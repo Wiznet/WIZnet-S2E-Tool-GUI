@@ -231,47 +231,16 @@ class TCPClient:
 		
 	def write(self, data):
 		self.sock.send(data)
-		
+	
+	def recvfrom(self):
+		data, addr = self.sock.recvfrom(2048)
+		return data
+
 	def close(self):
 		if self.sock is not 0:
 			self.sock.close()
 		self.state = CLOSE_STATE
 	
 	def shutdown(self):
-		self.sock.shutdown(1)
-		
-# if __name__ == '__main__':
-# 	client = TCPClient()
-#
-# 	print(client.state)
-#
-# 	while True:
-#
-#
-# 		if client.state is CLOSE_STATE:
-# 			cur_state = client.state
-# 			client.state = client.open(5001)
-# 			if client.state != cur_state:
-# 				sys.stdout.write('%r\r\n' % client.state)
-# #			client.state = OPENTRY_STATE
-#
-# 		elif client.state is OPEN_STATE:
-# 			cur_state = client.state
-# 			client.state = client.connect("192.168.11.235", 9000)
-# 			if client.state != cur_state:
-# 				sys.stdout.write('%r\r\n' % client.state)
-#
-# 		elif client.state is CONNECT_STATE:
-# #			sys.stdout.write("check readline()\r\n")
-# #			if inputready:
-# 			rcvddata = client.readline()
-# #			print rcvddata
-# 			if rcvddata != -1 :
-# 				sys.stdout.write("%s" % rcvddata)
-# #				for i in range(0, len(rcvddata)):
-# #					sys.stdout.write("%d " % rcvddata[i])
-# #				sys.stdout.write("\r\n")
-# 				sys.stdout.flush()
-# #				client.write(rcvddata)
-#
-# 		time.sleep(1)
+		if self.sock is not 0:
+			self.sock.shutdown(1)
