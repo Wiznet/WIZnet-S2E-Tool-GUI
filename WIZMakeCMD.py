@@ -43,6 +43,17 @@ class WIZMakeCMD:
         for cmd in cmd_twoport:
             cmd_list.append([cmd, ""])
         return cmd_list
+
+    def search(self, mac_addr):
+        cmd_list = []
+        # Search All Devices on the network
+        # 장치 검색 시 필요 정보 Get
+        cmd_list.append(["MA", mac_addr])
+        cmd_list.append(["PW", " "])
+        # for cmd in cmd_oneport:
+        for cmd in cmd_twoport:
+            cmd_list.append([cmd, ""])
+        return cmd_list
     
     def get_value(self, mac_addr, filename):
         # 파일의 command들에 대한 정보를 가져옴

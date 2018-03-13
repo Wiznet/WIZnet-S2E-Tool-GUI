@@ -1,19 +1,28 @@
 # WIZnet-S2E-Tool-GUI
-WIZnet-S2E-Tool-GUI is Configuration Tool for WIZnet serial to ethernet devices.
+WIZnet-S2E-Tool-GUI is Configuration Tool for WIZnet serial to ethernet devices. \
+Python interpreter based and it is platform independent. It works on version 3.6 python. 
+
 
 ![](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/blob/master/images/wizconfig.png?raw=true)
 
 ## Environment
 
-- Windows 7 or 10 \
-  Recommended to use this at a resolution of **1440*900 or higher.** \
+### Windows 
+- Windows 7  
+- Windows 10  
+
+  Recommended to use tool at a resolution of **1440*900 or higher.** \
   We plan to update to support lower resolutions in future versions.
 
   You can download Windows excutable file from [release page.](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/releases)
 
 
-- Linux (Not stable yet) \
-  This is will be updated soon.
+### Linux
+- Ubuntu \
+  Not stable yet. This is will be updated soon.
+
+  You can use [CLI configuration tool](https://github.com/Wiznet/WIZnet-S2E-Tool) before new update of GUI Tool.
+  
 
 ----
 
