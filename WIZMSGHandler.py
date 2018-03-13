@@ -12,6 +12,7 @@ import sys
 import codecs
 from WIZ750CMDSET import WIZ750CMDSET 
 from WIZ752CMDSET import WIZ752CMDSET 
+from wizsocket.TCPClient import TCPClient
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -138,6 +139,9 @@ class WIZMSGHandler:
     def sendcommands(self):
         self.sock.sendto(self.msg)
 
+    def sendcommandsTCP(self):
+        self.sock.write(self.msg)
+    
     def parseresponse(self):
         readready, writeready, errorready = select.select(self.inputs, self.outputs, self.errors, 1)
         
@@ -183,7 +187,7 @@ class WIZMSGHandler:
                             if b'IM' in replylists[i]: self.ip_mode.append(replylists[i][2:])
                     elif self.opcode is OP_FWUP:
                         for i in range(0, len(replylists)):
-                            # sys.stdout.write('%s\r\n' % replylists)
+                            # sys.stdout.write('FWUP: %s\r\n' % replylists)
                             # sys.stdout.write("%r\r\n" % replylists[i][:2])
                             if b'MA' in replylists[i][:2]:
                                 dest_mac = self.dest_mac
@@ -200,7 +204,7 @@ class WIZMSGHandler:
                                 # sys.stdout.write('self.isvalid is True\r\n')
                                 param = replylists[i][2:].split(b':')
                                 self.reply = replylists[i][2:]
-
+                                
                             # sys.stdout.write("%r\r\n" % replylists[i])
 
                     readready, writeready, errorready = select.select(self.inputs, self.outputs, self.errors, 1)
