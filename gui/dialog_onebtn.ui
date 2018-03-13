@@ -3,25 +3,25 @@
  <class>Dialog</class>
  <widget class="QDialog" name="Dialog">
   <property name="windowModality">
-   <enum>Qt::WindowModal</enum>
+   <enum>Qt::ApplicationModal</enum>
   </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>380</width>
+    <width>330</width>
     <height>110</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>380</width>
+    <width>330</width>
     <height>110</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>380</width>
+    <width>330</width>
     <height>110</height>
    </size>
   </property>
@@ -31,24 +31,24 @@
   <property name="modal">
    <bool>true</bool>
   </property>
-  <widget class="QLabel" name="label_137">
+  <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>17</x>
-     <y>18</y>
-     <width>350</width>
+     <x>20</x>
+     <y>20</y>
+     <width>300</width>
      <height>35</height>
     </rect>
    </property>
    <property name="minimumSize">
     <size>
-     <width>350</width>
+     <width>300</width>
      <height>35</height>
     </size>
    </property>
    <property name="maximumSize">
     <size>
-     <width>350</width>
+     <width>300</width>
      <height>35</height>
     </size>
    </property>
@@ -76,8 +76,8 @@
   <widget class="QPushButton" name="okbtn">
    <property name="geometry">
     <rect>
-     <x>154</x>
-     <y>67</y>
+     <x>127</x>
+     <y>63</y>
      <width>75</width>
      <height>23</height>
     </rect>
