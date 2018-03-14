@@ -26,7 +26,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>WIZnet S2E Configuration Tool</string>
+   <string>WIZnet S2E Configuration Tool v0.2.1</string>
   </property>
   <property name="autoFillBackground">
    <bool>false</bool>

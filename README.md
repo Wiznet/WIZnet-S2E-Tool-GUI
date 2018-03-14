@@ -42,5 +42,10 @@ Python interpreter based and it is platform independent. It works on version 3.6
 - [WIZ752SR-125](https://wizwiki.net/wiki/doku.php?id=products:s2e_module:wiz752sr-125:start)
 
 ----
+# Wiki
+
+You can check the contents of configuration tool wiki on the [WIZnet-S2E-Tool-GUI wiki page.](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki)
+
+----
 # TroubleShooting
 If you have any problems, please visit [WIZnet Forum](https://forum.wiznet.io/) and please let we know what the problem is.
