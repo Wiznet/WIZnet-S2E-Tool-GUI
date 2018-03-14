@@ -715,13 +715,15 @@ class WIZWindow(QMainWindow, main_window):
                 wizmsghangler.sendcommands()
             wizmsghangler.parseresponse()
 
-            self.devclick()
+            # self.devclick()
             
             self.statusbar.showMessage(' Set device complete!')
             self.OpenDialogSetOK()
 
             if self.isConnected and self.unicast_ip.isChecked():
                 self.conf_sock.shutdown()
+
+            self.Search()
 
     def SelectDev(self):
         # 선택된 장치의 mac addr / name 추출 
@@ -748,6 +750,9 @@ class WIZWindow(QMainWindow, main_window):
         t_fwup = FWUploadThread(self.conf_sock)
         # t_fwup = FWUploadThread()
         t_fwup.setparam(mac_addr, filename)
+        # For 'AB' command Test (boot mode fw update)
+        t_fwup.jumpToApp()
+        time.sleep(2)
         t_fwup.sendCmd('FW')
         t_fwup.start()
         self.threads.append(t_fwup)
@@ -763,6 +768,8 @@ class WIZWindow(QMainWindow, main_window):
 
         if self.isConnected and self.unicast_ip.isChecked():
             self.conf_sock.shutdown()
+        
+        self.Search()
 
     def FWFileOpen(self):    
         options = QFileDialog.Options()
@@ -823,10 +830,10 @@ class WIZWindow(QMainWindow, main_window):
         # wizmsghangler.parseresponse()
         self.statusbar.showMessage(' Device factory reset complete.')
 
-        # self.devclick()
-
         if self.isConnected and self.unicast_ip.isChecked():
             self.conf_sock.shutdown()
+        
+        self.Search()
 
     ###########################################################
     ## One button dialog
