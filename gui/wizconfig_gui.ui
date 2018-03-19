@@ -611,7 +611,7 @@
        </font>
       </property>
       <property name="title">
-       <string>Timer Interval</string>
+       <string>Timer interval</string>
       </property>
       <widget class="QLabel" name="label_137">
        <property name="geometry">
@@ -1213,7 +1213,7 @@
        </font>
       </property>
       <property name="text">
-       <string>Serial Interface:</string>
+       <string>Serial interface:</string>
       </property>
      </widget>
      <widget class="QLineEdit" name="ch1_uart_name">
@@ -1489,7 +1489,7 @@
        </font>
       </property>
       <property name="title">
-       <string>AT Command</string>
+       <string>Serial command mode</string>
       </property>
       <widget class="QCheckBox" name="at_enable">
        <property name="geometry">
@@ -3230,7 +3230,7 @@
          </font>
         </property>
         <property name="text">
-         <string>192.168.50.120</string>
+         <string>192.168.11.2</string>
         </property>
         <property name="frame">
          <bool>true</bool>
@@ -3458,7 +3458,7 @@
      </font>
     </property>
     <property name="title">
-     <string>General Options</string>
+     <string>General options</string>
     </property>
     <widget class="QGroupBox" name="network_config">
      <property name="geometry">
@@ -3475,7 +3475,7 @@
       </font>
      </property>
      <property name="title">
-      <string>Network Configuration</string>
+      <string>Network configuration</string>
      </property>
      <widget class="QWidget" name="layoutWidget_52">
       <property name="geometry">
@@ -3732,7 +3732,7 @@
       </font>
      </property>
      <property name="title">
-      <string>Search Identification code</string>
+      <string>Search identification code</string>
      </property>
      <widget class="QLabel" name="label_146">
       <property name="geometry">
@@ -4179,7 +4179,7 @@
       </font>
      </property>
      <property name="title">
-      <string>TCP Timeout</string>
+      <string>TCP timeout</string>
      </property>
      <widget class="QLabel" name="label_152">
       <property name="geometry">
