@@ -36,6 +36,8 @@ SOCK_CONNECT_STATE = 5
 ONE_PORT_DEV = ['WIZ750SR', 'WIZ750SR-100', 'WIZ750SR-105', 'WIZ750SR-110', 'WIZ107SR', 'WIZ108SR']
 TWO_PORT_DEV = ['WIZ752SR-12x', 'WIZ752SR-120','WIZ752SR-125']
 
+VERSION = 'v0.2.2'
+
 def resource_path(relative_path):
 # Get absolute path to resource, works for dev and for PyInstaller
     base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
@@ -74,8 +76,10 @@ class WIZWindow(QMainWindow, main_window):
         super().__init__()
         self.setupUi(self)
 
+        self.setWindowTitle('WIZnet S2E Configuration Tool ' + VERSION)
+
         # Main icon
-        self.setWindowIcon(QIcon(resource_path('gui/main_icon.ico')))
+        self.setWindowIcon(QIcon(resource_path('gui/icon.ico')))
 
         # Set Button icon 
         self.icon_save = QIcon()
@@ -154,6 +158,7 @@ class WIZWindow(QMainWindow, main_window):
         self.curr_dev = None
 
         self.isConnected = False
+        self.set_reponse = None
 
         ##################### Button Event #####################
         # device select event
@@ -417,6 +422,8 @@ class WIZWindow(QMainWindow, main_window):
         for currentQTableWidgetItem in self.list_device.selectedItems():
             # print('Click info:', currentQTableWidgetItem.row(), currentQTableWidgetItem.column(), currentQTableWidgetItem.text())
             self.getdevinfo(currentQTableWidgetItem.row())
+        
+        # print('Click info:', currentQTableWidgetItem.row(), currentQTableWidgetItem.column(), currentQTableWidgetItem.text(), self.list_device.selectedItems()[0].row())
 
     def EnableObject(self):
         self.SelectDev()
@@ -570,12 +577,17 @@ class WIZWindow(QMainWindow, main_window):
         self.EnableObject()
 
         # 선택 장치 정보 출력 
-        rcv_data = self.all_response
-        # print('rcv_data[%d] ===> %s' % (row_index, rcv_data[row_index]))
-        devinfo = rcv_data[row_index].splitlines()
+        self.rcv_data = self.all_response
+        # print('totalnum: %d, self.rcv_data[%d] ==> %s' % (len(self.rcv_data), row_index, self.rcv_data[row_index]))
+        if self.set_reponse is not None:
+            print('set_response: %s', self.set_reponse)
+        devinfo = self.rcv_data[row_index].splitlines()
         # print('devinfo %d: %s ' % (row_index, devinfo))
-        
         self.FillInfo(devinfo)
+    
+    def getSettinginfo(self, row_index):
+        self.rcv_data[row_index] = self.set_reponse[0]
+        # print('getSettinginfo set_response', self.set_reponse)
 
     def Dialog_invalid(self):
         dialog = InvalidDialog()
@@ -670,7 +682,6 @@ class WIZWindow(QMainWindow, main_window):
         
     def Setting(self):
         self.statusbar.showMessage(' Setting device...')
-        # Get each object's value
         setcmd = self.GetObjectValue()
         # self.SelectDev()
 
@@ -714,8 +725,6 @@ class WIZWindow(QMainWindow, main_window):
             else:
                 wizmsghangler.sendcommands()
             wizmsghangler.parseresponse()
-
-            # self.devclick()
             
             self.statusbar.showMessage(' Set device complete!')
             self.OpenDialogSetOK()
@@ -723,7 +732,11 @@ class WIZWindow(QMainWindow, main_window):
             if self.isConnected and self.unicast_ip.isChecked():
                 self.conf_sock.shutdown()
 
-            self.Search()
+            # Set -> get info
+            self.set_reponse = wizmsghangler.rcv_list
+            # print('setting response: ', self.set_reponse)
+            self.getSettinginfo(self.list_device.selectedItems()[0].row())
+            # self.Search()
 
     def SelectDev(self):
         # 선택된 장치의 mac addr / name 추출 
