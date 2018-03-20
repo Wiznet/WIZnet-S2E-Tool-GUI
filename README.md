@@ -1,9 +1,17 @@
-# WIZnet-S2E-Tool-GUI
+- [Overview](#overview)
+  - [Environment](#environment)
+- [Support Devices](#support-devices)
+- [Wiki](#wiki)
+- [CLI Configuration Tool](#https://github.com/Wiznet/WIZnet-S2E-Tool)
+- [TroubleShooting](#troubleshooting)
+
+
+# Overview
 WIZnet-S2E-Tool-GUI is Configuration Tool for WIZnet serial to ethernet devices. \
 Python interpreter based and it is platform independent. It works on version 3.6 python. 
 
 
-![](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/blob/master/doc/images/wizconfigv0.2.png?raw=true)
+![](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/blob/master/doc/images/wizconfig_main.png?raw=true)
 <!-- <img src="https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/blob/master/doc/images/wizconfigv0.2.png" width="80%"></img> -->
 
 ## Environment
@@ -42,6 +50,12 @@ Python interpreter based and it is platform independent. It works on version 3.6
 - [WIZ752SR-125](https://wizwiki.net/wiki/doku.php?id=products:s2e_module:wiz752sr-125:start)
 
 ----
+# CLI Configuration Tool
+
+CLI configuration tool for S2E devices can be refer from [WIZnet-S2E-Tool github page.](https://github.com/Wiznet/WIZnet-S2E-Tool)
+
+----
+
 # Wiki
 
 You can check the contents of configuration tool wiki on the [WIZnet-S2E-Tool-GUI wiki page.](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki)

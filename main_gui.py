@@ -440,8 +440,7 @@ class WIZWindow(QMainWindow, main_window):
         # 창 활성화
         self.general.setEnabled(True)
         self.channel_tab.setEnabled(True)
-
-        self.connect_pw.setEnabled(False)
+        self.EnablePW()
 
         ### 포트 수에 따라 설정 탭 활성화
         if self.curr_dev in ONE_PORT_DEV:
@@ -480,8 +479,13 @@ class WIZWindow(QMainWindow, main_window):
             if b'GW' in cmdset_list[i]: self.gateway.setText(cmdset_list[i][2:].decode())
             if b'DS' in cmdset_list[i]: self.dns_addr.setText(cmdset_list[i][2:].decode())
             # etc - general
-            if b'CP' in cmdset_list[i]: self.enable_connect_pw.setChecked(int(cmdset_list[i][2:].decode()))
-            if b'NP' in cmdset_list[i]: self.connect_pw.setText(cmdset_list[i][2:].decode())
+            if b'CP' in cmdset_list[i]: 
+                self.enable_connect_pw.setChecked(int(cmdset_list[i][2:].decode()))
+            if b'NP' in cmdset_list[i]: 
+                if cmdset_list[i][2:].decode() == ' ':
+                    self.connect_pw.setText(None)
+                else:
+                    self.connect_pw.setText(cmdset_list[i][2:].decode())
             # command mode (AT mode)
             if b'TE' in cmdset_list[i]: self.at_enable.setChecked(int(cmdset_list[i][2:].decode()))
             if b'SS' in cmdset_list[i]:
@@ -567,7 +571,9 @@ class WIZWindow(QMainWindow, main_window):
                 if b'RA' in cmdset_list[i]: 
                     if cmdset_list[i][2:].decode() == '0': self.ch2_keepalive_enable.setChecked(False)
                     elif cmdset_list[i][2:].decode() == '1': self.ch2_keepalive_enable.setChecked(True)
+
                 if b'RS' in cmdset_list[i]: self.ch2_keepalive_initial.setText(cmdset_list[i][2:].decode())
+
                 if b'RE' in cmdset_list[i]: self.ch2_keepalive_retry.setText(cmdset_list[i][2:].decode())
                 # reconnection - channel 2
                 if b'RR' in cmdset_list[i]: self.ch2_reconnection.setText(cmdset_list[i][2:].decode())
@@ -763,7 +769,7 @@ class WIZWindow(QMainWindow, main_window):
         t_fwup = FWUploadThread(self.conf_sock)
         # t_fwup = FWUploadThread()
         t_fwup.setparam(mac_addr, filename)
-        # For 'AB' command Test (boot mode fw update)
+        # For 'AB' command (appboot mode fw update)
         t_fwup.jumpToApp()
         time.sleep(2)
         t_fwup.sendCmd('FW')
