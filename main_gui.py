@@ -36,7 +36,7 @@ SOCK_CONNECT_STATE = 5
 ONE_PORT_DEV = ['WIZ750SR', 'WIZ750SR-100', 'WIZ750SR-105', 'WIZ750SR-110', 'WIZ107SR', 'WIZ108SR']
 TWO_PORT_DEV = ['WIZ752SR-12x', 'WIZ752SR-120','WIZ752SR-125']
 
-VERSION = 'v0.2.2'
+VERSION = 'v0.2.3'
 
 def resource_path(relative_path):
 # Get absolute path to resource, works for dev and for PyInstaller
@@ -572,7 +572,12 @@ class WIZWindow(QMainWindow, main_window):
                     if cmdset_list[i][2:].decode() == '0': self.ch2_keepalive_enable.setChecked(False)
                     elif cmdset_list[i][2:].decode() == '1': self.ch2_keepalive_enable.setChecked(True)
 
-                if b'RS' in cmdset_list[i]: self.ch2_keepalive_initial.setText(cmdset_list[i][2:].decode())
+                if b'RS' in cmdset_list[i]: 
+                    # exception
+                    if b'-232' in cmdset_list[i][2:]:
+                        pass
+                    else:
+                        self.ch2_keepalive_initial.setText(cmdset_list[i][2:].decode())
 
                 if b'RE' in cmdset_list[i]: self.ch2_keepalive_retry.setText(cmdset_list[i][2:].decode())
                 # reconnection - channel 2
