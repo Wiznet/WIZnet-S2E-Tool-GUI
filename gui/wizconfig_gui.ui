@@ -98,7 +98,7 @@
        <property name="geometry">
         <rect>
          <x>17</x>
-         <y>25</y>
+         <y>28</y>
          <width>91</width>
          <height>16</height>
         </rect>
@@ -118,7 +118,7 @@
       <widget class="QLineEdit" name="ch1_keepalive_initial">
        <property name="geometry">
         <rect>
-         <x>135</x>
+         <x>101</x>
          <y>55</y>
          <width>80</width>
          <height>22</height>
@@ -156,19 +156,19 @@
         <rect>
          <x>13</x>
          <y>55</y>
-         <width>115</width>
+         <width>90</width>
          <height>22</height>
         </rect>
        </property>
        <property name="minimumSize">
         <size>
-         <width>115</width>
+         <width>90</width>
          <height>22</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>115</width>
+         <width>90</width>
          <height>22</height>
         </size>
        </property>
@@ -178,7 +178,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Initial Interval:</string>
+        <string>Initial Interval</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_129">
@@ -186,19 +186,19 @@
         <rect>
          <x>13</x>
          <y>84</y>
-         <width>115</width>
+         <width>90</width>
          <height>22</height>
         </rect>
        </property>
        <property name="minimumSize">
         <size>
-         <width>115</width>
+         <width>90</width>
          <height>22</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>115</width>
+         <width>90</width>
          <height>22</height>
         </size>
        </property>
@@ -208,13 +208,13 @@
         </font>
        </property>
        <property name="text">
-        <string>Retry Interval:</string>
+        <string>Retry Interval</string>
        </property>
       </widget>
       <widget class="QLineEdit" name="ch1_keepalive_retry">
        <property name="geometry">
         <rect>
-         <x>135</x>
+         <x>101</x>
          <y>84</y>
          <width>80</width>
          <height>22</height>
@@ -247,6 +247,66 @@
         <set>Qt::AlignCenter</set>
        </property>
       </widget>
+      <widget class="QLabel" name="label_154">
+       <property name="geometry">
+        <rect>
+         <x>188</x>
+         <y>56</y>
+         <width>30</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>30</width>
+         <height>22</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>22</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <family>맑은 고딕</family>
+        </font>
+       </property>
+       <property name="text">
+        <string>ms</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_157">
+       <property name="geometry">
+        <rect>
+         <x>188</x>
+         <y>81</y>
+         <width>30</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>30</width>
+         <height>22</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>22</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <family>맑은 고딕</family>
+        </font>
+       </property>
+       <property name="text">
+        <string>ms</string>
+       </property>
+      </widget>
      </widget>
      <widget class="QGroupBox" name="group_serialconfig_2">
       <property name="geometry">
@@ -276,7 +336,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Baue rate:</string>
+            <string>Baud rate</string>
            </property>
           </widget>
          </item>
@@ -394,7 +454,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Data Bit:</string>
+            <string>Data bit</string>
            </property>
           </widget>
          </item>
@@ -444,7 +504,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Parity:</string>
+            <string>Parity</string>
            </property>
           </widget>
          </item>
@@ -499,7 +559,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Stop Bit:</string>
+            <string>Stop bit</string>
            </property>
           </widget>
          </item>
@@ -549,7 +609,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Flow Control:</string>
+            <string>Flow control</string>
            </property>
           </widget>
          </item>
@@ -635,46 +695,24 @@
         <bool>true</bool>
        </property>
       </widget>
-      <widget class="QLabel" name="label_138">
-       <property name="geometry">
-        <rect>
-         <x>30</x>
-         <y>98</y>
-         <width>191</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <family>돋움</family>
-         <pointsize>8</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>The connection retry interval</string>
-       </property>
-       <property name="wordWrap">
-        <bool>true</bool>
-       </property>
-      </widget>
       <widget class="QLabel" name="label_135">
        <property name="geometry">
         <rect>
          <x>13</x>
          <y>18</y>
-         <width>115</width>
+         <width>90</width>
          <height>22</height>
         </rect>
        </property>
        <property name="minimumSize">
         <size>
-         <width>115</width>
+         <width>90</width>
          <height>22</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>115</width>
+         <width>90</width>
          <height>22</height>
         </size>
        </property>
@@ -684,13 +722,13 @@
         </font>
        </property>
        <property name="text">
-        <string>Inactivity timer:</string>
+        <string>Inactivity timer</string>
        </property>
       </widget>
       <widget class="QLineEdit" name="ch1_inact_timer">
        <property name="geometry">
         <rect>
-         <x>135</x>
+         <x>101</x>
          <y>18</y>
          <width>80</width>
          <height>22</height>
@@ -727,38 +765,42 @@
        <property name="geometry">
         <rect>
          <x>13</x>
-         <y>75</y>
-         <width>115</width>
-         <height>22</height>
+         <y>80</y>
+         <width>90</width>
+         <height>25</height>
         </rect>
        </property>
        <property name="minimumSize">
         <size>
-         <width>115</width>
+         <width>90</width>
          <height>22</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>115</width>
-         <height>22</height>
+         <width>90</width>
+         <height>25</height>
         </size>
        </property>
        <property name="font">
         <font>
          <family>맑은 고딕</family>
-         <pointsize>8</pointsize>
+         <pointsize>9</pointsize>
         </font>
        </property>
        <property name="text">
-        <string>Reconnection Interval:</string>
+        <string>Reconnection
+Interval</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
        </property>
       </widget>
       <widget class="QLineEdit" name="ch1_reconnection">
        <property name="geometry">
         <rect>
-         <x>135</x>
-         <y>75</y>
+         <x>101</x>
+         <y>85</y>
          <width>80</width>
          <height>22</height>
         </rect>
@@ -790,6 +832,74 @@
         <set>Qt::AlignCenter</set>
        </property>
       </widget>
+      <widget class="QLabel" name="label_155">
+       <property name="geometry">
+        <rect>
+         <x>188</x>
+         <y>84</y>
+         <width>30</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>30</width>
+         <height>22</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>22</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <family>맑은 고딕</family>
+        </font>
+       </property>
+       <property name="text">
+        <string>ms</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_156">
+       <property name="geometry">
+        <rect>
+         <x>188</x>
+         <y>20</y>
+         <width>30</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>30</width>
+         <height>22</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>22</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <family>맑은 고딕</family>
+        </font>
+       </property>
+       <property name="text">
+        <string>sec</string>
+       </property>
+      </widget>
+      <zorder>label_137</zorder>
+      <zorder>label_135</zorder>
+      <zorder>ch1_inact_timer</zorder>
+      <zorder>label_136</zorder>
+      <zorder>ch1_reconnection</zorder>
+      <zorder>label_154</zorder>
+      <zorder>label_155</zorder>
+      <zorder>label_156</zorder>
      </widget>
      <widget class="QGroupBox" name="ch1_remote">
       <property name="enabled">
@@ -883,7 +993,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Remote IP:</string>
+        <string>Remote IP</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_141">
@@ -913,7 +1023,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Remote Port:</string>
+        <string>Remote Port</string>
        </property>
       </widget>
       <widget class="QLineEdit" name="ch1_remoteport">
@@ -990,7 +1100,7 @@
            </font>
           </property>
           <property name="text">
-           <string>Time:</string>
+           <string>Time(ms)</string>
           </property>
          </widget>
         </item>
@@ -1046,7 +1156,7 @@
            </font>
           </property>
           <property name="text">
-           <string>Character:</string>
+           <string>Character</string>
           </property>
          </widget>
         </item>
@@ -1105,7 +1215,7 @@
            <enum>QFrame::Plain</enum>
           </property>
           <property name="text">
-           <string>Size:</string>
+           <string>Size</string>
           </property>
          </widget>
         </item>
@@ -1437,7 +1547,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Local Port:</string>
+        <string>Local Port</string>
        </property>
       </widget>
       <widget class="QLineEdit" name="ch1_localport">
@@ -1620,7 +1730,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Triger code:</string>
+        <string>Triger code</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_145">
@@ -3500,7 +3610,7 @@
           </font>
          </property>
          <property name="text">
-          <string>Local IP:</string>
+          <string>Local IP</string>
          </property>
         </widget>
        </item>
@@ -3562,7 +3672,7 @@
           </font>
          </property>
          <property name="text">
-          <string>Gateway:</string>
+          <string>Gateway</string>
          </property>
         </widget>
        </item>
@@ -3627,7 +3737,7 @@
           <cursorShape>ArrowCursor</cursorShape>
          </property>
          <property name="text">
-          <string>Subnet mask:</string>
+          <string>Subnet mask</string>
          </property>
         </widget>
        </item>
@@ -3683,7 +3793,7 @@
           </font>
          </property>
          <property name="text">
-          <string>DNS Server:</string>
+          <string>DNS server</string>
          </property>
         </widget>
        </item>
@@ -3771,7 +3881,7 @@
        </font>
       </property>
       <property name="text">
-       <string>Code:</string>
+       <string>Code</string>
       </property>
      </widget>
      <widget class="QLineEdit" name="searchcode">
@@ -3912,8 +4022,8 @@
      <widget class="QLabel" name="label_149">
       <property name="geometry">
        <rect>
-        <x>93</x>
-        <y>23</y>
+        <x>96</x>
+        <y>22</y>
         <width>63</width>
         <height>16</height>
        </rect>
@@ -3924,7 +4034,7 @@
        </font>
       </property>
       <property name="text">
-       <string>Password:</string>
+       <string>Password</string>
       </property>
      </widget>
      <widget class="QCheckBox" name="show_connectpw">
@@ -3993,7 +4103,7 @@
        </font>
       </property>
       <property name="text">
-       <string>Firmware version:</string>
+       <string>Firmware version</string>
       </property>
      </widget>
      <widget class="QLineEdit" name="fw_version">
@@ -4201,7 +4311,7 @@
       </property>
       <property name="text">
        <string>Retransmission
-Retrycount:</string>
+Retry count</string>
       </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>
@@ -4281,7 +4391,7 @@ Retrycount:</string>
     <property name="font">
      <font>
       <family>맑은 고딕 Semilight</family>
-      <pointsize>9</pointsize>
+      <pointsize>8</pointsize>
       <weight>75</weight>
       <bold>true</bold>
      </font>
@@ -4330,7 +4440,7 @@ Retrycount:</string>
     <property name="font">
      <font>
       <family>맑은 고딕 Semilight</family>
-      <pointsize>9</pointsize>
+      <pointsize>8</pointsize>
       <weight>75</weight>
       <bold>true</bold>
      </font>
@@ -4519,7 +4629,7 @@ Retrycount:</string>
     <property name="font">
      <font>
       <family>맑은 고딕 Semilight</family>
-      <pointsize>10</pointsize>
+      <pointsize>8</pointsize>
       <weight>75</weight>
       <bold>true</bold>
      </font>
