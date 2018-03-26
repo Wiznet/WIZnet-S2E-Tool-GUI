@@ -5,6 +5,9 @@
   <property name="windowModality">
    <enum>Qt::WindowModal</enum>
   </property>
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -24,6 +27,12 @@
     <width>900</width>
     <height>720</height>
    </size>
+  </property>
+  <property name="font">
+   <font>
+    <family>맑은 고딕</family>
+    <pointsize>9</pointsize>
+   </font>
   </property>
   <property name="windowTitle">
    <string>WIZnet S2E Configuration Tool</string>
@@ -75,7 +84,7 @@
     </property>
     <widget class="QWidget" name="tab_ch1">
      <attribute name="title">
-      <string>CH1</string>
+      <string>Serial Channel #1</string>
      </attribute>
      <widget class="QGroupBox" name="ch1_packing">
       <property name="geometry">
@@ -892,14 +901,6 @@ Interval</string>
         <string>sec</string>
        </property>
       </widget>
-      <zorder>label_137</zorder>
-      <zorder>label_135</zorder>
-      <zorder>ch1_inact_timer</zorder>
-      <zorder>label_136</zorder>
-      <zorder>ch1_reconnection</zorder>
-      <zorder>label_154</zorder>
-      <zorder>label_155</zorder>
-      <zorder>label_156</zorder>
      </widget>
      <widget class="QGroupBox" name="ch1_remote">
       <property name="enabled">
@@ -1759,7 +1760,7 @@ Interval</string>
     </widget>
     <widget class="QWidget" name="tab_ch2">
      <attribute name="title">
-      <string>CH2</string>
+      <string>Serial Channel #2</string>
      </attribute>
      <widget class="QGroupBox" name="ch2_opmode">
       <property name="geometry">
@@ -3263,12 +3264,12 @@ Interval</string>
     </widget>
     <widget class="QWidget" name="tab_ch3">
      <attribute name="title">
-      <string>CH3</string>
+      <string>Serial Channel #3</string>
      </attribute>
     </widget>
     <widget class="QWidget" name="tab_ch4">
      <attribute name="title">
-      <string>CH4</string>
+      <string>Serial Channel #4</string>
      </attribute>
     </widget>
    </widget>
@@ -3532,20 +3533,108 @@ Interval</string>
       <height>400</height>
      </size>
     </property>
+    <property name="palette">
+     <palette>
+      <active>
+       <colorrole role="Highlight">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
+          <red>85</red>
+          <green>170</green>
+          <blue>255</blue>
+         </color>
+        </brush>
+       </colorrole>
+       <colorrole role="HighlightedText">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
+          <red>0</red>
+          <green>0</green>
+          <blue>0</blue>
+         </color>
+        </brush>
+       </colorrole>
+      </active>
+      <inactive>
+       <colorrole role="Highlight">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
+          <red>102</red>
+          <green>181</green>
+          <blue>255</blue>
+         </color>
+        </brush>
+       </colorrole>
+       <colorrole role="HighlightedText">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
+          <red>0</red>
+          <green>0</green>
+          <blue>0</blue>
+         </color>
+        </brush>
+       </colorrole>
+      </inactive>
+      <disabled>
+       <colorrole role="Highlight">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
+          <red>85</red>
+          <green>170</green>
+          <blue>255</blue>
+         </color>
+        </brush>
+       </colorrole>
+       <colorrole role="HighlightedText">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
+          <red>0</red>
+          <green>0</green>
+          <blue>0</blue>
+         </color>
+        </brush>
+       </colorrole>
+      </disabled>
+     </palette>
+    </property>
+    <property name="font">
+     <font>
+      <family>맑은 고딕</family>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
+    <property name="mouseTracking">
+     <bool>true</bool>
+    </property>
+    <property name="focusPolicy">
+     <enum>Qt::StrongFocus</enum>
+    </property>
     <property name="toolTip">
      <string notr="true"/>
     </property>
     <property name="layoutDirection">
      <enum>Qt::LeftToRight</enum>
     </property>
+    <property name="autoFillBackground">
+     <bool>true</bool>
+    </property>
+    <property name="autoScrollMargin">
+     <number>16</number>
+    </property>
     <property name="editTriggers">
      <set>QAbstractItemView::NoEditTriggers</set>
     </property>
     <property name="dragEnabled">
+     <bool>true</bool>
+    </property>
+    <property name="dragDropOverwriteMode">
      <bool>false</bool>
     </property>
+    <property name="dragDropMode">
+     <enum>QAbstractItemView::DragOnly</enum>
+    </property>
     <property name="alternatingRowColors">
-     <bool>true</bool>
+     <bool>false</bool>
     </property>
     <property name="selectionMode">
      <enum>QAbstractItemView::SingleSelection</enum>
@@ -3553,7 +3642,28 @@ Interval</string>
     <property name="selectionBehavior">
      <enum>QAbstractItemView::SelectRows</enum>
     </property>
+    <property name="textElideMode">
+     <enum>Qt::ElideRight</enum>
+    </property>
+    <property name="verticalScrollMode">
+     <enum>QAbstractItemView::ScrollPerItem</enum>
+    </property>
+    <property name="horizontalScrollMode">
+     <enum>QAbstractItemView::ScrollPerPixel</enum>
+    </property>
+    <property name="showGrid">
+     <bool>true</bool>
+    </property>
+    <property name="gridStyle">
+     <enum>Qt::CustomDashLine</enum>
+    </property>
     <property name="sortingEnabled">
+     <bool>false</bool>
+    </property>
+    <property name="wordWrap">
+     <bool>false</bool>
+    </property>
+    <property name="cornerButtonEnabled">
      <bool>false</bool>
     </property>
     <property name="rowCount">
@@ -3593,6 +3703,12 @@ Interval</string>
      <property name="whatsThis">
       <string notr="true"/>
      </property>
+     <property name="font">
+      <font>
+       <family>맑은 고딕</family>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
     </column>
     <column>
      <property name="text">
@@ -3603,6 +3719,12 @@ Interval</string>
      </property>
      <property name="whatsThis">
       <string notr="true"/>
+     </property>
+     <property name="font">
+      <font>
+       <family>맑은 고딕</family>
+       <pointsize>10</pointsize>
+      </font>
      </property>
     </column>
    </widget>
@@ -4230,6 +4352,9 @@ Interval</string>
       <property name="text">
        <string notr="true"/>
       </property>
+      <property name="frame">
+       <bool>true</bool>
+      </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>
       </property>
@@ -4352,10 +4477,7 @@ Interval</string>
       </property>
      </widget>
     </widget>
-    <widget class="QGroupBox" name="status_5">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
+    <widget class="QGroupBox" name="tcp_timeoutbox">
      <property name="geometry">
       <rect>
        <x>440</x>
@@ -4413,15 +4535,21 @@ Retry count</string>
      <widget class="QLineEdit" name="tcp_timeout">
       <property name="geometry">
        <rect>
-        <x>109</x>
-        <y>21</y>
+        <x>110</x>
+        <y>18</y>
         <width>70</width>
-        <height>23</height>
+        <height>22</height>
        </rect>
       </property>
       <property name="minimumSize">
        <size>
-        <width>0</width>
+        <width>70</width>
+        <height>22</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>70</width>
         <height>22</height>
        </size>
       </property>
@@ -4430,29 +4558,11 @@ Retry count</string>
         <family>맑은 고딕</family>
        </font>
       </property>
-      <property name="focusPolicy">
-       <enum>Qt::NoFocus</enum>
-      </property>
-      <property name="toolTip">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~255&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-      </property>
-      <property name="inputMask">
-       <string notr="true"/>
-      </property>
       <property name="text">
-       <string notr="true"/>
+       <string/>
       </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-      <property name="placeholderText">
-       <string notr="true"/>
-      </property>
-      <property name="clearButtonEnabled">
-       <bool>false</bool>
       </property>
      </widget>
     </widget>
@@ -4463,37 +4573,38 @@ Retry count</string>
     </property>
     <property name="geometry">
      <rect>
-      <x>551</x>
+      <x>553</x>
       <y>5</y>
       <width>107</width>
-      <height>26</height>
+      <height>52</height>
      </rect>
     </property>
     <property name="minimumSize">
      <size>
       <width>107</width>
-      <height>26</height>
+      <height>52</height>
      </size>
     </property>
     <property name="maximumSize">
      <size>
       <width>100</width>
-      <height>25</height>
+      <height>52</height>
      </size>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕 Semilight</family>
-      <pointsize>8</pointsize>
-      <weight>75</weight>
-      <bold>true</bold>
+      <family>D2Coding</family>
+      <pointsize>11</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
      </font>
     </property>
     <property name="toolTip">
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Save current configuration&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="text">
-     <string>Save Config</string>
+     <string>Save
+Config</string>
     </property>
     <property name="iconSize">
      <size>
@@ -4508,37 +4619,38 @@ Retry count</string>
     </property>
     <property name="geometry">
      <rect>
-      <x>551</x>
-      <y>30</y>
+      <x>659</x>
+      <y>5</y>
       <width>107</width>
-      <height>26</height>
+      <height>52</height>
      </rect>
     </property>
     <property name="minimumSize">
      <size>
       <width>107</width>
-      <height>26</height>
+      <height>52</height>
      </size>
     </property>
     <property name="maximumSize">
      <size>
-      <width>100</width>
-      <height>25</height>
+      <width>107</width>
+      <height>52</height>
      </size>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕 Semilight</family>
-      <pointsize>8</pointsize>
-      <weight>75</weight>
-      <bold>true</bold>
+      <family>D2Coding</family>
+      <pointsize>11</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
      </font>
     </property>
     <property name="toolTip">
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Load configuration&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="text">
-     <string>Load Config</string>
+     <string>Load
+Config</string>
     </property>
     <property name="iconSize">
      <size>
@@ -4556,56 +4668,15 @@ Retry count</string>
       <height>61</height>
      </rect>
     </property>
-    <property name="orientation">
-     <enum>Qt::Vertical</enum>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="devmanagerbtn">
-    <property name="enabled">
-     <bool>true</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>663</x>
-      <y>5</y>
-      <width>107</width>
-      <height>26</height>
-     </rect>
-    </property>
-    <property name="minimumSize">
-     <size>
-      <width>107</width>
-      <height>26</height>
-     </size>
-    </property>
-    <property name="maximumSize">
-     <size>
-      <width>100</width>
-      <height>26</height>
-     </size>
-    </property>
     <property name="font">
      <font>
-      <family>맑은 고딕 Semilight</family>
-      <pointsize>8</pointsize>
-      <weight>75</weight>
-      <bold>true</bold>
+      <pointsize>11</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
      </font>
     </property>
-    <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Ping test&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-    </property>
-    <property name="inputMethodHints">
-     <set>Qt::ImhNone</set>
-    </property>
-    <property name="text">
-     <string>DevManager</string>
-    </property>
-    <property name="iconSize">
-     <size>
-      <width>20</width>
-      <height>20</height>
-     </size>
+    <property name="orientation">
+     <enum>Qt::Vertical</enum>
     </property>
    </widget>
    <widget class="QPushButton" name="exitbtn">
@@ -4614,7 +4685,7 @@ Retry count</string>
     </property>
     <property name="geometry">
      <rect>
-      <x>777</x>
+      <x>773</x>
       <y>5</y>
       <width>107</width>
       <height>52</height>
@@ -4634,10 +4705,10 @@ Retry count</string>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕 Semilight</family>
-      <pointsize>10</pointsize>
-      <weight>75</weight>
-      <bold>true</bold>
+      <family>D2Coding</family>
+      <pointsize>11</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
      </font>
     </property>
     <property name="toolTip">
@@ -4653,75 +4724,24 @@ Retry count</string>
      </size>
     </property>
    </widget>
-   <widget class="Line" name="line_2">
-    <property name="geometry">
-     <rect>
-      <x>660</x>
-      <y>1</y>
-      <width>3</width>
-      <height>61</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Vertical</enum>
-    </property>
-   </widget>
    <widget class="Line" name="line_3">
     <property name="geometry">
      <rect>
-      <x>773</x>
+      <x>769</x>
       <y>2</y>
       <width>3</width>
       <height>61</height>
      </rect>
     </property>
-    <property name="orientation">
-     <enum>Qt::Vertical</enum>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="firewallbtn">
-    <property name="enabled">
-     <bool>true</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>663</x>
-      <y>30</y>
-      <width>107</width>
-      <height>26</height>
-     </rect>
-    </property>
-    <property name="minimumSize">
-     <size>
-      <width>107</width>
-      <height>26</height>
-     </size>
-    </property>
-    <property name="maximumSize">
-     <size>
-      <width>100</width>
-      <height>26</height>
-     </size>
-    </property>
     <property name="font">
      <font>
-      <family>맑은 고딕 Semilight</family>
-      <pointsize>8</pointsize>
-      <weight>75</weight>
-      <bold>true</bold>
+      <pointsize>11</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
      </font>
     </property>
-    <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Firewall setup&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-    </property>
-    <property name="text">
-     <string>Firewall</string>
-    </property>
-    <property name="iconSize">
-     <size>
-      <width>20</width>
-      <height>20</height>
-     </size>
+    <property name="orientation">
+     <enum>Qt::Vertical</enum>
     </property>
    </widget>
    <widget class="QPushButton" name="btnsearch">
@@ -4747,10 +4767,10 @@ Retry count</string>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕 Semilight</family>
-      <pointsize>10</pointsize>
-      <weight>75</weight>
-      <bold>true</bold>
+      <family>D2Coding</family>
+      <pointsize>11</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
      </font>
     </property>
     <property name="mouseTracking">
@@ -4814,10 +4834,10 @@ Retry count</string>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕 Semilight</family>
-      <pointsize>10</pointsize>
-      <weight>75</weight>
-      <bold>true</bold>
+      <family>D2Coding</family>
+      <pointsize>11</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
      </font>
     </property>
     <property name="toolTip">
@@ -4863,10 +4883,10 @@ Retry count</string>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕 Semilight</family>
-      <pointsize>10</pointsize>
-      <weight>75</weight>
-      <bold>true</bold>
+      <family>D2Coding</family>
+      <pointsize>11</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
      </font>
     </property>
     <property name="toolTip">
@@ -4912,10 +4932,10 @@ Retry count</string>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕 Semilight</family>
-      <pointsize>10</pointsize>
-      <weight>75</weight>
-      <bold>true</bold>
+      <family>D2Coding</family>
+      <pointsize>11</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
      </font>
     </property>
     <property name="toolTip">
@@ -4973,10 +4993,10 @@ Retry count</string>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕 Semilight</family>
-      <pointsize>10</pointsize>
-      <weight>75</weight>
-      <bold>true</bold>
+      <family>D2Coding</family>
+      <pointsize>11</pointsize>
+      <weight>50</weight>
+      <bold>false</bold>
      </font>
     </property>
     <property name="toolTip">
@@ -5490,19 +5510,16 @@ Retry count</string>
    <zorder>resetbtn</zorder>
    <zorder>factorybtn</zorder>
    <zorder>progressbar</zorder>
-   <zorder>list_device</zorder>
    <zorder>channel_tab</zorder>
    <zorder>group_searchmethod</zorder>
    <zorder>general</zorder>
    <zorder>savebtn</zorder>
    <zorder>loadbtn</zorder>
    <zorder>line</zorder>
-   <zorder>devmanagerbtn</zorder>
    <zorder>exitbtn</zorder>
-   <zorder>line_2</zorder>
    <zorder>line_3</zorder>
-   <zorder>firewallbtn</zorder>
    <zorder>line_4</zorder>
+   <zorder>list_device</zorder>
   </widget>
   <widget class="QStatusBar" name="statusbar">
    <property name="minimumSize">
@@ -5570,7 +5587,7 @@ Retry count</string>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="geometry">
     <rect>
@@ -5617,15 +5634,12 @@ Retry count</string>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="title">
      <string>Help</string>
     </property>
     <addaction name="separator"/>
-    <addaction name="version_check"/>
-    <addaction name="separator"/>
-    <addaction name="support"/>
     <addaction name="about_wiz"/>
     <addaction name="separator"/>
    </widget>
@@ -5685,7 +5699,7 @@ Retry count</string>
   </action>
   <action name="about_wiz">
    <property name="text">
-    <string>About 'wizconfig' tool</string>
+    <string>About ...</string>
    </property>
   </action>
   <action name="version_check">

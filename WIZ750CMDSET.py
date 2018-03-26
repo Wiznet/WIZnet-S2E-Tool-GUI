@@ -22,6 +22,11 @@ class WIZ750CMDSET:
                         "ST" : ["Operation status", "", {}, "RO"],
                         "UN" : ["UART Interface(Str)", "", {}, "RO"],
                         "UI" : ["UART Interface(Code)", "", {}, "RO"],
+                        # WIZ750SR: F/W 1.2.0 verison or later
+                        # "^([0-9]|1[0-4])$",
+                        "TR" : ["TCP Retransmission Retry count",
+                                "^([1-9]|[1-9][0-9]|1[0-9][0-9]|2[0-5][0-5])$", 
+                                {}, "RW"], 
                         "OP" : ["Network Operation Mode",
                                         "^[0-3]$",
                                         {"0": "TCP Client mode", "1" : "TCP Server mode", "2" : "TCP Mixed mode", "3" : "UDP mode"},
