@@ -2,7 +2,7 @@
   - [Environment](#environment)
 - [Support Devices](#support-devices)
 - [Wiki](#wiki)
-- [CLI Configuration Tool](#https://github.com/Wiznet/WIZnet-S2E-Tool)
+- [CLI Configuration Tool (External link)](https://github.com/Wiznet/WIZnet-S2E-Tool)
 - [TroubleShooting](#troubleshooting)
 
 
@@ -10,9 +10,7 @@
 WIZnet-S2E-Tool-GUI is Configuration Tool for WIZnet serial to ethernet devices. \
 Python interpreter based and it is platform independent. It works on version 3.6 python. 
 
-
 ![](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/blob/master/doc/images/wizconfig_main.png?raw=true)
-<!-- <img src="https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/blob/master/doc/images/wizconfigv0.2.png" width="80%"></img> -->
 
 ## Environment
 
@@ -62,4 +60,11 @@ You can check the contents of configuration tool wiki on the [WIZnet-S2E-Tool-GU
 
 ----
 # TroubleShooting
-If you have any problems, please visit [WIZnet Forum](https://forum.wiznet.io/) and please let we know what the problem is.
+
+If you have any problems, use one of the links below and **please report the problem.**
+
+- [Github Issue page](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/issues)
+- [WIZnet Forum](https://forum.wiznet.io/)
+
+----
+
