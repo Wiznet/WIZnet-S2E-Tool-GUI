@@ -5,10 +5,10 @@ import time
 import re
 import os
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import QSize, QThread, Qt, QTimer, pyqtSignal, pyqtSlot, QRect
+from PyQt5.QtCore import QSize, QThread, Qt, QTimer, pyqtSignal, pyqtSlot, QRect, QUrl
 # from PyQt5.QtCore import *
 from PyQt5 import QtCore
-from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtGui import QIcon, QPixmap, QFont
 # from PyQt5 import *
 from PyQt5 import uic
 
@@ -36,7 +36,7 @@ SOCK_CONNECT_STATE = 5
 ONE_PORT_DEV = ['WIZ750SR', 'WIZ750SR-100', 'WIZ750SR-105', 'WIZ750SR-110', 'WIZ107SR', 'WIZ108SR']
 TWO_PORT_DEV = ['WIZ752SR-12x', 'WIZ752SR-120','WIZ752SR-125']
 
-VERSION = 'v0.2.3'
+VERSION = '0.2.4 Beta'
 
 def resource_path(relative_path):
 # Get absolute path to resource, works for dev and for PyInstaller
@@ -45,31 +45,6 @@ def resource_path(relative_path):
 
 # Load ui files
 main_window = uic.loadUiType(resource_path('gui/wizconfig_gui.ui'))[0]
-dialog_onebtn = uic.loadUiType(resource_path('gui/dialog_onebtn.ui'))[0]
-
-dialog_warning_factory = uic.loadUiType(resource_path('gui/dialog_warning_factory.ui'))[0]
-dialog_warning_reset = uic.loadUiType(resource_path('gui/dialog_warning_reset.ui'))[0]
-exit_dialog = uic.loadUiType(resource_path('gui/dialog_exit.ui'))[0]
-
-class OneBtnDialog(QDialog, dialog_onebtn):
-    def __init__(self):
-        super().__init__()
-        self.setupUi(self)
-
-class ExitDialog(QDialog, exit_dialog):
-    def __init__(self):
-        super().__init__()
-        self.setupUi(self)
-
-class ResetDialog(QDialog, dialog_warning_reset):
-    def __init__(self):
-        super().__init__()
-        self.setupUi(self)
-
-class FactoryDialog(QDialog, dialog_warning_factory):
-    def __init__(self):
-        super().__init__()
-        self.setupUi(self)
 
 class WIZWindow(QMainWindow, main_window):
     def __init__(self):
@@ -85,22 +60,12 @@ class WIZWindow(QMainWindow, main_window):
         self.icon_save = QIcon()
         self.icon_save.addPixmap(QPixmap(resource_path('gui/save_48.ico')), QIcon.Normal, QIcon.Off)
         self.savebtn.setIcon(self.icon_save)
-        self.savebtn.setIconSize(QSize(20, 20))
+        self.savebtn.setIconSize(QSize(40, 40))
 
         self.icon_load = QIcon()
         self.icon_load.addPixmap(QPixmap(resource_path('gui/load_48.ico')), QIcon.Normal, QIcon.Off)
         self.loadbtn.setIcon(self.icon_load)
-        self.loadbtn.setIconSize(QSize(20, 20))
-
-        self.icon_ping = QIcon()
-        self.icon_ping.addPixmap(QPixmap(resource_path('gui/ping_48.ico')), QIcon.Normal, QIcon.Off)
-        self.devmanagerbtn.setIcon(self.icon_ping)
-        self.devmanagerbtn.setIconSize(QSize(20, 20))
-
-        self.icon_firewall = QIcon()
-        self.icon_firewall.addPixmap(QPixmap(resource_path('gui/firewall_48.ico')), QIcon.Normal, QIcon.Off)
-        self.firewallbtn.setIcon(self.icon_firewall)
-        self.firewallbtn.setIconSize(QSize(20, 20))
+        self.loadbtn.setIconSize(QSize(40, 40))
 
         self.icon_search = QIcon()
         self.icon_search.addPixmap(QPixmap(resource_path('gui/search_48.ico')), QIcon.Normal, QIcon.Off)
@@ -162,35 +127,29 @@ class WIZWindow(QMainWindow, main_window):
 
         ##################### Button Event #####################
         # device select event
-        self.list_device.itemClicked.connect(self.devclick)
+        self.list_device.itemClicked.connect(self.DevClicked)
 
         # Button event handler
         self.btnsearch.clicked.connect(self.Search)
         self.btnsetting.clicked.connect(self.Setting)
 
-        self.resetbtn.clicked.connect(self.OpenResetDialog)
-        self.factorybtn.clicked.connect(self.OpenFactoryDialog)
+        self.resetbtn.clicked.connect(self.ResetPopUp)
+        self.factorybtn.clicked.connect(self.FactoryPopUp)
 
         # configuration save/load button
-        self.savebtn.clicked.connect(self.SaveFile)
-        self.loadbtn.clicked.connect(self.LoadFile)
+        self.savebtn.clicked.connect(self.SaveFileDialog)
+        self.loadbtn.clicked.connect(self.LoadFileDialog)
 
-        # self.fwupbtn.clicked.connect(self.FWFileOpen)
-        self.fwupbtn.clicked.connect(self.NetworkCheck)
+        # self.fwupbtn.clicked.connect(self.NetworkCheck)
+        self.fwupbtn.clicked.connect(self.UpdateBtnClicked)
 
-        if sys.platform.lower() == 'win32':
-            self.firewallbtn.setEnabled(True)
-            self.firewallbtn.clicked.connect(self.OpenFirewall)
-            self.devmanagerbtn.clicked.connect(self.OpenDevManager)
-        else:
-            self.firewallbtn.setEnabled(False)
-
-        self.exitbtn.clicked.connect(self.OpenExitDialog)
+        #########################
+        self.exitbtn.clicked.connect(self.ExitPopUp)
 
         # Menu event
-        # self.actionSave.triggered.connect(self.SaveFile)
-        # self.actionLoad.triggered.connect(self.LoadFile)
-        # self.about_wiz.triggered.connect(self.OpenInfoDialog)
+        self.actionSave.triggered.connect(self.SaveFileDialog)
+        self.actionLoad.triggered.connect(self.LoadFileDialog)
+        self.about_wiz.triggered.connect(self.ProgramInfo)
 
         # State Changed Event 
         self.show_idcode.stateChanged.connect(self.ShowIDcode)
@@ -216,6 +175,38 @@ class WIZWindow(QMainWindow, main_window):
         self.broadcast.clicked.connect(self.SearchMethodEvent)
         self.unicast_ip.clicked.connect(self.SearchMethodEvent)
         self.unicast_mac.clicked.connect(self.SearchMethodEvent)
+    
+    def EnableObject(self):
+        self.SelectDev()
+
+        # 버튼 활성화
+        self.resetbtn.setEnabled(True)
+        self.factorybtn.setEnabled(True)
+        self.fwupbtn.setEnabled(True)
+        self.btnsetting.setEnabled(True)
+        self.savebtn.setEnabled(True)
+        self.loadbtn.setEnabled(True)
+
+        # 창 활성화
+        self.general.setEnabled(True)
+        self.channel_tab.setEnabled(True)
+        self.EnablePW()
+
+        ### 포트 수에 따라 설정 탭 활성화
+        if self.curr_dev in ONE_PORT_DEV:
+            self.channel_tab.setTabEnabled(0, True)
+            self.channel_tab.setTabEnabled(1, False)
+            self.channel_tab.setTabEnabled(2, False)
+            self.channel_tab.setTabEnabled(3, False)
+        elif self.curr_dev in TWO_PORT_DEV:
+            self.channel_tab.setTabEnabled(0, True)
+            self.channel_tab.setTabEnabled(1, True)
+            self.channel_tab.setTabEnabled(2, False)
+            self.channel_tab.setTabEnabled(3, False)
+        
+        # MENU 활성화
+        self.save_config.setEnabled(True)
+        self.load_config.setEnabled(True)
 
     def CheckIPalloc(self):
         if self.ip_dhcp.isChecked() is True:
@@ -346,7 +337,7 @@ class WIZWindow(QMainWindow, main_window):
                 self.isConnected = False
                 print('TCP connection failed!: %s' % self.conf_sock)
                 self.statusbar.showMessage(' TCP connection failed: %s' % ip_addr)
-                self.OpenConnectionFailDialog()
+                self.ConnectionFailPopUp()
             else:
                 self.isConnected = True
 
@@ -368,7 +359,6 @@ class WIZWindow(QMainWindow, main_window):
         self.SocketConfig()
         # print('search: conf_sock: %s' % self.conf_sock)
         
-        ##############################################################
         # Search devices
         if self.isConnected or self.broadcast.isChecked():
             self.statusbar.showMessage(' Searching devices...')
@@ -412,51 +402,13 @@ class WIZWindow(QMainWindow, main_window):
             if self.isConnected and self.unicast_ip.isChecked():
                 self.conf_sock.shutdown()
 
-            # TEST: progress bar
-            # self.statusbar.addPermanentWidget(self.progressbar)
-            # # Remove progress bar
-            # self.progressbar.hide()
 
-    def devclick(self):
+    def DevClicked(self):
         # get information for selected device
-        for currentQTableWidgetItem in self.list_device.selectedItems():
-            # print('Click info:', currentQTableWidgetItem.row(), currentQTableWidgetItem.column(), currentQTableWidgetItem.text())
-            self.getdevinfo(currentQTableWidgetItem.row())
-        
-        # print('Click info:', currentQTableWidgetItem.row(), currentQTableWidgetItem.column(), currentQTableWidgetItem.text(), self.list_device.selectedItems()[0].row())
-
-    def EnableObject(self):
-        self.SelectDev()
-
-        # 버튼 활성화
-        self.resetbtn.setEnabled(True)
-        self.factorybtn.setEnabled(True)
-        self.fwupbtn.setEnabled(True)
-        self.btnsetting.setEnabled(True)
-        self.savebtn.setEnabled(True)
-        self.loadbtn.setEnabled(True)
-        self.bootupbtn.setEnabled(True)
-
-        # 창 활성화
-        self.general.setEnabled(True)
-        self.channel_tab.setEnabled(True)
-        self.EnablePW()
-
-        ### 포트 수에 따라 설정 탭 활성화
-        if self.curr_dev in ONE_PORT_DEV:
-            self.channel_tab.setTabEnabled(0, True)
-            self.channel_tab.setTabEnabled(1, False)
-            self.channel_tab.setTabEnabled(2, False)
-            self.channel_tab.setTabEnabled(3, False)
-        elif self.curr_dev in TWO_PORT_DEV:
-            self.channel_tab.setTabEnabled(0, True)
-            self.channel_tab.setTabEnabled(1, True)
-            self.channel_tab.setTabEnabled(2, False)
-            self.channel_tab.setTabEnabled(3, False)
-        
-        # MENU 활성화
-        self.save_config.setEnabled(True)
-        self.load_config.setEnabled(True)
+        for currentItem in self.list_device.selectedItems():
+            # print('Click info:', currentItem, currentItem.row(), currentItem.column(), currentItem.text(), self.list_device.selectedItems()[0].row())
+            # print('Click info:', currentItem.row(), currentItem.column(), currentItem.text())
+            self.getdevinfo(currentItem.row())
 
     def FillInfo(self, cmdset_list):
         self.SelectDev()
@@ -478,6 +430,8 @@ class WIZWindow(QMainWindow, main_window):
             if b'SM' in cmdset_list[i]: self.subnet.setText(cmdset_list[i][2:].decode())
             if b'GW' in cmdset_list[i]: self.gateway.setText(cmdset_list[i][2:].decode())
             if b'DS' in cmdset_list[i]: self.dns_addr.setText(cmdset_list[i][2:].decode())
+            # TCP transmisstion retry count
+            if b'TR' in cmdset_list[i]: self.tcp_timeout.setText(cmdset_list[i][2:].decode())
             # etc - general
             if b'CP' in cmdset_list[i]: 
                 self.enable_connect_pw.setChecked(int(cmdset_list[i][2:].decode()))
@@ -589,9 +543,6 @@ class WIZWindow(QMainWindow, main_window):
 
         # 선택 장치 정보 출력 
         self.rcv_data = self.all_response
-        # print('totalnum: %d, self.rcv_data[%d] ==> %s' % (len(self.rcv_data), row_index, self.rcv_data[row_index]))
-        if self.set_reponse is not None:
-            print('set_response: %s', self.set_reponse)
         devinfo = self.rcv_data[row_index].splitlines()
         # print('devinfo %d: %s ' % (row_index, devinfo))
         self.FillInfo(devinfo)
@@ -616,22 +567,22 @@ class WIZWindow(QMainWindow, main_window):
         if self.ip_static.isChecked() is True: setcmd['IM'] = '0'
         elif self.ip_dhcp.isChecked() is True: setcmd['IM'] = '1'
         setcmd['DS'] = self.dns_addr.text()
+        setcmd['TR'] = self.tcp_timeout.text()
         # etc - general
         if self.enable_connect_pw.isChecked() is True: 
             setcmd['CP'] = '1'
             setcmd['NP'] = self.connect_pw.text()
         elif self.enable_connect_pw.isChecked() is False: setcmd['CP'] = '0'
-
         # command mode (AT mode)
         if self.at_enable.isChecked() is True: 
             setcmd['TE'] = '1'
             setcmd['SS'] = self.at_hex1.text() + self.at_hex2.text() + self.at_hex3.text()
         elif self.at_enable.isChecked() is False: setcmd['TE'] = '0'
             
-        # 'SP' 추가요망
+        # 'SP' 추가요망 (search id code: max 8 bytes)
+
         if self.serial_debug.isChecked() is True: setcmd['DG'] = '1'
         elif self.serial_debug.isChecked() is False: setcmd['DG'] = '0'
-        
         # Network - channel 1
         if self.ch1_tcpclient.isChecked() is True: setcmd['OP'] = '0'
         elif self.ch1_tcpserver.isChecked() is True: setcmd['OP'] = '1'
@@ -692,71 +643,77 @@ class WIZWindow(QMainWindow, main_window):
         return setcmd
         
     def Setting(self):
-        self.statusbar.showMessage(' Setting device...')
-        setcmd = self.GetObjectValue()
-        # self.SelectDev()
+        self.set_reponse = None
 
-        if self.curr_dev in ONE_PORT_DEV:
-            print('One port dev setting')
-            # Parameter validity check 
-            invalid_flag = 0
-            setcmd_cmd = list(setcmd.keys())
-            for i in range(len(setcmd)):
-                if self.wiz750cmdObj.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
-                    print('Invalid parameter: %s %s' % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
-                    # Invalid dialog
-                    self.OpenDialogInvalid(setcmd.get(setcmd_cmd[i]))
-                    invalid_flag += 1
-        elif self.curr_dev in TWO_PORT_DEV:
-            print('Two port dev setting')
-            # Parameter validity check 
-            invalid_flag = 0
-            setcmd_cmd = list(setcmd.keys())
-            for i in range(len(setcmd)):
-                if self.wiz752cmdObj.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
-                    print('Invalid parameter: %s %s' % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
-                    # Invalid dialog
-                    self.OpenDialogInvalid(setcmd.get(setcmd_cmd[i]))
-                    invalid_flag += 1
-        # print('invalid flag: %d' % invalid_flag)
-        if invalid_flag == 0:
+        if len(self.list_device.selectedItems()) == 0:
+            print('Device is not selected')
+            self.DevNotSelected()
+        else:
+            self.statusbar.showMessage(' Setting device...')
+            setcmd = self.GetObjectValue()
+            # self.SelectDev()
+
             if self.curr_dev in ONE_PORT_DEV:
-                cmd_list = self.wizmakecmd.setcommand(self.curr_mac, list(setcmd.keys()), list(setcmd.values()), 1)
+                print('One port dev setting')
+                # Parameter validity check 
+                invalid_flag = 0
+                setcmd_cmd = list(setcmd.keys())
+                for i in range(len(setcmd)):
+                    if self.wiz750cmdObj.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
+                        print('Invalid parameter: %s %s' % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
+                        self.InvalidPopUp(setcmd.get(setcmd_cmd[i]))
+                        invalid_flag += 1
             elif self.curr_dev in TWO_PORT_DEV:
-                cmd_list = self.wizmakecmd.setcommand(self.curr_mac, list(setcmd.keys()), list(setcmd.values()), 2)
-            # print('set cmdlist: ', cmd_list)
+                print('Two port dev setting')
+                # Parameter validity check 
+                invalid_flag = 0
+                setcmd_cmd = list(setcmd.keys())
+                for i in range(len(setcmd)):
+                    if self.wiz752cmdObj.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
+                        print('Invalid parameter: %s %s' % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
+                        self.InvalidPopUp(setcmd.get(setcmd_cmd[i]))
+                        invalid_flag += 1
+            # print('invalid flag: %d' % invalid_flag)
+            if invalid_flag == 0:
+                if self.curr_dev in ONE_PORT_DEV:
+                    cmd_list = self.wizmakecmd.setcommand(self.curr_mac, list(setcmd.keys()), list(setcmd.values()), 1)
+                elif self.curr_dev in TWO_PORT_DEV:
+                    cmd_list = self.wizmakecmd.setcommand(self.curr_mac, list(setcmd.keys()), list(setcmd.values()), 2)
+                # print('set cmdlist: ', cmd_list)
 
-            # socket config
-            self.SocketConfig() 
+                # socket config
+                self.SocketConfig() 
 
-            wizmsghangler = WIZMSGHandler(self.conf_sock)
-            wizmsghangler.makecommands(cmd_list, OP_SEARCHALL)
-            if self.unicast_ip.isChecked():
-                wizmsghangler.sendcommandsTCP()
-            else:
-                wizmsghangler.sendcommands()
-            wizmsghangler.parseresponse()
-            
-            self.statusbar.showMessage(' Set device complete!')
-            self.OpenDialogSetOK()
+                wizmsghangler = WIZMSGHandler(self.conf_sock)
+                wizmsghangler.makecommands(cmd_list, OP_SEARCHALL)
+                if self.unicast_ip.isChecked():
+                    wizmsghangler.sendcommandsTCP()
+                else:
+                    wizmsghangler.sendcommands()
+                wizmsghangler.parseresponse()
+                
+                self.statusbar.showMessage(' Set device complete!')
 
-            if self.isConnected and self.unicast_ip.isChecked():
-                self.conf_sock.shutdown()
+                # complete pop-up
+                self.SetOKPopUp()
+                
+                if self.isConnected and self.unicast_ip.isChecked():
+                    print('close socket')
+                    self.conf_sock.shutdown()
 
-            # Set -> get info
-            self.set_reponse = wizmsghangler.rcv_list
-            # print('setting response: ', self.set_reponse)
-            self.getSettinginfo(self.list_device.selectedItems()[0].row())
-            # self.Search()
+                # Set -> get info
+                self.set_reponse = wizmsghangler.rcv_list
+                # print('setting response: ', self.list_device.selectedItems()[0].row(), self.set_reponse)
+                self.getSettinginfo(self.list_device.selectedItems()[0].row())
 
     def SelectDev(self):
         # 선택된 장치의 mac addr / name 추출 
-        for currentQTableWidgetItem in self.list_device.selectedItems():
-            if currentQTableWidgetItem.column() == 0:
-                self.curr_mac = currentQTableWidgetItem.text()
+        for currentItem in self.list_device.selectedItems():
+            if currentItem.column() == 0:
+                self.curr_mac = currentItem.text()
                 # print('current mac addr:', self.curr_mac)
-            elif currentQTableWidgetItem.column() == 1:
-                self.curr_dev = currentQTableWidgetItem.text()
+            elif currentItem.column() == 1:
+                self.curr_dev = currentItem.text()
                 # print('current dev name:', self.curr_dev)
             
             self.statusbar.showMessage(' Current device [%s : %s]' % (self.curr_mac, self.curr_dev))
@@ -783,24 +740,33 @@ class WIZWindow(QMainWindow, main_window):
 
         for thread in self.threads:
             thread.join()   # 쓰레드 종료 대기
-
+        
         if t_fwup.checkResult() < 0:
-            self.OpenFWUerrDialog()
+            self.FWUpErrPopUp()
         elif t_fwup.checkResult() > 0:
             self.statusbar.showMessage(' Firmware update complete!')
-            self.OpenFWOKDialog()
+            print('FW Update OK')
+            self.FWUploadOKPopUp()
 
         if self.isConnected and self.unicast_ip.isChecked():
             self.conf_sock.shutdown()
-        
-        self.Search()
+
+        # self.Search()
 
     def FWFileOpen(self):    
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         fileName, _ = QFileDialog.getOpenFileName(self,"Firmware file open", "","Binary Files (*.bin);;All Files (*)", options=options)
+
         if fileName:
+            # get path
+            path = fileName.split('/')
+            dirpath = ''
+            for i in range(len(path) - 1):
+                dirpath += (path[i] + '/')
+            # print('dirpath:', dirpath)
             print(fileName)
+            # FW update 
             self.FWUpdate(fileName)
 
     def NetworkCheck(self):
@@ -809,11 +775,16 @@ class WIZWindow(QMainWindow, main_window):
         
         if ping_reponse != 0:
             self.statusbar.showMessage(' Firmware update error occured.')
-            self.OpenFWUerrDialog()
-            # sys.exit(0)
+            self.FWUpErrPopUp()
         else:
             self.statusbar.showMessage(' Firmware update: Select App boot Firmware file. (.bin)')
             self.FWFileOpen()
+
+    def UpdateBtnClicked(self):
+        if self.unicast_ip.isChecked() and self.isConnected:
+            self.FWFileOpen()
+        else:
+            self.NetworkCheck()
     
     def Reset(self):
         self.statusbar.showMessage(' Reset device?')
@@ -830,7 +801,9 @@ class WIZWindow(QMainWindow, main_window):
             wizmsghangler.sendcommandsTCP()
         else:
             wizmsghangler.sendcommands()
+        # Check the response
         # wizmsghangler.parseresponse()
+        
         self.statusbar.showMessage(' Reset device complete!')
 
         if self.isConnected and self.unicast_ip.isChecked():
@@ -851,90 +824,101 @@ class WIZWindow(QMainWindow, main_window):
             wizmsghangler.sendcommandsTCP()
         else:
             wizmsghangler.sendcommands()
+
+        # Check the response
         # wizmsghangler.parseresponse()
         self.statusbar.showMessage(' Device factory reset complete.')
 
         if self.isConnected and self.unicast_ip.isChecked():
             self.conf_sock.shutdown()
         
-        self.Search()
+        # self.Search()
 
-    ###########################################################
-    ## One button dialog
-    def OpenDialogInvalid(self, param):
-        dialog = OneBtnDialog()
-        dialog.setWindowTitle('Error: Invalid parameter')
-        dialog.label.setText('Invalid values. Please input valid value.\n\t%s' % (param))
-        dialog.okbtn.clicked.connect(dialog.close)
-        dialog.exec_()
+    def UpdateProcess(self, value):
+        progress = QProgressDialog("Firmware update. Please wait...", None, 0, 100, self)
+        progress.setAutoReset(True)
+        progress.setAutoClose(True)
+        progress.setMinimum(0)
+        progress.setMaximum(100)
+        progress.resize(350,100)
+        progress.setWindowTitle("Firmware update processing")
+        progress.show()
+        progress.setValue(0)
 
-    def OpenDialogSetOK(self):
-        dialog = OneBtnDialog()
-        dialog.setWindowTitle('Set devcie OK')
-        dialog.label.setText('Devcie configuration complete!')
-        dialog.okbtn.clicked.connect(dialog.close)
-        dialog.exec_()
+    def ProgramInfo(self):
+        msgbox = QMessageBox(self)
+        msgbox.setTextFormat(Qt.RichText)
+        text = "<div style=text-align:center><font size=5 color=darkblue>About WIZnet-S2E-Tool-GUI</font>" \
+                + "<br><a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI'><font color=black size=4>Github page</font></a>" \
+                + "<br><br><font size=4 color=black>Version " + VERSION \
+                + "<br>WIZnet 1997-2018</font><br>" \
+                + "<br><font size=5 color=black>WIZnet website</font><br>" \
+                + "<a href='http://www.wiznet.io/'><font color=black>WIZnet Official homepage</font></a>"  \
+                + "<br><a href='https://forum.wiznet.io/'><font color=black>WIZnet Forum</font></a>" \
+                + "<br><a href='https://wizwiki.net/'><font color=black>WIZnet Wiki</font></a></div>"
+        msgbox.about(self, "About WIZnet-S2E-Tool-GUI", text)
+
+    def InvalidPopUp(self, params):
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Warning)
+        msgbox.setWindowTitle("Invalid parameter")
+        msgbox.setText("Invalid parameter.\nPlease check the values.")
+        msgbox.setInformativeText(params)
+        msgbox.exec_()
+
+    def DevNotSelected(self):
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Warning)
+        msgbox.setWindowTitle("Warning")
+        msgbox.setText("Device is not selected.")
+        msgbox.exec_()
+
+    def SetOKPopUp(self):
+        msgbox = QMessageBox(self)
+        msgbox.question(self, "Setting success", "Devcie configuration complete!", QMessageBox.Yes)
     
-    def OpenFWUerrDialog(self):
-        dialog = OneBtnDialog()
-        # dialog.resize(450, 110)
-        dialog.setMinimumSize(QSize(440, 110))
-        # dialog.label.resize(400, 40)
-        dialog.label.setMinimumSize(QSize(400, 40))
-        dialog.okbtn.setGeometry(QRect(193, 67, 75, 23))
-        dialog.setWindowTitle('Error: firmware upload')
-        dialog.label.setText('Destination IP is unreachable!\nPlease check if the device is in the same subnet with the PC.')
-        dialog.okbtn.clicked.connect(dialog.close)
-        dialog.exec_()
+    def FWUpErrPopUp(self):
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Warning)
+        msgbox.setWindowTitle("Warning: Firmware upload")
+        msgbox.setText("Destination IP is unreachable.\nPlease check if the device is in the same subnet with the PC.")
+        msgbox.exec_()
 
-    def OpenFWOKDialog(self):
-        dialog = OneBtnDialog()
-        dialog.setWindowTitle('Firmware upload success')
-        dialog.label.setText('Firmware update complete!')
-        dialog.okbtn.clicked.connect(dialog.close)
-        dialog.exec_()
+    def FWUploadOKPopUp(self):
+        msgbox = QMessageBox(self)
+        msgbox.question(self, "Firmware upload success", "Firmware update complete!", QMessageBox.Yes)
     
-    def OpenConnectionFailDialog(self):
-        dialog = OneBtnDialog()
-        dialog.setWindowTitle('Error: Connection failed')
-        dialog.label.setText('Network connection failed.\nConnection is refused.')
-        dialog.okbtn.clicked.connect(dialog.close)
-        dialog.exec_()
+    def ConnectionFailPopUp(self):
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Critical)
+        msgbox.setWindowTitle("Error: Connection failed")
+        msgbox.setText("Network connection failed.\nConnection is refused.")
+        msgbox.exec_()
 
-    ###########################################################
-    ## Two button dialog
-    def OpenResetDialog(self):
-        dialog = ResetDialog()
-        # Reset btn => reset
-        dialog.okbtn.clicked.connect(self.Reset)
-        dialog.okbtn.clicked.connect(dialog.close)
-        dialog.cancelbtn.clicked.connect(dialog.close)
-        dialog.exec_()
+    def ResetPopUp(self):
+        msgbox = QMessageBox(self)
+        btnReply = msgbox.question(self, "Reset", "Do you really want to reset the device?", QMessageBox.Yes | QMessageBox.No)
+        if btnReply == QMessageBox.Yes:
+            self.Reset()
 
-    def OpenFactoryDialog(self):
-        dialog = FactoryDialog()
-        # Factory btn => factory reset
-        dialog.okbtn.clicked.connect(self.Factory)
+    def FactoryPopUp(self):
+        msgbox = QMessageBox(self)
+        btnReply = msgbox.question(self, "Factory Reset", "Do you really want to factory reset the selected device?\nAll settings will get the factory default values.", QMessageBox.Yes | QMessageBox.No)
+        if btnReply == QMessageBox.Yes:
+            self.Factory()
 
-        dialog.okbtn.clicked.connect(dialog.close)
-        dialog.cancelbtn.clicked.connect(dialog.close)
-        dialog.exec_()
+    def ExitPopUp(self):
+        msgbox = QMessageBox(self)
+        btnReply = msgbox.question(self, "Exit", "Do you really close this program?", QMessageBox.Yes | QMessageBox.No)
+        if btnReply == QMessageBox.Yes:
+            self.close()
 
-    def OpenExitDialog(self):
-        dialog = ExitDialog()
-        # Reset btn => reset
-        dialog.okbtn.clicked.connect(lambda: self.close())
-
-        dialog.okbtn.clicked.connect(dialog.close)
-        dialog.cancelbtn.clicked.connect(dialog.close)
-        dialog.exec_()
-
-    ########################## MENU
-    def SaveFile(self):
+    ########################## for MENU
+    def SaveFileDialog(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        # fileName, _ = QFileDialog.getSaveFileName(self,"Configuration Save","","Config File (.cfg);;All Files (*);;Text Files (*.txt)", options=options)
-        fileName, _ = QFileDialog.getSaveFileName(self,"Configuration Save","","All Files (*);;Text Files (*.txt)", options=options)
+
+        fileName, _ = QFileDialog.getSaveFileName(self,"Configuration Save","WIZCONF.cfg","Config File (.cfg);;All Files (*);;Text Files (*.txt)", options=options)
         if fileName:
             print(fileName)
             self.SaveConfig(fileName)
@@ -950,10 +934,12 @@ class WIZWindow(QMainWindow, main_window):
             f.write(cmdset)
         f.close()
 
-    def LoadFile(self):    
+        self.statusbar.showMessage(' Configuration is saved to \'%s\'.' % filename)
+
+    def LoadFileDialog(self):    
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self,"Configuration Load", "","All Files (*);;Text Files (*.txt);;ini Files (*.ini)", options=options)
+        fileName, _ = QFileDialog.getOpenFileName(self,"Configuration Load", "WIZCONF.cfg","Config File (.cfg);;All Files (*);;Text Files (*.txt)", options=options)
         if fileName:
             print(fileName)
             self.LoadConfig(fileName)
@@ -968,14 +954,6 @@ class WIZWindow(QMainWindow, main_window):
                 cmd_list.append(line.encode())
         # print('LoadConfig: cmdlist', cmd_list)
         self.FillInfo(cmd_list)
-
-    def OpenFirewall(self):
-        cmd = 'rundll32.exe shell32.dll, Control_RunDLL FireWall.cpl'
-        os.system(cmd)
-    
-    def OpenDevManager(self):
-        cmd = 'rundll32.exe devmgr.dll DeviceManager_Execute'
-        os.system(cmd)
             
 if __name__=='__main__':
     app = QApplication(sys.argv)

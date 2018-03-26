@@ -32,6 +32,10 @@ class WIZ752CMDSET:
 							 			"^[0-3]$",
 							 			{"0": "TCP Client mode", "1" : "TCP Server mode", "2" : "TCP Mixed mode", "3" : "UDP mode"},
 							 			"RW"],
+							# # WIZ750SR: F/W 1.2.0 verison or later
+							#  "TR" : ["TCP Retransmission Retry count",
+							#  			"^([1-9] | [1-9][1-9] | 1[0-9][0-9] | 2[0-5][0-5])$", 
+							#  			{}, "RW"], 
 							 "IM" : ["IP address Allocation Mode",
 							 			"^[0-1]$", 
 							 			{"0" : "Static IP", "1" : "DHCP"},
