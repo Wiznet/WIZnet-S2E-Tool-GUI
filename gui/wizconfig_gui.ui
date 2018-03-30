@@ -970,7 +970,7 @@ Interval</string>
       <widget class="QLabel" name="label_140">
        <property name="geometry">
         <rect>
-         <x>13</x>
+         <x>10</x>
          <y>23</y>
          <width>65</width>
          <height>22</height>
@@ -1000,7 +1000,7 @@ Interval</string>
       <widget class="QLabel" name="label_141">
        <property name="geometry">
         <rect>
-         <x>13</x>
+         <x>10</x>
          <y>48</y>
          <width>80</width>
          <height>22</height>
@@ -1030,7 +1030,7 @@ Interval</string>
       <widget class="QLineEdit" name="ch1_remoteport">
        <property name="geometry">
         <rect>
-         <x>100</x>
+         <x>84</x>
          <y>48</y>
          <width>80</width>
          <height>22</height>
@@ -4593,7 +4593,7 @@ Retry count</string>
     </property>
     <property name="font">
      <font>
-      <family>D2Coding</family>
+      <family>맑은 고딕</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -4639,7 +4639,7 @@ Config</string>
     </property>
     <property name="font">
      <font>
-      <family>D2Coding</family>
+      <family>맑은 고딕</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -4705,7 +4705,7 @@ Config</string>
     </property>
     <property name="font">
      <font>
-      <family>D2Coding</family>
+      <family>맑은 고딕</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -4767,7 +4767,7 @@ Config</string>
     </property>
     <property name="font">
      <font>
-      <family>D2Coding</family>
+      <family>맑은 고딕</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -4834,7 +4834,7 @@ Config</string>
     </property>
     <property name="font">
      <font>
-      <family>D2Coding</family>
+      <family>맑은 고딕</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -4883,7 +4883,7 @@ Config</string>
     </property>
     <property name="font">
      <font>
-      <family>D2Coding</family>
+      <family>맑은 고딕</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -4932,7 +4932,7 @@ Config</string>
     </property>
     <property name="font">
      <font>
-      <family>D2Coding</family>
+      <family>맑은 고딕</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -4993,7 +4993,7 @@ Config</string>
     </property>
     <property name="font">
      <font>
-      <family>D2Coding</family>
+      <family>맑은 고딕</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>

@@ -36,7 +36,7 @@ SOCK_CONNECT_STATE = 5
 ONE_PORT_DEV = ['WIZ750SR', 'WIZ750SR-100', 'WIZ750SR-105', 'WIZ750SR-110', 'WIZ107SR', 'WIZ108SR']
 TWO_PORT_DEV = ['WIZ752SR-12x', 'WIZ752SR-120','WIZ752SR-125']
 
-VERSION = '0.2.4 Beta'
+VERSION = '0.2.5 Beta'
 
 def resource_path(relative_path):
 # Get absolute path to resource, works for dev and for PyInstaller
@@ -175,7 +175,7 @@ class WIZWindow(QMainWindow, main_window):
         self.broadcast.clicked.connect(self.SearchMethodEvent)
         self.unicast_ip.clicked.connect(self.SearchMethodEvent)
         self.unicast_mac.clicked.connect(self.SearchMethodEvent)
-    
+
     def EnableObject(self):
         self.SelectDev()
 
@@ -207,6 +207,11 @@ class WIZWindow(QMainWindow, main_window):
         # MENU 활성화
         self.save_config.setEnabled(True)
         self.load_config.setEnabled(True)
+
+        self.CheckIPalloc()
+        self.EnableATmode()
+        self.EnablePW()
+        self.OPmodeEvent()
 
     def CheckIPalloc(self):
         if self.ip_dhcp.isChecked() is True:
@@ -742,7 +747,8 @@ class WIZWindow(QMainWindow, main_window):
             thread.join()   # 쓰레드 종료 대기
         
         if t_fwup.checkResult() < 0:
-            self.FWUpErrPopUp()
+            # self.FWUpErrPopUp()
+            self.FWUpFailPopUp()
         elif t_fwup.checkResult() > 0:
             self.statusbar.showMessage(' Firmware update complete!')
             print('FW Update OK')
@@ -775,7 +781,7 @@ class WIZWindow(QMainWindow, main_window):
         
         if ping_reponse != 0:
             self.statusbar.showMessage(' Firmware update error occured.')
-            self.FWUpErrPopUp()
+            self.FWUpErrPopUp(serverip)
         else:
             self.statusbar.showMessage(' Firmware update: Select App boot Firmware file. (.bin)')
             self.FWFileOpen()
@@ -849,13 +855,13 @@ class WIZWindow(QMainWindow, main_window):
         msgbox = QMessageBox(self)
         msgbox.setTextFormat(Qt.RichText)
         text = "<div style=text-align:center><font size=5 color=darkblue>About WIZnet-S2E-Tool-GUI</font>" \
-                + "<br><a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI'><font color=black size=4>Github page</font></a>" \
+                + "<br><a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI'><font color=darkblue size=4>* Github repository</font></a>" \
                 + "<br><br><font size=4 color=black>Version " + VERSION \
-                + "<br>WIZnet 1997-2018</font><br>" \
-                + "<br><font size=5 color=black>WIZnet website</font><br>" \
+                + "<br><br><font size=5 color=black>WIZnet website</font><br>" \
                 + "<a href='http://www.wiznet.io/'><font color=black>WIZnet Official homepage</font></a>"  \
                 + "<br><a href='https://forum.wiznet.io/'><font color=black>WIZnet Forum</font></a>" \
-                + "<br><a href='https://wizwiki.net/'><font color=black>WIZnet Wiki</font></a></div>"
+                + "<br><a href='https://wizwiki.net/'><font color=black>WIZnet Wiki</font></a>" \
+                + "<br><br>2018 WIZnet Co.</font><br></div>" 
         msgbox.about(self, "About WIZnet-S2E-Tool-GUI", text)
 
     def InvalidPopUp(self, params):
@@ -877,11 +883,19 @@ class WIZWindow(QMainWindow, main_window):
         msgbox = QMessageBox(self)
         msgbox.question(self, "Setting success", "Devcie configuration complete!", QMessageBox.Yes)
     
-    def FWUpErrPopUp(self):
+    def FWUpErrPopUp(self, dst_ip):
+    # def FWUpErrPopUp(self):
         msgbox = QMessageBox(self)
         msgbox.setIcon(QMessageBox.Warning)
         msgbox.setWindowTitle("Warning: Firmware upload")
-        msgbox.setText("Destination IP is unreachable.\nPlease check if the device is in the same subnet with the PC.")
+        msgbox.setText("Destination IP is unreachable: %s\nPlease check if the device is in the same subnet with the PC." % dst_ip)
+        msgbox.exec_()
+
+    def FWUpFailPopUp(self):
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Critical)
+        msgbox.setWindowTitle("Error: Firmware upload")
+        msgbox.setText("Firmware update failed.\nPlease check the device's status.")
         msgbox.exec_()
 
     def FWUploadOKPopUp(self):
