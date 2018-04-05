@@ -28,6 +28,70 @@
     <height>720</height>
    </size>
   </property>
+  <property name="palette">
+   <palette>
+    <active>
+     <colorrole role="Base">
+      <brush brushstyle="SolidPattern">
+       <color alpha="255">
+        <red>255</red>
+        <green>255</green>
+        <blue>255</blue>
+       </color>
+      </brush>
+     </colorrole>
+     <colorrole role="Window">
+      <brush brushstyle="SolidPattern">
+       <color alpha="255">
+        <red>245</red>
+        <green>245</green>
+        <blue>245</blue>
+       </color>
+      </brush>
+     </colorrole>
+    </active>
+    <inactive>
+     <colorrole role="Base">
+      <brush brushstyle="SolidPattern">
+       <color alpha="255">
+        <red>255</red>
+        <green>255</green>
+        <blue>255</blue>
+       </color>
+      </brush>
+     </colorrole>
+     <colorrole role="Window">
+      <brush brushstyle="SolidPattern">
+       <color alpha="255">
+        <red>245</red>
+        <green>245</green>
+        <blue>245</blue>
+       </color>
+      </brush>
+     </colorrole>
+    </inactive>
+    <disabled>
+     <colorrole role="Base">
+      <brush brushstyle="SolidPattern">
+       <color alpha="255">
+        <red>245</red>
+        <green>245</green>
+        <blue>245</blue>
+       </color>
+      </brush>
+     </colorrole>
+     <colorrole role="Window">
+      <brush brushstyle="SolidPattern">
+       <color alpha="255">
+        <red>245</red>
+        <green>245</green>
+        <blue>245</blue>
+       </color>
+      </brush>
+     </colorrole>
+    </disabled>
+   </palette>
+  </property>
   <property name="font">
    <font>
     <family>맑은 고딕</family>
@@ -84,7 +148,7 @@
     </property>
     <widget class="QWidget" name="tab_ch1">
      <attribute name="title">
-      <string>Serial Channel #1</string>
+      <string>Channel #1</string>
      </attribute>
      <widget class="QGroupBox" name="ch1_packing">
       <property name="geometry">
@@ -155,6 +219,9 @@
        </property>
        <property name="text">
         <string>00</string>
+       </property>
+       <property name="maxLength">
+        <number>5</number>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -251,6 +318,9 @@
        </property>
        <property name="text">
         <string>0</string>
+       </property>
+       <property name="maxLength">
+        <number>5</number>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -766,6 +836,9 @@
        <property name="text">
         <string>00</string>
        </property>
+       <property name="maxLength">
+        <number>5</number>
+       </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
        </property>
@@ -836,6 +909,9 @@ Interval</string>
        </property>
        <property name="text">
         <string>0</string>
+       </property>
+       <property name="maxLength">
+        <number>5</number>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -970,7 +1046,7 @@ Interval</string>
       <widget class="QLabel" name="label_140">
        <property name="geometry">
         <rect>
-         <x>10</x>
+         <x>13</x>
          <y>23</y>
          <width>65</width>
          <height>22</height>
@@ -1000,7 +1076,7 @@ Interval</string>
       <widget class="QLabel" name="label_141">
        <property name="geometry">
         <rect>
-         <x>10</x>
+         <x>13</x>
          <y>48</y>
          <width>80</width>
          <height>22</height>
@@ -1030,7 +1106,7 @@ Interval</string>
       <widget class="QLineEdit" name="ch1_remoteport">
        <property name="geometry">
         <rect>
-         <x>84</x>
+         <x>100</x>
          <y>48</y>
          <width>80</width>
          <height>22</height>
@@ -1760,7 +1836,7 @@ Interval</string>
     </widget>
     <widget class="QWidget" name="tab_ch2">
      <attribute name="title">
-      <string>Serial Channel #2</string>
+      <string>Channel #2</string>
      </attribute>
      <widget class="QGroupBox" name="ch2_opmode">
       <property name="geometry">
@@ -3264,12 +3340,12 @@ Interval</string>
     </widget>
     <widget class="QWidget" name="tab_ch3">
      <attribute name="title">
-      <string>Serial Channel #3</string>
+      <string>Channel #3</string>
      </attribute>
     </widget>
     <widget class="QWidget" name="tab_ch4">
      <attribute name="title">
-      <string>Serial Channel #4</string>
+      <string>Channel #4</string>
      </attribute>
     </widget>
    </widget>
@@ -3728,43 +3804,6 @@ Interval</string>
      </property>
     </column>
    </widget>
-   <widget class="QProgressBar" name="progressbar">
-    <property name="enabled">
-     <bool>true</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>410</y>
-      <width>200</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="minimumSize">
-     <size>
-      <width>200</width>
-      <height>20</height>
-     </size>
-    </property>
-    <property name="maximumSize">
-     <size>
-      <width>200</width>
-      <height>20</height>
-     </size>
-    </property>
-    <property name="value">
-     <number>0</number>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignCenter</set>
-    </property>
-    <property name="textVisible">
-     <bool>true</bool>
-    </property>
-    <property name="invertedAppearance">
-     <bool>false</bool>
-    </property>
-   </widget>
    <widget class="QGroupBox" name="general">
     <property name="enabled">
      <bool>false</bool>
@@ -3791,7 +3830,7 @@ Interval</string>
        <x>11</x>
        <y>72</y>
        <width>231</width>
-       <height>165</height>
+       <height>171</height>
       </rect>
      </property>
      <property name="font">
@@ -3868,7 +3907,7 @@ Interval</string>
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>91</y>
+        <y>95</y>
         <width>211</width>
         <height>30</height>
        </rect>
@@ -3924,7 +3963,7 @@ Interval</string>
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>59</y>
+        <y>61</y>
         <width>211</width>
         <height>30</height>
        </rect>
@@ -3989,7 +4028,7 @@ Interval</string>
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>123</y>
+        <y>129</y>
         <width>211</width>
         <height>30</height>
        </rect>
@@ -4046,7 +4085,7 @@ Interval</string>
      <property name="geometry">
       <rect>
        <x>250</x>
-       <y>127</y>
+       <y>138</y>
        <width>381</width>
        <height>51</height>
       </rect>
@@ -4128,6 +4167,9 @@ Interval</string>
       <property name="text">
        <string/>
       </property>
+      <property name="maxLength">
+       <number>8</number>
+      </property>
       <property name="echoMode">
        <enum>QLineEdit::Password</enum>
       </property>
@@ -4161,7 +4203,7 @@ Interval</string>
      <property name="geometry">
       <rect>
        <x>250</x>
-       <y>187</y>
+       <y>192</y>
        <width>381</width>
        <height>51</height>
       </rect>
@@ -4373,7 +4415,7 @@ Interval</string>
      <property name="geometry">
       <rect>
        <x>250</x>
-       <y>72</y>
+       <y>84</y>
        <width>180</width>
        <height>51</height>
       </rect>
@@ -4441,10 +4483,10 @@ Interval</string>
     <widget class="QGroupBox" name="group_opmode_3">
      <property name="geometry">
       <rect>
-       <x>250</x>
+       <x>489</x>
        <y>18</y>
-       <width>180</width>
-       <height>51</height>
+       <width>141</width>
+       <height>60</height>
       </rect>
      </property>
      <property name="font">
@@ -4458,8 +4500,8 @@ Interval</string>
      <widget class="QCheckBox" name="serial_debug">
       <property name="geometry">
        <rect>
-        <x>60</x>
-        <y>21</y>
+        <x>37</x>
+        <y>26</y>
         <width>71</width>
         <height>16</height>
        </rect>
@@ -4481,7 +4523,7 @@ Interval</string>
      <property name="geometry">
       <rect>
        <x>440</x>
-       <y>72</y>
+       <y>84</y>
        <width>191</width>
        <height>51</height>
       </rect>
@@ -4561,9 +4603,170 @@ Retry count</string>
       <property name="text">
        <string/>
       </property>
+      <property name="maxLength">
+       <number>3</number>
+      </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>
       </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="group_opmode_4">
+     <property name="geometry">
+      <rect>
+       <x>250</x>
+       <y>17</y>
+       <width>231</width>
+       <height>63</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>맑은 고딕</family>
+      </font>
+     </property>
+     <property name="title">
+      <string>Status pin</string>
+     </property>
+     <widget class="Line" name="line_2">
+      <property name="geometry">
+       <rect>
+        <x>89</x>
+        <y>7</y>
+        <width>20</width>
+        <height>58</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>11</pointsize>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <property name="midLineWidth">
+       <number>0</number>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </widget>
+     <widget class="QWidget" name="layoutWidget">
+      <property name="geometry">
+       <rect>
+        <x>19</x>
+        <y>18</y>
+        <width>71</width>
+        <height>43</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <property name="spacing">
+        <number>1</number>
+       </property>
+       <property name="sizeConstraint">
+        <enum>QLayout::SetMinimumSize</enum>
+       </property>
+       <item>
+        <widget class="QRadioButton" name="status_phy">
+         <property name="minimumSize">
+          <size>
+           <width>60</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+          </font>
+         </property>
+         <property name="text">
+          <string>PHY link</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="status_dtr">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+          </font>
+         </property>
+         <property name="text">
+          <string>DTR</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="layoutWidget">
+      <property name="geometry">
+       <rect>
+        <x>111</x>
+        <y>18</y>
+        <width>110</width>
+        <height>42</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <property name="spacing">
+        <number>1</number>
+       </property>
+       <property name="sizeConstraint">
+        <enum>QLayout::SetMinimumSize</enum>
+       </property>
+       <item>
+        <widget class="QRadioButton" name="status_tcpst">
+         <property name="minimumSize">
+          <size>
+           <width>60</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+          </font>
+         </property>
+         <property name="text">
+          <string>TCP connection</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="status_dsr">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <family>맑은 고딕</family>
+          </font>
+         </property>
+         <property name="text">
+          <string>DSR</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </widget>
    </widget>
@@ -4593,7 +4796,7 @@ Retry count</string>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕</family>
+      <family>D2Coding</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -4639,7 +4842,7 @@ Config</string>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕</family>
+      <family>D2Coding</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -4705,7 +4908,7 @@ Config</string>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕</family>
+      <family>D2Coding</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -4767,7 +4970,7 @@ Config</string>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕</family>
+      <family>D2Coding</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -4834,7 +5037,7 @@ Config</string>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕</family>
+      <family>D2Coding</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -4883,7 +5086,7 @@ Config</string>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕</family>
+      <family>D2Coding</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -4932,7 +5135,7 @@ Config</string>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕</family>
+      <family>D2Coding</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -4993,7 +5196,7 @@ Config</string>
     </property>
     <property name="font">
      <font>
-      <family>맑은 고딕</family>
+      <family>D2Coding</family>
       <pointsize>11</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -5458,58 +5661,12 @@ Config</string>
      <enum>Qt::Horizontal</enum>
     </property>
    </widget>
-   <widget class="QPushButton" name="bootupbtn">
-    <property name="enabled">
-     <bool>true</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>110</x>
-      <y>440</y>
-      <width>107</width>
-      <height>52</height>
-     </rect>
-    </property>
-    <property name="minimumSize">
-     <size>
-      <width>107</width>
-      <height>52</height>
-     </size>
-    </property>
-    <property name="maximumSize">
-     <size>
-      <width>100</width>
-      <height>52</height>
-     </size>
-    </property>
-    <property name="font">
-     <font>
-      <family>맑은 고딕 Semilight</family>
-      <pointsize>10</pointsize>
-      <weight>75</weight>
-      <bold>true</bold>
-     </font>
-    </property>
-    <property name="toolTip">
-     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Firmware upload&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-    </property>
-    <property name="text">
-     <string>BootUpload</string>
-    </property>
-    <property name="iconSize">
-     <size>
-      <width>40</width>
-      <height>40</height>
-     </size>
-    </property>
-   </widget>
-   <zorder>bootupbtn</zorder>
+   <zorder>list_device</zorder>
    <zorder>btnsearch</zorder>
    <zorder>fwupbtn</zorder>
    <zorder>btnsetting</zorder>
    <zorder>resetbtn</zorder>
    <zorder>factorybtn</zorder>
-   <zorder>progressbar</zorder>
    <zorder>channel_tab</zorder>
    <zorder>group_searchmethod</zorder>
    <zorder>general</zorder>
@@ -5519,7 +5676,6 @@ Config</string>
    <zorder>exitbtn</zorder>
    <zorder>line_3</zorder>
    <zorder>line_4</zorder>
-   <zorder>list_device</zorder>
   </widget>
   <widget class="QStatusBar" name="statusbar">
    <property name="minimumSize">
@@ -5611,26 +5767,16 @@ Config</string>
    </widget>
    <widget class="QMenu" name="menuOption">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="title">
      <string>Setup</string>
     </property>
-    <widget class="QMenu" name="menuConfiguration">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
-     <property name="title">
-      <string>Target Device</string>
-     </property>
-     <addaction name="menu_"/>
-     <addaction name="actionAll_devices"/>
-    </widget>
-    <addaction name="actionSet_Option"/>
-    <addaction name="actionSingle_Device"/>
-    <addaction name="actionAll_devices_2"/>
     <addaction name="separator"/>
-    <addaction name="menuConfiguration"/>
+    <addaction name="actionSaveconfig"/>
+    <addaction name="actionLoadconfig"/>
+    <addaction name="separator"/>
+    <addaction name="actionOption"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="enabled">
@@ -5758,7 +5904,7 @@ Config</string>
   </action>
   <action name="actionSet_Option">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Set Option</string>
@@ -5794,6 +5940,21 @@ Config</string>
   <action name="actionLoad">
    <property name="text">
     <string>Load</string>
+   </property>
+  </action>
+  <action name="actionSaveconfig">
+   <property name="text">
+    <string>Save Config</string>
+   </property>
+  </action>
+  <action name="actionLoadconfig">
+   <property name="text">
+    <string>Load Config</string>
+   </property>
+  </action>
+  <action name="actionOption">
+   <property name="text">
+    <string>Option</string>
    </property>
   </action>
  </widget>

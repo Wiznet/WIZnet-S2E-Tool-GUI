@@ -14,6 +14,7 @@ import binascii
 from WIZMSGHandler import WIZMSGHandler
 from WIZUDPSock import WIZUDPSock
 from wizsocket.TCPClient import TCPClient
+from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
 
 OP_SEARCHALL = 1
 OP_SETIP = 2
@@ -31,11 +32,11 @@ SOCK_CONNECT_STATE = 5
 idle_state = 1
 datasent_state = 2
 
-class FWUploadThread(threading.Thread):
-    # initialization
+class FWUploadThread(QThread):
+    uploading_size = pyqtSignal(int)
+
     def __init__(self, conf_sock):
-    # def __init__(self):
-        threading.Thread.__init__(self)
+        QThread.__init__(self)
 
         self.dest_mac = None
         self.bin_filename = None
@@ -48,7 +49,6 @@ class FWUploadThread(threading.Thread):
         self.serverport = None
 
         self.sentbyte = 0
-
         self.resultflag = 0
 
         # UDP
@@ -85,6 +85,9 @@ class FWUploadThread(threading.Thread):
             self.wizmsghangler.sendcommandsTCP()
         elif 'UDP' in self.sockinfo:
             self.wizmsghangler.sendcommands()
+        self.uploading_size.emit(1)
+
+        self.msleep(1500)
 
     # def run(self):
     def sendCmd(self, command):
@@ -104,12 +107,16 @@ class FWUploadThread(threading.Thread):
                 self.wizmsghangler.sendcommandsTCP()
             elif 'UDP' in self.sockinfo:
                 self.wizmsghangler.sendcommands()
-            self.resp = self.wizmsghangler.parseresponse()
+            # self.resp = self.wizmsghangler.parseresponse()
+            self.resp = self.wizmsghangler.run()
             if self.resp is not '':
                 break
-            time.sleep(2)
+            self.msleep(1500)
 
-    def run(self):
+        self.uploading_size.emit(2)
+
+    # def run(self):
+    def update(self):
         self.resultflag = 0
 
         if self.resp is not '':
@@ -120,11 +127,11 @@ class FWUploadThread(threading.Thread):
             self.serverip = params[0]
             self.serverport = int(params[1])
 
+            self.uploading_size.emit(3)
         else:
             print('No response from device. Check the network or device status.')
             self.resultflag = -1
-            sys.exit(0)
-
+            self.terminate()
         try:
             self.client = TCPClient(2, params[0], int(params[1]))
         except:
@@ -150,13 +157,13 @@ class FWUploadThread(threading.Thread):
                         if self.client.state is SOCK_OPEN_STATE:
                             sys.stdout.write('[%r] is OPEN\r\n' % (self.serverip))
                             # sys.stdout.write('[%r] client.working_state is %r\r\n' % (self.serverip, self.client.working_state))
-                            time.sleep(0.5)
+                            self.msleep(500)
                     except Exception as e:
                         sys.stdout.write('%r\r\n' % e)
 
                 elif self.client.state is SOCK_OPEN_STATE:
+                    self.uploading_size.emit(4)
                     cur_state = self.client.state
-                    # time.sleep(2)
                     try:
                         self.client.connect()
                         # sys.stdout.write('2 : %r' % self.client.getsockstate())
@@ -171,6 +178,7 @@ class FWUploadThread(threading.Thread):
                     # if self.client.working_state == idle_state:
                         # sys.stdout.write('3 : %r' % self.client.getsockstate())
                     try:
+                        self.uploading_size.emit(5)
                         while self.remainbytes is not 0:
                             if self.client.working_state == idle_state:
                                 if self.remainbytes >= 1024:
@@ -183,6 +191,7 @@ class FWUploadThread(threading.Thread):
                                     self.curr_ptr += 1024
                                     self.remainbytes -= 1024
                                 else :
+                                    self.uploading_size.emit(6)
                                     msg = bytearray(self.remainbytes)
                                     msg[:] = self.data[self.curr_ptr:self.curr_ptr+self.remainbytes]
                                     self.client.write(msg)
@@ -196,7 +205,9 @@ class FWUploadThread(threading.Thread):
 
                                 self.timer1 = threading.Timer(2.0, self.myTimer)
                                 self.timer1.start()
+
                             elif self.client.working_state == datasent_state:
+                                
                                 # sys.stdout.write('4 : %r' % self.client.getsockstate())
                                 response = self.client.readbytes(2)
                                 if response is not None:
@@ -207,14 +218,16 @@ class FWUploadThread(threading.Thread):
                                     else:
                                         print('ERROR: No response from device. Stop FW upload...')
                                         self.client.close()
-                                        sys.exit(0)
+                                        self.resultflag = -1
 
                                 if self.istimeout is 1:
                                     self.istimeout = 0
                                     self.client.working_state = idle_state
                                     self.client.close()
                                     self.resultflag = -1
-                                    sys.exit(0)
+                                    self.terminate()
+                            
+                            self.uploading_size.emit(7)
 
                     except Exception as e:
                         sys.stdout.write('%r\r\n' % e)
@@ -228,41 +241,10 @@ class FWUploadThread(threading.Thread):
             else:
                 sys.stdout.write('Device [%s] firmware upload success!\r\n' % (self.dest_mac))
                 self.resultflag = 1
-            # send FIN packet 
-            time.sleep(2.5)
-            self.client.shutdown()
+                # send FIN packet 
+                self.msleep(1000)
+                self.client.shutdown()
         except (KeyboardInterrupt, SystemExit):
             sys.stdout.write('%r\r\n' % e)
         finally:
             pass
-
-if __name__=='__main__':
-
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "hm:b:")
-    except getopt.GetoptError:
-        sys.stdout.write('Invalid syntax. Refer to below\r\n')
-        sys.stdout.write('FWUpload.py -m <WIZ750SR mac address> -b <binary filename>\r\n)')
-        sys.exit(0)
-
-    for opt, arg in opts:
-        if opt == '-h':
-            sys.stdout.write('Valid syntax\r\n')
-            sys.stdout.write('FWUpload.py -m <WIZ750SR mac address, format - xx:xx:xx:xx:xx:xx> -b <binary filename>\r\n')
-            sys.stdout.write('  -m <WIZ750SR mac address>\r\n')
-            sys.stdout.write('      mac address format is \"xx:xx:xx:xx:xx:xx\"\r\n')
-            sys.stdout.write('  -b <binary filename>\r\n')
-            sys.stdout.write('      binary filename is starting \"\\" and contains the whole path\r\n')
-            sys.exit(0)
-        elif opt in ("-m"):
-            dst_mac = arg
-            sys.stdout.write('Destination Mac: %r\r\n' % dst_mac)
-        elif opt in ("-b"):
-            bin_filename = arg
-            sys.stdout.write('Filename to upload: %r\r\n' % bin_filename)
-
-    FUObj = FWUpload(logging.DEBUG)
-    # FUObj.setparam("00:08:dc:52:db:0b", "/home/javakys/localrepositories/WIZ750SR/Projects/S2E_App/bin/W7500x_S2E_App.bin")
-    # FUObj.setparam("00:08:dc:1d:6a:4a", "/home/javakys/Downloads/W7500x_S2E_App.bin")
-    FUObj.setparam(dst_mac, bin_filename)
-    FUObj.run()
