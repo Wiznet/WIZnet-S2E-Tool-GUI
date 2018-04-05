@@ -4,7 +4,7 @@
 import socket
 import time
 import threading
-from threading import *
+# from threading import *
 import struct
 import binascii
 import select
@@ -13,6 +13,8 @@ import codecs
 from WIZ750CMDSET import WIZ750CMDSET 
 from WIZ752CMDSET import WIZ752CMDSET 
 from wizsocket.TCPClient import TCPClient
+
+from PyQt5.QtCore import QTimer, QThread
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -32,8 +34,10 @@ def timeout_func():
     global exitflag
     exitflag = 1
 
-class WIZMSGHandler:
+class WIZMSGHandler(QThread):
     def __init__(self, udpsock):
+        QThread.__init__(self)
+
         self.sock = udpsock
         self.msg = bytearray(1024)
         self.size = 0
@@ -142,32 +146,22 @@ class WIZMSGHandler:
     def sendcommandsTCP(self):
         self.sock.write(self.msg)
     
-    def parseresponse(self):
-        readready, writeready, errorready = select.select(self.inputs, self.outputs, self.errors, 1)
-        
-        self.timer1 = Timer(2.0, self.timeout_func)
-        self.timer1.start()
-        
-        # t = Timer(3.0, timeout_func)
-        # t.start()
-        
+    # def parseresponse(self):
+    def run(self):
+        readready, writeready, errorready = select.select(self.inputs, self.outputs, self.errors, 3)
+
         replylists = None
         self.getreply = []
         self.mac_list = []
         self.rcv_list = []
 
+        # print('readready 1: ', len(readready), readready)
+
         while True:
+            # readready, writeready, errorready = select.select(self.inputs, self.outputs, self.errors, 1)
+            
             self.iter += 1
-            # sys.stdout.write("iter count: %r" % self.iter)
-
-            if self.istimeout is True:
-                self.timer1.cancel()
-                self.istimeout = False
-                break
-
-            # if(exitflag) :
-            #     t.cancel()
-            #     # exitflag = 0
+            # sys.stdout.write("iter count: %r " % self.iter)
             
             for sock in readready:
                 if sock == self.sock.sock :
@@ -175,6 +169,7 @@ class WIZMSGHandler:
                     self.rcv_list.append(data)      ## 수신 데이터 저장 
                     replylists = data.splitlines()
                     # print('replylists', replylists)
+
                     self.getreply = replylists
 
                     if self.opcode is OP_SEARCHALL:
@@ -207,9 +202,17 @@ class WIZMSGHandler:
                                 
                             # sys.stdout.write("%r\r\n" % replylists[i])
 
-                    readready, writeready, errorready = select.select(self.inputs, self.outputs, self.errors, 1)
+                    print('readready 2: ', len(readready), readready, self.iter)
+
+            readready, writeready, errorready = select.select(self.inputs, self.outputs, self.errors, 1)
+                    
+
+            if len(readready) == 0:
+                break
+
 
         if self.opcode is OP_SEARCHALL:
+            print('Search device: ', self.mac_list)
             return len(self.mac_list)
         elif self.opcode is OP_FWUP:
             return self.reply
