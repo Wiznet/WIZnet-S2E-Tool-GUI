@@ -45,23 +45,23 @@ class WIZMakeCMD:
             cmd_list.append([cmd, ""])
         return cmd_list
 
-    def search(self, mac_addr):
+    def search(self, mac_addr, idcode):
         cmd_list = []
         # Search All Devices on the network
         # 장치 검색 시 필요 정보 Get
         cmd_list.append(["MA", mac_addr])
-        cmd_list.append(["PW", " "])
+        cmd_list.append(["PW", idcode])
         # for cmd in cmd_oneport:
         for cmd in cmd_twoport:
             cmd_list.append([cmd, ""])
         return cmd_list
     
-    def get_value(self, mac_addr, filename):
+    def get_value(self, mac_addr, idcode, filename):
         # 파일의 command들에 대한 정보를 가져옴
         cmd_list = []
         f = open(filename, 'r')
         cmd_list.append(["MA", mac_addr])
-        cmd_list.append(["PW", " "])
+        cmd_list.append(["PW", idcode])
         for line in f:
 #			print len(line), line.decode('hex')
             if len(line) > 2 :
@@ -69,12 +69,12 @@ class WIZMakeCMD:
         f.close()
         return cmd_list
 
-    def set_value(self, mac_addr, filename):
+    def set_value(self, mac_addr, idcode, filename):
         # 파일에서 cmd/parameter set 정보를 불러옴
         cmd_list = []
         f = open(filename, 'r')
         cmd_list.append(["MA", mac_addr])
-        cmd_list.append(["PW", " "])
+        cmd_list.append(["PW", idcode])
         getcmd_list = []
         for line in f:
             if len(line) > 2:
@@ -88,10 +88,10 @@ class WIZMakeCMD:
         return cmd_list
 
     # Get device info
-    def getcommand(self, macaddr, command_list):
+    def getcommand(self, macaddr, idcode, command_list):
         cmd_list = []    # 초기화
         cmd_list.append(["MA", macaddr])
-        cmd_list.append(["PW", " "])
+        cmd_list.append(["PW", idcode])
         # cmd_list.append(["MC", ""])
         for i in range(len(command_list)):
             cmd_list.append([command_list[i], ""]) 
@@ -99,12 +99,12 @@ class WIZMakeCMD:
         return cmd_list
 
     # Set device
-    def setcommand(self, macaddr, command_list, param_list, port):
+    def setcommand(self, macaddr, idcode, command_list, param_list, port):
         cmd_list = []
         try:
             # print('Macaddr: %s' % macaddr)
             cmd_list.append(["MA", macaddr])
-            cmd_list.append(["PW", " "])
+            cmd_list.append(["PW", idcode])
             for i in range(len(command_list)):
                 cmd_list.append([command_list[i], param_list[i]]) 
             ################ Set+Get
@@ -121,17 +121,17 @@ class WIZMakeCMD:
         except Exception as e:
             sys.stdout.write('%r\r\n' % e)            
 
-    def reset(self, mac_addr):
+    def reset(self, mac_addr, idcode):
         cmd_list = []
         cmd_list.append(["MA", mac_addr])
-        cmd_list.append(["PW", " "])
+        cmd_list.append(["PW", idcode])
         cmd_list.append(["RT", ""])	
         return cmd_list
     
-    def factory_reset(self, mac_addr):
+    def factory_reset(self, mac_addr, idcode):
         cmd_list = []
         cmd_list.append(["MA", mac_addr])
-        cmd_list.append(["PW", " "])
+        cmd_list.append(["PW", idcode])
         cmd_list.append(["FR", ""])	
         return cmd_list
     
