@@ -34,7 +34,7 @@ SOCK_CONNECT_STATE = 5
 ONE_PORT_DEV = ['WIZ750SR', 'WIZ750SR-100', 'WIZ750SR-105', 'WIZ750SR-110', 'WIZ107SR', 'WIZ108SR']
 TWO_PORT_DEV = ['WIZ752SR-12x', 'WIZ752SR-120','WIZ752SR-125']
 
-VERSION = '0.4.0 beta'
+VERSION = '0.4.1 dev'
 
 def resource_path(relative_path):
 # Get absolute path to resource, works for dev and for PyInstaller
@@ -324,7 +324,7 @@ class WIZWindow(QMainWindow, main_window):
             cli_sock.shutdown()
 
         while True:
-            if retrynum > 10:
+            if retrynum > 6:
                 break
             retrynum += 1
 
@@ -348,7 +348,7 @@ class WIZWindow(QMainWindow, main_window):
                     sys.stdout.write('%r\r\n' % e)
             elif cli_sock.state is SOCK_CONNECT_STATE:
                 break
-        if retrynum > 10:
+        if retrynum > 6:
             sys.stdout.write('Device [%s] TCP connection failed.\r\n' % (serverip))
             return None
         else:
@@ -894,18 +894,17 @@ class WIZWindow(QMainWindow, main_window):
             self.UpdateResult(-1)
 
     def FWFileOpen(self):    
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self,"Firmware file open", "","Binary Files (*.bin);;All Files (*)", options=options)
+        fname, _ = QFileDialog.getOpenFileName(self, 'Firmware file open', '', 'Binary Files (*.bin);;All Files (*)')
 
-        if fileName:
-            # get path
-            path = fileName.split('/')
-            dirpath = ''
-            for i in range(len(path) - 1):
-                dirpath += (path[i] + '/')
-            # print('dirpath:', dirpath)
-            print(fileName)
+        if fname:
+            fileName = fname
+            # # get path
+            # path = fileName.split('/')
+            # dirpath = ''
+            # for i in range(len(path) - 1):
+            #     dirpath += (path[i] + '/')
+            # # print('dirpath:', dirpath)
+            # print(fileName)
 
             # get file size
             self.fd = open(fileName, "rb")
@@ -1090,11 +1089,10 @@ class WIZWindow(QMainWindow, main_window):
             self.close()
 
     def SaveFileDialog(self):
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
+        fname, _ = QFileDialog.getSaveFileName(self, "Configuration Save","WIZCONF.cfg","Config File (*.cfg);;Text Files (*.txt);;All Files (*)")
 
-        fileName, _ = QFileDialog.getSaveFileName(self,"Configuration Save","WIZCONF.cfg","Config File (.cfg);;All Files (*);;Text Files (*.txt)", options=options)
-        if fileName:
+        if fname:
+            fileName = fname
             print(fileName)
             self.SaveConfig(fileName)
 
@@ -1112,10 +1110,10 @@ class WIZWindow(QMainWindow, main_window):
         self.statusbar.showMessage(' Configuration is saved to \'%s\'.' % filename)
 
     def LoadFileDialog(self):    
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self,"Configuration Load", "WIZCONF.cfg","Config File (.cfg);;All Files (*);;Text Files (*.txt)", options=options)
-        if fileName:
+        fname, _ = QFileDialog.getOpenFileName(self, "Configuration Load", "WIZCONF.cfg","Config File (*.cfg);;Text Files (*.txt);;All Files (*)")
+        
+        if fname:
+            fileName = fname
             print(fileName)
             self.LoadConfig(fileName)
 
