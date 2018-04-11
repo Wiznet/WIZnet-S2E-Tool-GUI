@@ -107,7 +107,9 @@ class WIZ752CMDSET:
 							 "CP" : ["Connection Password Enable", "^[0-1]$", {}, "RW"],
 							 "NP" : ["Connection Password", "", {}, "RW"], 
 							 "SP" : ["Search ID Code", "", {}, "RW"], 
-							 "DG" : ["Serial Debug Message Enable", "^[0-1]$", {}, "RW"], 
+							#  "DG" : ["Serial Debug Message Enable", "^[0-1]$", {}, "RW"], 
+							# debug msg test
+							 "DG" : ["Serial Debug Message Enable", "^[0-4]$", {}, "RW"], 
 							 "KA" : ["TCP Keep-alive Enable for channel 0", "^[0-1]$", {}, "RW"],
 							 "RA" : ["TCP Keep-alive Enable for channel 1", "^[0-1]$", {}, "RW"],
 							 "KI" : ["TCP Keep-alive Initial Interval for channel 0",

@@ -76,7 +76,9 @@ class WIZ750CMDSET:
                         "CP" : ["Connection Password Enable", "^[0-1]$", {}, "RW"],
                         "NP" : ["Connection Password", "", {}, "RW"],
                         "SP" : ["Search ID Code", "", {}, "RW"],
-                        "DG" : ["Serial Debug Message Enable", "^[0-1]$", {}, "RW"],
+                        # "DG" : ["Serial Debug Message Enable", "^[0-1]$", {}, "RW"],
+                        # debug msg test
+                        "DG" : ["Serial Debug Message Enable", "^[0-4]$", {}, "RW"], 
                         "KA" : ["TCP Keep-alive Enable", "^[0-1]$", {}, "RW"],
                         "KI" : ["TCP Keep-alive Initial Interval",
                                         "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])$",

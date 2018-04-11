@@ -4,6 +4,7 @@ import sys
 import time
 import re
 import os
+import subprocess
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QSize, QThread, Qt, QTimer, pyqtSignal, pyqtSlot, QRect, QUrl
 from PyQt5.QtGui import QIcon, QPixmap, QFont
@@ -33,7 +34,7 @@ SOCK_CONNECT_STATE = 5
 ONE_PORT_DEV = ['WIZ750SR', 'WIZ750SR-100', 'WIZ750SR-105', 'WIZ750SR-110', 'WIZ107SR', 'WIZ108SR']
 TWO_PORT_DEV = ['WIZ752SR-12x', 'WIZ752SR-120','WIZ752SR-125']
 
-VERSION = '0.3.0 Beta'
+VERSION = '0.4.0 beta'
 
 def resource_path(relative_path):
 # Get absolute path to resource, works for dev and for PyInstaller
@@ -100,7 +101,11 @@ class WIZWindow(QMainWindow, main_window):
             self.conf_sock = WIZUDPSock(5000, 50001)
             self.conf_sock.open()
         elif self.unicast_mac.isChecked():
-            cmd_list = self.wizmakecmd.search(self.search_macaddr)
+            if len(self.searchcode_input.text()) == 0:
+                self.code = " "
+            else:
+                self.code = self.searchcode_input.text()
+            cmd_list = self.wizmakecmd.search(self.search_macaddr, self.code)
         elif self.unicast_ip.isChecked():
             # TCP unicast
             ip_addr = self.search_ipaddr.text()
@@ -121,6 +126,7 @@ class WIZWindow(QMainWindow, main_window):
 
         self.isConnected = False
         self.set_reponse = None
+        self.wizmsghandler = None
 
         ##################### Button Event #####################
         # device select event
@@ -147,6 +153,7 @@ class WIZWindow(QMainWindow, main_window):
         # State Changed Event 
         self.show_idcode.stateChanged.connect(self.ShowIDcode)
         self.show_connectpw.stateChanged.connect(self.ShowPW)
+        self.show_idcodeinput.stateChanged.connect(self.ShowIDcodeInput)
         self.enable_connect_pw.stateChanged.connect(self.EnablePW)
         self.at_enable.stateChanged.connect(self.EnableATmode)
 
@@ -168,7 +175,7 @@ class WIZWindow(QMainWindow, main_window):
         self.broadcast.clicked.connect(self.SearchMethodEvent)
         self.unicast_ip.clicked.connect(self.SearchMethodEvent)
         self.unicast_mac.clicked.connect(self.SearchMethodEvent)
-    
+
         self.pgbar = QProgressBar()
         self.statusbar.addPermanentWidget(self.pgbar)
 
@@ -176,15 +183,28 @@ class WIZWindow(QMainWindow, main_window):
         self.th_search = ThreadProgress()
         self.th_search.change_value.connect(self.valueChanged)
 
+        self.list_device.itemSelectionChanged.connect(self.IfDevSelected)
+
     def valueChanged(self, value):
         self.pgbar.show()
         self.pgbar.setValue(value)
+
+    def IfDevSelected(self):
+        if len(self.list_device.selectedItems()) == 0:
+            self.DisableObject()
+        else:
+            self.EnableObject()
     
     def DisableObject(self):
         self.resetbtn.setEnabled(False)
         self.factorybtn.setEnabled(False)
         self.fwupbtn.setEnabled(False)
         self.btnsetting.setEnabled(False)
+        self.savebtn.setEnabled(False)
+        self.loadbtn.setEnabled(False)
+
+        self.generalTab.setEnabled(False)
+        self.channel_tab.setEnabled(False)
     
     def EnableObject(self):
         self.SelectDev()
@@ -198,17 +218,17 @@ class WIZWindow(QMainWindow, main_window):
         self.loadbtn.setEnabled(True)
 
         # 창 활성화
-        self.general.setEnabled(True)
+        self.generalTab.setEnabled(True)
         self.channel_tab.setEnabled(True)
         self.EnablePW()
 
         ### 포트 수에 따라 설정 탭 활성화
-        if self.curr_dev in ONE_PORT_DEV:
+        if self.curr_dev in ONE_PORT_DEV or 'WIZ750' in self.curr_dev:
             self.channel_tab.setTabEnabled(0, True)
             self.channel_tab.setTabEnabled(1, False)
             self.channel_tab.setTabEnabled(2, False)
             self.channel_tab.setTabEnabled(3, False)
-        elif self.curr_dev in TWO_PORT_DEV:
+        elif self.curr_dev in TWO_PORT_DEV or 'WIZ752' in self.curr_dev:
             self.channel_tab.setTabEnabled(0, True)
             self.channel_tab.setTabEnabled(1, True)
             self.channel_tab.setTabEnabled(2, False)
@@ -218,11 +238,10 @@ class WIZWindow(QMainWindow, main_window):
         self.save_config.setEnabled(True)
         self.load_config.setEnabled(True)
 
-        # 각 디바이스 설정에 따라 오브젝트 enable/disable
         self.OPmodeEvent()
         self.CheckIPalloc()
         self.EnableATmode()
-        self.EnablePW()
+        self.EnableATmode()
 
     def CheckIPalloc(self):
         if self.ip_dhcp.isChecked() is True:
@@ -239,6 +258,12 @@ class WIZWindow(QMainWindow, main_window):
             self.at_hex1.setEnabled(False)
             self.at_hex2.setEnabled(False)
             self.at_hex3.setEnabled(False)
+
+    def ShowIDcodeInput(self):
+        if self.show_idcodeinput.isChecked() is True:
+            self.searchcode_input.setEchoMode(QLineEdit.Normal)
+        elif self.show_idcodeinput.isChecked() is False:
+            self.searchcode_input.setEchoMode(QLineEdit.Password)
 
     def ShowIDcode(self):
         if self.show_idcode.isChecked() is True:
@@ -342,64 +367,91 @@ class WIZWindow(QMainWindow, main_window):
             port = int(self.search_port.text())
             print('unicast: ip: %r, port: %r' % (ip_addr, port))
 
-            self.conf_sock = self.tcpConnection(ip_addr, port)
+            ## network check
+            net_response = self.NetworkCheck(ip_addr)
 
-            if self.conf_sock is None:
-                self.isConnected = False
-                print('TCP connection failed!: %s' % self.conf_sock)
-                self.statusbar.showMessage(' TCP connection failed: %s' % ip_addr)
-                self.ConnectionFailPopUp()
+            if net_response == 0:
+                self.conf_sock = self.tcpConnection(ip_addr, port)
+
+                if self.conf_sock is None:
+                    self.isConnected = False
+                    print('TCP connection failed!: %s' % self.conf_sock)
+                    self.statusbar.showMessage(' TCP connection failed: %s' % ip_addr)
+                    self.ConnectionFailPopUp()
+                else:
+                    self.isConnected = True
             else:
-                self.isConnected = True
+                self.statusbar.showMessage(' Network unreachable: %s' % ip_addr)
+                self.NetworkNotConnected(ip_addr)
 
     def Processing(self):
         self.btnsearch.setEnabled(False)
-        QTimer.singleShot(2000, lambda: self.btnsearch.setEnabled(True))
-        QTimer.singleShot(2100, lambda: self.pgbar.hide())
+        # QTimer.singleShot(1500, lambda: self.btnsearch.setEnabled(True))
+        QTimer.singleShot(4500, lambda: self.pgbar.hide())
 
     def Search(self):
-        cmd_list = []
-        devnum = 0
-        self.pgbar.setFormat('Searching..')
-        self.pgbar.setRange(0, 100)
-        self.th_search.start()
+        if self.wizmsghandler is not None and self.wizmsghandler.isRunning():
+            # self.wizmsghandler.terminate()
+            self.wizmsghandler.wait()
+            print('wait')
+        else:
+            cmd_list = []
+            self.code = " "
+            self.all_response = None
+            # devnum = 0
+            self.pgbar.setFormat('Searching..')
+            self.pgbar.setRange(0, 100)
+            self.th_search.start()
 
-        self.Processing()
+            self.Processing()
 
-        # List table initial
-        self.list_device.clear()
-        while self.list_device.rowCount() > 0:
-            self.list_device.removeRow(0)
-        item = QTableWidgetItem()
-        item.setText("Mac addr")
-        self.list_device.setHorizontalHeaderItem(0, item)
-        item = QTableWidgetItem()
-        item.setText("Name")
-        self.list_device.setHorizontalHeaderItem(1, item)
-        
-        self.SocketConfig()
-        # print('search: conf_sock: %s' % self.conf_sock)
-        
-        # Search devices
-        if self.isConnected or self.broadcast.isChecked():
-            self.statusbar.showMessage(' Searching devices...')
-            cmd_list = self.wizmakecmd.search("FF:FF:FF:FF:FF:FF")
-            # print(cmd_list)
-            wizmsghangler = WIZMSGHandler(self.conf_sock)
-            wizmsghangler.makecommands(cmd_list, OP_SEARCHALL)
-            if self.unicast_ip.isChecked():
-                wizmsghangler.sendcommandsTCP()
-            else:
-                wizmsghangler.sendcommands()
-            # devnum = wizmsghangler.parseresponse()
-            devnum = wizmsghangler.run()
+            # List table initial
+            self.list_device.clear()
+            while self.list_device.rowCount() > 0:
+                self.list_device.removeRow(0)
+            item = QTableWidgetItem()
+            item.setText("Mac addr")
+            self.list_device.setHorizontalHeaderItem(0, item)
+            item = QTableWidgetItem()
+            item.setText("Name")
+            self.list_device.setHorizontalHeaderItem(1, item)
+            
+            self.SocketConfig()
+            # print('search: conf_sock: %s' % self.conf_sock)
+            
+            # Search devices
+            if self.isConnected or self.broadcast.isChecked():
+                self.statusbar.showMessage(' Searching devices...')
+
+                if len(self.searchcode_input.text()) == 0:
+                    self.code = " "
+                else:
+                    self.code = self.searchcode_input.text()
+
+                cmd_list = self.wizmakecmd.search("FF:FF:FF:FF:FF:FF", self.code)
+                # print(cmd_list)
+
+                if self.unicast_ip.isChecked():
+                    print('unicast')
+                    self.wizmsghandler = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_SEARCHALL)
+                else:
+                    print('broadcast')
+                    self.wizmsghandler = WIZMSGHandler(self.conf_sock, cmd_list, 'udp', OP_SEARCHALL)
+                self.wizmsghandler.search_result.connect(self.getSearchResult)
+                self.wizmsghandler.start()
+
+    def getSearchResult(self, devnum):
+        if self.wizmsghandler.isRunning():
+            self.wizmsghandler.wait()
+        if devnum >= 0:
+            self.btnsearch.setEnabled(True)
 
             if devnum == 0:
                 print('No device.')
             else:
-                dev_name = wizmsghangler.mn_list
-                self.mac_list = wizmsghangler.mac_list
-                self.all_response = wizmsghangler.rcv_list
+                dev_name = self.wizmsghandler.mn_list
+                self.mac_list = self.wizmsghandler.mac_list
+                self.all_response = self.wizmsghandler.rcv_list
             
                 # row length = the number of searched devices
                 self.list_device.setRowCount(len(self.mac_list))
@@ -418,11 +470,12 @@ class WIZWindow(QMainWindow, main_window):
                 self.list_device.horizontalHeader().setSectionResizeMode(2)
                 self.list_device.verticalHeader().setSectionResizeMode(2)
 
-            self.statusbar.showMessage(' Find %d devices' % len(self.mac_list))
+            self.statusbar.showMessage(' Find %d devices' % devnum)
 
             if self.isConnected and self.unicast_ip.isChecked():
                 self.conf_sock.shutdown()
-
+        else: 
+            print('search error')
 
     def DevClicked(self):
         # get information for selected device
@@ -471,8 +524,17 @@ class WIZWindow(QMainWindow, main_window):
                 self.at_hex1.setText(cmdset_list[i][2:4].decode())
                 self.at_hex2.setText(cmdset_list[i][4:6].decode())
                 self.at_hex3.setText(cmdset_list[i][6:8].decode())
-            # if b'SP' in cmdset_list[i]:   # search code
-            if b'DG' in cmdset_list[i]: self.serial_debug.setChecked(int(cmdset_list[i][2:].decode()))
+            # search id code
+            if b'SP' in cmdset_list[i]:
+                if cmdset_list[i][2:].decode() == ' ':
+                    pass
+            # Debug msg - for test
+            if b'DG' in cmdset_list[i]: 
+                if int(cmdset_list[i][2:].decode()) < 2:
+                    self.serial_debug.setCurrentIndex(int(cmdset_list[i][2:]))
+                elif cmdset_list[i][2:].decode() == '4':
+                    self.serial_debug.setCurrentIndex(2)
+
             # Network - channel 1
             if b'OP' in cmdset_list[i]:
                 if cmdset_list[i][2:].decode() == '0': 
@@ -616,10 +678,15 @@ class WIZWindow(QMainWindow, main_window):
             setcmd['SS'] = self.at_hex1.text() + self.at_hex2.text() + self.at_hex3.text()
         elif self.at_enable.isChecked() is False: setcmd['TE'] = '0'
             
-        # 'SP' 추가요망 (search id code: max 8 bytes)
+        # search id code: max 8 bytes
+        setcmd['SP'] = self.searchcode.text()
 
-        if self.serial_debug.isChecked() is True: setcmd['DG'] = '1'
-        elif self.serial_debug.isChecked() is False: setcmd['DG'] = '0'
+        # Debug msg 
+        if self.serial_debug.currentIndex() == 2:
+            setcmd['DG'] = '4'
+        else:
+            setcmd['DG'] = str(self.serial_debug.currentIndex())
+
         # Network - channel 1
         if self.ch1_tcpclient.isChecked() is True: setcmd['OP'] = '0'
         elif self.ch1_tcpserver.isChecked() is True: setcmd['OP'] = '1'
@@ -701,7 +768,7 @@ class WIZWindow(QMainWindow, main_window):
             setcmd = self.GetObjectValue()
             # self.SelectDev()
 
-            if self.curr_dev in ONE_PORT_DEV:
+            if self.curr_dev in ONE_PORT_DEV or 'WIZ750' in self.curr_dev:
                 print('One port dev setting')
                 # Parameter validity check 
                 invalid_flag = 0
@@ -711,7 +778,7 @@ class WIZWindow(QMainWindow, main_window):
                         print('Invalid parameter: %s %s' % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
                         self.InvalidPopUp(setcmd.get(setcmd_cmd[i]))
                         invalid_flag += 1
-            elif self.curr_dev in TWO_PORT_DEV:
+            elif self.curr_dev in TWO_PORT_DEV or 'WIZ752' in self.curr_dev:
                 print('Two port dev setting')
                 # Parameter validity check 
                 invalid_flag = 0
@@ -722,38 +789,45 @@ class WIZWindow(QMainWindow, main_window):
                         self.InvalidPopUp(setcmd.get(setcmd_cmd[i]))
                         invalid_flag += 1
             # print('invalid flag: %d' % invalid_flag)
-            if invalid_flag == 0:
-                if self.curr_dev in ONE_PORT_DEV:
-                    cmd_list = self.wizmakecmd.setcommand(self.curr_mac, list(setcmd.keys()), list(setcmd.values()), 1)
-                elif self.curr_dev in TWO_PORT_DEV:
-                    cmd_list = self.wizmakecmd.setcommand(self.curr_mac, list(setcmd.keys()), list(setcmd.values()), 2)
+            if invalid_flag > 0:
+                pass
+            elif invalid_flag == 0:
+                if len(self.searchcode_input.text()) == 0:
+                    self.code = " "
+                else:
+                    self.code = self.searchcode_input.text()
+
+                if self.curr_dev in ONE_PORT_DEV or 'WIZ750' in self.curr_dev:
+                    cmd_list = self.wizmakecmd.setcommand(self.curr_mac, self.code, list(setcmd.keys()), list(setcmd.values()), 1)
+                elif self.curr_dev in TWO_PORT_DEV or 'WIZ752' in self.curr_dev:
+                    cmd_list = self.wizmakecmd.setcommand(self.curr_mac, self.code, list(setcmd.keys()), list(setcmd.values()), 2)
                 # print('set cmdlist: ', cmd_list)
 
                 # socket config
                 self.SocketConfig() 
 
-                wizmsghangler = WIZMSGHandler(self.conf_sock)
-                wizmsghangler.makecommands(cmd_list, OP_SEARCHALL)
                 if self.unicast_ip.isChecked():
-                    wizmsghangler.sendcommandsTCP()
+                    self.wizmsghandler = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_SETCOMMAND)
                 else:
-                    wizmsghangler.sendcommands()
-                # wizmsghangler.parseresponse()
-                wizmsghangler.run()
-                
-                self.statusbar.showMessage(' Set device complete!')
+                    self.wizmsghandler = WIZMSGHandler(self.conf_sock, cmd_list, 'udp', OP_SETCOMMAND)
+                self.wizmsghandler.set_result.connect(self.SetResult)
+                self.wizmsghandler.start()
 
-                # complete pop-up
-                self.SetOKPopUp()
-                
-                if self.isConnected and self.unicast_ip.isChecked():
-                    print('close socket')
-                    self.conf_sock.shutdown()
+    def SetResult(self, result):
+        if result > 0:
+            self.statusbar.showMessage(' Set device complete!')
 
-                # Set -> get info
-                self.set_reponse = wizmsghangler.rcv_list
-                # print('setting response: ', self.list_device.selectedItems()[0].row(), self.set_reponse)
-                self.getSettinginfo(self.list_device.selectedItems()[0].row())
+            # complete pop-up
+            self.SetOKPopUp()
+            
+            if self.isConnected and self.unicast_ip.isChecked():
+                print('close socket')
+                self.conf_sock.shutdown()
+
+            # Set -> get info
+            self.set_reponse = self.wizmsghandler.rcv_list
+            # print('setting response: ', self.list_device.selectedItems()[0].row(), len(self.set_reponse[0]), self.set_reponse)
+            self.getSettinginfo(self.list_device.selectedItems()[0].row())
 
     def SelectDev(self):
         # 선택된 장치의 mac addr / name 추출 
@@ -767,36 +841,11 @@ class WIZWindow(QMainWindow, main_window):
             
             self.statusbar.showMessage(' Current device [%s : %s]' % (self.curr_mac, self.curr_dev))
 
-    # 'FW': firmware upload
-    def FWUpdate(self, filename, filesize):
-        # self.pgbar.setFormat('Uploading.. (file size: %d)' % filesize)
-        self.pgbar.setFormat('Uploading..')
-        # self.pgbar.setRange(0, filesize)
-        self.pgbar.setRange(0, 8)
-        self.pgbar.show()
-
-        self.SelectDev()
-        self.statusbar.showMessage(' Firmware update started. Please wait...')
-        mac_addr = self.curr_mac
-        print('FWUpdate %s, %s' % (mac_addr, filename))
-
-        self.SocketConfig()
-
-        # FW update
-        self.t_fwup = FWUploadThread(self.conf_sock)
-        self.t_fwup.uploading_size.connect(self.pgbar.setValue)
-
-        self.t_fwup.setparam(mac_addr, filename)
-        # For 'AB' command (appboot mode fw update)
-        self.t_fwup.jumpToApp()
-        self.t_fwup.sendCmd('FW')
-        self.t_fwup.update()
-
-        # self.t_fwup.wait()
-        
-        if self.t_fwup.checkResult() < 0:
+    def UpdateResult(self, result):
+        if result < 0:
+            # self.statusbar.showMessage(' Firmware update failed.')
             self.FWUpFailPopUp()
-        elif self.t_fwup.checkResult() > 0:
+        elif result > 0:
             self.statusbar.showMessage(' Firmware update complete!')
             print('FW Update OK')
             self.pgbar.setValue(8)
@@ -805,6 +854,44 @@ class WIZWindow(QMainWindow, main_window):
             self.conf_sock.shutdown()
 
         self.pgbar.hide()
+
+    def UpdateError(self, error):
+        self.t_fwup.terminate()
+        if error == -1:
+            self.statusbar.showMessage(' Firmware update failed. No response from device.')
+        elif error == -3:
+            self.statusbar.showMessage(' Firmware update error.')
+        # self.FWUpFailPopUp()
+
+    # 'FW': firmware upload
+    def FWUpdate(self, filename, filesize):
+        self.pgbar.setFormat('Uploading..')
+        # self.pgbar.setRange(0, filesize)
+        self.pgbar.setValue(0)
+        self.pgbar.setRange(0, 8)
+        self.pgbar.show()
+
+        self.SelectDev()
+        self.statusbar.showMessage(' Firmware update started. Please wait...')
+        mac_addr = self.curr_mac
+        print('FWUpdate %s, %s' % (mac_addr, filename))
+        self.SocketConfig()
+
+        if len(self.searchcode_input.text()) == 0:
+            self.code = " "
+        else:
+            self.code = self.searchcode_input.text()
+
+        # FW update
+        self.t_fwup = FWUploadThread(self.conf_sock, mac_addr, self.code, filename)
+        self.t_fwup.uploading_size.connect(self.pgbar.setValue)
+        self.t_fwup.upload_result.connect(self.UpdateResult)
+        self.t_fwup.error_flag.connect(self.UpdateError)
+        try:
+            self.t_fwup.start()
+        except Exception:
+            print('fw uplooad error')
+            self.UpdateResult(-1)
 
     def FWFileOpen(self):    
         options = QFileDialog.Options()
@@ -820,24 +907,33 @@ class WIZWindow(QMainWindow, main_window):
             # print('dirpath:', dirpath)
             print(fileName)
 
-            ##### get file size
+            # get file size
             self.fd = open(fileName, "rb")
             self.data = self.fd.read(-1)
             self.filesize = len(self.data)
             print('FWFileOpen: filesize: ', self.filesize)
+            self.fd.close()
             # upload start
             self.FWUpdate(fileName, self.filesize)
 
-    def NetworkCheck(self):
-        serverip = self.localip_addr
-        ping_reponse = os.system("ping " + ("-n 1 " if sys.platform.lower()=="win32" else "-c 1 ") + serverip)
-        
-        if ping_reponse != 0:
-            self.statusbar.showMessage(' Firmware update error occured.')
-            self.FWUpErrPopUp(serverip)
-        else:
+    def NetworkCheck(self, dst_ip):
+        self.statusbar.showMessage(' Checking the network...')
+        # serverip = self.localip_addr
+        serverip = dst_ip
+        do_ping = subprocess.Popen("ping " + ("-n 1 " if sys.platform.lower()=="win32" else "-c 1 ") + serverip, 
+                                    stdout=None, stderr=None, shell=True)
+        ping_response = do_ping.wait()
+        # print('ping_response', ping_response)
+        return ping_response
+
+    def UploadNetCheck(self):
+        response = self.NetworkCheck(self.localip_addr)
+        if response == 0:
             self.statusbar.showMessage(' Firmware update: Select App boot Firmware file. (.bin)')
             self.FWFileOpen()
+        else:
+            self.statusbar.showMessage(' Firmware update warning!')
+            self.FWUpErrPopUp(self.localip_addr)
 
     def UpdateBtnClicked(self):
         if len(self.list_device.selectedItems()) == 0:
@@ -847,7 +943,7 @@ class WIZWindow(QMainWindow, main_window):
             if self.unicast_ip.isChecked() and self.isConnected:
                 self.FWFileOpen()
             else:
-                self.NetworkCheck()
+                self.UploadNetCheck()
     
     def Reset(self):
         if len(self.list_device.selectedItems()) == 0:
@@ -857,19 +953,22 @@ class WIZWindow(QMainWindow, main_window):
             self.statusbar.showMessage(' Reset device?')
             self.SelectDev()
             mac_addr = self.curr_mac
-            cmd_list = self.wizmakecmd.reset(mac_addr)
-            print('Reset: %s' % cmd_list)
+            
+            if len(self.searchcode_input.text()) == 0:
+                self.code = " "
+            else:
+                self.code = self.searchcode_input.text()
+
+            cmd_list = self.wizmakecmd.reset(mac_addr, self.code)
+            # print('Reset: %s' % cmd_list)
 
             self.SocketConfig()
 
-            wizmsghangler = WIZMSGHandler(self.conf_sock)
-            wizmsghangler.makecommands(cmd_list, OP_SEARCHALL)
             if self.unicast_ip.isChecked():
-                wizmsghangler.sendcommandsTCP()
+                self.wizmsghandler = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_SETCOMMAND)
             else:
-                wizmsghangler.sendcommands()
-            # Check the response
-            # wizmsghangler.parseresponse()
+                self.wizmsghandler = WIZMSGHandler(self.conf_sock, cmd_list, 'udp', OP_SETCOMMAND)
+            self.wizmsghandler.start()
             
             self.statusbar.showMessage(' Reset device complete!')
 
@@ -884,17 +983,22 @@ class WIZWindow(QMainWindow, main_window):
             self.statusbar.showMessage(' Factory reset?')
             self.SelectDev()
             mac_addr = self.curr_mac
-            cmd_list = self.wizmakecmd.factory_reset(mac_addr)
-            print('Factory: %s' % cmd_list)
+
+            if len(self.searchcode_input.text()) == 0:
+                self.code = " "
+            else:
+                self.code = self.searchcode_input.text()
+            cmd_list = self.wizmakecmd.factory_reset(mac_addr, self.code)
+            # print('Factory: %s' % cmd_list)
 
             self.SocketConfig()
             
-            wizmsghangler = WIZMSGHandler(self.conf_sock)
-            wizmsghangler.makecommands(cmd_list, OP_SEARCHALL)
             if self.unicast_ip.isChecked():
-                wizmsghangler.sendcommandsTCP()
+                self.wizmsghandler = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_SETCOMMAND)
             else:
-                wizmsghangler.sendcommands()
+                self.wizmsghandler = WIZMSGHandler(self.conf_sock, cmd_list, 'udp', OP_SETCOMMAND)
+            
+            self.wizmsghandler.start()
 
             # Check the response
             # wizmsghangler.parseresponse()
@@ -936,7 +1040,6 @@ class WIZWindow(QMainWindow, main_window):
         msgbox.question(self, "Setting success", "Devcie configuration complete!", QMessageBox.Yes)
     
     def FWUpErrPopUp(self, dst_ip):
-    # def FWUpErrPopUp(self):
         msgbox = QMessageBox(self)
         msgbox.setIcon(QMessageBox.Warning)
         msgbox.setWindowTitle("Warning: Firmware upload")
@@ -959,6 +1062,13 @@ class WIZWindow(QMainWindow, main_window):
         msgbox.setIcon(QMessageBox.Critical)
         msgbox.setWindowTitle("Error: Connection failed")
         msgbox.setText("Network connection failed.\nConnection is refused.")
+        msgbox.exec_()
+
+    def NetworkNotConnected(self, dst_ip):
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Warning)
+        msgbox.setWindowTitle("Warning: Network")
+        msgbox.setText("Destination IP is unreachable: %s\nPlease check the network status." % dst_ip)
         msgbox.exec_()
 
     def ResetPopUp(self):
@@ -1033,7 +1143,7 @@ class ThreadProgress(QThread):
         while self.cnt <= 100:
             self.cnt += 1
             self.change_value.emit(self.cnt)
-            self.msleep(20)  
+            self.msleep(15)  
 
     def __del__(self):
         print('thread: del')
