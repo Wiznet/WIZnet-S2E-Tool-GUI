@@ -116,8 +116,8 @@ class FWUploadThread(QThread):
             self.resp = self.wizmsghangler.run()
             if self.resp is not '':
                 break
-            self.msleep(600)
 
+        self.msleep(500)
         self.uploading_size.emit(2)
 
     def run(self):
@@ -149,7 +149,6 @@ class FWUploadThread(QThread):
             self.client = TCPClient(2, params[0], int(params[1]))
         except:
             pass
-        
         try:
             if self.error_noresponse < 0:
                 pass
@@ -184,7 +183,6 @@ class FWUploadThread(QThread):
                             if self.client.state is SOCK_CONNECT_STATE:
                                 sys.stdout.write('[%r] is CONNECTED\r\n' % (self.serverip))
                                 # sys.stdout.write('[%r] client.working_state is %r\r\n' % (self.serverip, self.client.working_state))
-                                # time.sleep(1)
                         except Exception as e:
                             sys.stdout.write('%r\r\n' % e)
 
@@ -221,7 +219,6 @@ class FWUploadThread(QThread):
                                     self.timer1.start()
 
                                 elif self.client.working_state == datasent_state:
-                                    
                                     # sys.stdout.write('4 : %r' % self.client.getsockstate())
                                     response = self.client.readbytes(2)
                                     if response is not None:
