@@ -34,8 +34,10 @@ datasent_state = 2
 
 class FWUploadThread(QThread):
     uploading_size = pyqtSignal(int)
+    upload_result = pyqtSignal(int)
+    error_flag = pyqtSignal(int)
 
-    def __init__(self, conf_sock):
+    def __init__(self, conf_sock, dest_mac, idcode, binaryfile):
         QThread.__init__(self)
 
         self.dest_mac = None
@@ -49,45 +51,48 @@ class FWUploadThread(QThread):
         self.serverport = None
 
         self.sentbyte = 0
-        self.resultflag = 0
+
+        self.dest_mac = dest_mac
+        self.bin_filename = binaryfile
+        self.idcode = idcode
+
+        self.conf_sock = conf_sock
+        self.error_noresponse = 0
+        self.retrycheck = 0
 
         # UDP
         # conf_sock = WIZUDPSock(5000, 50001)
         # conf_sock.open()
         self.sockinfo = '%s' % conf_sock
-        self.wizmsghangler = WIZMSGHandler(conf_sock)
 
-    def setparam(self, dest_mac, binaryfile):
-        self.dest_mac = dest_mac
-        self.bin_filename = binaryfile
+    def setparam(self):
         self.fd = open(self.bin_filename, "rb")
         self.data = self.fd.read(-1)
         self.remainbytes = len(self.data)
         self.curr_ptr = 0 
-
+        self.fd.close()
         sys.stdout.write("Firmware file size: %r\n\n" % len(self.data))
 
     def myTimer(self):
         # sys.stdout.write('timer1 timeout\r\n')
         self.istimeout = 1
 
-    def checkResult(self):
-        return self.resultflag
-
     def jumpToApp(self):
         cmd_list = []
         # boot mode change: App boot mode
         cmd_list.append(["MA", self.dest_mac])
-        cmd_list.append(["PW", " "])
+        cmd_list.append(["PW", self.idcode])
         cmd_list.append(["AB", ""])
-        self.wizmsghangler.makecommands(cmd_list, OP_FWUP)
-        if 'TCP' in self.sockinfo:
-            self.wizmsghangler.sendcommandsTCP()
-        elif 'UDP' in self.sockinfo:
-            self.wizmsghangler.sendcommands()
-        self.uploading_size.emit(1)
 
-        self.msleep(1500)
+        if 'TCP' in self.sockinfo:
+            self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_FWUP)
+        elif 'UDP' in self.sockinfo:
+            self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'udp', OP_FWUP)
+        
+        self.resp = self.wizmsghangler.run()
+        
+        self.uploading_size.emit(1)
+        self.msleep(1000)
 
     # def run(self):
     def sendCmd(self, command):
@@ -96,28 +101,36 @@ class FWUploadThread(QThread):
 
         # Send FW UPload request message
         cmd_list.append(["MA", self.dest_mac])
-        cmd_list.append(["PW", " "])
+        cmd_list.append(["PW", self.idcode])
         cmd_list.append([command, str(len(self.data))])
+
+        if 'TCP' in self.sockinfo:
+            self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_FWUP)
+        elif 'UDP' in self.sockinfo:
+            self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'udp', OP_FWUP)
         # sys.stdout.write("cmd_list: %s\r\n" % cmd_list)
-        self.wizmsghangler.makecommands(cmd_list, OP_FWUP)
 
         # if no reponse from device, retry for several times.
-        for i in range(3):
-            if 'TCP' in self.sockinfo:
-                self.wizmsghangler.sendcommandsTCP()
-            elif 'UDP' in self.sockinfo:
-                self.wizmsghangler.sendcommands()
+        for i in range(4):
             # self.resp = self.wizmsghangler.parseresponse()
             self.resp = self.wizmsghangler.run()
             if self.resp is not '':
                 break
-            self.msleep(1500)
+            self.msleep(600)
 
         self.uploading_size.emit(2)
 
-    # def run(self):
-    def update(self):
-        self.resultflag = 0
+    def run(self):
+        try:
+            self.setparam()
+            self.jumpToApp()
+        except Exception as e:
+            sys.stdout.write('%r\r\n' % e)
+
+        try:
+            self.sendCmd('FW')
+        except Exception as e:
+            sys.stdout.write('sendCmd(): %r\r\n' % e)
 
         if self.resp is not '':
             resp = self.resp.decode('utf-8')
@@ -130,121 +143,126 @@ class FWUploadThread(QThread):
             self.uploading_size.emit(3)
         else:
             print('No response from device. Check the network or device status.')
-            self.resultflag = -1
-            self.terminate()
+            self.error_flag.emit(-1)
+            self.error_noresponse = -1
         try:
             self.client = TCPClient(2, params[0], int(params[1]))
         except:
             pass
-
-        self.retrycheck = 0
+        
         try:
-            # sys.stdout.write("%r\r\n" % self.client.state)
-            while True:
-                
-                if self.retrycheck > 10:
-                    break
+            if self.error_noresponse < 0:
+                pass
+            else:
+                # sys.stdout.write("%r\r\n" % self.client.state)
+                while True:
+                    if self.retrycheck > 6:
+                        break
 
-                self.retrycheck += 1
-                if self.client.state is SOCK_CLOSE_STATE:
-                    if self.timer1 is not None:
-                        self.timer1.cancel()
-                    cur_state = self.client.state
-                    try:
-                        self.client.open()
-                        # sys.stdout.write('1 : %r\r\n' % self.client.getsockstate())
-                        # sys.stdout.write("%r\r\n" % self.client.state)
-                        if self.client.state is SOCK_OPEN_STATE:
-                            sys.stdout.write('[%r] is OPEN\r\n' % (self.serverip))
-                            # sys.stdout.write('[%r] client.working_state is %r\r\n' % (self.serverip, self.client.working_state))
-                            self.msleep(500)
-                    except Exception as e:
-                        sys.stdout.write('%r\r\n' % e)
+                    self.retrycheck += 1
+                    if self.client.state is SOCK_CLOSE_STATE:
+                        if self.timer1 is not None:
+                            self.timer1.cancel()
+                        cur_state = self.client.state
+                        try:
+                            self.client.open()
+                            # sys.stdout.write('1 : %r\r\n' % self.client.getsockstate())
+                            # sys.stdout.write("%r\r\n" % self.client.state)
+                            if self.client.state is SOCK_OPEN_STATE:
+                                sys.stdout.write('[%r] is OPEN\r\n' % (self.serverip))
+                                # sys.stdout.write('[%r] client.working_state is %r\r\n' % (self.serverip, self.client.working_state))
+                                self.msleep(500)
+                        except Exception as e:
+                            sys.stdout.write('%r\r\n' % e)
 
-                elif self.client.state is SOCK_OPEN_STATE:
-                    self.uploading_size.emit(4)
-                    cur_state = self.client.state
-                    try:
-                        self.client.connect()
-                        # sys.stdout.write('2 : %r' % self.client.getsockstate())
-                        if self.client.state is SOCK_CONNECT_STATE:
-                            sys.stdout.write('[%r] is CONNECTED\r\n' % (self.serverip))
-                            # sys.stdout.write('[%r] client.working_state is %r\r\n' % (self.serverip, self.client.working_state))
-                            # time.sleep(1)
-                    except Exception as e:
-                        sys.stdout.write('%r\r\n' % e)
+                    elif self.client.state is SOCK_OPEN_STATE:
+                        self.uploading_size.emit(4)
+                        cur_state = self.client.state
+                        try:
+                            self.client.connect()
+                            # sys.stdout.write('2 : %r' % self.client.getsockstate())
+                            if self.client.state is SOCK_CONNECT_STATE:
+                                sys.stdout.write('[%r] is CONNECTED\r\n' % (self.serverip))
+                                # sys.stdout.write('[%r] client.working_state is %r\r\n' % (self.serverip, self.client.working_state))
+                                # time.sleep(1)
+                        except Exception as e:
+                            sys.stdout.write('%r\r\n' % e)
 
-                elif self.client.state is SOCK_CONNECT_STATE:
-                    # if self.client.working_state == idle_state:
-                        # sys.stdout.write('3 : %r' % self.client.getsockstate())
-                    try:
-                        self.uploading_size.emit(5)
-                        while self.remainbytes is not 0:
-                            if self.client.working_state == idle_state:
-                                if self.remainbytes >= 1024:
-                                    msg = bytearray(1024)
-                                    msg[:] = self.data[self.curr_ptr:self.curr_ptr+1024]
-                                    self.client.write(msg)
-                                    self.sentbyte = 1024
-                                    # sys.stdout.write('1024 bytes sent from at %r\r\n' % (self.curr_ptr))
-                                    sys.stdout.write('[%s] 1024 bytes sent from at %r\r\n' % (self.serverip, self.curr_ptr))
-                                    self.curr_ptr += 1024
-                                    self.remainbytes -= 1024
-                                else :
-                                    self.uploading_size.emit(6)
-                                    msg = bytearray(self.remainbytes)
-                                    msg[:] = self.data[self.curr_ptr:self.curr_ptr+self.remainbytes]
-                                    self.client.write(msg)
-                                    # sys.stdout.write('Last %r byte sent from at %r \r\n' % (self.remainbytes, self.curr_ptr))
-                                    sys.stdout.write('[%s] Last %r byte sent from at %r \r\n' % (self.serverip, self.remainbytes, self.curr_ptr))
-                                    self.curr_ptr += self.remainbytes
-                                    self.remainbytes = 0
-                                    self.sentbyte = self.remainbytes
+                    elif self.client.state is SOCK_CONNECT_STATE:
+                        # if self.client.working_state == idle_state:
+                            # sys.stdout.write('3 : %r' % self.client.getsockstate())
+                        try:
+                            self.uploading_size.emit(5)
+                            while self.remainbytes is not 0:
+                                if self.client.working_state == idle_state:
+                                    if self.remainbytes >= 1024:
+                                        msg = bytearray(1024)
+                                        msg[:] = self.data[self.curr_ptr:self.curr_ptr+1024]
+                                        self.client.write(msg)
+                                        self.sentbyte = 1024
+                                        # sys.stdout.write('1024 bytes sent from at %r\r\n' % (self.curr_ptr))
+                                        sys.stdout.write('[%s] 1024 bytes sent from at %r\r\n' % (self.serverip, self.curr_ptr))
+                                        self.curr_ptr += 1024
+                                        self.remainbytes -= 1024
+                                    else :
+                                        self.uploading_size.emit(6)
+                                        msg = bytearray(self.remainbytes)
+                                        msg[:] = self.data[self.curr_ptr:self.curr_ptr+self.remainbytes]
+                                        self.client.write(msg)
+                                        # sys.stdout.write('Last %r byte sent from at %r \r\n' % (self.remainbytes, self.curr_ptr))
+                                        sys.stdout.write('[%s] Last %r byte sent from at %r \r\n' % (self.serverip, self.remainbytes, self.curr_ptr))
+                                        self.curr_ptr += self.remainbytes
+                                        self.remainbytes = 0
+                                        self.sentbyte = self.remainbytes
 
-                                self.client.working_state = datasent_state
+                                    self.client.working_state = datasent_state
 
-                                self.timer1 = threading.Timer(2.0, self.myTimer)
-                                self.timer1.start()
+                                    self.timer1 = threading.Timer(2.0, self.myTimer)
+                                    self.timer1.start()
 
-                            elif self.client.working_state == datasent_state:
-                                
-                                # sys.stdout.write('4 : %r' % self.client.getsockstate())
-                                response = self.client.readbytes(2)
-                                if response is not None:
-                                    if int(binascii.hexlify(response), 16):
-                                        self.client.working_state = idle_state
-                                        self.timer1.cancel()
+                                elif self.client.working_state == datasent_state:
+                                    
+                                    # sys.stdout.write('4 : %r' % self.client.getsockstate())
+                                    response = self.client.readbytes(2)
+                                    if response is not None:
+                                        if int(binascii.hexlify(response), 16):
+                                            self.client.working_state = idle_state
+                                            self.timer1.cancel()
+                                            self.istimeout = 0
+                                        else:
+                                            print('ERROR: No response from device. Stop FW upload...')
+                                            self.client.close()
+                                            self.upload_result.emit(-1)
+                                            self.terminate()
+
+                                    if self.istimeout is 1:
                                         self.istimeout = 0
-                                    else:
-                                        print('ERROR: No response from device. Stop FW upload...')
+                                        self.client.working_state = idle_state
                                         self.client.close()
-                                        self.resultflag = -1
+                                        self.upload_result.emit(-1)
+                                        self.terminate()
+                                
+                                self.uploading_size.emit(7)
 
-                                if self.istimeout is 1:
-                                    self.istimeout = 0
-                                    self.client.working_state = idle_state
-                                    self.client.close()
-                                    self.resultflag = -1
-                                    self.terminate()
-                            
-                            self.uploading_size.emit(7)
-
-                    except Exception as e:
-                        sys.stdout.write('%r\r\n' % e)
-                        response = ""
-                    break
+                        except Exception as e:
+                            sys.stdout.write('%r\r\n' % e)
+                            response = ""
+                        break
             
             print('retrycheck: %d' % self.retrycheck)
-            if self.retrycheck > 10:
+            
+            if self.retrycheck > 6 or self.error_noresponse < 0:
                 sys.stdout.write('Device [%s] firmware upload fail.\r\n' % (self.dest_mac))
-                self.resultflag = -1
-            else:
+                self.upload_result.emit(-1)
+            elif self.error_noresponse >= 0:
+                self.uploading_size.emit(8)
                 sys.stdout.write('Device [%s] firmware upload success!\r\n' % (self.dest_mac))
-                self.resultflag = 1
+                self.upload_result.emit(1)
                 # send FIN packet 
-                self.msleep(1000)
+                self.msleep(500)
                 self.client.shutdown()
-        except (KeyboardInterrupt, SystemExit):
+        except Exception as e:
+            self.error_flag.emit(-3)
             sys.stdout.write('%r\r\n' % e)
         finally:
             pass

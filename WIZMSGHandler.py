@@ -14,7 +14,7 @@ from WIZ750CMDSET import WIZ750CMDSET
 from WIZ752CMDSET import WIZ752CMDSET 
 from wizsocket.TCPClient import TCPClient
 
-from PyQt5.QtCore import QTimer, QThread
+from PyQt5.QtCore import QTimer, QThread, pyqtSignal
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -35,7 +35,10 @@ def timeout_func():
     exitflag = 1
 
 class WIZMSGHandler(QThread):
-    def __init__(self, udpsock):
+    search_result = pyqtSignal(int)
+    set_result = pyqtSignal(int)
+
+    def __init__(self, udpsock, cmd_list, what_sock, op_code):
         QThread.__init__(self)
 
         self.sock = udpsock
@@ -59,16 +62,15 @@ class WIZMSGHandler(QThread):
         self.mode_list = []
         self.mn_list = []
         self.vr_list = []
-
         self.getreply = []
-
         self.rcv_list = []
 
-        # self.exitflag = None
+        self.what_sock = what_sock
+        self.cmd_list = cmd_list
+        self.opcode = op_code
+
 
     def timeout_func(self):
-    	# print('timeout')
-        # self.exitflag = 1
         self.istimeout = True        
 
     def getmacaddr(self, index):
@@ -111,11 +113,10 @@ class WIZMSGHandler(QThread):
             print('getipmode: index is out of range')
             return None
 
-    def makecommands(self, cmd_list, op_code):
-        self.opcode = op_code
+    def makecommands(self):
         self.size = 0
 
-        for cmd in cmd_list:
+        for cmd in self.cmd_list:
             # print('cmd[0]: %s, cmd[1]: %s' % (cmd[0], cmd[1]))
             self.msg[self.size:] = str.encode(cmd[0])
             self.size += len(cmd[0])
@@ -148,6 +149,15 @@ class WIZMSGHandler(QThread):
     
     # def parseresponse(self):
     def run(self):
+        try:
+            self.makecommands()
+            if self.what_sock == 'udp':
+                self.sendcommands()
+            elif self.what_sock == 'tcp':
+                self.sendcommandsTCP()
+        except Exception as e:
+            print(e)
+
         readready, writeready, errorready = select.select(self.inputs, self.outputs, self.errors, 3)
 
         replylists = None
@@ -199,21 +209,22 @@ class WIZMSGHandler(QThread):
                                 # sys.stdout.write('self.isvalid is True\r\n')
                                 param = replylists[i][2:].split(b':')
                                 self.reply = replylists[i][2:]
-                                
                             # sys.stdout.write("%r\r\n" % replylists[i])
-
-                    print('readready 2: ', len(readready), readready, self.iter)
+                    # print('readready 2: ', len(readready), readready, self.iter)
 
             readready, writeready, errorready = select.select(self.inputs, self.outputs, self.errors, 1)
                     
-
             if len(readready) == 0:
                 break
 
-
         if self.opcode is OP_SEARCHALL:
-            print('Search device: ', self.mac_list)
-            return len(self.mac_list)
+            self.msleep(500)
+            # print('Search device:', self.mac_list)
+            self.search_result.emit(len(self.mac_list))
+            # return len(self.mac_list)
+        if self.opcode is OP_SETCOMMAND:
+            self.msleep(500)
+            self.set_result.emit(1)
         elif self.opcode is OP_FWUP:
             return self.reply
         # sys.stdout.write("%s\r\n" % self.mac_list)
