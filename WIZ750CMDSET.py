@@ -64,7 +64,7 @@ class WIZ750CMDSET:
                         "DB" : ["UART Data bit length", "^[0-1]$", {"0" : "7-bit", "1" : "8-bit"}, "RW"],
                         "PR" : ["UART Parity bit", "^[0-2]$", {"0" : "NONE", "1" : "ODD", "2" : "EVEN"}, "RW"],
                         "SB" : ["UART Stop bit length", "^[0-1]$", {"0" : "1-bit", "1" : "2-bit"}, "RW"],
-                        "FL" : ["UART Flow Control", "^[0-2]$", {"0" : "NONE", "1" : "XON/XOFF", "2" : "RTS/CTS"}, "RW"],
+                        "FL" : ["UART Flow Control", "^[0-2]$", {"0" : "NONE", "1" : "XON/XOFF", "2" : "RTS/CTS", "3" : "RTS on TX", "4" : "RTS on TX (invert)"}, "RW"],
                         "PT" : ["Time Delimiter",
                                         "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])$",
                                         {}, "RW"],
@@ -136,6 +136,9 @@ class WIZ750CMDSET:
 
         if self.isvalidcommand(cmdstr) is 1:
             prog = re.compile(self.cmdset[cmdstr][1])
+            # for domain name
+            if cmdstr == 'RH':
+                return True
             if prog.match(param) :
                 if self.log_level is logging.DEBUG:
                     logger.debug("Valid %s\r\n" % self.cmdset[cmdstr][0])

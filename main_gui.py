@@ -219,6 +219,9 @@ class WIZWindow(QMainWindow, main_window):
 
         # 창 활성화
         self.generalTab.setEnabled(True)
+        self.generalTab.setTabEnabled(0, True)
+        self.generalTab.setTabEnabled(1, False)
+
         self.channel_tab.setEnabled(True)
         self.EnablePW()
 
@@ -582,6 +585,24 @@ class WIZWindow(QMainWindow, main_window):
                     self.status_tcpst.setChecked(True)
                 elif cmdset_list[i][2:].decode()[1:2] == '1':
                     self.status_dsr.setChecked(True)
+            
+            # if b'CA' in cmdset_list[i]:
+            #     self.gpioa_config.setCurrentIndex(int(cmdset_list[i][2:]))
+            # if b'CB' in cmdset_list[i]:
+            #     self.gpiob_config.setCurrentIndex(int(cmdset_list[i][2:]))
+            # if b'CC' in cmdset_list[i]:
+            #     self.gpioc_config.setCurrentIndex(int(cmdset_list[i][2:]))
+            # if b'CD' in cmdset_list[i]:
+            #     self.gpiod_config.setCurrentIndex(int(cmdset_list[i][2:]))
+
+            # if b'GA' in cmdset_list[i]:
+            #     self.gpioa_value.setText(cmdset_list[i][2:].decode())
+            # if b'GB' in cmdset_list[i]:
+            #     self.gpiob_value.setText(cmdset_list[i][2:].decode())
+            # if b'GC' in cmdset_list[i]:
+            #     self.gpioc_value.setText(cmdset_list[i][2:].decode())
+            # if b'GD' in cmdset_list[i]:
+            #     self.gpiod_value.setText(cmdset_list[i][2:].decode())
 
             # Channel 2 config (For two Port device)
             if self.curr_dev in TWO_PORT_DEV:
@@ -679,7 +700,10 @@ class WIZWindow(QMainWindow, main_window):
         elif self.at_enable.isChecked() is False: setcmd['TE'] = '0'
             
         # search id code: max 8 bytes
-        setcmd['SP'] = self.searchcode.text()
+        if len(self.searchcode.text()) == 0:
+            setcmd['SP'] = ' '
+        else:
+            setcmd['SP'] = self.searchcode.text()
 
         # Debug msg 
         if self.serial_debug.currentIndex() == 2:
@@ -725,6 +749,21 @@ class WIZWindow(QMainWindow, main_window):
             lower_val = '1'
         setcmd['SC'] = upper_val + lower_val
 
+        # Expansion GPIO
+        # setcmd['CA'] = str(self.gpioa_config.currentIndex())
+        # setcmd['CB'] = str(self.gpiob_config.currentIndex())
+        # setcmd['CC'] = str(self.gpioc_config.currentIndex())
+        # setcmd['CD'] = str(self.gpiod_config.currentIndex())
+
+        # if self.gpioa_config.currentIndex() == 1:
+        #     setcmd['GA'] = self.gpioa_value.text()
+        # if self.gpiob_config.currentIndex() == 1:
+        #     setcmd['GB'] = self.gpiob_value.text()
+        # if self.gpioc_config.currentIndex() == 1:
+        #     setcmd['GC'] = self.gpioc_value.text()
+        # if self.gpiod_config.currentIndex() == 1:
+        #     setcmd['GD'] = self.gpiod_value.text()
+          
         # for channel 2
         if self.curr_dev in TWO_PORT_DEV:
             # device info - channel 2
