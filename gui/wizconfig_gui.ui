@@ -119,7 +119,7 @@
   <widget class="QWidget" name="centralwidget">
    <widget class="QTabWidget" name="channel_tab">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="geometry">
      <rect>
@@ -390,10 +390,10 @@
      <widget class="QGroupBox" name="group_serialconfig_2">
       <property name="geometry">
        <rect>
-        <x>239</x>
+        <x>224</x>
         <y>6</y>
-        <width>181</width>
-        <height>191</height>
+        <width>195</width>
+        <height>174</height>
        </rect>
       </property>
       <property name="font">
@@ -404,336 +404,435 @@
       <property name="title">
        <string>Serial options</string>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout_16">
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_108">
-         <item>
-          <widget class="QLabel" name="label_130">
-           <property name="font">
-            <font>
-             <family>맑은 고딕</family>
-            </font>
-           </property>
+      <widget class="QWidget" name="">
+       <property name="geometry">
+        <rect>
+         <x>11</x>
+         <y>26</y>
+         <width>176</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QLabel" name="label_130">
+          <property name="minimumSize">
+           <size>
+            <width>68</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>맑은 고딕</family>
+           </font>
+          </property>
+          <property name="text">
+           <string>Baud rate</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="ch1_baud">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>100</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>맑은 고딕</family>
+           </font>
+          </property>
+          <property name="editable">
+           <bool>false</bool>
+          </property>
+          <property name="currentText">
+           <string>300</string>
+          </property>
+          <property name="sizeAdjustPolicy">
+           <enum>QComboBox::AdjustToContents</enum>
+          </property>
+          <item>
            <property name="text">
-            <string>Baud rate</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="ch1_baud">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>75</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <family>맑은 고딕</family>
-            </font>
-           </property>
-           <property name="editable">
-            <bool>false</bool>
-           </property>
-           <property name="currentText">
             <string>300</string>
            </property>
-           <item>
-            <property name="text">
-             <string>300</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>600</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>1200</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>1800</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>2400</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>4800</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>9600</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>14400</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>19200</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>28800</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>38400</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>57600</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>115200</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>230400</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>460800</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_109">
-         <item>
-          <widget class="QLabel" name="label_131">
-           <property name="font">
-            <font>
-             <family>맑은 고딕</family>
-            </font>
-           </property>
+          </item>
+          <item>
            <property name="text">
-            <string>Data bit</string>
+            <string>600</string>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="ch1_databit">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
+          </item>
+          <item>
+           <property name="text">
+            <string>1200</string>
            </property>
-           <property name="maximumSize">
-            <size>
-             <width>75</width>
-             <height>16777215</height>
-            </size>
+          </item>
+          <item>
+           <property name="text">
+            <string>1800</string>
            </property>
-           <property name="font">
-            <font>
-             <family>맑은 고딕</family>
-            </font>
+          </item>
+          <item>
+           <property name="text">
+            <string>2400</string>
            </property>
-           <property name="currentText">
+          </item>
+          <item>
+           <property name="text">
+            <string>4800</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>9600</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>14400</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>19200</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>28800</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>38400</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>57600</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>115200</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>230400</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>460800</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="">
+       <property name="geometry">
+        <rect>
+         <x>11</x>
+         <y>55</y>
+         <width>176</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QLabel" name="label_131">
+          <property name="minimumSize">
+           <size>
+            <width>68</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>맑은 고딕</family>
+           </font>
+          </property>
+          <property name="text">
+           <string>Data bit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="ch1_databit">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>100</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>맑은 고딕</family>
+           </font>
+          </property>
+          <property name="currentText">
+           <string>7</string>
+          </property>
+          <property name="sizeAdjustPolicy">
+           <enum>QComboBox::AdjustToContents</enum>
+          </property>
+          <item>
+           <property name="text">
             <string>7</string>
            </property>
-           <item>
-            <property name="text">
-             <string>7</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>8</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_110">
-         <item>
-          <widget class="QLabel" name="label_132">
-           <property name="font">
-            <font>
-             <family>맑은 고딕</family>
-            </font>
-           </property>
+          </item>
+          <item>
            <property name="text">
-            <string>Parity</string>
+            <string>8</string>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="ch1_parity">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>75</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <family>맑은 고딕</family>
-            </font>
-           </property>
-           <property name="currentText">
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="">
+       <property name="geometry">
+        <rect>
+         <x>11</x>
+         <y>84</y>
+         <width>176</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <widget class="QLabel" name="label_132">
+          <property name="minimumSize">
+           <size>
+            <width>68</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>맑은 고딕</family>
+           </font>
+          </property>
+          <property name="text">
+           <string>Parity</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="ch1_parity">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>100</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>맑은 고딕</family>
+           </font>
+          </property>
+          <property name="currentText">
+           <string>NONE</string>
+          </property>
+          <property name="sizeAdjustPolicy">
+           <enum>QComboBox::AdjustToContents</enum>
+          </property>
+          <item>
+           <property name="text">
             <string>NONE</string>
            </property>
-           <item>
-            <property name="text">
-             <string>NONE</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>ODD</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>EVEN</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_111">
-         <item>
-          <widget class="QLabel" name="label_133">
-           <property name="font">
-            <font>
-             <family>맑은 고딕</family>
-            </font>
-           </property>
+          </item>
+          <item>
            <property name="text">
-            <string>Stop bit</string>
+            <string>ODD</string>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="ch1_stopbit">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
+          </item>
+          <item>
+           <property name="text">
+            <string>EVEN</string>
            </property>
-           <property name="maximumSize">
-            <size>
-             <width>75</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <family>맑은 고딕</family>
-            </font>
-           </property>
-           <property name="currentText">
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="">
+       <property name="geometry">
+        <rect>
+         <x>11</x>
+         <y>113</y>
+         <width>176</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_4">
+        <item>
+         <widget class="QLabel" name="label_133">
+          <property name="minimumSize">
+           <size>
+            <width>68</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>맑은 고딕</family>
+           </font>
+          </property>
+          <property name="text">
+           <string>Stop bit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="ch1_stopbit">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>100</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>맑은 고딕</family>
+           </font>
+          </property>
+          <property name="currentText">
+           <string>1</string>
+          </property>
+          <property name="sizeAdjustPolicy">
+           <enum>QComboBox::AdjustToContents</enum>
+          </property>
+          <item>
+           <property name="text">
             <string>1</string>
            </property>
-           <item>
-            <property name="text">
-             <string>1</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>2</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_112">
-         <item>
-          <widget class="QLabel" name="label_134">
-           <property name="font">
-            <font>
-             <family>맑은 고딕</family>
-            </font>
-           </property>
+          </item>
+          <item>
            <property name="text">
-            <string>Flow control</string>
+            <string>2</string>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="ch1_flow">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>75</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <family>맑은 고딕</family>
-            </font>
-           </property>
-           <property name="currentText">
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="">
+       <property name="geometry">
+        <rect>
+         <x>11</x>
+         <y>142</y>
+         <width>176</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_5">
+        <item>
+         <widget class="QLabel" name="label_134">
+          <property name="minimumSize">
+           <size>
+            <width>68</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>맑은 고딕</family>
+           </font>
+          </property>
+          <property name="text">
+           <string>Flow control</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="ch1_flow">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>100</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>맑은 고딕</family>
+           </font>
+          </property>
+          <property name="currentText">
+           <string>NONE</string>
+          </property>
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <property name="sizeAdjustPolicy">
+           <enum>QComboBox::AdjustToContents</enum>
+          </property>
+          <property name="modelColumn">
+           <number>0</number>
+          </property>
+          <item>
+           <property name="text">
             <string>NONE</string>
            </property>
-           <item>
-            <property name="text">
-             <string>NONE</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>XON/XOFF</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>RTS/CTS</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-        </layout>
-       </item>
-      </layout>
+          </item>
+          <item>
+           <property name="text">
+            <string>XON/XOFF</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>RTS/CTS</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>RTS on TX</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>RTS on TX (invert)</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </widget>
      </widget>
      <widget class="QGroupBox" name="group_packing_5">
       <property name="geometry">
@@ -986,7 +1085,7 @@ Interval</string>
        <rect>
         <x>6</x>
         <y>242</y>
-        <width>225</width>
+        <width>210</width>
         <height>80</height>
        </rect>
       </property>
@@ -1013,7 +1112,7 @@ Interval</string>
       <widget class="QLineEdit" name="ch1_remoteip">
        <property name="geometry">
         <rect>
-         <x>95</x>
+         <x>82</x>
          <y>23</y>
          <width>120</width>
          <height>22</height>
@@ -1046,7 +1145,7 @@ Interval</string>
       <widget class="QLabel" name="label_140">
        <property name="geometry">
         <rect>
-         <x>13</x>
+         <x>10</x>
          <y>23</y>
          <width>65</width>
          <height>22</height>
@@ -1076,7 +1175,7 @@ Interval</string>
       <widget class="QLabel" name="label_141">
        <property name="geometry">
         <rect>
-         <x>13</x>
+         <x>10</x>
          <y>48</y>
          <width>80</width>
          <height>22</height>
@@ -1106,7 +1205,7 @@ Interval</string>
       <widget class="QLineEdit" name="ch1_remoteport">
        <property name="geometry">
         <rect>
-         <x>95</x>
+         <x>82</x>
          <y>49</y>
          <width>80</width>
          <height>22</height>
@@ -1140,9 +1239,9 @@ Interval</string>
      <widget class="QGroupBox" name="group_packing_6">
       <property name="geometry">
        <rect>
-        <x>239</x>
+        <x>224</x>
         <y>201</y>
-        <width>181</width>
+        <width>195</width>
         <height>121</height>
        </rect>
       </property>
@@ -1329,7 +1428,7 @@ Interval</string>
      <widget class="QLineEdit" name="ch1_status">
       <property name="geometry">
        <rect>
-        <x>115</x>
+        <x>110</x>
         <y>11</y>
         <width>100</width>
         <height>23</height>
@@ -1370,7 +1469,7 @@ Interval</string>
      <widget class="QLabel" name="label_150">
       <property name="geometry">
        <rect>
-        <x>20</x>
+        <x>16</x>
         <y>10</y>
         <width>71</width>
         <height>25</height>
@@ -1388,9 +1487,9 @@ Interval</string>
      <widget class="QLabel" name="label_151">
       <property name="geometry">
        <rect>
-        <x>20</x>
+        <x>16</x>
         <y>40</y>
-        <width>111</width>
+        <width>90</width>
         <height>25</height>
        </rect>
       </property>
@@ -1406,7 +1505,7 @@ Interval</string>
      <widget class="QLineEdit" name="ch1_uart_name">
       <property name="geometry">
        <rect>
-        <x>115</x>
+        <x>110</x>
         <y>40</y>
         <width>100</width>
         <height>23</height>
@@ -1449,7 +1548,7 @@ Interval</string>
        <rect>
         <x>7</x>
         <y>71</y>
-        <width>225</width>
+        <width>210</width>
         <height>105</height>
        </rect>
       </property>
@@ -1476,7 +1575,7 @@ Interval</string>
       <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
-         <x>38</x>
+         <x>30</x>
          <y>20</y>
          <width>161</width>
          <height>81</height>
@@ -1590,7 +1689,7 @@ Interval</string>
        <rect>
         <x>7</x>
         <y>181</y>
-        <width>225</width>
+        <width>210</width>
         <height>55</height>
        </rect>
       </property>
@@ -1612,7 +1711,7 @@ Interval</string>
       <widget class="QLabel" name="label_139">
        <property name="geometry">
         <rect>
-         <x>13</x>
+         <x>10</x>
          <y>21</y>
          <width>77</width>
          <height>22</height>
@@ -4724,6 +4823,9 @@ Config</string>
      <number>0</number>
     </property>
     <widget class="QWidget" name="general">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <attribute name="title">
       <string>Options</string>
      </attribute>
@@ -5687,6 +5789,263 @@ Retry count</string>
         </property>
        </item>
       </widget>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="etc_tab">
+     <attribute name="title">
+      <string>ETC</string>
+     </attribute>
+     <widget class="QGroupBox" name="groupBox_2">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>6</y>
+        <width>271</width>
+        <height>141</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Expansion GPIO</string>
+      </property>
+      <widget class="QComboBox" name="gpiod_config">
+       <property name="geometry">
+        <rect>
+         <x>70</x>
+         <y>110</y>
+         <width>100</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <item>
+        <property name="text">
+         <string>Digital Input</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Digital Output</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Analog Input</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QComboBox" name="gpiob_config">
+       <property name="geometry">
+        <rect>
+         <x>70</x>
+         <y>50</y>
+         <width>100</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <item>
+        <property name="text">
+         <string>Digital Input</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Digital Output</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Analog Input</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QComboBox" name="gpioa_config">
+       <property name="geometry">
+        <rect>
+         <x>70</x>
+         <y>20</y>
+         <width>100</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <item>
+        <property name="text">
+         <string>Digital Input</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Digital Output</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Analog Input</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QLabel" name="label_2">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>50</y>
+         <width>56</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>GPIO B</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_4">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>110</y>
+         <width>56</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>GPIO D</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_3">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>80</y>
+         <width>56</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>GPIO C</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>20</y>
+         <width>56</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>GPIO A</string>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="gpioc_config">
+       <property name="geometry">
+        <rect>
+         <x>70</x>
+         <y>80</y>
+         <width>100</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <item>
+        <property name="text">
+         <string>Digital Input</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Digital Output</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Analog Input</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QLineEdit" name="gpiod_value">
+       <property name="geometry">
+        <rect>
+         <x>184</x>
+         <y>110</y>
+         <width>70</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="gpiob_value">
+       <property name="geometry">
+        <rect>
+         <x>184</x>
+         <y>50</y>
+         <width>70</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="gpioa_value">
+       <property name="geometry">
+        <rect>
+         <x>184</x>
+         <y>20</y>
+         <width>70</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="gpioc_value">
+       <property name="geometry">
+        <rect>
+         <x>184</x>
+         <y>80</y>
+         <width>70</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QLabel" name="label_5">
+      <property name="geometry">
+       <rect>
+        <x>70</x>
+        <y>150</y>
+        <width>161</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Digital input: Read only
+Digital output: R/W
+Analog input: Read only</string>
+      </property>
      </widget>
     </widget>
    </widget>
