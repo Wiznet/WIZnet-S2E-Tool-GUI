@@ -224,7 +224,13 @@ class WIZMSGHandler(QThread):
             # return len(self.mac_list)
         if self.opcode is OP_SETCOMMAND:
             self.msleep(500)
-            self.set_result.emit(1)
+            # print(self.rcv_list)
+            if len(self.rcv_list) > 0:
+                # print('set: rcv_list:', len(self.rcv_list[0]), self.rcv_list[0])
+                self.set_result.emit(len(self.rcv_list[0]))
+            else:
+                self.set_result.emit(-1)
+            
         elif self.opcode is OP_FWUP:
             return self.reply
         # sys.stdout.write("%s\r\n" % self.mac_list)

@@ -404,7 +404,7 @@
       <property name="title">
        <string>Serial options</string>
       </property>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>11</x>
@@ -539,7 +539,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>11</x>
@@ -606,7 +606,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>11</x>
@@ -678,7 +678,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>11</x>
@@ -745,7 +745,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>11</x>
@@ -4863,7 +4863,7 @@ Config</string>
       <bool>false</bool>
      </property>
      <attribute name="title">
-      <string>Options</string>
+      <string>Settings</string>
      </attribute>
      <widget class="QGroupBox" name="status_4">
       <property name="geometry">
@@ -5829,7 +5829,7 @@ Retry count</string>
     </widget>
     <widget class="QWidget" name="etc_tab">
      <attribute name="title">
-      <string>ETC</string>
+      <string>Options</string>
      </attribute>
      <widget class="QGroupBox" name="groupBox_2">
       <property name="geometry">
