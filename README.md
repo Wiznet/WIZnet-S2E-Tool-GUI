@@ -16,6 +16,9 @@ Python interpreter based and it is platform independent. It works on version 3.6
 
 ### Windows 
 - Windows 7  
+
+  * If the Windows 7 service pack version is low, there may be a problem running this tool.**
+
 - Windows 10  
 
   Recommended to use tool at a resolution of **1440*900 or higher.** \
