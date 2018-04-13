@@ -34,7 +34,7 @@ SOCK_CONNECT_STATE = 5
 ONE_PORT_DEV = ['WIZ750SR', 'WIZ750SR-100', 'WIZ750SR-105', 'WIZ750SR-110', 'WIZ107SR', 'WIZ108SR']
 TWO_PORT_DEV = ['WIZ752SR-12x', 'WIZ752SR-120','WIZ752SR-125']
 
-VERSION = '0.4.1 dev'
+VERSION = '0.4.1 beta'
 
 def resource_path(relative_path):
 # Get absolute path to resource, works for dev and for PyInstaller
@@ -852,8 +852,8 @@ class WIZWindow(QMainWindow, main_window):
                 self.wizmsghandler.set_result.connect(self.SetResult)
                 self.wizmsghandler.start()
 
-    def SetResult(self, result):
-        if result > 0:
+    def SetResult(self, resp_len):
+        if resp_len > 100:
             self.statusbar.showMessage(' Set device complete!')
 
             # complete pop-up
@@ -867,6 +867,16 @@ class WIZWindow(QMainWindow, main_window):
             self.set_reponse = self.wizmsghandler.rcv_list
             # print('setting response: ', self.list_device.selectedItems()[0].row(), len(self.set_reponse[0]), self.set_reponse)
             self.getSettinginfo(self.list_device.selectedItems()[0].row())
+        elif resp_len < 0:
+            print('Setting: no response from device.')
+            self.statusbar.showMessage(' Setting: no response from device.')
+            self.SetFailPopUp()
+        elif resp_len < 50:
+            print('Warning: setting is did not well.')
+            self.statusbar.showMessage(' Warning: setting is did not well.')
+            self.SetWarningPopUp()
+
+
 
     def SelectDev(self):
         # 선택된 장치의 mac addr / name 추출 
@@ -1071,6 +1081,20 @@ class WIZWindow(QMainWindow, main_window):
         msgbox.setIcon(QMessageBox.Warning)
         msgbox.setWindowTitle("Warning")
         msgbox.setText("Device is not selected.")
+        msgbox.exec_()
+
+    def SetWarningPopUp(self):
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Warning)
+        msgbox.setWindowTitle("Warning: Setting")
+        msgbox.setText("Setting did not well.\nPlease check the device or check the firmware version.")
+        msgbox.exec_()
+
+    def SetFailPopUp(self):
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Warning)
+        msgbox.setWindowTitle("Setting Failed")
+        msgbox.setText("Setting failed.\nNo response from device.")
         msgbox.exec_()
 
     def SetOKPopUp(self):
