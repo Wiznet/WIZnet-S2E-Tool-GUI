@@ -23,7 +23,6 @@ class WIZ750CMDSET:
                         "UN" : ["UART Interface(Str)", "", {}, "RO"],
                         "UI" : ["UART Interface(Code)", "", {}, "RO"],
                         # WIZ750SR: F/W 1.2.0 verison or later
-                        # "^([0-9]|1[0-4])$",
                         "TR" : ["TCP Retransmission Retry count",
                                 "^([1-9]|[1-9][0-9]|1[0-9][0-9]|2[0-5][0-5])$", 
                                 {}, "RW"], 
@@ -64,7 +63,7 @@ class WIZ750CMDSET:
                         "DB" : ["UART Data bit length", "^[0-1]$", {"0" : "7-bit", "1" : "8-bit"}, "RW"],
                         "PR" : ["UART Parity bit", "^[0-2]$", {"0" : "NONE", "1" : "ODD", "2" : "EVEN"}, "RW"],
                         "SB" : ["UART Stop bit length", "^[0-1]$", {"0" : "1-bit", "1" : "2-bit"}, "RW"],
-                        "FL" : ["UART Flow Control", "^[0-2]$", {"0" : "NONE", "1" : "XON/XOFF", "2" : "RTS/CTS", "3" : "RTS on TX", "4" : "RTS on TX (invert)"}, "RW"],
+                        "FL" : ["UART Flow Control", "^[0-4]$", {"0" : "NONE", "1" : "XON/XOFF", "2" : "RTS/CTS", "3" : "RTS on TX", "4" : "RTS on TX (invert)"}, "RW"],
                         "PT" : ["Time Delimiter",
                                         "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])$",
                                         {}, "RW"],
