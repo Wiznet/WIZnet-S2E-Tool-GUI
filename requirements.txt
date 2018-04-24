@@ -1,0 +1,3 @@
+# WIZnet-S2E-Tool-GUI requirements
+
+PyQt5==5.9.2
