@@ -85,9 +85,9 @@ class FWUploadThread(QThread):
         cmd_list.append(["AB", ""])
 
         if 'TCP' in self.sockinfo:
-            self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_FWUP)
+            self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_FWUP, 2)
         elif 'UDP' in self.sockinfo:
-            self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'udp', OP_FWUP)
+            self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'udp', OP_FWUP, 2)
         
         self.resp = self.wizmsghangler.run()
         
@@ -105,9 +105,9 @@ class FWUploadThread(QThread):
         cmd_list.append([command, str(len(self.data))])
 
         if 'TCP' in self.sockinfo:
-            self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_FWUP)
+            self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_FWUP, 2)
         elif 'UDP' in self.sockinfo:
-            self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'udp', OP_FWUP)
+            self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'udp', OP_FWUP, 2)
         # sys.stdout.write("cmd_list: %s\r\n" % cmd_list)
 
         # if no reponse from device, retry for several times.
