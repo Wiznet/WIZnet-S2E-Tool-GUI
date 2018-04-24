@@ -30,31 +30,66 @@ OP_FWUP = 6
 
 BAUDRATES = [300, 600, 1200, 1800, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 115200, 230400, 460800]
 # not use UI / EI (UART interface(Code))
-# cmd_oneport = ['MC','VR','MN','UN','ST','IM','OP','DD','CP','PO','DG','KA','KI','KE','RI','LI','SM','GW','DS','PI','PP','DX','DP','DI','DW','DH','LP','RP','RH','BR','DB','PR','SB','FL','IT','PT','PS','PD','TE','SS','NP','SP','SC','CA','CB','CC','CD','GA','GB','GC','GD','TR']
-# cmd_twoport = ['MC','VR','MN','UN','ST','IM','OP','DD','CP','PO','DG','KA','KI','KE','RI','LI','SM','GW','DS','PI','PP','DX','DP','DI','DW','DH','LP','RP','RH','BR','DB','PR','SB','FL','IT','PT','PS','PD','TE','SS','NP','SP','SC','CA','CB','CC','CD','GA','GB','GC','GD','TR','QS','QO','QH','QP','QL','RV','RA','RE','RR','EN','RS','EB','ED','EP','ES','EF','E0','E1','NT','NS','ND']
-cmd_oneport = ['MC','VR','MN','UN','ST','IM','OP','DD','CP','PO','DG','KA','KI','KE','RI','LI','SM','GW','DS','PI','PP','DX','DP','DI','DW','DH','LP','RP','RH','BR','DB','PR','SB','FL','IT','PT','PS','PD','TE','SS','NP','SP','SC','TR']
-cmd_twoport = ['MC','VR','MN','UN','ST','IM','OP','DD','CP','PO','DG','KA','KI','KE','RI','LI','SM','GW','DS','PI','PP','DX','DP','DI','DW','DH','LP','RP','RH','BR','DB','PR','SB','FL','IT','PT','PS','PD','TE','SS','NP','SP','SC','TR','QS','QO','QH','QP','QL','RV','RA','RE','RR','EN','RS','EB','ED','EP','ES','EF','E0','E1','NT','NS','ND']
+# for pre-search
+cmd_getinfo = ['MC','VR','MN','ST','IM','OP','LI','SM','GW']
+
+# Command for each device
+cmd_ch1 = ['MC','VR','MN','UN','ST','IM','OP','DD','CP','PO','DG','KA','KI','KE','RI','LI','SM','GW','DS','PI','PP','DX','DP','DI','DW','DH','LP','RP','RH','BR','DB','PR','SB','FL','IT','PT','PS','PD','TE','SS','NP','SP','SC']
+cmd_added = ['TR']  # f/w version 1.2.0 or later
+cmd_ch2 = ['QS','QO','QH','QP','QL','RV','RA','RE','RR','EN','RS','EB','ED','EP','ES','EF','E0','E1','NT','NS','ND']
+
+cmd_gpio = ['CA','CB','CC','CD','GA','GB','GC','GD']
+
+### CMD list
+cmd_1p_default = cmd_ch1
+cmd_1p_advanced = cmd_ch1 + cmd_added
+cmd_2p_default = cmd_ch1 + cmd_ch2
+
+def version_compare(version1, version2):
+    def normalize(v):
+        # return [x for x in re.sub(r'(\.0+)*$','',v).split('.')]
+        return [x for x in re.sub(r'(\.0+\.[dev])*$','',v).split('.')]
+    obj1 = normalize(version1)
+    obj2 = normalize(version2)
+    return (obj1 > obj2) - (obj1 < obj2)
+    # if return value < 0: version2 upper than version1
 
 class WIZMakeCMD:
-    def search_broadcast(self):
-        cmd_list = []
-        # Search All Devices on the network
-        # 장치 검색 시 필요 정보 Get
-        cmd_list.append(["MA", "FF:FF:FF:FF:FF:FF"])
-        cmd_list.append(["PW", " "])
-        # for cmd in cmd_oneport:
-        for cmd in cmd_twoport:
-            cmd_list.append([cmd, ""])
-        return cmd_list
-
-    def search(self, mac_addr, idcode):
+    def presearch(self, mac_addr, idcode):
         cmd_list = []
         # Search All Devices on the network
         # 장치 검색 시 필요 정보 Get
         cmd_list.append(["MA", mac_addr])
         cmd_list.append(["PW", idcode])
-        # for cmd in cmd_oneport:
-        for cmd in cmd_twoport:
+        for cmd in cmd_getinfo:
+            cmd_list.append([cmd, ""])
+        return cmd_list
+
+    def search(self, mac_addr, idcode, devname, version):
+        cmd_list = []
+        # Search All Devices on the network
+        cmd_list.append(["MA", mac_addr])
+        cmd_list.append(["PW", idcode])
+        
+        if "750" in devname:
+            # print('makecmd: one port')
+            if version_compare('1.2.0', version) <= 0:
+                for cmd in cmd_1p_advanced:
+                    cmd_list.append([cmd, ""])
+            else:
+                for cmd in cmd_ch1:
+                    cmd_list.append([cmd, ""])
+        elif "752" in devname:
+            for cmd in cmd_2p_default:
+                cmd_list.append([cmd, ""])
+            
+        return cmd_list
+
+    def get_gpiovalue(self, mac_addr, idcode):
+        cmd_list = []
+        cmd_list.append(["MA", mac_addr])
+        cmd_list.append(["PW", idcode])
+        for cmd in cmd_gpio:
             cmd_list.append([cmd, ""])
         return cmd_list
     
@@ -101,7 +136,7 @@ class WIZMakeCMD:
         return cmd_list
 
     # Set device
-    def setcommand(self, macaddr, idcode, command_list, param_list, port):
+    def setcommand(self, macaddr, idcode, command_list, param_list, devname, version):
         cmd_list = []
         try:
             # print('Macaddr: %s' % macaddr)
@@ -109,14 +144,18 @@ class WIZMakeCMD:
             cmd_list.append(["PW", idcode])
             for i in range(len(command_list)):
                 cmd_list.append([command_list[i], param_list[i]]) 
-            ################ Set+Get
-            if port == 1:
-                for cmd in cmd_oneport:
+            if "750" in devname:
+                if version_compare('1.2.0', version) <= 0:
+                    # print('makecmd: version 1.2.0 upper')
+                    for cmd in cmd_1p_advanced:
+                        cmd_list.append([cmd, ""])
+                else:
+                    for cmd in cmd_ch1:
+                        cmd_list.append([cmd, ""])
+            elif "752" in devname:
+                # print('makecmd: two port')
+                for cmd in cmd_2p_default:
                     cmd_list.append([cmd, ""])
-            elif port == 2:
-                for cmd in cmd_twoport:
-                    cmd_list.append([cmd, ""])
-            ################
             cmd_list.append(["SV", ""]) # save device setting
             cmd_list.append(["RT", ""]) # Device reboot
             return cmd_list
