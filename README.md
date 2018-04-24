@@ -8,31 +8,54 @@
 
 # Overview
 WIZnet-S2E-Tool-GUI is Configuration Tool for WIZnet serial to ethernet devices. \
-Python interpreter based and it is platform independent. It works on version 3.6 python. 
+Python interpreter based and it is platform independent. It works on version 3.x python. 
 
-![](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/blob/master/doc/images/wizconfig_main.png?raw=true)
+<img src="https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/blob/master/doc/images/wizconfig_main.png" width="85%"></img>
+
 
 ## Environment
 
 ### Windows 
+
+You can refer to below wiki page.
+
+   [WIZnet-S2E-Tool-GUI wiki: Getting started guide](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki/Getting-started-guide)
+
+
 - Windows 7  
 
-  * If the Windows 7 service pack version is low, there may be a problem running this tool.**
+  * If the Windows 7 service pack version is low, there may be a problem running this tool.
+
 
 - Windows 10  
 
-  Recommended to use tool at a resolution of **1440*900 or higher.** \
-  We plan to update to support lower resolutions in future versions.
+Recommended to use tool at a resolution of **1440*900 or higher.** \
+We plan to update to support lower resolutions in future versions.
 
-  You can download Windows excutable file from [release page.](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/releases)
+You can download Windows excutable file from [release page.](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/releases)
 
 
 ### Linux
-- Ubuntu \
-  Not stable yet. This is will be updated soon.
 
-  You can use [CLI configuration tool](https://github.com/Wiznet/WIZnet-S2E-Tool) before new update of GUI Tool.
+#### Ubuntu 
+
+WIZnet-S2E-Tool-GUI is worked on **python 3.x** version.
+
+So please check the ubuntu version.
+
+    $ python --version
+
+Install:
+
+    $ git clone https://github.com/Wiznet/WIZnet-S2E-Tool-GUI
+    $ cd WIZnet-S2E-Tool-GUI
+    $ sudo pip install -r requirements.txt
+
+Now, run the configuration tool.
+
+    $ python main_gui.py
   
+You can use the [CLI configuration tool](https://github.com/Wiznet/WIZnet-S2E-Tool) also.
 
 ----
 
@@ -52,6 +75,8 @@ Python interpreter based and it is platform independent. It works on version 3.6
 
 ----
 # CLI Configuration Tool
+
+CLI: Command Line Interface Configuration Tool.
 
 CLI configuration tool for S2E devices can be refer from [WIZnet-S2E-Tool github page.](https://github.com/Wiznet/WIZnet-S2E-Tool)
 
