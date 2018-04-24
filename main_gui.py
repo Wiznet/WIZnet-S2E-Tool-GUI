@@ -631,14 +631,16 @@ class WIZWindow(QMainWindow, main_window):
         self.searched_dev = []
         self.dev_data = {}
         
-        print(self.mac_list, self.dev_name, self.vr_list)
-        for i in range(len(self.mac_list)):
-            # name = 'dev%d' % i
-            self.searched_dev.append([self.mac_list[i].decode(), self.dev_name[i].decode(), self.vr_list[i].decode()])
-            self.dev_data[self.mac_list[i].decode()] = [self.dev_name[i].decode(), self.vr_list[i].decode()]
+        # print(self.mac_list, self.dev_name, self.vr_list)
+        if self.mac_list is not None:
+            for i in range(len(self.mac_list)):
+                # name = 'dev%d' % i
+                self.searched_dev.append([self.mac_list[i].decode(), self.dev_name[i].decode(), self.vr_list[i].decode()])
+                self.dev_data[self.mac_list[i].decode()] = [self.dev_name[i].decode(), self.vr_list[i].decode()]
 
-        # print('searched_dev', self.searched_dev)
-        self.SingleSearch(self.searched_dev)
+            # print('searched_dev', self.searched_dev)
+            self.SingleSearch(self.searched_dev)
+        else: print('There is no device.')
 
     def DevClicked(self):
         dev_info = []
