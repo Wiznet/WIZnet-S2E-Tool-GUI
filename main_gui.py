@@ -35,7 +35,7 @@ SOCK_CONNECT_STATE = 5
 ONE_PORT_DEV = ['WIZ750SR', 'WIZ750SR-100', 'WIZ750SR-105', 'WIZ750SR-110', 'WIZ107SR', 'WIZ108SR']
 TWO_PORT_DEV = ['WIZ752SR-12x', 'WIZ752SR-120','WIZ752SR-125']
 
-VERSION = '0.5.0 beta'
+VERSION = '0.5.1 beta'
 
 def resource_path(relative_path):
 # Get absolute path to resource, works for dev and for PyInstaller
@@ -66,6 +66,9 @@ class WIZWindow(QMainWindow, main_window):
         self.curr_mac = None
         self.curr_dev = None
         self.curr_ver = None
+        self.curr_st = None
+
+        self.cli_sock = None
 
         self.isConnected = False
         self.set_reponse = None
@@ -353,46 +356,55 @@ class WIZWindow(QMainWindow, main_window):
             self.search_ipaddr.setEnabled(False)
             self.search_port.setEnabled(False)
 
+    def sock_close(self):
+        # 기존 연결 fin 
+        if self.cli_sock is not None:
+            if self.cli_sock.state is not SOCK_CLOSE_STATE:
+                self.cli_sock.shutdown()
+
+        # if self.isConnected and self.unicast_ip.isChecked():
+        #     self.conf_sock.shutdown()
+
     def tcpConnection(self, serverip, port):
         retrynum = 0
-        cli_sock = TCPClient(2, serverip, port)
-        print('sock state: %r' % (cli_sock.state))
+        self.cli_sock = TCPClient(2, serverip, port)
+        # print('sock state: %r' % (self.cli_sock.state))
 
-        # 기존 연결 fin 
-        if cli_sock.state is not SOCK_CLOSE_STATE:
-            cli_sock.shutdown()
+        # # 기존 연결 fin 
+        # if self.cli_sock.state is not SOCK_CLOSE_STATE:
+        #     self.cli_sock.shutdown()
 
         while True:
             if retrynum > 6:
                 break
             retrynum += 1
 
-            if cli_sock.state is SOCK_CLOSE_STATE:
-                cli_sock.shutdown()
-                cur_state = cli_sock.state
+            if self.cli_sock.state is SOCK_CLOSE_STATE:
+                self.cli_sock.shutdown()
+                cur_state = self.cli_sock.state
                 try:
-                    cli_sock.open()
-                    if cli_sock.state is SOCK_OPEN_STATE:
+                    self.cli_sock.open()
+                    if self.cli_sock.state is SOCK_OPEN_STATE:
                         print('[%r] is OPEN' % (serverip))
-                    time.sleep(0.5)
+                    time.sleep(0.2)
                 except Exception as e:
                     sys.stdout.write('%r\r\n' % e)
-            elif cli_sock.state is SOCK_OPEN_STATE:
-                cur_state = cli_sock.state
+            elif self.cli_sock.state is SOCK_OPEN_STATE:
+                cur_state = self.cli_sock.state
                 try:
-                    cli_sock.connect()
-                    if cli_sock.state is SOCK_CONNECT_STATE:
+                    self.cli_sock.connect()
+                    if self.cli_sock.state is SOCK_CONNECT_STATE:
                         print('[%r] is CONNECTED' % (serverip))
                 except Exception as e:
                     sys.stdout.write('%r\r\n' % e)
-            elif cli_sock.state is SOCK_CONNECT_STATE:
+            elif self.cli_sock.state is SOCK_CONNECT_STATE:
                 break
         if retrynum > 6:
             sys.stdout.write('Device [%s] TCP connection failed.\r\n' % (serverip))
             return None
         else:
             sys.stdout.write('Device [%s] TCP connected\r\n' % (serverip))
-            return cli_sock
+            return self.cli_sock
 
     def SocketConfig(self):
         # Broadcast
@@ -419,8 +431,10 @@ class WIZWindow(QMainWindow, main_window):
                     self.ConnectionFailPopUp()
                 else:
                     self.isConnected = True
+                self.btnsearch.setEnabled(True)
             else:
                 self.statusbar.showMessage(' Network unreachable: %s' % ip_addr)
+                self.btnsearch.setEnabled(True)
                 self.NetworkNotConnected(ip_addr)
 
     # expansion GPIO config
@@ -478,7 +492,7 @@ class WIZWindow(QMainWindow, main_window):
 
                 ## Expansion GPIO
                 for i in range(len(cmdset_list)):
-                    if num < 3:
+                    if num < 2:
                         if b'CA' in cmdset_list[i]: self.gpioa_config.setCurrentIndex(int(cmdset_list[i][2:]))
                         if b'CB' in cmdset_list[i]: self.gpiob_config.setCurrentIndex(int(cmdset_list[i][2:]))
                         if b'CC' in cmdset_list[i]: self.gpioc_config.setCurrentIndex(int(cmdset_list[i][2:]))
@@ -494,6 +508,9 @@ class WIZWindow(QMainWindow, main_window):
             self.wizmsghandler.wait()
             print('wait')
         else:
+            # 기존 연결 close
+            self.sock_close()
+
             cmd_list = []
             self.code = " "
             self.all_response = None
@@ -548,7 +565,12 @@ class WIZWindow(QMainWindow, main_window):
         self.code = " "
         # self.all_response = None
         self.pgbar.setFormat('Search for each device...')
-        self.SocketConfig()
+        
+        if self.broadcast.isChecked():
+            self.SocketConfig()
+        else:
+            # tcp unicast일 경우 presearch에서 이미 커넥션이 수립되어 있음
+            pass
 
         # Search devices
         if self.isConnected or self.broadcast.isChecked():
@@ -564,7 +586,7 @@ class WIZWindow(QMainWindow, main_window):
                 # print(cmd_list)
                 th_name = "dev_%s" % dev_info[0]
                 if self.unicast_ip.isChecked(): 
-                    th_name = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_SEARCHALL, 2)
+                    th_name = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_SEARCHALL, 1)
                 else: 
                     th_name = WIZMSGHandler(self.conf_sock, cmd_list, 'udp', OP_SEARCHALL, 1)
                 th_name.searched_data.connect(self.getSingleSearch)
@@ -618,8 +640,8 @@ class WIZWindow(QMainWindow, main_window):
 
             self.statusbar.showMessage(' Find %d devices' % devnum)
 
-            if self.isConnected and self.unicast_ip.isChecked():
-                self.conf_sock.shutdown()
+            # if self.isConnected and self.unicast_ip.isChecked():
+            #     self.conf_sock.shutdown()
 
             self.get_dev_list()
             # self.GetDevProfile()
@@ -634,7 +656,6 @@ class WIZWindow(QMainWindow, main_window):
         # print(self.mac_list, self.dev_name, self.vr_list)
         if self.mac_list is not None:
             for i in range(len(self.mac_list)):
-                # name = 'dev%d' % i
                 self.searched_dev.append([self.mac_list[i].decode(), self.dev_name[i].decode(), self.vr_list[i].decode()])
                 self.dev_data[self.mac_list[i].decode()] = [self.dev_name[i].decode(), self.vr_list[i].decode()]
 
@@ -965,6 +986,8 @@ class WIZWindow(QMainWindow, main_window):
     def Setting(self):
         self.set_reponse = None
 
+        self.sock_close()
+
         if len(self.list_device.selectedItems()) == 0:
             print('Device is not selected')
             self.DevNotSelected()
@@ -1068,12 +1091,17 @@ class WIZWindow(QMainWindow, main_window):
         self.t_fwup.terminate()
         if error == -1:
             self.statusbar.showMessage(' Firmware update failed. No response from device.')
+        elif error == -2:
+            self.statusbar.showMessage(' Firmware update: Nework connection failed.')
+            self.ConnectionFailPopUp()
         elif error == -3:
             self.statusbar.showMessage(' Firmware update error.')
         # self.FWUpFailPopUp()
 
     # 'FW': firmware upload
     def FWUpdate(self, filename, filesize):
+        self.sock_close()
+
         self.pgbar.setFormat('Uploading..')
         # self.pgbar.setRange(0, filesize)
         self.pgbar.setValue(0)
@@ -1092,7 +1120,12 @@ class WIZWindow(QMainWindow, main_window):
             self.code = self.searchcode_input.text()
 
         # FW update
-        self.t_fwup = FWUploadThread(self.conf_sock, mac_addr, self.code, filename)
+        if self.broadcast.isChecked():
+            self.t_fwup = FWUploadThread(self.conf_sock, mac_addr, self.code, filename, None, None)
+        elif self.unicast_ip.isChecked():
+            ip_addr = self.search_ipaddr.text()
+            port = int(self.search_port.text())
+            self.t_fwup = FWUploadThread(self.conf_sock, mac_addr, self.code, filename, ip_addr, port)
         self.t_fwup.uploading_size.connect(self.pgbar.setValue)
         self.t_fwup.upload_result.connect(self.UpdateResult)
         self.t_fwup.error_flag.connect(self.UpdateError)
@@ -1100,7 +1133,7 @@ class WIZWindow(QMainWindow, main_window):
             self.t_fwup.start()
         except Exception:
             print('fw uplooad error')
-            self.UpdateResult(-1)
+            self.UpdateResult(-1)  
 
     def FWFileOpen(self):    
         fname, _ = QFileDialog.getOpenFileName(self, 'Firmware file open', '', 'Binary Files (*.bin);;All Files (*)')
@@ -1152,13 +1185,22 @@ class WIZWindow(QMainWindow, main_window):
                 self.FWFileOpen()
             else:
                 self.UploadNetCheck()
+
+    def ResetResult(self, resp_len):
+        if resp_len > 0:
+            # self.statusbar.showMessage(' Reset complete.')
+            if self.isConnected and self.unicast_ip.isChecked():
+                self.conf_sock.shutdown()
+        elif resp_len < 0:
+            self.statusbar.showMessage(' Reset/Factory failed: no response from device.')
     
     def Reset(self):
         if len(self.list_device.selectedItems()) == 0:
             print('Device is not selected')
             self.DevNotSelected()
         else:
-            self.statusbar.showMessage(' Reset device?')
+            self.sock_close()
+
             self.SelectedDev()
             mac_addr = self.curr_mac
             
@@ -1170,24 +1212,22 @@ class WIZWindow(QMainWindow, main_window):
             cmd_list = self.wizmakecmd.reset(mac_addr, self.code)
             # print('Reset: %s' % cmd_list)
 
-            self.SocketConfig()
+            self.SocketConfig() 
 
             if self.unicast_ip.isChecked():
                 self.wizmsghandler = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_SETCOMMAND, 2)
             else:
                 self.wizmsghandler = WIZMSGHandler(self.conf_sock, cmd_list, 'udp', OP_SETCOMMAND, 2)
+            self.wizmsghandler.set_result.connect(self.ResetResult)
             self.wizmsghandler.start()
-            
-            self.statusbar.showMessage(' Reset device complete!')
-
-            if self.isConnected and self.unicast_ip.isChecked():
-                self.conf_sock.shutdown()
 
     def Factory(self):
         if len(self.list_device.selectedItems()) == 0:
             print('Device is not selected')
             self.DevNotSelected()
         else:
+            self.sock_close()
+
             self.statusbar.showMessage(' Factory reset?')
             self.SelectedDev()
             mac_addr = self.curr_mac
@@ -1205,14 +1245,8 @@ class WIZWindow(QMainWindow, main_window):
                 self.wizmsghandler = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_SETCOMMAND, 2)
             else:
                 self.wizmsghandler = WIZMSGHandler(self.conf_sock, cmd_list, 'udp', OP_SETCOMMAND, 2)
-            
+            self.wizmsghandler.set_result.connect(self.ResetResult)
             self.wizmsghandler.start()
-
-            # Check the response
-            self.statusbar.showMessage(' Device factory reset complete.')
-
-            if self.isConnected and self.unicast_ip.isChecked():
-                self.conf_sock.shutdown()
 
     def ProgramInfo(self):
         msgbox = QMessageBox(self)
@@ -1293,6 +1327,7 @@ class WIZWindow(QMainWindow, main_window):
         msgbox.exec_()
 
     def ResetPopUp(self):
+        self.statusbar.showMessage(' Reset device?')
         msgbox = QMessageBox(self)
         btnReply = msgbox.question(self, "Reset", "Do you really want to reset the device?", QMessageBox.Yes | QMessageBox.No)
         if btnReply == QMessageBox.Yes:
