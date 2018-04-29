@@ -8,6 +8,8 @@ import logging
 import threading
 import getopt
 import os
+import subprocess
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 import binascii
@@ -37,7 +39,7 @@ class FWUploadThread(QThread):
     upload_result = pyqtSignal(int)
     error_flag = pyqtSignal(int)
 
-    def __init__(self, conf_sock, dest_mac, idcode, binaryfile):
+    def __init__(self, conf_sock, dest_mac, idcode, binaryfile, ipaddr, port):
         QThread.__init__(self)
 
         self.dest_mac = None
@@ -49,21 +51,21 @@ class FWUploadThread(QThread):
         self.istimeout = 0
         self.serverip = None
         self.serverport = None
-
         self.sentbyte = 0
-
         self.dest_mac = dest_mac
         self.bin_filename = binaryfile
         self.idcode = idcode
-
-        self.conf_sock = conf_sock
         self.error_noresponse = 0
         self.retrycheck = 0
 
-        # UDP
-        # conf_sock = WIZUDPSock(5000, 50001)
-        # conf_sock.open()
-        self.sockinfo = '%s' % conf_sock
+        self.conf_sock = conf_sock
+        self.what_sock = '%s' % self.conf_sock
+        
+        # socket config (for TCP unicast)
+        self.ip_addr = ipaddr
+        self.port = port
+
+        self.cli_sock = None
 
     def setparam(self):
         self.fd = open(self.bin_filename, "rb")
@@ -84,9 +86,9 @@ class FWUploadThread(QThread):
         cmd_list.append(["PW", self.idcode])
         cmd_list.append(["AB", ""])
 
-        if 'TCP' in self.sockinfo:
+        if 'TCP' in self.what_sock:
             self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_FWUP, 2)
-        elif 'UDP' in self.sockinfo:
+        elif 'UDP' in self.what_sock:
             self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'udp', OP_FWUP, 2)
         
         self.resp = self.wizmsghangler.run()
@@ -94,7 +96,6 @@ class FWUploadThread(QThread):
         self.uploading_size.emit(1)
         self.msleep(1000)
 
-    # def run(self):
     def sendCmd(self, command):
         cmd_list = []
         self.resp = None
@@ -104,9 +105,9 @@ class FWUploadThread(QThread):
         cmd_list.append(["PW", self.idcode])
         cmd_list.append([command, str(len(self.data))])
 
-        if 'TCP' in self.sockinfo:
+        if 'TCP' in self.what_sock:
             self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_FWUP, 2)
-        elif 'UDP' in self.sockinfo:
+        elif 'UDP' in self.what_sock:
             self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'udp', OP_FWUP, 2)
         # sys.stdout.write("cmd_list: %s\r\n" % cmd_list)
 
@@ -121,18 +122,18 @@ class FWUploadThread(QThread):
         self.uploading_size.emit(2)
 
     def run(self):
-        try:
-            self.setparam()
-            self.jumpToApp()
-        except Exception as e:
-            sys.stdout.write('%r\r\n' % e)
+        self.setparam()
+        self.jumpToApp()
 
-        try:
-            self.sendCmd('FW')
-        except Exception as e:
-            sys.stdout.write('sendCmd(): %r\r\n' % e)
+        if 'UDP' in self.what_sock:
+            pass
+        elif 'TCP' in self.what_sock:
+            self.sock_close()
+            self.SocketConfig()
 
-        if self.resp is not '':
+        self.sendCmd('FW')
+
+        if self.resp is not '' and self.resp is not None:
             resp = self.resp.decode('utf-8')
             # print('resp', resp)
             params = resp.split(':')
@@ -258,8 +259,75 @@ class FWUploadThread(QThread):
                 # send FIN packet 
                 self.msleep(500)
                 self.client.shutdown()
+                if 'TCP' in self.what_sock:
+                    self.conf_sock.shutdown()
         except Exception as e:
             self.error_flag.emit(-3)
             sys.stdout.write('%r\r\n' % e)
         finally:
             pass
+
+    def sock_close(self):
+        # 기존 연결 fin 
+        if self.cli_sock is not None:
+            if self.cli_sock.state is not SOCK_CLOSE_STATE:
+                self.cli_sock.shutdown()
+        if self.conf_sock is not None:
+            self.conf_sock.shutdown()
+
+    def tcpConnection(self, serverip, port):
+        retrynum = 0
+        self.cli_sock = TCPClient(2, serverip, port)
+        print('sock state: %r' % (self.cli_sock.state))
+
+        while True:
+            if retrynum > 6:
+                break
+            retrynum += 1
+
+            if self.cli_sock.state is SOCK_CLOSE_STATE:
+                self.cli_sock.shutdown()
+                cur_state = self.cli_sock.state
+                try:
+                    self.cli_sock.open()
+                    if self.cli_sock.state is SOCK_OPEN_STATE:
+                        print('[%r] is OPEN' % (serverip))
+                    time.sleep(0.5)
+                except Exception as e:
+                    sys.stdout.write('%r\r\n' % e)
+            elif self.cli_sock.state is SOCK_OPEN_STATE:
+                cur_state = self.cli_sock.state
+                try:
+                    self.cli_sock.connect()
+                    if self.cli_sock.state is SOCK_CONNECT_STATE:
+                        print('[%r] is CONNECTED' % (serverip))
+                except Exception as e:
+                    sys.stdout.write('%r\r\n' % e)
+            elif self.cli_sock.state is SOCK_CONNECT_STATE:
+                break
+        if retrynum > 6:
+            sys.stdout.write('Device [%s] TCP connection failed.\r\n' % (serverip))
+            return None
+        else:
+            sys.stdout.write('Device [%s] TCP connected\r\n' % (serverip))
+            return self.cli_sock
+
+    def SocketConfig(self):
+        # Broadcast
+        if 'UDP' in self.what_sock:
+            self.conf_sock = WIZUDPSock(5000, 50001)
+            self.conf_sock.open()
+
+        # TCP unicast
+        elif 'TCP' in self.what_sock:
+            print('upload_unicast: ip: %r, port: %r' % (self.ip_addr, self.port))
+
+            self.conf_sock = self.tcpConnection(self.ip_addr, self.port)
+
+            if self.conf_sock is None:
+                # self.isConnected = False
+                print('TCP connection failed!: %s' % self.conf_sock)
+                self.error_flag.emit(-3)
+                self.terminate()
+            else:
+                self.isConnected = True

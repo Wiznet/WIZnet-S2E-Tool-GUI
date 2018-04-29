@@ -44,7 +44,12 @@ class WIZMSGHandler(QThread):
         self.msg = bytearray(1024)
         self.size = 0
 
-        self.inputs = [self.sock.sock]
+        try:
+            self.inputs = [self.sock.sock]
+        except Exception as e:
+            print('socket error:', e)
+            self.terminate()
+
         self.outputs = []
         self.errors = []
         self.opcode = None
@@ -69,7 +74,6 @@ class WIZMSGHandler(QThread):
         self.opcode = op_code
 
         self.timeout = timeout
-
 
     def timeout_func(self):
         self.istimeout = True        
@@ -212,9 +216,7 @@ class WIZMSGHandler(QThread):
                                     # self.isvalid = True
                                 else:
                                     self.isvalid = False
-
                                 # sys.stdout.write("%r\r\n" % replylists[i][:2])
-
                                 if b'FW' in replylists[i][:2]:
                                     # sys.stdout.write('self.isvalid is True\r\n')
                                     param = replylists[i][2:].split(b':')
@@ -224,7 +226,7 @@ class WIZMSGHandler(QThread):
 
                 readready, writeready, errorready = select.select(self.inputs, self.outputs, self.errors, 1)
                         
-                if len(readready) == 0:
+                if not readready or not replylists:
                     break
 
             if self.opcode is OP_SEARCHALL:
@@ -236,7 +238,7 @@ class WIZMSGHandler(QThread):
                 self.msleep(500)
                 # print(self.rcv_list)
                 if len(self.rcv_list) > 0:
-                    # print('set: rcv_list:', len(self.rcv_list[0]), self.rcv_list[0])
+                    # print('OP_SETCOMMAND: rcv_list:', len(self.rcv_list[0]), self.rcv_list[0])
                     self.set_result.emit(len(self.rcv_list[0]))
                 else:
                     self.set_result.emit(-1)
