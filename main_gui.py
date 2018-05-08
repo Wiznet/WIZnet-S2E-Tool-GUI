@@ -32,10 +32,10 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-ONE_PORT_DEV = ['WIZ750SR', 'WIZ750SR-100', 'WIZ750SR-105', 'WIZ750SR-110', 'WIZ107SR', 'WIZ108SR']
+ONE_PORT_DEV = ['WIZ750SR', 'WIZ750SR-100', 'WIZ750SR-105', 'WIZ750SR-110', 'WIZ107SR', 'WIZ108SR', 'WIZ2000']
 TWO_PORT_DEV = ['WIZ752SR-12x', 'WIZ752SR-120','WIZ752SR-125']
 
-VERSION = '0.5.1 beta'
+VERSION = '0.5.2 dev'
 
 def resource_path(relative_path):
 # Get absolute path to resource, works for dev and for PyInstaller
@@ -237,7 +237,7 @@ class WIZWindow(QMainWindow, main_window):
         self.EnablePW()
 
         # device's port number check
-        if self.curr_dev in ONE_PORT_DEV or 'WIZ750' in self.curr_dev:
+        if self.curr_dev in ONE_PORT_DEV or 'WIZ750' in self.curr_dev or 'WIZ2000' in self.curr_dev:
             self.channel_tab.setTabEnabled(0, True)
             self.channel_tab.setTabEnabled(1, False)
             self.channel_tab.setTabEnabled(2, False)
@@ -727,7 +727,9 @@ class WIZWindow(QMainWindow, main_window):
             # search id code
             if b'SP' in cmdset_list[i]:
                 if cmdset_list[i][2:].decode() == ' ':
-                    pass
+                    self.searchcode.clear()
+                else:
+                    self.searchcode.setText(cmdset_list[i][2:].decode())
             # Debug msg - for test
             if b'DG' in cmdset_list[i]: 
                 if int(cmdset_list[i][2:].decode()) < 2:
@@ -848,9 +850,15 @@ class WIZWindow(QMainWindow, main_window):
     def getdevinfo(self, row_index):
         self.EnableObject()
         self.rcv_data = self.all_response
-        devinfo = self.rcv_data[row_index].splitlines()
-        # print('devinfo %d: %s ' % (row_index, devinfo))
-        self.FillInfo(devinfo)
+        # print('row_index - rcvdate:', row_index, len(self.rcv_data))
+
+        if row_index < len(self.rcv_data):
+            devinfo = self.rcv_data[row_index].splitlines()
+            # print('devinfo %d: %s ' % (row_index, devinfo))
+            self.FillInfo(devinfo)
+        else:
+            print('list index range error - No response from device')
+            self.InvalidResponse()
     
     def getSettinginfo(self, row_index):
         self.rcv_data[row_index] = self.set_reponse[0]
@@ -996,7 +1004,7 @@ class WIZWindow(QMainWindow, main_window):
             setcmd = self.GetObjectValue()
             # self.SelectedDev()
 
-            if self.curr_dev in ONE_PORT_DEV or 'WIZ750' in self.curr_dev:
+            if self.curr_dev in ONE_PORT_DEV or 'WIZ750' in self.curr_dev or 'WIZ2000' in self.curr_dev:
                 print('One port dev setting')
                 # Parameter validity check 
                 invalid_flag = 0
@@ -1016,6 +1024,9 @@ class WIZWindow(QMainWindow, main_window):
                         print('Invalid parameter: %s %s' % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
                         self.InvalidPopUp(setcmd.get(setcmd_cmd[i]))
                         invalid_flag += 1
+            else:
+                print('device is not supported')
+
             # print('invalid flag: %d' % invalid_flag)
             if invalid_flag > 0:
                 pass
@@ -1274,6 +1285,14 @@ class WIZWindow(QMainWindow, main_window):
         msgbox.setIcon(QMessageBox.Warning)
         msgbox.setWindowTitle("Warning")
         msgbox.setText("Device is not selected.")
+        msgbox.exec_()
+
+    def InvalidResponse(self):
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Warning)
+        msgbox.setWindowTitle("Invalid Response")
+        msgbox.setText("Did not receive a valid response from the device.\nPlease check if the device is supported device or firmware is the latest version.")
+        
         msgbox.exec_()
 
     def SetWarningPopUp(self):

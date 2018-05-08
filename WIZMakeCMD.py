@@ -71,7 +71,7 @@ class WIZMakeCMD:
         cmd_list.append(["MA", mac_addr])
         cmd_list.append(["PW", idcode])
         
-        if "750" in devname:
+        if "750" in devname or "WIZ2000" in devname:
             # print('makecmd: one port')
             if version_compare('1.2.0', version) <= 0:
                 for cmd in cmd_1p_advanced:
@@ -144,7 +144,7 @@ class WIZMakeCMD:
             cmd_list.append(["PW", idcode])
             for i in range(len(command_list)):
                 cmd_list.append([command_list[i], param_list[i]]) 
-            if "750" in devname:
+            if "750" in devname or "2000" in devname:
                 if version_compare('1.2.0', version) <= 0:
                     # print('makecmd: version 1.2.0 upper')
                     for cmd in cmd_1p_advanced:
