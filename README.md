@@ -19,7 +19,7 @@ Python interpreter based and it is platform independent. It works on version 3.x
 
 You can refer to below wiki page.
 
-   [WIZnet-S2E-Tool-GUI wiki: Getting started guide](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki/Getting-started-guide)
+  * [WIZnet-S2E-Tool-GUI wiki: Getting started guide](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki/Getting-started-guide)
 
 
 - Windows 7  
@@ -36,6 +36,10 @@ You can download Windows excutable file from [release page.](https://github.com/
 
 
 ### Linux
+
+You can refer to below wiki page.
+
+  * [Getting started guide: Using Python - Linux](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki/Getting-started-guide#using-python-linux)
 
 #### Ubuntu 
 
