@@ -4033,7 +4033,7 @@ Interval</string>
      </property>
     </column>
    </widget>
-   <widget class="QPushButton" name="savebtn">
+   <widget class="QPushButton" name="btn_saveconfig">
     <property name="enabled">
      <bool>false</bool>
     </property>
@@ -4080,7 +4080,7 @@ Config</string>
      </size>
     </property>
    </widget>
-   <widget class="QPushButton" name="loadbtn">
+   <widget class="QPushButton" name="btn_loadconfig">
     <property name="enabled">
      <bool>false</bool>
     </property>
@@ -4148,7 +4148,7 @@ Config</string>
      <enum>Qt::Vertical</enum>
     </property>
    </widget>
-   <widget class="QPushButton" name="exitbtn">
+   <widget class="QPushButton" name="btn_exit">
     <property name="enabled">
      <bool>true</bool>
     </property>
@@ -4215,7 +4215,7 @@ Config</string>
      <enum>Qt::Vertical</enum>
     </property>
    </widget>
-   <widget class="QPushButton" name="btnsearch">
+   <widget class="QPushButton" name="btn_search">
     <property name="geometry">
      <rect>
       <x>13</x>
@@ -4280,7 +4280,7 @@ Config</string>
      <string extracomment="shortcut"/>
     </property>
    </widget>
-   <widget class="QPushButton" name="fwupbtn">
+   <widget class="QPushButton" name="btn_upload">
     <property name="enabled">
      <bool>false</bool>
     </property>
@@ -4330,7 +4330,7 @@ Config</string>
      </size>
     </property>
    </widget>
-   <widget class="QPushButton" name="btnsetting">
+   <widget class="QPushButton" name="btn_setting">
     <property name="enabled">
      <bool>false</bool>
     </property>
@@ -4380,7 +4380,7 @@ Config</string>
      </size>
     </property>
    </widget>
-   <widget class="QPushButton" name="resetbtn">
+   <widget class="QPushButton" name="btn_reset">
     <property name="enabled">
      <bool>false</bool>
     </property>
@@ -4442,7 +4442,7 @@ Config</string>
      <bool>false</bool>
     </property>
    </widget>
-   <widget class="QPushButton" name="factorybtn">
+   <widget class="QPushButton" name="btn_factory">
     <property name="enabled">
      <bool>false</bool>
     </property>
@@ -5867,8 +5867,8 @@ Retry count</string>
        <rect>
         <x>476</x>
         <y>3</y>
-        <width>141</width>
-        <height>60</height>
+        <width>151</width>
+        <height>63</height>
        </rect>
       </property>
       <property name="font">
@@ -5882,9 +5882,9 @@ Retry count</string>
       <widget class="QComboBox" name="serial_debug">
        <property name="geometry">
         <rect>
-         <x>17</x>
-         <y>25</y>
-         <width>108</width>
+         <x>13</x>
+         <y>27</y>
+         <width>125</width>
          <height>22</height>
         </rect>
        </property>
@@ -6148,6 +6148,18 @@ Retry count</string>
          <width>70</width>
          <height>20</height>
         </rect>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>70</width>
+         <height>20</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>70</width>
+         <height>20</height>
+        </size>
        </property>
        <property name="inputMask">
         <string notr="true"/>
@@ -6513,17 +6525,17 @@ Analog input: Read only</string>
     </widget>
    </widget>
    <zorder>list_device</zorder>
-   <zorder>btnsearch</zorder>
-   <zorder>fwupbtn</zorder>
-   <zorder>btnsetting</zorder>
-   <zorder>resetbtn</zorder>
-   <zorder>factorybtn</zorder>
+   <zorder>btn_search</zorder>
+   <zorder>btn_upload</zorder>
+   <zorder>btn_setting</zorder>
+   <zorder>btn_reset</zorder>
+   <zorder>btn_factory</zorder>
    <zorder>channel_tab</zorder>
    <zorder>group_searchmethod</zorder>
-   <zorder>savebtn</zorder>
-   <zorder>loadbtn</zorder>
+   <zorder>btn_saveconfig</zorder>
+   <zorder>btn_loadconfig</zorder>
    <zorder>line</zorder>
-   <zorder>exitbtn</zorder>
+   <zorder>btn_exit</zorder>
    <zorder>line_3</zorder>
    <zorder>line_4</zorder>
    <zorder>generalTab</zorder>
