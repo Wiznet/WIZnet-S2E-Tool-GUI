@@ -32,10 +32,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-ONE_PORT_DEV = ['WIZ750SR', 'WIZ750SR-100', 'WIZ750SR-105', 'WIZ750SR-110', 'WIZ107SR', 'WIZ108SR', 'WIZ2000']
-TWO_PORT_DEV = ['WIZ752SR-12x', 'WIZ752SR-120','WIZ752SR-125']
-
-VERSION = '0.5.2 beta'
+VERSION = '0.5.3 dev'
 
 def resource_path(relative_path):
     # Get absolute path to resource, works for dev and for PyInstaller
@@ -62,12 +59,14 @@ class WIZWindow(QMainWindow, main_window):
 
         self.mac_list = []
         self.vr_list = []
+        self.st_list = []
         self.threads = []
         self.curr_mac = None
         self.curr_dev = None
         self.curr_ver = None
         self.curr_st = None
 
+        self.selected_eth = None
         self.cli_sock = None
 
         self.isConnected = False
@@ -165,6 +164,8 @@ class WIZWindow(QMainWindow, main_window):
 
     def net_ifs_selected(self, netifs):
         print('net_ifs_selected() %s: %s' % (netifs.text(), self.ifs_list[netifs.text()]))
+        self.statusbar.showMessage(' Selected eth: %s: %s' % (netifs.text(), self.ifs_list[netifs.text()]))
+        self.selected_eth = self.ifs_list[netifs.text()]
 
     def value_changed(self, value):
         self.pgbar.show()
@@ -197,9 +198,11 @@ class WIZWindow(QMainWindow, main_window):
                         self.ifs_list[adapter.nice_name] = ipv4_addr
 
                         # get network interface list
-                        self.net_list.append(adapter.nice_name)
-                        netconfig = QAction(adapter.nice_name, self)
-                        self.netconfig_menu.addAction(netconfig)
+                        if adapter.nice_name not in self.net_list:
+                            self.net_list.append(adapter.nice_name)
+                            # netconfig = QAction(adapter.nice_name, self, checkable=True)
+                            netconfig = QAction(adapter.nice_name, self)
+                            self.netconfig_menu.addAction(netconfig)
                 else:
                     ipv6_addr = ip.ip
         # print('net list: ', self.ifs_list)
@@ -401,7 +404,13 @@ class WIZWindow(QMainWindow, main_window):
     def socket_config(self):
         # Broadcast
         if self.broadcast.isChecked() or self.unicast_mac.isChecked():
-            self.conf_sock = WIZUDPSock(5000, 50001)
+            if self.selected_eth is None:
+                self.conf_sock = WIZUDPSock(5000, 50001, "")
+            else:
+                self.conf_sock = WIZUDPSock(5000, 50001, self.selected_eth)
+                print('selected eth IP address:', self.selected_eth)
+
+            # self.conf_sock = WIZUDPSock(5000, 50001)
             self.conf_sock.open()
 
         # TCP unicast
@@ -599,6 +608,7 @@ class WIZWindow(QMainWindow, main_window):
         self.dev_name = None
         self.mac_list = None
         self.vr_list = None
+        self.st_list = None
 
         if self.wizmsghandler.isRunning():
             self.wizmsghandler.wait()
@@ -611,6 +621,7 @@ class WIZWindow(QMainWindow, main_window):
                 self.mac_list = self.wizmsghandler.mac_list
                 self.dev_name = self.wizmsghandler.mn_list
                 self.vr_list = self.wizmsghandler.vr_list
+                self.st_list = self.wizmsghandler.st_list
 
                 self.all_response = self.wizmsghandler.rcv_list
             
@@ -643,8 +654,10 @@ class WIZWindow(QMainWindow, main_window):
         # print(self.mac_list, self.dev_name, self.vr_list)
         if self.mac_list is not None:
             for i in range(len(self.mac_list)):
-                self.searched_dev.append([self.mac_list[i].decode(), self.dev_name[i].decode(), self.vr_list[i].decode()])
-                self.dev_data[self.mac_list[i].decode()] = [self.dev_name[i].decode(), self.vr_list[i].decode()]
+                # self.searched_dev.append([self.mac_list[i].decode(), self.dev_name[i].decode(), self.vr_list[i].decode()])
+                # self.dev_data[self.mac_list[i].decode()] = [self.dev_name[i].decode(), self.vr_list[i].decode()]
+                self.searched_dev.append([self.mac_list[i].decode(), self.dev_name[i].decode(), self.vr_list[i].decode(), self.st_list[i].decode()])
+                self.dev_data[self.mac_list[i].decode()] = [self.dev_name[i].decode(), self.vr_list[i].decode(), self.st_list[i].decode()]
 
             # print('searched_dev', self.searched_dev)
             self.search_each_dev(self.searched_dev)
@@ -660,12 +673,12 @@ class WIZWindow(QMainWindow, main_window):
             self.getdevinfo(currentItem.row())
     
     def object_config(self):
-        if 'WIZ752' in self.curr_dev:
-            self.tcp_timeout.setEnabled(False)
-            self.generalTab.setTabEnabled(1, False)
-        else:
+        if 'WIZ750' in self.curr_dev:
             self.tcp_timeout.setEnabled(True)
             self.generalTab.setTabEnabled(1, True)
+        else:
+            self.tcp_timeout.setEnabled(False)
+            self.generalTab.setTabEnabled(1, False)
 
     def fill_devinfo(self, cmdset_list):
         self.selected_devinfo()
@@ -911,11 +924,14 @@ class WIZWindow(QMainWindow, main_window):
         # reconnection - channel 1
         setcmd['RI'] = self.ch1_reconnection.text()
         # Status pin
-        if self.status_phy.isChecked() is True: upper_val = '0'
-        elif self.status_dtr.isChecked() is True: upper_val = '1'
-        if self.status_tcpst.isChecked() is True: lower_val = '0'
-        elif self.status_dsr.isChecked() is True: lower_val = '1'
-        setcmd['SC'] = upper_val + lower_val
+        if 'WIZ107' in self.curr_dev or 'WIZ108' in self.curr_dev:
+            pass
+        else:
+            if self.status_phy.isChecked() is True: upper_val = '0'
+            elif self.status_dtr.isChecked() is True: upper_val = '1'
+            if self.status_tcpst.isChecked() is True: lower_val = '0'
+            elif self.status_dsr.isChecked() is True: lower_val = '1'
+            setcmd['SC'] = upper_val + lower_val
 
         if 'WIZ750' in self.curr_dev: 
             if version_compare('1.2.0', self.curr_ver) <= 0:
@@ -926,21 +942,24 @@ class WIZWindow(QMainWindow, main_window):
             pass
 
         # Expansion GPIO
-        if 'WIZ750' in self.curr_dev:
-            setcmd['CA'] = str(self.gpioa_config.currentIndex())
-            setcmd['CB'] = str(self.gpiob_config.currentIndex())
-            setcmd['CC'] = str(self.gpioc_config.currentIndex())
-            setcmd['CD'] = str(self.gpiod_config.currentIndex())
-            if self.gpioa_config.currentIndex() == 1:
-                setcmd['GA'] = str(self.gpioa_set.currentIndex())
-            if self.gpiob_config.currentIndex() == 1: 
-                setcmd['GB'] = str(self.gpiob_set.currentIndex())
-            if self.gpioc_config.currentIndex() == 1: 
-                setcmd['GC'] = str(self.gpioc_set.currentIndex())
-            if self.gpiod_config.currentIndex() == 1: 
-                setcmd['GD'] = str(self.gpiod_set.currentIndex())
-        elif 'WIZ752' in self.curr_dev:
+        if self.curr_st == 'BOOT':
             pass
+        else:
+            if 'WIZ750' in self.curr_dev:
+                setcmd['CA'] = str(self.gpioa_config.currentIndex())
+                setcmd['CB'] = str(self.gpiob_config.currentIndex())
+                setcmd['CC'] = str(self.gpioc_config.currentIndex())
+                setcmd['CD'] = str(self.gpiod_config.currentIndex())
+                if self.gpioa_config.currentIndex() == 1:
+                    setcmd['GA'] = str(self.gpioa_set.currentIndex())
+                if self.gpiob_config.currentIndex() == 1: 
+                    setcmd['GB'] = str(self.gpiob_set.currentIndex())
+                if self.gpioc_config.currentIndex() == 1: 
+                    setcmd['GC'] = str(self.gpioc_set.currentIndex())
+                if self.gpiod_config.currentIndex() == 1: 
+                    setcmd['GD'] = str(self.gpiod_set.currentIndex())
+            elif 'WIZ752' in self.curr_dev:
+                pass
           
         # for channel 2
         if self.curr_dev in TWO_PORT_DEV:
@@ -1050,6 +1069,8 @@ class WIZWindow(QMainWindow, main_window):
             self.set_reponse = self.wizmsghandler.rcv_list
             # print('setting response: ', self.list_device.selectedItems()[0].row(), len(self.set_reponse[0]), self.set_reponse)
             self.getinfo_for_setting(self.list_device.selectedItems()[0].row())
+
+            self.dev_clicked()
         elif resp_len < 0:
             print('Setting: no response from device.')
             self.statusbar.showMessage(' Setting: no response from device.')
@@ -1067,7 +1088,8 @@ class WIZWindow(QMainWindow, main_window):
             if currentItem.column() == 0:
                 self.curr_mac = currentItem.text()
                 self.curr_ver = self.dev_data[self.curr_mac][1]
-                # print('current mac addr:', self.curr_mac)
+                self.curr_st = self.dev_data[self.curr_mac][2]
+                # print('current device:', self.curr_mac, self.curr_ver, self.curr_st)
             elif currentItem.column() == 1:
                 self.curr_dev = currentItem.text()
                 # print('current dev name:', self.curr_dev)
@@ -1160,10 +1182,11 @@ class WIZWindow(QMainWindow, main_window):
         self.statusbar.showMessage(' Checking the network...')
         # serverip = self.localip_addr
         serverip = dst_ip
-        do_ping = subprocess.Popen("ping " + ("-n 1 " if sys.platform.lower()=="win32" else "-c 1 ") + serverip, 
+        # do_ping = subprocess.Popen("ping " + ("-n 1 " if sys.platform.lower()=="win32" else "-c 1 ") + serverip, 
+        do_ping = subprocess.Popen("ping " + ("-n 1 " if "win" in sys.platform.lower() else "-c 1 ") + serverip, 
                                     stdout=None, stderr=None, shell=True)
         ping_response = do_ping.wait()
-        # print('ping_response', ping_response)
+        print('ping response', ping_response)
         return ping_response
 
     def upload_net_check(self):
