@@ -68,6 +68,7 @@ class WIZMSGHandler(QThread):
         self.vr_list = []
         self.getreply = []
         self.rcv_list = []
+        self.st_list = []
 
         self.what_sock = what_sock
         self.cmd_list = cmd_list
@@ -204,15 +205,12 @@ class WIZMSGHandler(QThread):
                                 if b'OP' in replylists[i]: self.mode_list.append(replylists[i][2:])
                                 if b'LI' in replylists[i]: self.ip_list.append(replylists[i][2:]) 
                                 if b'IM' in replylists[i]: self.ip_mode.append(replylists[i][2:])
+                                if b'ST' in replylists[i]: self.st_list.append(replylists[i][2:])
                         elif self.opcode is OP_FWUP:
                             for i in range(0, len(replylists)):
-                                # sys.stdout.write('FWUP: %s\r\n' % replylists)
-                                # sys.stdout.write("%r\r\n" % replylists[i][:2])
                                 if b'MA' in replylists[i][:2]:
                                     dest_mac = self.dest_mac
                                     reply_mac = replylists[i][2:]
-                                    # sys.stdout.write('dest_mac: %r\r\n' % dest_mac)
-                                    # sys.stdout.write('reply_mac: %r\r\n' % reply_mac)
                                     # self.isvalid = True
                                 else:
                                     self.isvalid = False
@@ -221,7 +219,6 @@ class WIZMSGHandler(QThread):
                                     # sys.stdout.write('self.isvalid is True\r\n')
                                     param = replylists[i][2:].split(b':')
                                     self.reply = replylists[i][2:]
-                                # sys.stdout.write("%r\r\n" % replylists[i])
                         # print('readready 2: ', len(readready), readready, self.iter)
 
                 readready, writeready, errorready = select.select(self.inputs, self.outputs, self.errors, 1)

@@ -28,14 +28,18 @@ OP_SETFILE = 4
 OP_GETFILE = 5
 OP_FWUP = 6
 
+# Supported devices
+ONE_PORT_DEV = ['WIZ750SR', 'WIZ750SR-100', 'WIZ750SR-105', 'WIZ750SR-110', 'WIZ107SR', 'WIZ108SR', 'WIZ2000']
+TWO_PORT_DEV = ['WIZ752SR-12x', 'WIZ752SR-120','WIZ752SR-125']
+
 BAUDRATES = [300, 600, 1200, 1800, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 115200, 230400, 460800]
 # not use UI / EI (UART interface(Code))
 # for pre-search
 cmd_getinfo = ['MC','VR','MN','ST','IM','OP','LI','SM','GW']
 
 # Command for each device
-cmd_ch1 = ['MC','VR','MN','UN','ST','IM','OP','DD','CP','PO','DG','KA','KI','KE','RI','LI','SM','GW','DS','PI','PP','DX','DP','DI','DW','DH','LP','RP','RH','BR','DB','PR','SB','FL','IT','PT','PS','PD','TE','SS','NP','SP','SC']
-cmd_added = ['TR']  # f/w version 1.2.0 or later
+cmd_ch1 = ['MC','VR','MN','UN','ST','IM','OP','DD','CP','PO','DG','KA','KI','KE','RI','LI','SM','GW','DS','PI','PP','DX','DP','DI','DW','DH','LP','RP','RH','BR','DB','PR','SB','FL','IT','PT','PS','PD','TE','SS','NP','SP']
+cmd_added = ['SC', 'TR']  # f/w version 1.2.0 or later
 cmd_ch2 = ['QS','QO','QH','QP','QL','RV','RA','RE','RR','EN','RS','EB','ED','EP','ES','EF','E0','E1','NT','NS','ND']
 
 cmd_gpio = ['CA','CB','CC','CD','GA','GB','GC','GD']
@@ -71,15 +75,15 @@ class WIZMakeCMD:
         cmd_list.append(["MA", mac_addr])
         cmd_list.append(["PW", idcode])
         
-        if "750" in devname or "WIZ2000" in devname:
-            # print('makecmd: one port')
-            if version_compare('1.2.0', version) <= 0:
+        if devname in ONE_PORT_DEV or "750" in devname or "WIZ2000" in devname:
+
+            if '750' in devname and version_compare('1.2.0', version) <= 0:
                 for cmd in cmd_1p_advanced:
                     cmd_list.append([cmd, ""])
             else:
-                for cmd in cmd_ch1:
+                for cmd in cmd_1p_default:
                     cmd_list.append([cmd, ""])
-        elif "752" in devname:
+        elif devname in TWO_PORT_DEV or "752" in devname:
             for cmd in cmd_2p_default:
                 cmd_list.append([cmd, ""])
             
@@ -144,15 +148,16 @@ class WIZMakeCMD:
             cmd_list.append(["PW", idcode])
             for i in range(len(command_list)):
                 cmd_list.append([command_list[i], param_list[i]]) 
-            if "750" in devname or "2000" in devname:
-                if version_compare('1.2.0', version) <= 0:
+
+            if devname in ONE_PORT_DEV or "750" in devname or "2000" in devname:
+                if '750' in devname and version_compare('1.2.0', version) <= 0:
                     # print('makecmd: version 1.2.0 upper')
                     for cmd in cmd_1p_advanced:
                         cmd_list.append([cmd, ""])
                 else:
-                    for cmd in cmd_ch1:
+                    for cmd in cmd_1p_default:
                         cmd_list.append([cmd, ""])
-            elif "752" in devname:
+            elif devname in TWO_PORT_DEV or "752" in devname:
                 # print('makecmd: two port')
                 for cmd in cmd_2p_default:
                     cmd_list.append([cmd, ""])
