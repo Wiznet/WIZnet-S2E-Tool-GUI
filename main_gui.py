@@ -32,7 +32,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = '0.5.3 dev'
+VERSION = '0.5.4 Beta'
 
 def resource_path(relative_path):
     # Get absolute path to resource, works for dev and for PyInstaller
@@ -685,178 +685,197 @@ class WIZWindow(QMainWindow, main_window):
         # print('fill_devinfo: cmdset_list', cmdset_list)
         self.object_config()
 
-        for i in range(len(cmdset_list)):
-            # device info (RO)
-            if b'VR' in cmdset_list[i]: self.fw_version.setText(cmdset_list[i][2:].decode())
-            # device info - channel 1
-            if b'ST' in cmdset_list[i]: self.ch1_status.setText(cmdset_list[i][2:].decode())
-            if b'UN' in cmdset_list[i]: self.ch1_uart_name.setText(cmdset_list[i][2:].decode())
-            # Network - general
-            if b'IM' in cmdset_list[i]: 
-                if cmdset_list[i][2:].decode() == '0': self.ip_static.setChecked(True)
-                elif cmdset_list[i][2:].decode() == '1': self.ip_dhcp.setChecked(True)
-            if b'LI' in cmdset_list[i]: 
-                if 'VALID' in cmdset_list[i][2:].decode():
-                    pass
-                else:
-                    self.localip.setText(cmdset_list[i][2:].decode())
-                    self.localip_addr = cmdset_list[i][2:].decode()
-            if b'SM' in cmdset_list[i]: self.subnet.setText(cmdset_list[i][2:].decode())
-            if b'GW' in cmdset_list[i]: self.gateway.setText(cmdset_list[i][2:].decode())
-            if b'DS' in cmdset_list[i]: self.dns_addr.setText(cmdset_list[i][2:].decode())
-            # TCP transmisstion retry count
-            if b'TR' in cmdset_list[i]: 
-                if cmdset_list[i][2:].decode() == '0':
-                    self.tcp_timeout.setText('8')
-                else:
-                    self.tcp_timeout.setText(cmdset_list[i][2:].decode())
-            # etc - general
-            if b'CP' in cmdset_list[i]: 
-                self.enable_connect_pw.setChecked(int(cmdset_list[i][2:].decode()))
-            if b'NP' in cmdset_list[i]: 
-                if cmdset_list[i][2:].decode() == ' ':
-                    self.connect_pw.setText(None)
-                else:
-                    self.connect_pw.setText(cmdset_list[i][2:].decode())
-            # command mode (AT mode)
-            if b'TE' in cmdset_list[i]: self.at_enable.setChecked(int(cmdset_list[i][2:].decode()))
-            if b'SS' in cmdset_list[i]:
-                self.at_hex1.setText(cmdset_list[i][2:4].decode())
-                self.at_hex2.setText(cmdset_list[i][4:6].decode())
-                self.at_hex3.setText(cmdset_list[i][6:8].decode())
-            # search id code
-            if b'SP' in cmdset_list[i]:
-                if cmdset_list[i][2:].decode() == ' ':
-                    self.searchcode.clear()
-                else:
-                    self.searchcode.setText(cmdset_list[i][2:].decode())
-            # Debug msg - for test
-            if b'DG' in cmdset_list[i]: 
-                if int(cmdset_list[i][2:].decode()) < 2:
-                    self.serial_debug.setCurrentIndex(int(cmdset_list[i][2:]))
-                elif cmdset_list[i][2:].decode() == '4':
-                    self.serial_debug.setCurrentIndex(2)
+        # for cmd in cmdset_list:
+        #     pass
 
-            # Network - channel 1
-            if b'OP' in cmdset_list[i]:
-                if cmdset_list[i][2:].decode() == '0': 
-                    self.ch1_tcpclient.setChecked(True)
-                elif cmdset_list[i][2:].decode() == '1': 
-                    self.ch1_tcpserver.setChecked(True)
-                elif cmdset_list[i][2:].decode() == '2': 
-                    self.ch1_tcpmixed.setChecked(True)
-                elif cmdset_list[i][2:].decode() == '3': 
-                    self.ch1_udp.setChecked(True)
-            if b'LP' in cmdset_list[i]: self.ch1_localport.setText(cmdset_list[i][2:].decode())
-            if b'RH' in cmdset_list[i]: self.ch1_remoteip.setText(cmdset_list[i][2:].decode())
-            if b'RP' in cmdset_list[i]: self.ch1_remoteport.setText(cmdset_list[i][2:].decode())
-            # serial - channel 1
-            if b'BR' in cmdset_list[i]: self.ch1_baud.setCurrentIndex(int(cmdset_list[i][2:]))
-            if b'DB' in cmdset_list[i]: 
-                if (len(cmdset_list[i][2:]) > 2): pass 
-                else: 
-                    self.ch1_databit.setCurrentIndex(int(cmdset_list[i][2:]))
-            if b'PR' in cmdset_list[i]: self.ch1_parity.setCurrentIndex(int(cmdset_list[i][2:]))
-            if b'SB' in cmdset_list[i]: self.ch1_stopbit.setCurrentIndex(int(cmdset_list[i][2:]))
-            if b'FL' in cmdset_list[i]: self.ch1_flow.setCurrentIndex(int(cmdset_list[i][2:]))
-            if b'PT' in cmdset_list[i]: self.ch1_pack_time.setText(cmdset_list[i][2:].decode())
-            if b'PS' in cmdset_list[i]: self.ch1_pack_size.setText(cmdset_list[i][2:].decode())
-            if b'PD' in cmdset_list[i]: self.ch1_pack_char.setText(cmdset_list[i][2:].decode())
-            # Inactive timer - channel 1
-            if b'IT' in cmdset_list[i]: self.ch1_inact_timer.setText(cmdset_list[i][2:].decode())
-            # TCP keep alive - channel 1
-            if b'KA' in cmdset_list[i]: 
-                if cmdset_list[i][2:].decode() == '0': self.ch1_keepalive_enable.setChecked(False)
-                elif cmdset_list[i][2:].decode() == '1': self.ch1_keepalive_enable.setChecked(True)
-            if b'KI' in cmdset_list[i]: self.ch1_keepalive_initial.setText(cmdset_list[i][2:].decode())
-            if b'KE' in cmdset_list[i]: self.ch1_keepalive_retry.setText(cmdset_list[i][2:].decode())
-            # reconnection - channel 1
-            if b'RI' in cmdset_list[i]: self.ch1_reconnection.setText(cmdset_list[i][2:].decode())
-            
-            # Status pin
-            # status_phy / status_dtr || status_tcpst / status_dsr
-            if b'SC' in cmdset_list[i]: 
-                if cmdset_list[i][2:].decode()[0:1] == '0':
-                    self.status_phy.setChecked(True)
-                elif cmdset_list[i][2:].decode()[0:1] == '1':
-                    self.status_dtr.setChecked(True)
-                if cmdset_list[i][2:].decode()[1:2] == '0':
-                    self.status_tcpst.setChecked(True)
-                elif cmdset_list[i][2:].decode()[1:2] == '1':
-                    self.status_dsr.setChecked(True)
-
-            # Channel 2 config (For two Port device)
-            if self.curr_dev in TWO_PORT_DEV:
-                # device info - channel 2
-                if b'QS' in cmdset_list[i]: self.ch2_status.setText(cmdset_list[i][2:].decode())
-                if b'EN' in cmdset_list[i]: 
-                    if 'OPEN' in cmdset_list[i][2:].decode():
+        try:
+            for i in range(len(cmdset_list)):
+                # device info (RO)
+                if b'VR' in cmdset_list[i]: self.fw_version.setText(cmdset_list[i][2:].decode())
+                # device info - channel 1
+                if b'ST' in cmdset_list[i]: self.ch1_status.setText(cmdset_list[i][2:].decode())
+                if b'UN' in cmdset_list[i]: self.ch1_uart_name.setText(cmdset_list[i][2:].decode())
+                # Network - general
+                if b'IM' in cmdset_list[i]: 
+                    if cmdset_list[i][2:].decode() == '0': self.ip_static.setChecked(True)
+                    elif cmdset_list[i][2:].decode() == '1': self.ip_dhcp.setChecked(True)
+                if b'LI' in cmdset_list[i]: 
+                    if 'VALID' in cmdset_list[i][2:].decode():
                         pass
                     else:
-                        self.ch2_uart_name.setText(cmdset_list[i][2:].decode())
-                # Network - channel 2
-                if b'QO' in cmdset_list[i]: 
-                    if cmdset_list[i][2:].decode() == '0': self.ch2_tcpclient.setChecked(True)
-                    elif cmdset_list[i][2:].decode() == '1': self.ch2_tcpserver.setChecked(True)
-                    elif cmdset_list[i][2:].decode() == '2': self.ch2_tcpmixed.setChecked(True)
-                    elif cmdset_list[i][2:].decode() == '3': self.ch2_udp.setChecked(True)
-                if b'QL' in cmdset_list[i]: self.ch2_localport.setText(cmdset_list[i][2:].decode())
-                if b'QH' in cmdset_list[i]: self.ch2_remoteip.setText(cmdset_list[i][2:].decode())
-                if b'QP' in cmdset_list[i]: self.ch2_remoteport.setText(cmdset_list[i][2:].decode())
-                # serial - channel 2
-                if b'EB' in cmdset_list[i]: 
-                    if (len(cmdset_list[i][2:]) > 4):
-                        pass 
+                        self.localip.setText(cmdset_list[i][2:].decode())
+                        self.localip_addr = cmdset_list[i][2:].decode()
+                if b'SM' in cmdset_list[i]: self.subnet.setText(cmdset_list[i][2:].decode())
+                if b'GW' in cmdset_list[i]: self.gateway.setText(cmdset_list[i][2:].decode())
+                if b'DS' in cmdset_list[i]: self.dns_addr.setText(cmdset_list[i][2:].decode())
+                # TCP transmisstion retry count
+                if b'TR' in cmdset_list[i]: 
+                    if cmdset_list[i][2:].decode() == '0':
+                        self.tcp_timeout.setText('8')
                     else:
-                        self.ch2_baud.setCurrentIndex(int(cmdset_list[i][2:]))
-                if b'ED' in cmdset_list[i]: 
-                    if (len(cmdset_list[i][2:]) > 2):   
-                        pass 
+                        self.tcp_timeout.setText(cmdset_list[i][2:].decode())
+                # etc - general
+                if b'CP' in cmdset_list[i]: 
+                    self.enable_connect_pw.setChecked(int(cmdset_list[i][2:].decode()))
+                if b'NP' in cmdset_list[i]: 
+                    if cmdset_list[i][2:].decode() == ' ':
+                        self.connect_pw.setText(None)
                     else:
-                        self.ch2_databit.setCurrentIndex(int(cmdset_list[i][2:]))
-                if b'EP' in cmdset_list[i]: self.ch2_parity.setCurrentIndex(int(cmdset_list[i][2:]))
-                if b'ES' in cmdset_list[i]: self.ch2_stopbit.setCurrentIndex(int(cmdset_list[i][2:]))
-                if b'EF' in cmdset_list[i]: 
-                    if (len(cmdset_list[i][2:]) > 2):   
-                        pass
+                        self.connect_pw.setText(cmdset_list[i][2:].decode())
+                # command mode (AT mode)
+                if b'TE' in cmdset_list[i]: self.at_enable.setChecked(int(cmdset_list[i][2:].decode()))
+                if b'SS' in cmdset_list[i]:
+                    self.at_hex1.setText(cmdset_list[i][2:4].decode())
+                    self.at_hex2.setText(cmdset_list[i][4:6].decode())
+                    self.at_hex3.setText(cmdset_list[i][6:8].decode())
+                # search id code
+                if b'SP' in cmdset_list[i]:
+                    if cmdset_list[i][2:].decode() == ' ':
+                        self.searchcode.clear()
                     else:
-                        self.ch2_flow.setCurrentIndex(int(cmdset_list[i][2:]))
-                if b'NT' in cmdset_list[i]: self.ch2_pack_time.setText(cmdset_list[i][2:].decode())
-                if b'NS' in cmdset_list[i]: self.ch2_pack_size.setText(cmdset_list[i][2:].decode())
-                if b'ND' in cmdset_list[i]: 
-                    if (len(cmdset_list[i][2:]) > 2):
-                        pass
-                    else:
-                        self.ch2_pack_char.setText(cmdset_list[i][2:].decode())
-                # Inactive timer - channel 2
-                if b'RV' in cmdset_list[i]: self.ch2_inact_timer.setText(cmdset_list[i][2:].decode())
-                # TCP keep alive - channel 2
-                if b'RA' in cmdset_list[i]: 
-                    if cmdset_list[i][2:].decode() == '0': self.ch2_keepalive_enable.setChecked(False)
-                    elif cmdset_list[i][2:].decode() == '1': self.ch2_keepalive_enable.setChecked(True)
+                        self.searchcode.setText(cmdset_list[i][2:].decode())
+                # Debug msg - for test
+                if b'DG' in cmdset_list[i]: 
+                    if int(cmdset_list[i][2:].decode()) < 2:
+                        self.serial_debug.setCurrentIndex(int(cmdset_list[i][2:]))
+                    elif cmdset_list[i][2:].decode() == '4':
+                        self.serial_debug.setCurrentIndex(2)
 
-                if b'RS' in cmdset_list[i]: 
-                    # exception
-                    if b'-232' in cmdset_list[i][2:]:
-                        pass
-                    else:
-                        self.ch2_keepalive_initial.setText(cmdset_list[i][2:].decode())
+                # Network - channel 1
+                if b'OP' in cmdset_list[i]:
+                    if cmdset_list[i][2:].decode() == '0': 
+                        self.ch1_tcpclient.setChecked(True)
+                    elif cmdset_list[i][2:].decode() == '1': 
+                        self.ch1_tcpserver.setChecked(True)
+                    elif cmdset_list[i][2:].decode() == '2': 
+                        self.ch1_tcpmixed.setChecked(True)
+                    elif cmdset_list[i][2:].decode() == '3': 
+                        self.ch1_udp.setChecked(True)
+                if b'LP' in cmdset_list[i]: self.ch1_localport.setText(cmdset_list[i][2:].decode())
+                if b'RH' in cmdset_list[i]: 
+                    self.ch1_remoteip.setText(cmdset_list[i][2:].decode())
+                if b'RP' in cmdset_list[i]: self.ch1_remoteport.setText(cmdset_list[i][2:].decode())
+                # serial - channel 1
+                if b'BR' in cmdset_list[i]: self.ch1_baud.setCurrentIndex(int(cmdset_list[i][2:]))
+                if b'DB' in cmdset_list[i]: 
+                    if (len(cmdset_list[i][2:]) > 2): pass 
+                    else: 
+                        self.ch1_databit.setCurrentIndex(int(cmdset_list[i][2:]))
+                if b'PR' in cmdset_list[i]: self.ch1_parity.setCurrentIndex(int(cmdset_list[i][2:]))
+                if b'SB' in cmdset_list[i]: self.ch1_stopbit.setCurrentIndex(int(cmdset_list[i][2:]))
+                if b'FL' in cmdset_list[i]: self.ch1_flow.setCurrentIndex(int(cmdset_list[i][2:]))
+                if b'PT' in cmdset_list[i]: self.ch1_pack_time.setText(cmdset_list[i][2:].decode())
+                if b'PS' in cmdset_list[i]: self.ch1_pack_size.setText(cmdset_list[i][2:].decode())
+                if b'PD' in cmdset_list[i]: self.ch1_pack_char.setText(cmdset_list[i][2:].decode())
+                # Inactive timer - channel 1
+                if b'IT' in cmdset_list[i]: self.ch1_inact_timer.setText(cmdset_list[i][2:].decode())
+                # TCP keep alive - channel 1
+                if b'KA' in cmdset_list[i]: 
+                    if cmdset_list[i][2:].decode() == '0': self.ch1_keepalive_enable.setChecked(False)
+                    elif cmdset_list[i][2:].decode() == '1': self.ch1_keepalive_enable.setChecked(True)
+                if b'KI' in cmdset_list[i]: self.ch1_keepalive_initial.setText(cmdset_list[i][2:].decode())
+                if b'KE' in cmdset_list[i]: self.ch1_keepalive_retry.setText(cmdset_list[i][2:].decode())
+                # reconnection - channel 1
+                if b'RI' in cmdset_list[i]: self.ch1_reconnection.setText(cmdset_list[i][2:].decode())
+                
+                # Status pin
+                # status_phy / status_dtr || status_tcpst / status_dsr
+                if b'SC' in cmdset_list[i]: 
+                    if cmdset_list[i][2:].decode()[0:1] == '0':
+                        self.status_phy.setChecked(True)
+                    elif cmdset_list[i][2:].decode()[0:1] == '1':
+                        self.status_dtr.setChecked(True)
+                    if cmdset_list[i][2:].decode()[1:2] == '0':
+                        self.status_tcpst.setChecked(True)
+                    elif cmdset_list[i][2:].decode()[1:2] == '1':
+                        self.status_dsr.setChecked(True)
 
-                if b'RE' in cmdset_list[i]: self.ch2_keepalive_retry.setText(cmdset_list[i][2:].decode())
-                # reconnection - channel 2
-                if b'RR' in cmdset_list[i]: self.ch2_reconnection.setText(cmdset_list[i][2:].decode())
-        
+                # Channel 2 config (For two Port device)
+                if self.curr_dev in TWO_PORT_DEV:
+                    # device info - channel 2
+                    if b'QS' in cmdset_list[i]: self.ch2_status.setText(cmdset_list[i][2:].decode())
+                    if b'EN' in cmdset_list[i]: 
+                        if 'OPEN' in cmdset_list[i][2:].decode():
+                            pass
+                        else:
+                            self.ch2_uart_name.setText(cmdset_list[i][2:].decode())
+                    # Network - channel 2
+                    if b'QO' in cmdset_list[i]: 
+                        if cmdset_list[i][2:].decode() == '0': self.ch2_tcpclient.setChecked(True)
+                        elif cmdset_list[i][2:].decode() == '1': self.ch2_tcpserver.setChecked(True)
+                        elif cmdset_list[i][2:].decode() == '2': self.ch2_tcpmixed.setChecked(True)
+                        elif cmdset_list[i][2:].decode() == '3': self.ch2_udp.setChecked(True)
+                    if b'QL' in cmdset_list[i]: self.ch2_localport.setText(cmdset_list[i][2:].decode())
+                    if b'QH' in cmdset_list[i]: self.ch2_remoteip.setText(cmdset_list[i][2:].decode())
+                    if b'QP' in cmdset_list[i]: self.ch2_remoteport.setText(cmdset_list[i][2:].decode())
+                    # serial - channel 2
+                    if b'EB' in cmdset_list[i]: 
+                        if (len(cmdset_list[i][2:]) > 4):
+                            pass 
+                        else:
+                            self.ch2_baud.setCurrentIndex(int(cmdset_list[i][2:]))
+                    if b'ED' in cmdset_list[i]: 
+                        if (len(cmdset_list[i][2:]) > 2):   
+                            pass 
+                        else:
+                            self.ch2_databit.setCurrentIndex(int(cmdset_list[i][2:]))
+                    if b'EP' in cmdset_list[i]: self.ch2_parity.setCurrentIndex(int(cmdset_list[i][2:]))
+                    if b'ES' in cmdset_list[i]: self.ch2_stopbit.setCurrentIndex(int(cmdset_list[i][2:]))
+                    if b'EF' in cmdset_list[i]: 
+                        if (len(cmdset_list[i][2:]) > 2):   
+                            pass
+                        else:
+                            self.ch2_flow.setCurrentIndex(int(cmdset_list[i][2:]))
+                    if b'NT' in cmdset_list[i]: self.ch2_pack_time.setText(cmdset_list[i][2:].decode())
+                    if b'NS' in cmdset_list[i]: self.ch2_pack_size.setText(cmdset_list[i][2:].decode())
+                    if b'ND' in cmdset_list[i]: 
+                        if (len(cmdset_list[i][2:]) > 2):
+                            pass
+                        else:
+                            self.ch2_pack_char.setText(cmdset_list[i][2:].decode())
+                    # Inactive timer - channel 2
+                    if b'RV' in cmdset_list[i]: self.ch2_inact_timer.setText(cmdset_list[i][2:].decode())
+                    # TCP keep alive - channel 2
+                    if b'RA' in cmdset_list[i]: 
+                        if cmdset_list[i][2:].decode() == '0': self.ch2_keepalive_enable.setChecked(False)
+                        elif cmdset_list[i][2:].decode() == '1': self.ch2_keepalive_enable.setChecked(True)
+
+                    if b'RS' in cmdset_list[i]: 
+                        # exception
+                        if b'-232' in cmdset_list[i][2:]:
+                            pass
+                        else:
+                            self.ch2_keepalive_initial.setText(cmdset_list[i][2:].decode())
+
+                    if b'RE' in cmdset_list[i]: self.ch2_keepalive_retry.setText(cmdset_list[i][2:].decode())
+                    # reconnection - channel 2
+                    if b'RR' in cmdset_list[i]: self.ch2_reconnection.setText(cmdset_list[i][2:].decode())
+
+        except Exception as e:
+            print(e)
+            self.msg_error()
+
+    def msg_error(self):
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Critical)
+        msgbox.setWindowTitle("Unexceptional error occured")
+        msgbox.setText("Unexceptional error occured.")
+        msgbox.exec_() 
+
     def getdevinfo(self, row_index):
         self.enable_object()
         self.rcv_data = self.all_response
 
-        if row_index < len(self.rcv_data):
-            devinfo = self.rcv_data[row_index].splitlines()
-            # print('devinfo %d: %s ' % (row_index, devinfo))
-            self.fill_devinfo(devinfo)
-        else:
-            print('list index range error - No response from device')
-            self.msg_invalid_response()
+        try:
+            if row_index < len(self.rcv_data):
+                devinfo = self.rcv_data[row_index].splitlines()
+                # print('devinfo %d: %s ' % (row_index, devinfo))
+                self.fill_devinfo(devinfo)
+            else:
+                print('list index range error - No response from device')
+                self.msg_invalid_response()
+        except Exception as e:
+            print(e)
     
     def getinfo_for_setting(self, row_index):
         self.rcv_data[row_index] = self.set_reponse[0]
@@ -1142,11 +1161,11 @@ class WIZWindow(QMainWindow, main_window):
 
         # FW update
         if self.broadcast.isChecked():
-            self.t_fwup = FWUploadThread(self.conf_sock, mac_addr, self.code, filename, None, None)
+            self.t_fwup = FWUploadThread(self.conf_sock, mac_addr, self.code, filename, filesize, None, None)
         elif self.unicast_ip.isChecked():
             ip_addr = self.search_ipaddr.text()
             port = int(self.search_port.text())
-            self.t_fwup = FWUploadThread(self.conf_sock, mac_addr, self.code, filename, ip_addr, port)
+            self.t_fwup = FWUploadThread(self.conf_sock, mac_addr, self.code, filename, filesize, ip_addr, port)
         self.t_fwup.uploading_size.connect(self.pgbar.setValue)
         self.t_fwup.upload_result.connect(self.update_result)
         self.t_fwup.error_flag.connect(self.update_error)
@@ -1172,8 +1191,15 @@ class WIZWindow(QMainWindow, main_window):
             # get file size
             self.fd = open(fileName, "rb")
             self.data = self.fd.read(-1)
-            self.filesize = len(self.data)
+            
+            if 'WIZ107' in self.curr_dev or 'WIZ108' in self.curr_dev:
+                # for support WIZ107SR & WIZ108SR 
+                self.filesize = 51 * 1024
+            else:
+                self.filesize = len(self.data)
+            
             print('firmware_file_open: filesize: ', self.filesize)
+            
             self.fd.close()
             # upload start
             self.firmware_update(fileName, self.filesize)
