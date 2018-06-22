@@ -39,11 +39,11 @@ class FWUploadThread(QThread):
     upload_result = pyqtSignal(int)
     error_flag = pyqtSignal(int)
 
-    def __init__(self, conf_sock, dest_mac, idcode, binaryfile, ipaddr, port):
+    def __init__(self, conf_sock, dest_mac, idcode, filename, filesize, ipaddr, port):
         QThread.__init__(self)
 
         self.dest_mac = None
-        self.bin_filename = None
+        self.bin_filename = filename
         self.fd = None
         self.data = None
         self.client = None
@@ -53,10 +53,12 @@ class FWUploadThread(QThread):
         self.serverport = None
         self.sentbyte = 0
         self.dest_mac = dest_mac
-        self.bin_filename = binaryfile
         self.idcode = idcode
         self.error_noresponse = 0
         self.retrycheck = 0
+
+        self.filesize = filesize
+        self.remainbytes = self.filesize
 
         self.conf_sock = conf_sock
         self.what_sock = '%s' % self.conf_sock
@@ -70,10 +72,8 @@ class FWUploadThread(QThread):
     def setparam(self):
         self.fd = open(self.bin_filename, "rb")
         self.data = self.fd.read(-1)
-        self.remainbytes = len(self.data)
-        self.curr_ptr = 0 
+        self.curr_ptr = 0
         self.fd.close()
-        sys.stdout.write("Firmware file size: %r\n\n" % len(self.data))
 
     def myTimer(self):
         # sys.stdout.write('timer1 timeout\r\n')
@@ -103,7 +103,7 @@ class FWUploadThread(QThread):
         # Send FW UPload request message
         cmd_list.append(["MA", self.dest_mac])
         cmd_list.append(["PW", self.idcode])
-        cmd_list.append([command, str(len(self.data))])
+        cmd_list.append([command, str(self.filesize)])
 
         if 'TCP' in self.what_sock:
             self.wizmsghangler = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp', OP_FWUP, 2)
