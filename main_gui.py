@@ -187,8 +187,7 @@ class WIZWindow(QMainWindow, main_window):
         self.net_list = []
         
         for adapter in adapters:
-            print("Interface:", adapter.nice_name)
-            
+            # print("Net Interface:", adapter.nice_name)
             for ip in adapter.ips:
                 if len(ip.ip) > 6:
                     ipv4_addr = ip.ip
@@ -197,11 +196,13 @@ class WIZWindow(QMainWindow, main_window):
                     else:
                         self.ifs_list[adapter.nice_name] = ipv4_addr
 
+                        net_ifs = ipv4_addr + ': ' + adapter.nice_name
+
                         # get network interface list
                         if adapter.nice_name not in self.net_list:
                             self.net_list.append(adapter.nice_name)
                             # netconfig = QAction(adapter.nice_name, self, checkable=True)
-                            netconfig = QAction(adapter.nice_name, self)
+                            netconfig = QAction(net_ifs, self)
                             self.netconfig_menu.addAction(netconfig)
                 else:
                     ipv6_addr = ip.ip
@@ -256,6 +257,7 @@ class WIZWindow(QMainWindow, main_window):
         self.load_config.setEnabled(True)
 
         self.event_opmode()
+        self.event_search_method()
         self.event_ip_alloc()
         self.event_atmode()
         self.event_keepalive()
@@ -348,7 +350,8 @@ class WIZWindow(QMainWindow, main_window):
 
     def event_search_method(self):
         if self.broadcast.isChecked() is True:
-            pass
+            self.search_ipaddr.setEnabled(False)
+            self.search_port.setEnabled(False)
         elif self.unicast_ip.isChecked() is True:
             self.search_ipaddr.setEnabled(True)
             self.search_port.setEnabled(True)
@@ -491,18 +494,22 @@ class WIZWindow(QMainWindow, main_window):
                 resp = self.datarefresh.rcv_list[0]
                 cmdset_list = resp.splitlines()
 
-                ## Expansion GPIO
-                for i in range(len(cmdset_list)):
-                    if num < 2:
-                        if b'CA' in cmdset_list[i]: self.gpioa_config.setCurrentIndex(int(cmdset_list[i][2:]))
-                        if b'CB' in cmdset_list[i]: self.gpiob_config.setCurrentIndex(int(cmdset_list[i][2:]))
-                        if b'CC' in cmdset_list[i]: self.gpioc_config.setCurrentIndex(int(cmdset_list[i][2:]))
-                        if b'CD' in cmdset_list[i]: self.gpiod_config.setCurrentIndex(int(cmdset_list[i][2:]))
-                            
-                    if b'GA' in cmdset_list[i]: self.gpioa_get.setText(cmdset_list[i][2:].decode())
-                    if b'GB' in cmdset_list[i]: self.gpiob_get.setText(cmdset_list[i][2:].decode())
-                    if b'GC' in cmdset_list[i]: self.gpioc_get.setText(cmdset_list[i][2:].decode())
-                    if b'GD' in cmdset_list[i]: self.gpiod_get.setText(cmdset_list[i][2:].decode())
+                try:
+                    ## Expansion GPIO
+                    for i in range(len(cmdset_list)):
+                        if num < 2:
+                            if b'CA' in cmdset_list[i]: self.gpioa_config.setCurrentIndex(int(cmdset_list[i][2:]))
+                            if b'CB' in cmdset_list[i]: self.gpiob_config.setCurrentIndex(int(cmdset_list[i][2:]))
+                            if b'CC' in cmdset_list[i]: self.gpioc_config.setCurrentIndex(int(cmdset_list[i][2:]))
+                            if b'CD' in cmdset_list[i]: self.gpiod_config.setCurrentIndex(int(cmdset_list[i][2:]))
+
+                        if b'GA' in cmdset_list[i]: self.gpioa_get.setText(cmdset_list[i][2:].decode())
+                        if b'GB' in cmdset_list[i]: self.gpiob_get.setText(cmdset_list[i][2:].decode())
+                        if b'GC' in cmdset_list[i]: self.gpioc_get.setText(cmdset_list[i][2:].decode())
+                        if b'GD' in cmdset_list[i]: self.gpiod_get.setText(cmdset_list[i][2:].decode())
+                except Exception as e:
+                    print(e)
+                    self.msg_error()
 
     def search_pre(self):
         if self.wizmsghandler is not None and self.wizmsghandler.isRunning():
@@ -685,9 +692,6 @@ class WIZWindow(QMainWindow, main_window):
         # print('fill_devinfo: cmdset_list', cmdset_list)
         self.object_config()
 
-        # for cmd in cmdset_list:
-        #     pass
-
         try:
             for i in range(len(cmdset_list)):
                 # device info (RO)
@@ -858,8 +862,11 @@ class WIZWindow(QMainWindow, main_window):
     def msg_error(self):
         msgbox = QMessageBox(self)
         msgbox.setIcon(QMessageBox.Critical)
-        msgbox.setWindowTitle("Unexceptional error occured")
-        msgbox.setText("Unexceptional error occured.")
+        msgbox.setWindowTitle("Unexceptional error")
+        text = "<div style=text-align:center>Unexceptional error occurred." \
+                + "<br>Please report the issue via the following link:" \
+                + "<br><a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/issues'>Github Issue page</a></div>"
+        msgbox.setText(text)
         msgbox.exec_() 
 
     def getdevinfo(self, row_index):
