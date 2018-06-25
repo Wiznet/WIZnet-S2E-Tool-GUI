@@ -1914,7 +1914,7 @@ Interval</string>
         </font>
        </property>
        <property name="text">
-        <string>Triger code</string>
+        <string>Trigger code</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_145">
