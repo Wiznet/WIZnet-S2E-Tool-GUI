@@ -404,7 +404,7 @@
       <property name="title">
        <string>Serial options</string>
       </property>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>11</x>
@@ -1661,7 +1661,7 @@ Interval</string>
            </font>
           </property>
           <property name="text">
-           <string>TCP mIxed (server/client)</string>
+           <string>TCP mIxed</string>
           </property>
          </widget>
         </item>
@@ -3161,7 +3161,7 @@ Interval</string>
       <property name="title">
        <string>Serial options</string>
       </property>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>11</x>
@@ -3818,21 +3818,21 @@ Interval</string>
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>64</y>
+      <y>96</y>
       <width>220</width>
-      <height>377</height>
+      <height>345</height>
      </rect>
     </property>
     <property name="minimumSize">
      <size>
       <width>220</width>
-      <height>377</height>
+      <height>300</height>
      </size>
     </property>
     <property name="maximumSize">
      <size>
       <width>220</width>
-      <height>377</height>
+      <height>345</height>
      </size>
     </property>
     <property name="palette">
@@ -3902,7 +3902,7 @@ Interval</string>
     <property name="font">
      <font>
       <family>맑은 고딕</family>
-      <pointsize>10</pointsize>
+      <pointsize>9</pointsize>
      </font>
     </property>
     <property name="mouseTracking">
@@ -3963,7 +3963,7 @@ Interval</string>
      <enum>Qt::CustomDashLine</enum>
     </property>
     <property name="sortingEnabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="wordWrap">
      <bool>false</bool>
@@ -3987,7 +3987,7 @@ Interval</string>
      <bool>true</bool>
     </attribute>
     <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
-     <bool>false</bool>
+     <bool>true</bool>
     </attribute>
     <attribute name="horizontalHeaderStretchLastSection">
      <bool>false</bool>
@@ -4060,7 +4060,7 @@ Interval</string>
     <property name="font">
      <font>
       <family>맑은 고딕</family>
-      <pointsize>11</pointsize>
+      <pointsize>10</pointsize>
       <weight>50</weight>
       <italic>false</italic>
       <bold>false</bold>
@@ -4107,7 +4107,7 @@ Config</string>
     <property name="font">
      <font>
       <family>맑은 고딕</family>
-      <pointsize>11</pointsize>
+      <pointsize>10</pointsize>
       <weight>50</weight>
       <italic>false</italic>
       <bold>false</bold>
@@ -4175,7 +4175,7 @@ Config</string>
     <property name="font">
      <font>
       <family>맑은 고딕</family>
-      <pointsize>11</pointsize>
+      <pointsize>10</pointsize>
       <weight>50</weight>
       <italic>false</italic>
       <bold>false</bold>
@@ -4239,7 +4239,7 @@ Config</string>
     <property name="font">
      <font>
       <family>맑은 고딕</family>
-      <pointsize>11</pointsize>
+      <pointsize>10</pointsize>
       <weight>50</weight>
       <italic>false</italic>
       <bold>false</bold>
@@ -4264,7 +4264,8 @@ Config</string>
      <string extracomment="4"/>
     </property>
     <property name="text">
-     <string comment="search" extracomment="Search">Search</string>
+     <string comment="search" extracomment="Search">Device
+Search</string>
     </property>
     <property name="icon">
      <iconset>
@@ -4307,7 +4308,7 @@ Config</string>
     <property name="font">
      <font>
       <family>맑은 고딕</family>
-      <pointsize>11</pointsize>
+      <pointsize>10</pointsize>
       <weight>50</weight>
       <italic>false</italic>
       <bold>false</bold>
@@ -4317,7 +4318,8 @@ Config</string>
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Firmware upload&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="text">
-     <string>Upload</string>
+     <string>Firmware
+Upload</string>
     </property>
     <property name="icon">
      <iconset>
@@ -4357,7 +4359,7 @@ Config</string>
     <property name="font">
      <font>
       <family>맑은 고딕</family>
-      <pointsize>11</pointsize>
+      <pointsize>10</pointsize>
       <weight>50</weight>
       <italic>false</italic>
       <bold>false</bold>
@@ -4367,7 +4369,8 @@ Config</string>
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Setting&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="text">
-     <string>Setting</string>
+     <string>Apply
+Settings</string>
     </property>
     <property name="icon">
      <iconset>
@@ -4407,7 +4410,7 @@ Config</string>
     <property name="font">
      <font>
       <family>맑은 고딕</family>
-      <pointsize>11</pointsize>
+      <pointsize>10</pointsize>
       <weight>50</weight>
       <italic>false</italic>
       <bold>false</bold>
@@ -4417,7 +4420,8 @@ Config</string>
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Reset&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="text">
-     <string>Reset</string>
+     <string>Reset
+Device</string>
     </property>
     <property name="icon">
      <iconset>
@@ -4469,7 +4473,7 @@ Config</string>
     <property name="font">
      <font>
       <family>맑은 고딕</family>
-      <pointsize>11</pointsize>
+      <pointsize>10</pointsize>
       <weight>50</weight>
       <italic>false</italic>
       <bold>false</bold>
@@ -4479,7 +4483,8 @@ Config</string>
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Factory reset&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="text">
-     <string>Factory</string>
+     <string>Factory
+Reset</string>
     </property>
     <property name="icon">
      <iconset>
@@ -5920,7 +5925,7 @@ Retry count</string>
     </widget>
     <widget class="QWidget" name="etc_tab">
      <attribute name="title">
-      <string>Options</string>
+      <string>GPIO</string>
      </attribute>
      <widget class="QGroupBox" name="exp_gpio">
       <property name="enabled">
@@ -6356,7 +6361,7 @@ Analog input: Read only</string>
       <property name="title">
        <string>Refresh time</string>
       </property>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <property name="geometry">
         <rect>
          <x>21</x>
@@ -6524,6 +6529,45 @@ Analog input: Read only</string>
      </property>
     </widget>
    </widget>
+   <widget class="QComboBox" name="net_interface">
+    <property name="geometry">
+     <rect>
+      <x>15</x>
+      <y>63</y>
+      <width>211</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="minimumSize">
+     <size>
+      <width>100</width>
+      <height>0</height>
+     </size>
+    </property>
+    <property name="maximumSize">
+     <size>
+      <width>1000</width>
+      <height>16777215</height>
+     </size>
+    </property>
+    <property name="font">
+     <font>
+      <family>맑은 고딕</family>
+     </font>
+    </property>
+    <property name="currentText">
+     <string/>
+    </property>
+    <property name="maxCount">
+     <number>128</number>
+    </property>
+    <property name="sizeAdjustPolicy">
+     <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
+    </property>
+    <property name="frame">
+     <bool>false</bool>
+    </property>
+   </widget>
    <zorder>list_device</zorder>
    <zorder>btn_search</zorder>
    <zorder>btn_upload</zorder>
@@ -6540,6 +6584,7 @@ Analog input: Read only</string>
    <zorder>line_4</zorder>
    <zorder>generalTab</zorder>
    <zorder>input_searchcode</zorder>
+   <zorder>net_interface</zorder>
   </widget>
   <widget class="QStatusBar" name="statusbar">
    <property name="minimumSize">
