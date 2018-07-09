@@ -6,7 +6,7 @@ import re
 import os
 import subprocess
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import QSize, QThread, Qt, QTimer, pyqtSignal, pyqtSlot, QRect, QUrl
+from PyQt5.QtCore import QSize, QThread, Qt, QTimer, pyqtSignal, pyqtSlot, QRect, QUrl, QFileInfo
 from PyQt5.QtGui import QIcon, QPixmap, QFont
 from PyQt5 import uic
 import ifaddr
@@ -32,7 +32,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = '0.5.4 Beta'
+VERSION = '0.5.5 dev'
 
 def resource_path(relative_path):
     # Get absolute path to resource, works for dev and for PyInstaller
@@ -66,6 +66,7 @@ class WIZWindow(QMainWindow, main_window):
         self.curr_ver = None
         self.curr_st = None
 
+        self.saved_path = None
         self.selected_eth = None
         self.cli_sock = None
 
@@ -136,6 +137,9 @@ class WIZWindow(QMainWindow, main_window):
         self.net_adapter_info()
         self.netconfig_menu.triggered[QAction].connect(self.net_ifs_selected)
 
+        self.net_interface.currentIndexChanged.connect(self.net_changed)
+
+
         # Tab changed
         self.generalTab.currentChanged.connect(self.tab_changed)
 
@@ -163,9 +167,14 @@ class WIZWindow(QMainWindow, main_window):
             self.get_refresh_time()
 
     def net_ifs_selected(self, netifs):
-        print('net_ifs_selected() %s: %s' % (netifs.text(), self.ifs_list[netifs.text()]))
-        self.statusbar.showMessage(' Selected eth: %s: %s' % (netifs.text(), self.ifs_list[netifs.text()]))
-        self.selected_eth = self.ifs_list[netifs.text()]
+        ifs = netifs.text().split(':')
+        selected_ip = ifs[0]
+        selected_name = ifs[1]
+
+        print('net_ifs_selected() %s: %s' % (selected_ip, selected_name))
+        
+        self.statusbar.showMessage(' Selected: %s: %s' % (selected_ip, selected_name))
+        self.selected_eth = selected_ip
 
     def value_changed(self, value):
         self.pgbar.show()
@@ -176,6 +185,15 @@ class WIZWindow(QMainWindow, main_window):
             self.disable_object()
         else:
             self.enable_object()
+
+    def net_changed(self, ifs):
+        print('====> net_changed()', self.net_interface.currentText())
+        ifs = self.net_interface.currentText().split(':')
+        selected_ip = ifs[0]
+        selected_name = ifs[1]
+
+        self.statusbar.showMessage(' Selected eth: %s: %s' % (selected_ip, selected_name))
+        self.selected_eth = selected_ip
     
     ### Get adapter list (ing)
     def net_adapter_info(self):
@@ -196,7 +214,7 @@ class WIZWindow(QMainWindow, main_window):
                     else:
                         self.ifs_list[adapter.nice_name] = ipv4_addr
 
-                        net_ifs = ipv4_addr + ': ' + adapter.nice_name
+                        net_ifs = ipv4_addr + ':' + adapter.nice_name
 
                         # get network interface list
                         if adapter.nice_name not in self.net_list:
@@ -204,9 +222,14 @@ class WIZWindow(QMainWindow, main_window):
                             # netconfig = QAction(adapter.nice_name, self, checkable=True)
                             netconfig = QAction(net_ifs, self)
                             self.netconfig_menu.addAction(netconfig)
+                            self.net_interface.addItem(net_ifs)
                 else:
                     ipv6_addr = ip.ip
         # print('net list: ', self.ifs_list)
+
+    def netifs_combo(self):
+        # combobox: net_interface
+        pass
 
     def disable_object(self):
         self.btn_reset.setEnabled(False)
@@ -691,7 +714,7 @@ class WIZWindow(QMainWindow, main_window):
         self.selected_devinfo()
         # print('fill_devinfo: cmdset_list', cmdset_list)
         self.object_config()
-
+        
         try:
             for i in range(len(cmdset_list)):
                 # device info (RO)
@@ -855,6 +878,8 @@ class WIZWindow(QMainWindow, main_window):
                     # reconnection - channel 2
                     if b'RR' in cmdset_list[i]: self.ch2_reconnection.setText(cmdset_list[i][2:].decode())
 
+            self.enable_object()
+
         except Exception as e:
             print(e)
             self.msg_error()
@@ -882,7 +907,7 @@ class WIZWindow(QMainWindow, main_window):
                 print('list index range error - No response from device')
                 self.msg_invalid_response()
         except Exception as e:
-            print(e)
+            print('getdevinfo()', e)
     
     def getinfo_for_setting(self, row_index):
         self.rcv_data[row_index] = self.set_reponse[0]
@@ -1416,6 +1441,10 @@ class WIZWindow(QMainWindow, main_window):
             print(fileName)
             self.save_configuration(fileName)
 
+            # QFileinfo
+            self.saved_path = QFileInfo(fileName).path()
+            print('===> path:', self.saved_path)
+
     def save_configuration(self, filename):
         setcmd = self.get_object_value()
         # print('save_configuration: setcmd', setcmd)
@@ -1429,8 +1458,11 @@ class WIZWindow(QMainWindow, main_window):
 
         self.statusbar.showMessage(' Configuration is saved to \'%s\'.' % filename)
 
-    def dialog_load_file(self):    
-        fname, _ = QFileDialog.getOpenFileName(self, "Configuration Load", "WIZCONF.cfg","Config File (*.cfg);;Text Files (*.txt);;All Files (*)")
+    def dialog_load_file(self):
+        if self.saved_path is None:
+            fname, _ = QFileDialog.getOpenFileName(self, "Configuration Load", "WIZCONF.cfg","Config File (*.cfg);;Text Files (*.txt);;All Files (*)")
+        else:
+            fname, _ = QFileDialog.getOpenFileName(self, "Configuration Load", self.saved_path, "Config File (*.cfg);;Text Files (*.txt);;All Files (*)")
         
         if fname:
             fileName = fname
