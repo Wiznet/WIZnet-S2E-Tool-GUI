@@ -2055,7 +2055,7 @@ Interval</string>
            </font>
           </property>
           <property name="text">
-           <string>TCP mIxed (server/client)</string>
+           <string>TCP mIxed</string>
           </property>
          </widget>
         </item>
@@ -3564,16 +3564,6 @@ Interval</string>
       </widget>
      </widget>
     </widget>
-    <widget class="QWidget" name="tab_ch3">
-     <attribute name="title">
-      <string>Channel #3</string>
-     </attribute>
-    </widget>
-    <widget class="QWidget" name="tab_ch4">
-     <attribute name="title">
-      <string>Channel #4</string>
-     </attribute>
-    </widget>
    </widget>
    <widget class="QGroupBox" name="group_searchmethod">
     <property name="geometry">
@@ -3963,7 +3953,7 @@ Interval</string>
      <enum>Qt::CustomDashLine</enum>
     </property>
     <property name="sortingEnabled">
-     <bool>true</bool>
+     <bool>false</bool>
     </property>
     <property name="wordWrap">
      <bool>false</bool>
@@ -3987,7 +3977,7 @@ Interval</string>
      <bool>true</bool>
     </attribute>
     <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
-     <bool>true</bool>
+     <bool>false</bool>
     </attribute>
     <attribute name="horizontalHeaderStretchLastSection">
      <bool>false</bool>

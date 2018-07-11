@@ -32,7 +32,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = '0.5.5 dev'
+VERSION = '0.5.5 Beta'
 
 def resource_path(relative_path):
     # Get absolute path to resource, works for dev and for PyInstaller
@@ -201,7 +201,6 @@ class WIZWindow(QMainWindow, main_window):
         self.menuOption.addMenu(self.netconfig_menu)
 
         adapters = ifaddr.get_adapters() 
-        self.ifs_list = {}
         self.net_list = []
         
         for adapter in adapters:
@@ -212,24 +211,16 @@ class WIZWindow(QMainWindow, main_window):
                     if ipv4_addr == '127.0.0.1':
                         pass
                     else:
-                        self.ifs_list[adapter.nice_name] = ipv4_addr
-
                         net_ifs = ipv4_addr + ':' + adapter.nice_name
 
-                        # get network interface list
-                        if adapter.nice_name not in self.net_list:
-                            self.net_list.append(adapter.nice_name)
-                            # netconfig = QAction(adapter.nice_name, self, checkable=True)
-                            netconfig = QAction(net_ifs, self)
-                            self.netconfig_menu.addAction(netconfig)
-                            self.net_interface.addItem(net_ifs)
+                        #-- get network interface list
+                        # if adapter.nice_name not in self.net_list:
+                        self.net_list.append(adapter.nice_name)
+                        netconfig = QAction(net_ifs, self)
+                        self.netconfig_menu.addAction(netconfig)
+                        self.net_interface.addItem(net_ifs)
                 else:
                     ipv6_addr = ip.ip
-        # print('net list: ', self.ifs_list)
-
-    def netifs_combo(self):
-        # combobox: net_interface
-        pass
 
     def disable_object(self):
         self.btn_reset.setEnabled(False)
@@ -256,7 +247,11 @@ class WIZWindow(QMainWindow, main_window):
         # 창 활성화
         self.generalTab.setEnabled(True)
         self.generalTab.setTabEnabled(0, True)
-        self.generalTab.setTabEnabled(1, True)
+
+        if 'WIZ750' in self.curr_dev:
+            self.generalTab.setTabEnabled(1, True)
+        else:
+            pass
         self.refresh_grp.setEnabled(True)
         self.exp_gpio.setEnabled(True)
 
@@ -1013,7 +1008,7 @@ class WIZWindow(QMainWindow, main_window):
                 pass
           
         # for channel 2
-        if self.curr_dev in TWO_PORT_DEV:
+        if self.curr_dev in TWO_PORT_DEV or 'WIZ752' in self.curr_dev:
             # device info - channel 2
             if self.ch2_tcpclient.isChecked() is True: setcmd['QO'] = '0'
             elif self.ch2_tcpserver.isChecked() is True: setcmd['QO'] = '1'
