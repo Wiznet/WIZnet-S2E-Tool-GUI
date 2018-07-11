@@ -86,6 +86,8 @@ class WIZMakeCMD:
         elif devname in TWO_PORT_DEV or "752" in devname:
             for cmd in cmd_2p_default:
                 cmd_list.append([cmd, ""])
+        else: 
+            pass
             
         return cmd_list
 
@@ -151,15 +153,16 @@ class WIZMakeCMD:
 
             if devname in ONE_PORT_DEV or "750" in devname or "2000" in devname:
                 if '750' in devname and version_compare('1.2.0', version) <= 0:
-                    # print('makecmd: version 1.2.0 upper')
                     for cmd in cmd_1p_advanced:
                         cmd_list.append([cmd, ""])
                 else:
                     for cmd in cmd_1p_default:
                         cmd_list.append([cmd, ""])
             elif devname in TWO_PORT_DEV or "752" in devname:
-                # print('makecmd: two port')
-                for cmd in cmd_2p_default:
+                # for cmd in cmd_2p_default:
+                #     cmd_list.append([cmd, ""])
+                # for WIZ752SR-12x
+                for cmd in cmd_ch2:
                     cmd_list.append([cmd, ""])
             cmd_list.append(["SV", ""]) # save device setting
             cmd_list.append(["RT", ""]) # Device reboot
