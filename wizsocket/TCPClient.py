@@ -7,8 +7,9 @@ import binascii
 import select
 import sys
 
-TIMEOUT=10
-MAXBUFLEN = 1024
+TIMEOUT = 10
+# MAXBUFLEN = 1024
+MAXBUFLEN = 2048
 
 idle_state = 1
 
