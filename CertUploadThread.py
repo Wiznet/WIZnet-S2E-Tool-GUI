@@ -66,6 +66,7 @@ class CertUploadThread(QThread):
         self.set_pw = set_pw
         self.cert = cert
         self.mode_cmd = mode_cmd
+        self.curr_ptr = 0
 
         self.cert_size = len(self.cert)
         self.remainbytes = self.cert_size
