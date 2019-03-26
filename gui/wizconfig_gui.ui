@@ -4838,9 +4838,9 @@ management</string>
             <property name="tabBarAutoHide">
              <bool>false</bool>
             </property>
-            <widget class="QWidget" name="tab_ch1">
+            <widget class="QWidget" name="tab_ch0">
              <attribute name="title">
-              <string>Channel #1</string>
+              <string>Channel #0</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_49">
               <item row="0" column="0">
@@ -6441,9 +6441,9 @@ interval</string>
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="tab_ch2">
+            <widget class="QWidget" name="tab_ch1">
              <attribute name="title">
-              <string>Channel #2</string>
+              <string>Channel #1</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_74">
               <item row="0" column="0">

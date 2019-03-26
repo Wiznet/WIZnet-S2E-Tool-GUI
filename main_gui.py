@@ -41,7 +41,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = '0.6.2 Dev 190107-2'
+VERSION = '0.6.3 Dev 190326'
 
 def resource_path(relative_path):
     # Get absolute path to resource, works for dev and for PyInstaller
@@ -84,7 +84,7 @@ class WIZWindow(QMainWindow, main_window):
         self.use_setting_pw = False
         # self.entered_set_pw = ''  # setting pw bak
         self.encoded_setting_pw = ''
-        self.curr_setting_pw = '' # 설정된 setting pw 값
+        self.curr_setting_pw = '' # setting pw value
     
         self.mac_list = []
         self.dev_name = []
