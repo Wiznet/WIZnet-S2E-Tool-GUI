@@ -69,13 +69,13 @@ class FWUploadThread(QThread):
         self.remainbytes = self.filesize
 
         self.conf_sock = conf_sock
-        self.what_sock = '%s' % self.conf_sock
+        self.sock_type = '%s' % self.conf_sock
 
         # socket config (for TCP unicast)
         self.ip_addr = ipaddr
         self.port = port
 
-        self.cli_sock = None
+        self.tcp_sock = None
 
     def setparam(self):
         self.fd = open(self.bin_filename, "rb")
@@ -94,10 +94,10 @@ class FWUploadThread(QThread):
         cmd_list.append(["PW", self.idcode])
         cmd_list.append(["AB", ""])
 
-        if 'TCP' in self.what_sock:
+        if 'TCP' in self.sock_type:
             self.wizmsghangler = WIZMSGHandler(
                 self.conf_sock, cmd_list, 'tcp', OP_FWUP, 2)
-        elif 'UDP' in self.what_sock:
+        elif 'UDP' in self.sock_type:
             self.wizmsghangler = WIZMSGHandler(
                 self.conf_sock, cmd_list, 'udp', OP_FWUP, 2)
 
@@ -119,10 +119,10 @@ class FWUploadThread(QThread):
 
         print('sendCmd() cmd_list ===> ', cmd_list)
 
-        if 'TCP' in self.what_sock:
+        if 'TCP' in self.sock_type:
             self.wizmsghangler = WIZMSGHandler(
                 self.conf_sock, cmd_list, 'tcp', OP_FWUP, 2)
-        elif 'UDP' in self.what_sock:
+        elif 'UDP' in self.sock_type:
             self.wizmsghangler = WIZMSGHandler(
                 self.conf_sock, cmd_list, 'udp', OP_FWUP, 2)
         sys.stdout.write("sendCmd(): %s\r\n" % cmd_list)
@@ -147,9 +147,9 @@ class FWUploadThread(QThread):
         else:
             self.jumpToApp()
 
-        if 'UDP' in self.what_sock:
+        if 'UDP' in self.sock_type:
             pass
-        elif 'TCP' in self.what_sock:
+        elif 'TCP' in self.sock_type:
             self.sock_close()
             self.SocketConfig()
 
@@ -292,7 +292,7 @@ class FWUploadThread(QThread):
                 # send FIN packet
                 self.msleep(500)
                 self.client.shutdown()
-                if 'TCP' in self.what_sock:
+                if 'TCP' in self.sock_type:
                     self.conf_sock.shutdown()
         except Exception as e:
             self.error_flag.emit(-3)
@@ -302,41 +302,41 @@ class FWUploadThread(QThread):
 
     def sock_close(self):
         # 기존 연결 fin
-        if self.cli_sock is not None:
-            if self.cli_sock.state is not SOCK_CLOSE_STATE:
-                self.cli_sock.shutdown()
+        if self.tcp_sock is not None:
+            if self.tcp_sock.state is not SOCK_CLOSE_STATE:
+                self.tcp_sock.shutdown()
         if self.conf_sock is not None:
             self.conf_sock.shutdown()
 
     def tcpConnection(self, serverip, port):
         retrynum = 0
-        self.cli_sock = TCPClient(2, serverip, port)
-        print('sock state: %r' % (self.cli_sock.state))
+        self.tcp_sock = TCPClient(2, serverip, port)
+        print('sock state: %r' % (self.tcp_sock.state))
 
         while True:
             if retrynum > 6:
                 break
             retrynum += 1
 
-            if self.cli_sock.state is SOCK_CLOSE_STATE:
-                self.cli_sock.shutdown()
-                cur_state = self.cli_sock.state
+            if self.tcp_sock.state is SOCK_CLOSE_STATE:
+                self.tcp_sock.shutdown()
+                cur_state = self.tcp_sock.state
                 try:
-                    self.cli_sock.open()
-                    if self.cli_sock.state is SOCK_OPEN_STATE:
+                    self.tcp_sock.open()
+                    if self.tcp_sock.state is SOCK_OPEN_STATE:
                         print('[%r] is OPEN' % (serverip))
                     time.sleep(0.5)
                 except Exception as e:
                     sys.stdout.write('%r\r\n' % e)
-            elif self.cli_sock.state is SOCK_OPEN_STATE:
-                cur_state = self.cli_sock.state
+            elif self.tcp_sock.state is SOCK_OPEN_STATE:
+                cur_state = self.tcp_sock.state
                 try:
-                    self.cli_sock.connect()
-                    if self.cli_sock.state is SOCK_CONNECT_STATE:
+                    self.tcp_sock.connect()
+                    if self.tcp_sock.state is SOCK_CONNECT_STATE:
                         print('[%r] is CONNECTED' % (serverip))
                 except Exception as e:
                     sys.stdout.write('%r\r\n' % e)
-            elif self.cli_sock.state is SOCK_CONNECT_STATE:
+            elif self.tcp_sock.state is SOCK_CONNECT_STATE:
                 break
         if retrynum > 6:
             sys.stdout.write(
@@ -344,16 +344,16 @@ class FWUploadThread(QThread):
             return None
         else:
             sys.stdout.write('Device [%s] TCP connected\r\n' % (serverip))
-            return self.cli_sock
+            return self.tcp_sock
 
     def SocketConfig(self):
         # Broadcast
-        if 'UDP' in self.what_sock:
+        if 'UDP' in self.sock_type:
             self.conf_sock = WIZUDPSock(5000, 50001)
             self.conf_sock.open()
 
         # TCP unicast
-        elif 'TCP' in self.what_sock:
+        elif 'TCP' in self.sock_type:
             print('upload_unicast: ip: %r, port: %r' %
                   (self.ip_addr, self.port))
 
