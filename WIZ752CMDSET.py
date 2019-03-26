@@ -99,8 +99,11 @@ class WIZ752CMDSET:
 							 			{}, "RW"],
 							 "PS" : ["Size Delimiter for channel 0", "^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$", {}, "RW"],
 							 "NS" : ["Size Delimiter for channel 1", "^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$", {}, "RW"],
-							 "PD" : ["Char Delimiter for channel 0", "^([0-7][0-9a-fA-F])$", {}, "RW"],
-							 "ND" : ["Char Delimiter for channel 1", "^([0-7][0-9a-fA-F])$", {}, "RW"],
+							#  "PD" : ["Char Delimiter for channel 0", "^([0-7][0-9a-fA-F])$", {}, "RW"],
+							#  "ND" : ["Char Delimiter for channel 1", "^([0-7][0-9a-fA-F])$", {}, "RW"],
+							 "PD" : ["Char Delimiter for channel 0", "^([0-9a-fA-F][0-9a-fA-F])$", {}, "RW"],
+							 "ND" : ["Char Delimiter for channel 1", "^([0-9a-fA-F][0-9a-fA-F])$", {}, "RW"],
+
 							 "IT" : ["Inactivity Timer Value for channel 0",
 							 			"^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])$", 
 							 			{}, "RW"], 
