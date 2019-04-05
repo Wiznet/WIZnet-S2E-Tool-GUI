@@ -41,8 +41,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = '0.6.3 Dev 190405'
-# VERSION = 'v1.0.0.0'
+VERSION = 'V1.0.0 Dev'
 
 def resource_path(relative_path):
     # Get absolute path to resource, works for dev and for PyInstaller
@@ -1036,7 +1035,7 @@ class WIZWindow(QMainWindow, main_window):
         self.searched_dev = []
         self.dev_data = {}
         
-        print(self.mac_list, self.dev_name, self.vr_list)
+        # print(self.mac_list, self.dev_name, self.vr_list)
         if self.mac_list is not None:
             try:
                 for i in range(len(self.mac_list)):
@@ -1047,7 +1046,7 @@ class WIZWindow(QMainWindow, main_window):
             except Exception as e:
                 print('[ERROR] main_gui get_dev_list(): %r' % e)
 
-            print('get_dev_list()', self.searched_dev, self.dev_data)
+            # print('get_dev_list()', self.searched_dev, self.dev_data)
             self.search_each_dev(self.searched_dev)
         else: print('There is no device.')
 
