@@ -4851,7 +4851,7 @@ management</string>
                    <number>1</number>
                   </property>
                   <property name="topMargin">
-                   <number>3</number>
+                   <number>1</number>
                   </property>
                   <property name="rightMargin">
                    <number>1</number>
@@ -5467,12 +5467,18 @@ management</string>
                 </item>
                 <item row="0" column="0">
                  <layout class="QGridLayout" name="gridLayout_46">
+                  <property name="topMargin">
+                   <number>1</number>
+                  </property>
                   <property name="spacing">
                    <number>2</number>
                   </property>
                   <item row="0" column="0">
                    <layout class="QGridLayout" name="gridLayout_33">
                     <property name="topMargin">
+                     <number>3</number>
+                    </property>
+                    <property name="bottomMargin">
                      <number>3</number>
                     </property>
                     <property name="verticalSpacing">
@@ -5657,7 +5663,7 @@ management</string>
                          <property name="maximumSize">
                           <size>
                            <width>110</width>
-                           <height>16</height>
+                           <height>14</height>
                           </size>
                          </property>
                          <property name="font">
@@ -5681,7 +5687,7 @@ management</string>
                          <property name="maximumSize">
                           <size>
                            <width>110</width>
-                           <height>16</height>
+                           <height>14</height>
                           </size>
                          </property>
                          <property name="font">
@@ -5708,7 +5714,7 @@ management</string>
                          <property name="maximumSize">
                           <size>
                            <width>110</width>
-                           <height>16</height>
+                           <height>14</height>
                           </size>
                          </property>
                          <property name="font">
@@ -5732,7 +5738,7 @@ management</string>
                          <property name="maximumSize">
                           <size>
                            <width>110</width>
-                           <height>16</height>
+                           <height>14</height>
                           </size>
                          </property>
                          <property name="font">
@@ -5988,6 +5994,9 @@ management</string>
                 </item>
                 <item row="0" column="2">
                  <layout class="QGridLayout" name="gridLayout_47">
+                  <property name="topMargin">
+                   <number>1</number>
+                  </property>
                   <property name="rightMargin">
                    <number>2</number>
                   </property>
@@ -6013,6 +6022,9 @@ management</string>
                        <string>Timer interval</string>
                       </property>
                       <layout class="QGridLayout" name="gridLayout_40">
+                       <property name="topMargin">
+                        <number>9</number>
+                       </property>
                        <item row="0" column="0">
                         <layout class="QGridLayout" name="gridLayout_9">
                          <property name="horizontalSpacing">
@@ -6149,7 +6161,7 @@ interval</string>
                            <property name="maximumSize">
                             <size>
                              <width>57</width>
-                             <height>16777215</height>
+                             <height>22</height>
                             </size>
                            </property>
                            <property name="font">
@@ -6450,12 +6462,18 @@ interval</string>
                <layout class="QGridLayout" name="gridLayout_50">
                 <item row="0" column="0">
                  <layout class="QGridLayout" name="gridLayout_51">
+                  <property name="topMargin">
+                   <number>1</number>
+                  </property>
                   <property name="spacing">
                    <number>2</number>
                   </property>
                   <item row="0" column="0">
                    <layout class="QGridLayout" name="gridLayout_52">
                     <property name="topMargin">
+                     <number>3</number>
+                    </property>
+                    <property name="bottomMargin">
                      <number>3</number>
                     </property>
                     <property name="verticalSpacing">
@@ -6631,13 +6649,13 @@ interval</string>
                          <property name="minimumSize">
                           <size>
                            <width>110</width>
-                           <height>10</height>
+                           <height>14</height>
                           </size>
                          </property>
                          <property name="maximumSize">
                           <size>
                            <width>110</width>
-                           <height>15</height>
+                           <height>14</height>
                           </size>
                          </property>
                          <property name="font">
@@ -6655,13 +6673,13 @@ interval</string>
                          <property name="minimumSize">
                           <size>
                            <width>110</width>
-                           <height>10</height>
+                           <height>14</height>
                           </size>
                          </property>
                          <property name="maximumSize">
                           <size>
                            <width>110</width>
-                           <height>15</height>
+                           <height>14</height>
                           </size>
                          </property>
                          <property name="font">
@@ -6682,13 +6700,13 @@ interval</string>
                          <property name="minimumSize">
                           <size>
                            <width>110</width>
-                           <height>10</height>
+                           <height>14</height>
                           </size>
                          </property>
                          <property name="maximumSize">
                           <size>
                            <width>110</width>
-                           <height>15</height>
+                           <height>14</height>
                           </size>
                          </property>
                          <property name="font">
@@ -6706,13 +6724,13 @@ interval</string>
                          <property name="minimumSize">
                           <size>
                            <width>110</width>
-                           <height>10</height>
+                           <height>14</height>
                           </size>
                          </property>
                          <property name="maximumSize">
                           <size>
                            <width>110</width>
-                           <height>15</height>
+                           <height>14</height>
                           </size>
                          </property>
                          <property name="font">
@@ -6841,7 +6859,7 @@ interval</string>
                      </font>
                     </property>
                     <property name="title">
-                     <string>Remote Host / Port</string>
+                     <string>Remote host / Port</string>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_59">
                      <item row="0" column="0">
@@ -6972,7 +6990,7 @@ interval</string>
                    <number>1</number>
                   </property>
                   <property name="topMargin">
-                   <number>3</number>
+                   <number>1</number>
                   </property>
                   <property name="rightMargin">
                    <number>1</number>
@@ -7588,8 +7606,14 @@ interval</string>
                 </item>
                 <item row="0" column="2">
                  <layout class="QGridLayout" name="gridLayout_65">
+                  <property name="topMargin">
+                   <number>1</number>
+                  </property>
                   <property name="rightMargin">
                    <number>2</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
                   </property>
                   <property name="spacing">
                    <number>3</number>
@@ -7604,6 +7628,12 @@ interval</string>
                     </property>
                     <item row="0" column="0">
                      <widget class="QGroupBox" name="group_packing_12">
+                      <property name="maximumSize">
+                       <size>
+                        <width>16777215</width>
+                        <height>352</height>
+                       </size>
+                      </property>
                       <property name="font">
                        <font>
                         <family>맑은 고딕</family>
@@ -7616,19 +7646,19 @@ interval</string>
                        <item row="0" column="0">
                         <layout class="QGridLayout" name="gridLayout_68">
                          <property name="horizontalSpacing">
-                          <number>3</number>
+                          <number>6</number>
                          </property>
                          <item row="0" column="0">
                           <widget class="QLabel" name="label_136">
                            <property name="minimumSize">
                             <size>
-                             <width>90</width>
+                             <width>85</width>
                              <height>22</height>
                             </size>
                            </property>
                            <property name="maximumSize">
                             <size>
-                             <width>90</width>
+                             <width>85</width>
                              <height>22</height>
                             </size>
                            </property>
@@ -7640,19 +7670,22 @@ interval</string>
                            <property name="text">
                             <string>Inactivity timer</string>
                            </property>
+                           <property name="alignment">
+                            <set>Qt::AlignCenter</set>
+                           </property>
                           </widget>
                          </item>
                          <item row="0" column="1">
                           <widget class="QLineEdit" name="ch2_inact_timer">
                            <property name="minimumSize">
                             <size>
-                             <width>55</width>
+                             <width>57</width>
                              <height>22</height>
                             </size>
                            </property>
                            <property name="maximumSize">
                             <size>
-                             <width>55</width>
+                             <width>57</width>
                              <height>16777215</height>
                             </size>
                            </property>
@@ -7707,20 +7740,20 @@ interval</string>
                           <widget class="QLabel" name="ch2_reconnection_label">
                            <property name="minimumSize">
                             <size>
-                             <width>90</width>
-                             <height>22</height>
+                             <width>85</width>
+                             <height>25</height>
                             </size>
                            </property>
                            <property name="maximumSize">
                             <size>
-                             <width>90</width>
+                             <width>85</width>
                              <height>25</height>
                             </size>
                            </property>
                            <property name="font">
                             <font>
                              <family>맑은 고딕</family>
-                             <pointsize>9</pointsize>
+                             <pointsize>8</pointsize>
                             </font>
                            </property>
                            <property name="text">
@@ -7736,13 +7769,13 @@ Interval</string>
                           <widget class="QLineEdit" name="ch2_reconnection">
                            <property name="minimumSize">
                             <size>
-                             <width>55</width>
+                             <width>57</width>
                              <height>22</height>
                             </size>
                            </property>
                            <property name="maximumSize">
                             <size>
-                             <width>55</width>
+                             <width>57</width>
                              <height>16777215</height>
                             </size>
                            </property>
@@ -7802,204 +7835,203 @@ Interval</string>
                        </font>
                       </property>
                       <property name="title">
-                       <string>TCP Keep-Alive Interval</string>
+                       <string>TCP Keep-alive interval</string>
                       </property>
-                      <layout class="QGridLayout" name="gridLayout_70">
+                      <layout class="QGridLayout" name="gridLayout_44">
                        <item row="0" column="0">
-                        <layout class="QGridLayout" name="gridLayout_71">
-                         <property name="spacing">
-                          <number>2</number>
+                        <widget class="QCheckBox" name="ch2_keepalive_enable">
+                         <property name="font">
+                          <font>
+                           <family>맑은 고딕</family>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>Enable</string>
+                         </property>
+                         <property name="checked">
+                          <bool>true</bool>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="0">
+                        <layout class="QGridLayout" name="gridLayout_72">
+                         <property name="horizontalSpacing">
+                          <number>6</number>
                          </property>
                          <item row="0" column="0">
-                          <widget class="QCheckBox" name="ch2_keepalive_enable">
+                          <widget class="QLabel" name="label_130">
+                           <property name="minimumSize">
+                            <size>
+                             <width>85</width>
+                             <height>22</height>
+                            </size>
+                           </property>
+                           <property name="maximumSize">
+                            <size>
+                             <width>85</width>
+                             <height>22</height>
+                            </size>
+                           </property>
                            <property name="font">
                             <font>
                              <family>맑은 고딕</family>
                             </font>
                            </property>
                            <property name="text">
-                            <string>Enable</string>
+                            <string>Initial Interval</string>
                            </property>
-                           <property name="checked">
-                            <bool>true</bool>
+                           <property name="alignment">
+                            <set>Qt::AlignCenter</set>
                            </property>
                           </widget>
                          </item>
-                         <item row="1" column="0">
-                          <layout class="QGridLayout" name="gridLayout_72">
-                           <property name="horizontalSpacing">
-                            <number>8</number>
+                         <item row="0" column="1">
+                          <widget class="QLineEdit" name="ch2_keepalive_initial">
+                           <property name="minimumSize">
+                            <size>
+                             <width>57</width>
+                             <height>22</height>
+                            </size>
                            </property>
-                           <item row="0" column="0">
-                            <widget class="QLabel" name="label_130">
-                             <property name="minimumSize">
-                              <size>
-                               <width>80</width>
-                               <height>22</height>
-                              </size>
-                             </property>
-                             <property name="maximumSize">
-                              <size>
-                               <width>80</width>
-                               <height>22</height>
-                              </size>
-                             </property>
-                             <property name="font">
-                              <font>
-                               <family>맑은 고딕</family>
-                              </font>
-                             </property>
-                             <property name="text">
-                              <string>Initial Interval</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="0" column="1">
-                            <widget class="QLineEdit" name="ch2_keepalive_initial">
-                             <property name="minimumSize">
-                              <size>
-                               <width>60</width>
-                               <height>22</height>
-                              </size>
-                             </property>
-                             <property name="maximumSize">
-                              <size>
-                               <width>60</width>
-                               <height>22</height>
-                              </size>
-                             </property>
-                             <property name="font">
-                              <font>
-                               <family>맑은 고딕</family>
-                              </font>
-                             </property>
-                             <property name="toolTip">
-                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                             </property>
-                             <property name="text">
-                              <string>00</string>
-                             </property>
-                             <property name="maxLength">
-                              <number>5</number>
-                             </property>
-                             <property name="alignment">
-                              <set>Qt::AlignCenter</set>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="0" column="2">
-                            <widget class="QLabel" name="label_163">
-                             <property name="minimumSize">
-                              <size>
-                               <width>30</width>
-                               <height>22</height>
-                              </size>
-                             </property>
-                             <property name="maximumSize">
-                              <size>
-                               <width>30</width>
-                               <height>22</height>
-                              </size>
-                             </property>
-                             <property name="font">
-                              <font>
-                               <family>맑은 고딕</family>
-                              </font>
-                             </property>
-                             <property name="text">
-                              <string>ms</string>
-                             </property>
-                            </widget>
-                           </item>
-                          </layout>
+                           <property name="maximumSize">
+                            <size>
+                             <width>57</width>
+                             <height>22</height>
+                            </size>
+                           </property>
+                           <property name="font">
+                            <font>
+                             <family>맑은 고딕</family>
+                            </font>
+                           </property>
+                           <property name="toolTip">
+                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                           </property>
+                           <property name="text">
+                            <string>00</string>
+                           </property>
+                           <property name="maxLength">
+                            <number>5</number>
+                           </property>
+                           <property name="alignment">
+                            <set>Qt::AlignCenter</set>
+                           </property>
+                          </widget>
                          </item>
-                         <item row="2" column="0">
-                          <layout class="QGridLayout" name="gridLayout_73">
-                           <property name="horizontalSpacing">
-                            <number>8</number>
+                         <item row="0" column="2">
+                          <widget class="QLabel" name="label_163">
+                           <property name="minimumSize">
+                            <size>
+                             <width>30</width>
+                             <height>22</height>
+                            </size>
                            </property>
-                           <item row="0" column="0">
-                            <widget class="QLabel" name="label_131">
-                             <property name="minimumSize">
-                              <size>
-                               <width>80</width>
-                               <height>22</height>
-                              </size>
-                             </property>
-                             <property name="maximumSize">
-                              <size>
-                               <width>80</width>
-                               <height>22</height>
-                              </size>
-                             </property>
-                             <property name="font">
-                              <font>
-                               <family>맑은 고딕</family>
-                              </font>
-                             </property>
-                             <property name="text">
-                              <string>Retry interval</string>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="0" column="1">
-                            <widget class="QLineEdit" name="ch2_keepalive_retry">
-                             <property name="minimumSize">
-                              <size>
-                               <width>60</width>
-                               <height>22</height>
-                              </size>
-                             </property>
-                             <property name="maximumSize">
-                              <size>
-                               <width>60</width>
-                               <height>22</height>
-                              </size>
-                             </property>
-                             <property name="font">
-                              <font>
-                               <family>맑은 고딕</family>
-                              </font>
-                             </property>
-                             <property name="toolTip">
-                              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                             </property>
-                             <property name="text">
-                              <string>0</string>
-                             </property>
-                             <property name="maxLength">
-                              <number>5</number>
-                             </property>
-                             <property name="alignment">
-                              <set>Qt::AlignCenter</set>
-                             </property>
-                            </widget>
-                           </item>
-                           <item row="0" column="2">
-                            <widget class="QLabel" name="label_164">
-                             <property name="minimumSize">
-                              <size>
-                               <width>30</width>
-                               <height>22</height>
-                              </size>
-                             </property>
-                             <property name="maximumSize">
-                              <size>
-                               <width>30</width>
-                               <height>22</height>
-                              </size>
-                             </property>
-                             <property name="font">
-                              <font>
-                               <family>맑은 고딕</family>
-                              </font>
-                             </property>
-                             <property name="text">
-                              <string>ms</string>
-                             </property>
-                            </widget>
-                           </item>
-                          </layout>
+                           <property name="maximumSize">
+                            <size>
+                             <width>30</width>
+                             <height>22</height>
+                            </size>
+                           </property>
+                           <property name="font">
+                            <font>
+                             <family>맑은 고딕</family>
+                            </font>
+                           </property>
+                           <property name="text">
+                            <string>ms</string>
+                           </property>
+                          </widget>
+                         </item>
+                        </layout>
+                       </item>
+                       <item row="2" column="0">
+                        <layout class="QGridLayout" name="gridLayout_73">
+                         <property name="horizontalSpacing">
+                          <number>6</number>
+                         </property>
+                         <item row="0" column="0">
+                          <widget class="QLabel" name="label_131">
+                           <property name="minimumSize">
+                            <size>
+                             <width>85</width>
+                             <height>22</height>
+                            </size>
+                           </property>
+                           <property name="maximumSize">
+                            <size>
+                             <width>85</width>
+                             <height>22</height>
+                            </size>
+                           </property>
+                           <property name="font">
+                            <font>
+                             <family>맑은 고딕</family>
+                            </font>
+                           </property>
+                           <property name="text">
+                            <string>Retry interval</string>
+                           </property>
+                           <property name="alignment">
+                            <set>Qt::AlignCenter</set>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="0" column="1">
+                          <widget class="QLineEdit" name="ch2_keepalive_retry">
+                           <property name="minimumSize">
+                            <size>
+                             <width>57</width>
+                             <height>22</height>
+                            </size>
+                           </property>
+                           <property name="maximumSize">
+                            <size>
+                             <width>57</width>
+                             <height>22</height>
+                            </size>
+                           </property>
+                           <property name="font">
+                            <font>
+                             <family>맑은 고딕</family>
+                            </font>
+                           </property>
+                           <property name="toolTip">
+                            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                           </property>
+                           <property name="text">
+                            <string>0</string>
+                           </property>
+                           <property name="maxLength">
+                            <number>5</number>
+                           </property>
+                           <property name="alignment">
+                            <set>Qt::AlignCenter</set>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="0" column="2">
+                          <widget class="QLabel" name="label_164">
+                           <property name="minimumSize">
+                            <size>
+                             <width>30</width>
+                             <height>22</height>
+                            </size>
+                           </property>
+                           <property name="maximumSize">
+                            <size>
+                             <width>30</width>
+                             <height>22</height>
+                            </size>
+                           </property>
+                           <property name="font">
+                            <font>
+                             <family>맑은 고딕</family>
+                            </font>
+                           </property>
+                           <property name="text">
+                            <string>ms</string>
+                           </property>
+                          </widget>
                          </item>
                         </layout>
                        </item>
