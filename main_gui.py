@@ -41,7 +41,8 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = '0.6.3 Dev 190326'
+VERSION = '0.6.3 Dev 190405'
+# VERSION = 'v1.0.0.0'
 
 def resource_path(relative_path):
     # Get absolute path to resource, works for dev and for PyInstaller
@@ -120,7 +121,7 @@ class WIZWindow(QMainWindow, main_window):
         self.wiz2000_tab_text = self.generalTab.tabText(3)
         self.wiz2000_cloud_tab_text = self.generalTab.tabText(4)
         self.wiz2000_certificate_text = self.generalTab.tabText(5)
-        self.ch2_tab_text = self.channel_tab.tabText(1)
+        self.ch1_tab_text = self.channel_tab.tabText(1)
 
         # Initial tab
         self.generalTab.removeTab(5)
@@ -493,7 +494,7 @@ class WIZWindow(QMainWindow, main_window):
             self.channel_tab.removeTab(1)
             self.channel_tab.setTabEnabled(0, True)
         elif self.curr_dev in TWO_PORT_DEV or 'WIZ752' in self.curr_dev:
-            self.channel_tab.insertTab(1, self.tab_ch2, self.ch2_tab_text)
+            self.channel_tab.insertTab(1, self.tab_ch1, self.ch1_tab_text)
             self.channel_tab.setTabEnabled(0, True)
             self.channel_tab.setTabEnabled(1, True)
 
