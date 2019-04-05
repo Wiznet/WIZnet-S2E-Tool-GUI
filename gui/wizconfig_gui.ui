@@ -438,7 +438,7 @@
                <item row="0" column="0">
                 <layout class="QGridLayout" name="gridLayout_18">
                  <property name="horizontalSpacing">
-                  <number>5</number>
+                  <number>6</number>
                  </property>
                  <property name="verticalSpacing">
                   <number>3</number>
@@ -447,13 +447,13 @@
                   <widget class="QLabel" name="label_171">
                    <property name="minimumSize">
                     <size>
-                     <width>47</width>
+                     <width>45</width>
                      <height>22</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>50</width>
+                     <width>45</width>
                      <height>22</height>
                     </size>
                    </property>
@@ -471,13 +471,13 @@
                   <widget class="QCheckBox" name="show_idcodeinput">
                    <property name="minimumSize">
                     <size>
-                     <width>73</width>
+                     <width>76</width>
                      <height>22</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>73</width>
+                     <width>76</width>
                      <height>22</height>
                     </size>
                    </property>
