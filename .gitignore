@@ -99,3 +99,16 @@ ENV/
 
 # mypy
 .mypy_cache/
+*.dll
+*.bin
+.idea/
+version_2.txt
+version_1.txt
+WIZCONF.cfg
+gui/_wizconfig_gui.ui
+gui/wizconfig_gui-bak.ui
+.vscode/settings.json
+
+*old*
+*.crt
+*.patch

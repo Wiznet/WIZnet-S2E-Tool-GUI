@@ -23,7 +23,7 @@ OP_SETIP = 2
 OP_CHECKIP = 3
 OP_FACTORYRESET = 4
 OP_GETDETAIL = 5
-OP_FWUP = 6
+OP_CERTUP = 6
 
 SOCK_CLOSE_STATE = 1
 SOCK_OPENTRY_STATE = 2
@@ -34,20 +34,20 @@ SOCK_CONNECT_STATE = 5
 idle_state = 1
 datasent_state = 2
 
-FW_PACKET_SIZE = 1024
-# FW_PACKET_SIZE = 2048
+PACKET_SIZE = 1024
+# PACKET_SIZE = 2048
 
 
-class FWUploadThread(QThread):
+class CertUploadThread(QThread):
     uploading_size = pyqtSignal(int)
     upload_result = pyqtSignal(int)
     error_flag = pyqtSignal(int)
 
-    def __init__(self, conf_sock, dest_mac, idcode, set_pw, filename, filesize, ipaddr, port, dev_name):
+    def __init__(self, conf_sock, dest_mac, idcode, set_pw, cert, ipaddr, port, dev_name, mode_cmd):
         QThread.__init__(self)
 
         self.dest_mac = None
-        self.bin_filename = filename
+        # self.bin_cert_name = cert_name
         self.fd = None
         self.data = None
         self.client = None
@@ -61,70 +61,54 @@ class FWUploadThread(QThread):
         self.error_noresponse = 0
         self.retrycheck = 0
 
-        # if wiz2000
+        # wiz2000
         self.dev_name = dev_name
         self.set_pw = set_pw
+        self.cert = cert
+        self.mode_cmd = mode_cmd
+        self.curr_ptr = 0
 
-        self.filesize = filesize
-        self.remainbytes = self.filesize
+        self.cert_size = len(self.cert)
+        self.remainbytes = self.cert_size
 
         self.conf_sock = conf_sock
-        self.sock_type = '%s' % self.conf_sock
+        self.what_sock = '%s' % self.conf_sock
 
         # socket config (for TCP unicast)
         self.ip_addr = ipaddr
         self.port = port
 
-        self.tcp_sock = None
+        self.cli_sock = None
 
-    def setparam(self):
-        self.fd = open(self.bin_filename, "rb")
-        self.data = self.fd.read(-1)
-        self.curr_ptr = 0
-        self.fd.close()
+    # def setparam(self):
+    #     self.fd = open(self.bin_cert_name, "rb")
+    #     self.data = self.fd.read(-1)
+    #     self.curr_ptr = 0
+    #     self.fd.close()
 
     def myTimer(self):
         # sys.stdout.write('timer1 timeout\r\n')
         self.istimeout = 1
 
-    def jumpToApp(self):
-        cmd_list = []
-        # boot mode change: App boot mode
-        cmd_list.append(["MA", self.dest_mac])
-        cmd_list.append(["PW", self.idcode])
-        cmd_list.append(["AB", ""])
-
-        if 'TCP' in self.sock_type:
-            self.wizmsghangler = WIZMSGHandler(
-                self.conf_sock, cmd_list, 'tcp', OP_FWUP, 2)
-        elif 'UDP' in self.sock_type:
-            self.wizmsghangler = WIZMSGHandler(
-                self.conf_sock, cmd_list, 'udp', OP_FWUP, 2)
-
-        self.resp = self.wizmsghangler.run()
-
-        self.uploading_size.emit(1)
-        self.msleep(1000)
-
     def sendCmd(self, command):
         cmd_list = []
         self.resp = None
 
-        # Send FW UPload request message
+        # Send certificate upload request message
         cmd_list.append(["MA", self.dest_mac])
         cmd_list.append(["PW", self.idcode])
         if 'WIZ2000' in self.dev_name:
             cmd_list.append(["AP", self.set_pw.decode()])
-        cmd_list.append([command, str(self.filesize)])
+        cmd_list.append([command, str(self.cert_size)])
 
         print('sendCmd() cmd_list ===> ', cmd_list)
 
-        if 'TCP' in self.sock_type:
+        if 'TCP' in self.what_sock:
             self.wizmsghangler = WIZMSGHandler(
-                self.conf_sock, cmd_list, 'tcp', OP_FWUP, 2)
-        elif 'UDP' in self.sock_type:
+                self.conf_sock, cmd_list, 'tcp', OP_CERTUP, 2)
+        elif 'UDP' in self.what_sock:
             self.wizmsghangler = WIZMSGHandler(
-                self.conf_sock, cmd_list, 'udp', OP_FWUP, 2)
+                self.conf_sock, cmd_list, 'udp', OP_CERTUP, 2)
         sys.stdout.write("sendCmd(): %s\r\n" % cmd_list)
 
         # if no reponse from device, retry for several times.
@@ -138,22 +122,16 @@ class FWUploadThread(QThread):
         self.uploading_size.emit(2)
 
     def run(self):
-        self.setparam()
-        # wiz2000: not use 'AB' command
-        print('===============>> FW upload', self.dev_name)
-        if 'WIZ2000' in self.dev_name:
-            print('wiz2000 FW upload', self.dev_name)
-            pass
-        else:
-            self.jumpToApp()
+        # self.setparam()
+        print('=======>> certificate upload', self.dev_name)
 
-        if 'UDP' in self.sock_type:
+        if 'UDP' in self.what_sock:
             pass
-        elif 'TCP' in self.sock_type:
+        elif 'TCP' in self.what_sock:
             self.sock_close()
             self.SocketConfig()
 
-        self.sendCmd('FW')
+        self.sendCmd(self.mode_cmd)
 
         if self.resp is not '' and self.resp is not None:
             resp = self.resp.decode('utf-8')
@@ -219,17 +197,17 @@ class FWUploadThread(QThread):
                             self.uploading_size.emit(5)
                             while self.remainbytes is not 0:
                                 if self.client.working_state == idle_state:
-                                    if self.remainbytes >= FW_PACKET_SIZE:
-                                        msg = bytearray(FW_PACKET_SIZE)
+                                    if self.remainbytes >= PACKET_SIZE:
+                                        msg = bytearray(PACKET_SIZE)
                                         msg[:] = self.data[self.curr_ptr:self.curr_ptr +
-                                                           FW_PACKET_SIZE]
+                                                           PACKET_SIZE]
                                         self.client.write(msg)
-                                        self.sentbyte = FW_PACKET_SIZE
-                                        # sys.stdout.write('FW_PACKET_SIZE bytes sent from at %r\r\n' % (self.curr_ptr))
-                                        sys.stdout.write('[%s] FW_PACKET_SIZE bytes sent from at %r\r\n' % (
+                                        self.sentbyte = PACKET_SIZE
+                                        # sys.stdout.write('PACKET_SIZE bytes sent from at %r\r\n' % (self.curr_ptr))
+                                        sys.stdout.write('[%s] PACKET_SIZE bytes sent from at %r\r\n' % (
                                             self.serverip, self.curr_ptr))
-                                        self.curr_ptr += FW_PACKET_SIZE
-                                        self.remainbytes -= FW_PACKET_SIZE
+                                        self.curr_ptr += PACKET_SIZE
+                                        self.remainbytes -= PACKET_SIZE
                                     else:
                                         self.uploading_size.emit(6)
                                         msg = bytearray(self.remainbytes)
@@ -259,7 +237,7 @@ class FWUploadThread(QThread):
                                             self.istimeout = 0
                                         else:
                                             print(
-                                                'ERROR: No response from device. Stop FW upload...')
+                                                'ERROR: No response from device. Stop certificate upload...')
                                             self.client.close()
                                             self.upload_result.emit(-1)
                                             self.terminate()
@@ -292,7 +270,7 @@ class FWUploadThread(QThread):
                 # send FIN packet
                 self.msleep(500)
                 self.client.shutdown()
-                if 'TCP' in self.sock_type:
+                if 'TCP' in self.what_sock:
                     self.conf_sock.shutdown()
         except Exception as e:
             self.error_flag.emit(-3)
@@ -302,41 +280,41 @@ class FWUploadThread(QThread):
 
     def sock_close(self):
         # 기존 연결 fin
-        if self.tcp_sock is not None:
-            if self.tcp_sock.state is not SOCK_CLOSE_STATE:
-                self.tcp_sock.shutdown()
+        if self.cli_sock is not None:
+            if self.cli_sock.state is not SOCK_CLOSE_STATE:
+                self.cli_sock.shutdown()
         if self.conf_sock is not None:
             self.conf_sock.shutdown()
 
     def tcpConnection(self, serverip, port):
         retrynum = 0
-        self.tcp_sock = TCPClient(2, serverip, port)
-        print('sock state: %r' % (self.tcp_sock.state))
+        self.cli_sock = TCPClient(2, serverip, port)
+        print('sock state: %r' % (self.cli_sock.state))
 
         while True:
             if retrynum > 6:
                 break
             retrynum += 1
 
-            if self.tcp_sock.state is SOCK_CLOSE_STATE:
-                self.tcp_sock.shutdown()
-                cur_state = self.tcp_sock.state
+            if self.cli_sock.state is SOCK_CLOSE_STATE:
+                self.cli_sock.shutdown()
+                cur_state = self.cli_sock.state
                 try:
-                    self.tcp_sock.open()
-                    if self.tcp_sock.state is SOCK_OPEN_STATE:
+                    self.cli_sock.open()
+                    if self.cli_sock.state is SOCK_OPEN_STATE:
                         print('[%r] is OPEN' % (serverip))
                     time.sleep(0.5)
                 except Exception as e:
                     sys.stdout.write('%r\r\n' % e)
-            elif self.tcp_sock.state is SOCK_OPEN_STATE:
-                cur_state = self.tcp_sock.state
+            elif self.cli_sock.state is SOCK_OPEN_STATE:
+                cur_state = self.cli_sock.state
                 try:
-                    self.tcp_sock.connect()
-                    if self.tcp_sock.state is SOCK_CONNECT_STATE:
+                    self.cli_sock.connect()
+                    if self.cli_sock.state is SOCK_CONNECT_STATE:
                         print('[%r] is CONNECTED' % (serverip))
                 except Exception as e:
                     sys.stdout.write('%r\r\n' % e)
-            elif self.tcp_sock.state is SOCK_CONNECT_STATE:
+            elif self.cli_sock.state is SOCK_CONNECT_STATE:
                 break
         if retrynum > 6:
             sys.stdout.write(
@@ -344,16 +322,16 @@ class FWUploadThread(QThread):
             return None
         else:
             sys.stdout.write('Device [%s] TCP connected\r\n' % (serverip))
-            return self.tcp_sock
+            return self.cli_sock
 
     def SocketConfig(self):
         # Broadcast
-        if 'UDP' in self.sock_type:
+        if 'UDP' in self.what_sock:
             self.conf_sock = WIZUDPSock(5000, 50001)
             self.conf_sock.open()
 
         # TCP unicast
-        elif 'TCP' in self.sock_type:
+        elif 'TCP' in self.what_sock:
             print('upload_unicast: ip: %r, port: %r' %
                   (self.ip_addr, self.port))
 
