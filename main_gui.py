@@ -41,7 +41,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.0.0 Dev'
+VERSION = 'V1.0.0'
 
 def resource_path(relative_path):
     # Get absolute path to resource, works for dev and for PyInstaller
