@@ -6,9 +6,9 @@ import re
 import os
 import subprocess
 import base64
-import ssl
-from urllib.parse import urlsplit
-from tkinter import Tk
+# import ssl
+# from urllib.parse import urlsplit
+# from tkinter import Tk
 
 # need to install package
 from PyQt5.QtWidgets import QAction, QMainWindow, QApplication, QProgressBar, \
@@ -26,7 +26,7 @@ from WIZ752CMDSET import WIZ752CMDSET
 from WIZ2000CMDSET import WIZ2000CMDSET
 from WIZMakeCMD import WIZMakeCMD, version_compare, ONE_PORT_DEV, TWO_PORT_DEV
 from wizsocket.TCPClient import TCPClient
-from CertUploadThread import CertUploadThread
+# from CertUploadThread import CertUploadThread
 
 OP_SEARCHALL = 1
 OP_GETCOMMAND = 2
@@ -41,7 +41,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.0.0'
+VERSION = 'V1.0.1'
 
 def resource_path(relative_path):
     # Get absolute path to resource, works for dev and for PyInstaller
@@ -149,13 +149,13 @@ class WIZWindow(QMainWindow, main_window):
 
         # for certificate management
         self.btn_cert_update.clicked.connect(self.event_certificate_clicked)
-        self.btn_cert_server_run.clicked.connect(self.get_certificate_from_server)
+        # self.btn_cert_server_run.clicked.connect(self.get_certificate_from_server)
         self.btn_cert_save_file.clicked.connect(self.dialog_save_certificate)
         self.btn_cert_load_file.clicked.connect(self.dialog_load_certificate)
         self.btn_cert_clear.clicked.connect(self.clear_certificate)
         # device certificate update
         self.btn_device_cert_update.clicked.connect(self.btn_cert_update_clicked)
-        self.btn_cert_copy_clipboard.clicked.connect(self.btn_cert_copy_clipboard_clicked)
+        # self.btn_cert_copy_clipboard.clicked.connect(self.btn_cert_copy_clipboard_clicked)
         self.certificate_detail.textChanged.connect(self.event_cert_changed)
 
         # configuration save/load button
@@ -1583,19 +1583,18 @@ class WIZWindow(QMainWindow, main_window):
         return setcmd
 
     # copy current cert to clipboard
-    def btn_cert_copy_clipboard_clicked(self):
-        cert = self.certificate_detail.toPlainText()
-        try:
-            clip = Tk()
-            clip.withdraw()
-            clip.clipboard_clear()
-            clip.clipboard_append(cert)
-            clip.update()
-            clip.destroy()
-        except Exception as e:
-            print('[ERROR] btn_cert_copy_clipboard_clicked(): %r' % e)
+    # def btn_cert_copy_clipboard_clicked(self):
+    #     cert = self.certificate_detail.toPlainText()
+    #     try:
+    #         clip = Tk()
+    #         clip.withdraw()
+    #         clip.clipboard_clear()
+    #         clip.clipboard_append(cert)
+    #         clip.update()
+    #         clip.destroy()
+    #     except Exception as e:
+    #         print('[ERROR] btn_cert_copy_clipboard_clicked(): %r' % e)
 
-    # TODO:
     def get_certificate_from_device(self):
         pass
     
@@ -1622,67 +1621,67 @@ class WIZWindow(QMainWindow, main_window):
             self.statusbar.showMessage(' Certificate update warning.')
             self.msg_upload_warning(self.localip_addr)
 
-    def update_device_cert(self):
-        print('update_device_cert()')
-        self.selected_devinfo()
-        mac_addr = self.curr_mac
+    # def update_device_cert(self):
+    #     print('update_device_cert()')
+    #     self.selected_devinfo()
+    #     mac_addr = self.curr_mac
 
-        if len(self.searchcode_input.text()) == 0:
-            self.code = " "
-        else:
-            self.code = self.searchcode_input.text()
+    #     if len(self.searchcode_input.text()) == 0:
+    #         self.code = " "
+    #     else:
+    #         self.code = self.searchcode_input.text()
 
-        # certificate channel type
-        cert = self.certificate_detail.toPlainText()
-        if self.cert_tcp_client.isChecked():
-            mode_cmd = 'TC'
-        elif self.cert_cloud.isChecked():
-            mode_cmd = 'WC'
+    #     # certificate channel type
+    #     cert = self.certificate_detail.toPlainText()
+    #     if self.cert_tcp_client.isChecked():
+    #         mode_cmd = 'TC'
+    #     elif self.cert_cloud.isChecked():
+    #         mode_cmd = 'WC'
 
-        # Certificate update
-        try: 
-            if self.broadcast.isChecked():
-                self.t_certup = CertUploadThread(self.conf_sock, mac_addr, self.code, self.encoded_setting_pw, cert, None, None, self.curr_dev, mode_cmd)
-            elif self.unicast_ip.isChecked():
-                ip_addr = self.search_ipaddr.text()
-                port = int(self.search_port.text())
-                self.t_certup = CertUploadThread(self.conf_sock, mac_addr, self.code, self.encoded_setting_pw, cert, ip_addr, port, self.curr_dev, mode_cmd)
-            self.t_certup.uploading_size.connect(self.pgbar.setValue)
-            self.t_certup.upload_result.connect(self.update_result)
-            self.t_certup.error_flag.connect(self.update_error)
-            try:
-                self.t_certup.start()
-            except Exception as e:
-                print('update_device_cert() thread start error', e)
-                self.update_result(-1)
-        except Exception as e:
-            print('update_device_cert() error', e)
+    #     # Certificate update
+    #     try: 
+    #         if self.broadcast.isChecked():
+    #             self.t_certup = CertUploadThread(self.conf_sock, mac_addr, self.code, self.encoded_setting_pw, cert, None, None, self.curr_dev, mode_cmd)
+    #         elif self.unicast_ip.isChecked():
+    #             ip_addr = self.search_ipaddr.text()
+    #             port = int(self.search_port.text())
+    #             self.t_certup = CertUploadThread(self.conf_sock, mac_addr, self.code, self.encoded_setting_pw, cert, ip_addr, port, self.curr_dev, mode_cmd)
+    #         self.t_certup.uploading_size.connect(self.pgbar.setValue)
+    #         self.t_certup.upload_result.connect(self.update_result)
+    #         self.t_certup.error_flag.connect(self.update_error)
+    #         try:
+    #             self.t_certup.start()
+    #         except Exception as e:
+    #             print('update_device_cert() thread start error', e)
+    #             self.update_result(-1)
+    #     except Exception as e:
+    #         print('update_device_cert() error', e)
 
-    def get_certificate_from_server(self):
-        self.clear_certificate()
-        # ?: need host address verify or check if host has SSL certificate
-        try: 
-            url = self.cert_server.text()
-            addr = urlsplit(url).hostname
-            port = 443
-        except Exception as e:
-            print('[ERROR] get_certificate_from_server() get addr', e)
+    # def get_certificate_from_server(self):
+    #     self.clear_certificate()
+    #     # ?: need host address verify or check if host has SSL certificate
+    #     try: 
+    #         url = self.cert_server.text()
+    #         addr = urlsplit(url).hostname
+    #         port = 443
+    #     except Exception as e:
+    #         print('[ERROR] get_certificate_from_server() get addr', e)
 
-        try:
-            # TODO: CHECK ssl_version
-            cert = ssl.get_server_certificate((addr, port))
-            self.certificate_detail.setText(cert)
-            # certificate size
-            self.cert_size.setText(str(len(cert)))
-            self.statusbar.showMessage("")
+    #     try:
+    #         # TODO: CHECK ssl_version
+    #         cert = ssl.get_server_certificate((addr, port))
+    #         self.certificate_detail.setText(cert)
+    #         # certificate size
+    #         self.cert_size.setText(str(len(cert)))
+    #         self.statusbar.showMessage("")
 
-            # TODO: 다운받은 certificate를 디바이스로 전송
-            # self.msg_certificate_success(file_name)
+    #         # TODO: 다운받은 certificate를 디바이스로 전송
+    #         # self.msg_certificate_success(file_name)
 
-        except Exception as e:
-            self.certificate_detail.setText('Fail to get certificate from server.\nPlease check the address')
-            self.statusbar.showMessage(' Warning: fail to get certificate from server.')
-            print('[ERROR] get_certificate_from_server():', e)
+    #     except Exception as e:
+    #         self.certificate_detail.setText('Fail to get certificate from server.\nPlease check the address')
+    #         self.statusbar.showMessage(' Warning: fail to get certificate from server.')
+    #         print('[ERROR] get_certificate_from_server():', e)
 
     def clear_certificate(self):
         self.certificate_detail.setText("")
@@ -1757,7 +1756,8 @@ class WIZWindow(QMainWindow, main_window):
                 self.msg_factory_firmware()
             # certificate update
             elif mode == 'update_cert':
-                self.update_device_cert()
+                # self.update_device_cert()
+                pass
         except Exception as e:
             print('[ERROR] encode_setting_pw(): %r' % e)
 
