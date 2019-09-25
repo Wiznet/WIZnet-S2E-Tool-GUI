@@ -41,7 +41,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.0.1'
+VERSION = 'V1.1.0'
 
 def resource_path(relative_path):
     # Get absolute path to resource, works for dev and for PyInstaller
@@ -1810,8 +1810,18 @@ class WIZWindow(QMainWindow, main_window):
                         print('WIZ2000: Invalid parameter: %s %s' % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
                         self.msg_invalid(setcmd.get(setcmd_cmd[i]))
                         invalid_flag += 1
+            elif 'W7500_S2E' in self.curr_dev or 'W7500P_S2E':
+                print('W7500(P)-S2E setting...')
+                invalid_flag = 0
+                setcmd_cmd = list(setcmd.keys())
+                for i in range(len(setcmd)):
+                    if self.wiz750cmdObj.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
+                        print('Invalid parameter: %s %s' % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
+                        self.msg_invalid(setcmd.get(setcmd_cmd[i]))
+                        invalid_flag += 1
             else:
-                print('device is not supported')
+                invalid_flag = -1
+                print('The device is not supported')
 
             # print('invalid flag: %d' % invalid_flag)
             if invalid_flag > 0:
