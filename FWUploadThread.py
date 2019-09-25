@@ -46,7 +46,6 @@ class FWUploadThread(QThread):
     def __init__(self, conf_sock, dest_mac, idcode, set_pw, filename, filesize, ipaddr, port, dev_name):
         QThread.__init__(self)
 
-        self.dest_mac = None
         self.bin_filename = filename
         self.fd = None
         self.data = None

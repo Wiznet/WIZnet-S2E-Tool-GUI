@@ -35,6 +35,9 @@ Python interpreter based and it is platform independent. It works on version 3.x
 - [WIZ752SR-120](https://wizwiki.net/wiki/doku.php?id=products:s2e_module:wiz752sr-120:start)
 - [WIZ752SR-125](https://wizwiki.net/wiki/doku.php?id=products:s2e_module:wiz752sr-125:start)
 
+### Pre-programmed MCU
+- [W7500(P)-S2E](http://wizwiki.net/wiki/doku.php?id=products:w7500x-s2e:en)
+
 ---
 
 # Wiki
