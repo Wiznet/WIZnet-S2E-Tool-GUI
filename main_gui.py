@@ -2240,7 +2240,7 @@ class WIZWindow(QMainWindow, main_window):
 
     def msg_set_success(self):
         msgbox = QMessageBox(self)
-        msgbox.question(self, "Setting success", "Devcie configuration complete!", QMessageBox.Yes)
+        msgbox.question(self, "Setting success", "Device configuration complete!", QMessageBox.Yes)
 
     def msg_certificate_success(self, filename):
         msgbox = QMessageBox(self)
