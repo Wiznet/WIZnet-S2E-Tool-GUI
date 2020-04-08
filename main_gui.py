@@ -18,6 +18,24 @@ from PyQt5.QtGui import QIcon, QPixmap, QFont
 from PyQt5 import uic
 import ifaddr
 
+import logging
+import logging.handlers
+
+testlog = logging.getLogger('testlogging')
+testlog.setLevel(logging.INFO)
+
+fileformatter = logging.Formatter('[%(levelname)s][%(asctime)s]-(%(funcName)s)(%(lineno)s) %(message)s')
+
+fileHandler = logging.FileHandler('./testlogging.log', encoding='utf-8')
+streamHandler = logging.StreamHandler()
+
+fileHandler.setFormatter(fileformatter)
+streamHandler.setFormatter(fileformatter)
+
+# log handler
+testlog.addHandler(fileHandler)
+testlog.addHandler(streamHandler)
+
 from WIZMSGHandler import WIZMSGHandler, DataRefresh
 from FWUploadThread import FWUploadThread
 from WIZUDPSock import WIZUDPSock
@@ -41,7 +59,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.1.0'
+VERSION = 'V1.1.1 Dev'
 
 def resource_path(relative_path):
     # Get absolute path to resource, works for dev and for PyInstaller
@@ -429,14 +447,31 @@ class WIZWindow(QMainWindow, main_window):
             self.update_btn_clicked()
 
     def gpio_check(self):
-        if self.gpioa_config.currentIndex() == 1: self.gpioa_set.setEnabled(True)
-        else: self.gpioa_set.setEnabled(False)
-        if self.gpiob_config.currentIndex() == 1: self.gpiob_set.setEnabled(True)
-        else: self.gpiob_set.setEnabled(False)
-        if self.gpioc_config.currentIndex() == 1: self.gpioc_set.setEnabled(True)
-        else: self.gpioc_set.setEnabled(False)
-        if self.gpiod_config.currentIndex() == 1: self.gpiod_set.setEnabled(True)
-        else: self.gpiod_set.setEnabled(False)
+        gpio_list = ['a', 'b', 'c', 'd']
+        for name in gpio_list:
+            gpio_config = getattr(self, 'gpio' + name + '_config')
+            gpio_set = getattr(self, 'gpio' + name + '_set')
+            if gpio_config.currentIndex() == 1:
+                gpio_set.setEnabled(True)
+            else:
+                gpio_set.setEnabled(False)
+
+        # if self.gpioa_config.currentIndex() == 1: 
+        #     self.gpioa_set.setEnabled(True)
+        # else: 
+        #     self.gpioa_set.setEnabled(False)
+        # if self.gpiob_config.currentIndex() == 1: 
+        #     self.gpiob_set.setEnabled(True)
+        # else: 
+        #     self.gpiob_set.setEnabled(False)
+        # if self.gpioc_config.currentIndex() == 1: 
+        #     self.gpioc_set.setEnabled(True)
+        # else: 
+        #     self.gpioc_set.setEnabled(False)
+        # if self.gpiod_config.currentIndex() == 1: 
+        #     self.gpiod_set.setEnabled(True)
+        # else: 
+        #     self.gpiod_set.setEnabled(False)
 
     # 펌웨어 버전 별 오브젝트 설정
     def object_config_for_version(self):
@@ -2384,55 +2419,24 @@ class WIZWindow(QMainWindow, main_window):
         f.close()
         self.fill_devinfo(load_profile)
 
+    def config_button_icon(self, iconfile, btnname):
+        button = getattr(self, btnname)
+        
+        icon = QIcon()
+        icon.addPixmap(QPixmap(resource_path(iconfile)), QIcon.Normal, QIcon.Off)
+        button.setIcon(icon)
+        button.setIconSize(QSize(40, 40))
+        button.setFont(self.midfont)
+
     def set_btn_icon(self):
-        # Set Button icon 
-        self.icon_save = QIcon()
-        self.icon_save.addPixmap(QPixmap(resource_path('gui/save_48.ico')), QIcon.Normal, QIcon.Off)
-        self.btn_saveconfig.setIcon(self.icon_save)
-        self.btn_saveconfig.setIconSize(QSize(40, 40))
-        self.btn_saveconfig.setFont(self.midfont)
-
-        self.icon_load = QIcon()
-        self.icon_load.addPixmap(QPixmap(resource_path('gui/load_48.ico')), QIcon.Normal, QIcon.Off)
-        self.btn_loadconfig.setIcon(self.icon_load)
-        self.btn_loadconfig.setIconSize(QSize(40, 40))
-        self.btn_loadconfig.setFont(self.midfont)
-
-        self.icon_search = QIcon()
-        self.icon_search.addPixmap(QPixmap(resource_path('gui/search_48.ico')), QIcon.Normal, QIcon.Off)
-        self.btn_search.setIcon(self.icon_search)
-        self.btn_search.setIconSize(QSize(40, 40))
-        self.btn_search.setFont(self.midfont)
-
-        self.icon_setting = QIcon()
-        self.icon_setting.addPixmap(QPixmap(resource_path('gui/setting_48.ico')), QIcon.Normal, QIcon.Off)
-        self.btn_setting.setIcon(self.icon_setting)
-        self.btn_setting.setIconSize(QSize(40, 40))
-        self.btn_setting.setFont(self.midfont)
-
-        self.icon_upload = QIcon()
-        self.icon_upload.addPixmap(QPixmap(resource_path('gui/upload_48.ico')), QIcon.Normal, QIcon.Off)
-        self.btn_upload.setIcon(self.icon_upload)
-        self.btn_upload.setIconSize(QSize(40, 40))
-        self.btn_upload.setFont(self.midfont)
-
-        self.icon_reset = QIcon()
-        self.icon_reset.addPixmap(QPixmap(resource_path('gui/reset_48.ico')), QIcon.Normal, QIcon.Off)
-        self.btn_reset.setIcon(self.icon_reset)
-        self.btn_reset.setIconSize(QSize(40, 40))
-        self.btn_reset.setFont(self.midfont)
-
-        self.icon_factory = QIcon()
-        self.icon_factory.addPixmap(QPixmap(resource_path('gui/factory_48.ico')), QIcon.Normal, QIcon.Off)
-        self.btn_factory.setIcon(self.icon_factory)
-        self.btn_factory.setIconSize(QSize(40, 40))
-        self.btn_factory.setFont(self.midfont)
-
-        self.icon_exit = QIcon()
-        self.icon_exit.addPixmap(QPixmap(resource_path('gui/exit_48.ico')), QIcon.Normal, QIcon.Off)
-        self.btn_exit.setIcon(self.icon_exit)
-        self.btn_exit.setIconSize(QSize(40, 40))
-        self.btn_exit.setFont(self.midfont)
+        self.config_button_icon('gui/save_48.ico', 'btn_saveconfig')
+        self.config_button_icon('gui/load_48.ico', 'btn_loadconfig')
+        self.config_button_icon('gui/search_48.ico', 'btn_search')
+        self.config_button_icon('gui/setting_48.ico', 'btn_setting')
+        self.config_button_icon('gui/upload_48.ico', 'btn_upload')
+        self.config_button_icon('gui/reset_48.ico', 'btn_reset')
+        self.config_button_icon('gui/factory_48.ico', 'btn_factory')
+        self.config_button_icon('gui/exit_48.ico', 'btn_exit')
 
     def font_init(self):
         self.midfont = QFont()
