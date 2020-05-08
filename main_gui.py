@@ -18,10 +18,7 @@ import base64
 # from urllib.parse import urlsplit
 
 # need to install package
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import QSize, QThread, Qt, QTimer, pyqtSignal, QFileInfo
-from PyQt5.QtGui import QIcon, QPixmap, QFont
-from PyQt5 import uic
+from PyQt5 import QtWidgets, QtCore, QtGui, uic
 import ifaddr
 
 import logging
@@ -33,7 +30,7 @@ testlog.setLevel(logging.INFO)
 fileformatter = logging.Formatter(
     '[%(levelname)s][%(asctime)s]-(%(funcName)s)(%(lineno)s) %(message)s')
 
-fileHandler = logging.FileHandler('./testlogging.log', encoding='utf-8')
+fileHandler = logging.FileHandler('./toollogging.log', encoding='utf-8')
 streamHandler = logging.StreamHandler()
 
 fileHandler.setFormatter(fileformatter)
@@ -56,7 +53,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.1.1 Dev'
+VERSION = 'V1.2.0'
 
 
 def resource_path(relative_path):
@@ -86,7 +83,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         self.gui_init()
 
         # Main icon
-        self.setWindowIcon(QIcon(resource_path('gui/icon.ico')))
+        self.setWindowIcon(QtGui.QIcon(resource_path('gui/icon.ico')))
         self.set_btn_icon()
 
         self.wiz750cmdObj = WIZ750CMDSET(1)
@@ -454,23 +451,6 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             else:
                 gpio_set.setEnabled(False)
 
-        # if self.gpioa_config.currentIndex() == 1:
-        #     self.gpioa_set.setEnabled(True)
-        # else:
-        #     self.gpioa_set.setEnabled(False)
-        # if self.gpiob_config.currentIndex() == 1:
-        #     self.gpiob_set.setEnabled(True)
-        # else:
-        #     self.gpiob_set.setEnabled(False)
-        # if self.gpioc_config.currentIndex() == 1:
-        #     self.gpioc_set.setEnabled(True)
-        # else:
-        #     self.gpioc_set.setEnabled(False)
-        # if self.gpiod_config.currentIndex() == 1:
-        #     self.gpiod_set.setEnabled(True)
-        # else:
-        #     self.gpiod_set.setEnabled(False)
-
     # 펌웨어 버전 별 오브젝트 설정
     def object_config_for_version(self):
         if 'WIZ750' in self.curr_dev:
@@ -508,7 +488,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.ch1_localport_fix.setEnabled(False)
 
         # User I/O tab (WIZ750SR)
-        if 'WIZ750' in self.curr_dev:
+        if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev:
             self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
             self.generalTab.setTabEnabled(2, True)
         else:
@@ -910,8 +890,8 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
     def processing(self):
         self.btn_search.setEnabled(False)
-        # QTimer.singleShot(1500, lambda: self.btn_search.setEnabled(True))
-        QTimer.singleShot(4500, lambda: self.pgbar.hide())
+        # QtCore.QTimer.singleShot(1500, lambda: self.btn_search.setEnabled(True))
+        QtCore.QTimer.singleShot(4500, lambda: self.pgbar.hide())
 
     def search_each_dev(self, dev_info_list):
         cmd_list = []
@@ -1795,8 +1775,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             print(fileName)
             self.save_certificate(fileName)
 
-            # QFileinfo
-            self.saved_path = QFileInfo(fileName).path()
+            self.saved_path = QtCore.QFileInfo(fileName).path()
             self.logging.info(self.saved_path)
 
     def save_certificate(self, file_name):
@@ -2103,7 +2082,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             # print(fw_filename)
 
             # get file size
-            with open(self.fw_filename, "rb", encoding='utf-8') as fd:
+            with open(self.fw_filename, "rb") as fd:
                 self.data = fd.read(-1)
 
                 if 'WIZ107' in self.curr_dev or 'WIZ108' in self.curr_dev:
@@ -2286,7 +2265,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
     def about_info(self):
         msgbox = QtWidgets.QMessageBox(self)
-        msgbox.setTextFormat(Qt.RichText)
+        msgbox.setTextFormat(QtCore.Qt.RichText)
         text = "<div style=text-align:center><font size=5 color=darkblue>About WIZnet-S2E-Tool-GUI</font>" \
             + "<br><a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI'><font color=darkblue size=4>* Github repository</font></a>" \
             + "<br><br><font size=4 color=black>Version " + VERSION \
@@ -2301,7 +2280,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         msgbox = QtWidgets.QMessageBox(self)
         msgbox.setIcon(QtWidgets.QMessageBox.Warning)
         msgbox.setWindowTitle("Not supported device")
-        msgbox.setTextFormat(Qt.RichText)
+        msgbox.setTextFormat(QtCore.Qt.RichText)
         text = "The device is not supported.<br>Please contact us by the link below.<br><br>" \
             "<a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/issues'># Github issue page</a>"
         msgbox.setText(text)
@@ -2447,8 +2426,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.logging.info(fileName)
             self.save_configuration(fileName)
 
-            # QFileinfo
-            self.saved_path = QFileInfo(fileName).path()
+            self.saved_path = QtCore.QFileInfo(fileName).path()
             self.logging.info(self.saved_path)
 
     def save_configuration(self, filename):
@@ -2510,10 +2488,10 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
     def config_button_icon(self, iconfile, btnname):
         button = getattr(self, btnname)
 
-        icon = QIcon()
-        icon.addPixmap(QPixmap(resource_path(iconfile)), QIcon.Normal, QIcon.Off)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(resource_path(iconfile)), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         button.setIcon(icon)
-        button.setIconSize(QSize(40, 40))
+        button.setIconSize(QtCore.QSize(40, 40))
         button.setFont(self.midfont)
 
     def set_btn_icon(self):
@@ -2527,13 +2505,13 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         self.config_button_icon('gui/exit_48.ico', 'btn_exit')
 
     def font_init(self):
-        self.midfont = QFont()
+        self.midfont = QtGui.QFont()
         self.midfont.setPixelSize(12)    # pointsize(9)
 
-        self.smallfont = QFont()
+        self.smallfont = QtGui.QFont()
         self.smallfont.setPixelSize(11)
 
-        self.certfont = QFont()
+        self.certfont = QtGui.QFont()
         self.certfont.setPixelSize(10)
         self.certfont.setFamily('Consolas')
 
@@ -2574,11 +2552,11 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         self.certificate_detail.setFont(self.certfont)
 
 
-class ThreadProgress(QThread):
-    change_value = pyqtSignal(int)
+class ThreadProgress(QtCore.QThread):
+    change_value = QtCore.pyqtSignal(int)
 
     def __init__(self, parent=None):
-        # QThread.__init__(self)
+        # QtCore.QThread.__init__(self)
         super().__init__()
         self.cnt = 1
 
