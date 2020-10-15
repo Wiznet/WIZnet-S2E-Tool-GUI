@@ -131,7 +131,7 @@ class WIZMSGHandler(QThread):
         self.sock.write(self.msg)
 
     def check_parameter(self, cmdset):
-        # print('check_parameter()', cmdset, cmdset[:2], cmdset[2:])
+        print('check_parameter()', cmdset, cmdset[:2], cmdset[2:])
         try:
             if b'MA' not in cmdset:
                 # print('check_parameter() OK', cmdset, cmdset[:2], cmdset[2:])
@@ -173,7 +173,8 @@ class WIZMSGHandler(QThread):
                 if sock == self.sock.sock:
                     data = self.sock.recvfrom()
                     self.searched_data.emit(data)
-                    replylists = data.splitlines()
+                    # replylists = data.splitlines()
+                    replylists = data.split(b"\r\n")
                     # print('replylists', replylists)
                     self.getreply = replylists
         else:
@@ -190,8 +191,10 @@ class WIZMSGHandler(QThread):
                             replylists = []
                         else:
                             self.rcv_list.append(data)  # received data backup
-                            replylists = data.splitlines()
-                            # print('replylists', replylists)
+                            # replylists = data.splitlines()
+                            replylists = data.split(b"\r\n")
+                            
+                            print('replylists', replylists)
                             self.getreply = replylists
 
                         if self.opcode is OP_SEARCHALL:
@@ -341,7 +344,8 @@ class DataRefresh(QThread):
                 if sock == self.sock.sock:
                     data = self.sock.recvfrom()
                     self.rcv_list.append(data)  # 수신 데이터 저장
-                    replylists = data.splitlines()
+                    # replylists = data.splitlines()
+                    replylists = data.split(b"\r\n")
                     # print('replylists', replylists)
 
             checknum += 1
