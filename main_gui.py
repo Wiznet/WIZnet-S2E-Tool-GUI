@@ -53,7 +53,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.2.1'
+VERSION = 'V1.3.0'
 
 
 def resource_path(relative_path):

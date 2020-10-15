@@ -131,7 +131,7 @@ class WIZMSGHandler(QThread):
         self.sock.write(self.msg)
 
     def check_parameter(self, cmdset):
-        print('check_parameter()', cmdset, cmdset[:2], cmdset[2:])
+        # print('check_parameter()', cmdset, cmdset[:2], cmdset[2:])
         try:
             if b'MA' not in cmdset:
                 # print('check_parameter() OK', cmdset, cmdset[:2], cmdset[2:])
@@ -216,8 +216,7 @@ class WIZMSGHandler(QThread):
                                         if self.check_parameter(replylists[i]):
                                             self.st_list.append(replylists[i][2:])
                             except Exception as e:
-                                print(
-                                    '[ERROR] WIZMSGHandler makecommands(): %r' % e)
+                                print('[ERROR] WIZMSGHandler makecommands(): %r' % e)
                         elif self.opcode is OP_FWUP:
                             for i in range(0, len(replylists)):
                                 if b'MA' in replylists[i][:2]:
