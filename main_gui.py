@@ -53,7 +53,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.2.0'
+VERSION = 'V1.3.0'
 
 
 def resource_path(relative_path):
@@ -790,7 +790,8 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 pass
             else:
                 resp = self.datarefresh.rcv_list[0]
-                cmdset_list = resp.splitlines()
+                # cmdset_list = resp.splitlines()
+                cmdset_list = resp.split(b"\r\n")
 
                 try:
                     # Expansion GPIO
@@ -942,7 +943,9 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 self.eachdev_info.append(dev_data)
                 # print('eachdev_info', len(self.eachdev_info), self.eachdev_info)
                 for i in range(len(self.eachdev_info)):
-                    cmdsets = self.eachdev_info[i].splitlines()
+                    # cmdsets = self.eachdev_info[i].splitlines()
+                    cmdsets = self.eachdev_info[i].split(b"\r\n")
+
                     for i in range(len(cmdsets)):
                         # print('cmdsets', i, cmdsets[i], cmdsets[i][:2], cmdsets[i][2:])
                         if cmdsets[i][:2] == b'MA':
@@ -1946,7 +1949,9 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             # get setting result
             self.set_reponse = self.wizmsghandler.rcv_list[0]
 
-            cmdsets = self.set_reponse.splitlines()
+            # cmdsets = self.set_reponse.splitlines()
+            cmdsets = self.set_reponse.split(b"\r\n")
+            
             for i in range(len(cmdsets)):
                 if cmdsets[i][:2] == b'MA':
                     pass

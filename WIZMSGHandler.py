@@ -173,7 +173,8 @@ class WIZMSGHandler(QThread):
                 if sock == self.sock.sock:
                     data = self.sock.recvfrom()
                     self.searched_data.emit(data)
-                    replylists = data.splitlines()
+                    # replylists = data.splitlines()
+                    replylists = data.split(b"\r\n")
                     # print('replylists', replylists)
                     self.getreply = replylists
         else:
@@ -190,8 +191,10 @@ class WIZMSGHandler(QThread):
                             replylists = []
                         else:
                             self.rcv_list.append(data)  # received data backup
-                            replylists = data.splitlines()
-                            # print('replylists', replylists)
+                            # replylists = data.splitlines()
+                            replylists = data.split(b"\r\n")
+                            
+                            print('replylists', replylists)
                             self.getreply = replylists
 
                         if self.opcode is OP_SEARCHALL:
@@ -213,8 +216,7 @@ class WIZMSGHandler(QThread):
                                         if self.check_parameter(replylists[i]):
                                             self.st_list.append(replylists[i][2:])
                             except Exception as e:
-                                print(
-                                    '[ERROR] WIZMSGHandler makecommands(): %r' % e)
+                                print('[ERROR] WIZMSGHandler makecommands(): %r' % e)
                         elif self.opcode is OP_FWUP:
                             for i in range(0, len(replylists)):
                                 if b'MA' in replylists[i][:2]:
@@ -341,7 +343,8 @@ class DataRefresh(QThread):
                 if sock == self.sock.sock:
                     data = self.sock.recvfrom()
                     self.rcv_list.append(data)  # 수신 데이터 저장
-                    replylists = data.splitlines()
+                    # replylists = data.splitlines()
+                    replylists = data.split(b"\r\n")
                     # print('replylists', replylists)
 
             checknum += 1
