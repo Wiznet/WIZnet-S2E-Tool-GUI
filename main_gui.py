@@ -1107,9 +1107,6 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 self.logging.info('warning: 검색된 장치의 수와 프로파일된 장치의 수가 다릅니다.')
             self.logging.info('warning: retry search')
 
-    def check_dev_data(self):
-        pass
-
     # TODO: decode exception handling
     def fill_devinfo(self, dev_data):
         # print('fill_devinfo', dev_data)
@@ -1966,8 +1963,6 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             try:
                 clicked_mac = self.list_device.selectedItems()[0].text()
                 self.dev_profile[clicked_mac] = set_result
-
-                self.fill_devinfo(clicked_mac)
             except Exception as e:
                 self.logging.error(e)
 
