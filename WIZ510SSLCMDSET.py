@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
 
-class WIZ750CMDSET:
+class WIZ510SSLCMDSET:
     def __init__(self, log_level):
 
         self.log_level = log_level
@@ -20,6 +20,46 @@ class WIZ750CMDSET:
             "ST": ["Operation status", "", {}, "RO"],
             "UN": ["UART Interface(Str)", "", {}, "RO"],
             "UI": ["UART Interface(Code)", "", {}, "RO"],
+            # ----------------------------------------------
+            # part of wiz2000 commands
+            # "SE": ["SSL/TLS 1.2 enable", "^[0-1]$", {}, "RW"],
+            "AE": ["Setting Password Enable", "^[0-1]$", {}, "RW"],
+            "AP": ["Setting Password", "", {}, "RW"],
+            "AL": ["Device Alias", "", {}, "RW"],
+            "GR": ["Device Group", "", {}, "RW"],
+            # WIZ510SSL commands
+            "RC": ["Root CA Option", "^[0-2]$", {}, "RW"],
+            "CE": ["Client Certificate Enable", "^[0-1]$", {}, "RW"],
+            "OP": [
+                "Network Operation Mode - Extended",
+                "^[0-6]$",
+                {
+                    "0": "TCP Client mode",
+                    "1": "TCP Server mode",
+                    "2": "TCP Mixed mode",
+                    "3": "UDP mode",
+                    "4": "SSL TCP Client mode",
+                    "5": "MQTT Client",
+                    "6": "MQTTS Client",
+                },
+                "RW",
+            ],
+            "QU": ["MQTT Options - User name", "", {}, "RW"],
+            "QP": ["MQTT options - Password", "", {}, "RW"],
+            "QC": ["MQTT options - Client ID", "", {}, "RW"],
+            "QK": [
+                "MQTT options - Keep Alive",
+                "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])$",
+                {},
+                "RW",
+            ],
+            "PU": ["MQTT options - Publish topic", "", {}, "RW"],
+            # "SU": ["MQTT options - Subscribe topic", "", {}, "RW"],
+            "U0": ["MQTT options - Subscribe topic 0", "", {}, "RW"],
+            "U1": ["MQTT options - Subscribe topic 1", "", {}, "RW"],
+            "U2": ["MQTT options - Subscribe topic 2", "", {}, "RW"],
+            "BA": ["Current Flash Bank", "", {}, "RO"],
+            # ----------------------------------------------
             # WIZ750SR: F/W 1.2.0 verison or later
             "TR": ["TCP Retransmission Retry count", "^([1-9]|[1-9][0-9]|1[0-9][0-9]|2[0-5][0-5])$", {}, "RW"],
             "OP": [
@@ -187,19 +227,13 @@ class WIZ750CMDSET:
             "S0": [
                 "Status of pin S0 (PHY Link or DTR)",
                 "^[0-1]$",
-                {
-                    "0": "PHY Link Up / The device != ready",
-                    "1": "PHY Link Down / The device ready for communication",
-                },
+                {"0": "PHY Link Up / The device != ready", "1": "PHY Link Down / The device ready for communication",},
                 "RO",
             ],
             "S1": [
                 "Status of pin S1 (TCP Connection or DST)",
                 "^[0-1]$",
-                {
-                    "0": "PHY Link Up / The device != ready",
-                    "1": "PHY Link Down / The device ready for communication",
-                },
+                {"0": "PHY Link Up / The device != ready", "1": "PHY Link Down / The device ready for communication",},
                 "RO",
             ],
         }
@@ -255,7 +289,7 @@ class WIZ750CMDSET:
 
 
 if __name__ == "__main__":
-    cmdsetObj = WIZ750CMDSET(logging.DEBUG)
+    cmdsetObj = WIZ510SSLCMDSET(logging.DEBUG)
 
     cmdlist = cmdsetObj.cmdset.items()
     # for i in range(len(cmdlist)):
