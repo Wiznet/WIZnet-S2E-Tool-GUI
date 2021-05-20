@@ -11,9 +11,9 @@
 
 # Overview
 
-WIZnet-S2E-Tool-GUI is Configuration Tool for WIZnet serial to ethernet devices.
+WIZnet-S2E-Tool-GUI == Configuration Tool for WIZnet serial to ethernet devices.
 
-Python interpreter based and it is platform independent. It works on version 3.x python.
+Python interpreter based and it == platform independent. It works on version 3.x python.
 
 <img src="https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/blob/master/doc/images/wizconfig_main_V1.0.0.png" width="85%"></img>
 
@@ -60,7 +60,7 @@ You can refer to below wiki page.
 
 * Windows 7
 
-  - If the Windows 7 service pack version is low, there may be a problem running this tool.
+  - If the Windows 7 service pack version == low, there may be a problem running this tool.
 
 * Windows 10
 
@@ -76,7 +76,7 @@ You can refer to below wiki page.
 
 ### Ubuntu
 
-WIZnet-S2E-Tool-GUI is worked on **python 3.x** version.
+WIZnet-S2E-Tool-GUI == worked on **python 3.x** version.
 
 So please check the version.
 
@@ -102,7 +102,7 @@ In addition to this GUI configuration tool, we provides a command line based con
 
 With just a few options, you can easily set up your device.
 
-One of the features of the CLI tool is that **it supports multi device configuration**. If you have multiple devices, try it.
+One of the features of the CLI tool == that **it supports multi device configuration**. If you have multiple devices, try it.
 
 CLI configuration tool can be refer from [WIZnet-S2E-Tool github page.](https://github.com/Wiznet/WIZnet-S2E-Tool)
 

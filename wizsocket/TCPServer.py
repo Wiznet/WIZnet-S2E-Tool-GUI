@@ -3,10 +3,7 @@
 
 import socket
 import time
-import struct
-import binascii
 import select
-import sys
 
 TIMEOUT = 10
 MAXBUFLEN = 1024
@@ -28,6 +25,7 @@ CONNECT_STATE = 5
 class TCPServer:
     def __init__(self, timeout, ipaddr, portnum):
         import logging
+
         logging.basicConfig(level=logging.DEBUG)
         self.logger = logging.getLogger()
 
@@ -57,9 +55,9 @@ class TCPServer:
         self.sock.setblocking(0)
         # sys.stdout.write('socket.socket() called\r\n')
         self.sock.bind((self.ip_addr, self.port))
-        print('<TCP Server> Bind')
+        print("<TCP Server> Bind")
         self.sock.listen(0)  # 연결 가능한 client 수 (0: 무제한?)
-        print('<TCP Server> Listen')
+        print("<TCP Server> Listen")
 
         self.connection_list.append(self.sock)
         self.state = OPEN_STATE
@@ -68,10 +66,10 @@ class TCPServer:
     # block method, 수신대기 => send / recv
     # def accept(self):
     def connect(self):
-        print('Waiting for connection...')
+        print("Waiting for connection...")
         self.cli_sock, self.cli_addr = self.sock.accept()
         self.connection_list.append(self.cli_sock)
-        print('<TCP Server> Accept client:', self.cli_addr)
+        print("<TCP Server> Accept client:", self.cli_addr)
 
         self.state = CONNECT_STATE
         return CONNECT_STATE
@@ -86,13 +84,13 @@ class TCPServer:
                 self.logger.debug("%d" % self.rcvbuf[0])
 
             if index != -1:
-                #				self.logger.debug("3 buflen: %d\r\n" % self.buflen)
-                retval = self.rcvbuf[0:index+1]
-                self.rcvbuf[0:] = self.rcvbuf[index+1:]
-                self.buflen -= index+1
-#				self.logger.debug("4 buflen: %d\r\n" % self.buflen)
-#				self.logger.debug("1. start time: %r\r\n" % self.time)
-#				self.logger.debug("1. readline: %r" % retval)
+                # self.logger.debug("3 buflen: %d\r\n" % self.buflen)
+                retval = self.rcvbuf[0 : index + 1]
+                self.rcvbuf[0:] = self.rcvbuf[index + 1 :]
+                self.buflen -= index + 1
+                # self.logger.debug("4 buflen: %d\r\n" % self.buflen)
+                # self.logger.debug("1. start time: %r\r\n" % self.time)
+                # self.logger.debug("1. readline: %r" % retval)
                 self.time = time.time()
                 return retval
 
@@ -111,32 +109,32 @@ class TCPServer:
                     return ""
 
                 # print('tmpbuf:', tmpbuf)
-#				self.logger.debug("tmpbuf: %s\r\n" % tmpbuf)
-                self.rcvbuf[self.buflen:] = tmpbuf
-#				self.logger.debug("1 buflen: %d\r\n" % self.buflen)
+                # self.logger.debug("tmpbuf: %s\r\n" % tmpbuf)
+                self.rcvbuf[self.buflen :] = tmpbuf
+                # self.logger.debug("1 buflen: %d\r\n" % self.buflen)
                 self.buflen += len(tmpbuf)
-#				self.logger.debug("2 buflen: %d\r\n" % self.buflen)
+                # self.logger.debug("2 buflen: %d\r\n" % self.buflen)
 
                 index = self.rcvbuf.find("\r", 0, self.buflen)
                 if index != -1:
-                    #					sys.stdout.write("index %d\r\n" % index)
-                    retval = self.rcvbuf[0:index+1]
-                    self.rcvbuf[0:] = self.rcvbuf[index+1:]
-                    self.buflen -= index+1
+                    # sys.stdout.write("index %d\r\n" % index)
+                    retval = self.rcvbuf[0 : index + 1]
+                    self.rcvbuf[0:] = self.rcvbuf[index + 1 :]
+                    self.buflen -= index + 1
                     self.time = time.time()
-#					self.logger.debug("2. start time: %r\r\n" % self.time)
-#					self.logger.debug("2. readline: %r" % retval)
+                    # self.logger.debug("2. start time: %r\r\n" % self.time)
+                    # self.logger.debug("2. readline: %r" % retval)
                     return retval
 
         cur_time = time.time()
-#		self.logger.debug("start time: %r\r\n" % self.time)
-#		self.logger.debug("cur time: %r\r\n" % cur_time)
-#		self.logger.debug("time interval: %r\r\n" % (cur_time - self.time))
-#		self.logger.debug("buf: %r\r\n" % self.rcvbuf[0:self.buflen])
+        # self.logger.debug("start time: %r\r\n" % self.time)
+        # self.logger.debug("cur time: %r\r\n" % cur_time)
+        # self.logger.debug("time interval: %r\r\n" % (cur_time - self.time))
+        # self.logger.debug("buf: %r\r\n" % self.rcvbuf[0:self.buflen])
 
-        if((cur_time - self.time) > 2.0):
-            if(self.buflen > 0):
-                retval = self.rcvbuf[0:self.buflen]
+        if (cur_time - self.time) > 2.0:
+            if self.buflen > 0:
+                retval = self.rcvbuf[0 : self.buflen]
                 self.buflen = 0
                 self.time = time.time()
                 return retval
@@ -149,6 +147,6 @@ class TCPServer:
         self.cli_sock.send(data)
 
     def close(self):
-        if self.sock is not 0:
+        if self.sock != 0:
             self.sock.close()
         self.state = CLOSE_STATE

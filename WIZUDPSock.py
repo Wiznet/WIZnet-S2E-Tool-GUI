@@ -1,13 +1,6 @@
 #!/usr/bin/python
 
 import socket
-import time
-import struct
-import binascii
-import select
-import sys
-import threading
-from random import randint
 
 # for command set/get
 
