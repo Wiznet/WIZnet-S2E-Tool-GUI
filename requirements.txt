@@ -1,4 +1,4 @@
 # WIZnet-S2E-Tool-GUI requirements
 
 PyQt5==5.9.2
-ifaddr==0.1.4
+ifaddr

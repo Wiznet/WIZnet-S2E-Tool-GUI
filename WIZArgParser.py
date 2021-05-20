@@ -5,7 +5,6 @@
 
 import argparse
 import logging
-import sys
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
@@ -51,7 +50,7 @@ class WIZArgParser:
         group.add_argument('-r', '--reset', action='store_true', help='Reboot device')
         group.add_argument('-f', '--factory', action='store_true', help='Factory reset')
         # multi ip set
-        group.add_argument('-m', '--multiset', metavar='ipaddr', help='Set IP address for all devices in \'mac_list.txt\'. Parameter is first address.')
+        group.add_argument('-m', '--multiset', metavar='ipaddr', help='Set IP address for all devices in \'mac_list.txt\'. Parameter == first address.')
         # F/W upload
         group.add_argument('-u', '--upload', dest='fwfile', help='Firmware upload from file')
         
@@ -81,7 +80,7 @@ class WIZArgParser:
         group.add_argument('--char0', help='Designated character delimiter (00: Not use / Other: Designated character)')
         
         group.add_argument('--it', metavar='timer', 
-                help='''Inactivity timer value for TCP connection close\nwhen there is no data exchange (0: Not use / 1~65535: timer value)''')
+                help='''Inactivity timer value for TCP connection close\nwhen there == no data exchange (0: Not use / 1~65535: timer value)''')
 
         group.add_argument('--ka', choices=['0','1'], help='Keep-alive packet transmit enable for checking TCP connection established')
         group.add_argument('--ki', metavar='number', 
@@ -110,7 +109,7 @@ class WIZArgParser:
         group.add_argument('--char1', help='Designated character delimiter (00: Not use / Other: Designated character)')
         
         group.add_argument('--rv', metavar='timer', 
-                help='''Inactivity timer value for TCP connection close\nwhen there is no data exchange (0: Not use / 1~65535: timer value)''')
+                help='''Inactivity timer value for TCP connection close\nwhen there == no data exchange (0: Not use / 1~65535: timer value)''')
         group.add_argument('--ra', choices=['0','1'], help='Keep-alive packet transmit enable for checking TCP connection established')
         group.add_argument('--rs', metavar='number', 
                 help='''Initial TCP keep-alive packet transmission interval value\n(0: Not use / 1~65535: Initial Keep-alive packet transmission interval (Unit: millisecond))''')

@@ -1,17 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import socket
-import time
-import struct
-import binascii
 import select
-import sys
 import codecs
 from WIZ750CMDSET import WIZ750CMDSET
-from WIZ752CMDSET import WIZ752CMDSET
-from wizsocket.TCPClient import TCPClient
-from PyQt5.QtCore import QTimer, QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -25,6 +18,9 @@ OP_SETCOMMAND = 3
 OP_SETFILE = 4
 OP_GETFILE = 5
 OP_FWUP = 6
+
+# PACKET_SIZE = 1024
+PACKET_SIZE = 2048
 
 
 def timeout_func():
@@ -43,7 +39,7 @@ class WIZMSGHandler(QThread):
         QThread.__init__(self)
 
         self.sock = udpsock
-        self.msg = bytearray(1024)
+        self.msg = bytearray(PACKET_SIZE)
         self.size = 0
 
         try:
@@ -93,7 +89,7 @@ class WIZMSGHandler(QThread):
                 except Exception as e:
                     print('[ERROR] makecommands() encode:', cmd[0], e)
                 self.size += len(cmd[0])
-                if cmd[0] is "MA":
+                if cmd[0] == "MA":
                     # sys.stdout.write('cmd[1]: %r\r\n' % cmd[1])
                     cmd[1] = cmd[1].replace(":", "")
                     # print(cmd[1])
@@ -197,7 +193,7 @@ class WIZMSGHandler(QThread):
                             print('replylists', replylists)
                             self.getreply = replylists
 
-                        if self.opcode is OP_SEARCHALL:
+                        if self.opcode == OP_SEARCHALL:
                             try:
                                 for i in range(0, len(replylists)):
                                     if b'MC' in replylists[i]:
@@ -217,7 +213,7 @@ class WIZMSGHandler(QThread):
                                             self.st_list.append(replylists[i][2:])
                             except Exception as e:
                                 print('[ERROR] WIZMSGHandler makecommands(): %r' % e)
-                        elif self.opcode is OP_FWUP:
+                        elif self.opcode == OP_FWUP:
                             for i in range(0, len(replylists)):
                                 if b'MA' in replylists[i][:2]:
                                     dest_mac = self.dest_mac
@@ -227,10 +223,10 @@ class WIZMSGHandler(QThread):
                                     self.isvalid = False
                                 # sys.stdout.write("%r\r\n" % replylists[i][:2])
                                 if b'FW' in replylists[i][:2]:
-                                    # sys.stdout.write('self.isvalid is True\r\n')
+                                    # sys.stdout.write('self.isvalid == True\r\n')
                                     param = replylists[i][2:].split(b':')
                                     self.reply = replylists[i][2:]
-                        elif self.opcode is OP_SETCOMMAND:
+                        elif self.opcode == OP_SETCOMMAND:
                             for i in range(0, len(replylists)):
                                 if b'AP' in replylists[i][:2]:
                                     if replylists[i][2:] == b' ':
@@ -244,12 +240,12 @@ class WIZMSGHandler(QThread):
                 if not readready or not replylists:
                     break
 
-            if self.opcode is OP_SEARCHALL:
+            if self.opcode == OP_SEARCHALL:
                 self.msleep(500)
                 # print('Search device:', self.mac_list)
                 self.search_result.emit(len(self.mac_list))
                 # return len(self.mac_list)
-            if self.opcode is OP_SETCOMMAND:
+            if self.opcode == OP_SETCOMMAND:
                 self.msleep(500)
                 # print(self.rcv_list)
                 if len(self.rcv_list) > 0:
@@ -260,7 +256,7 @@ class WIZMSGHandler(QThread):
                         self.set_result.emit(len(self.rcv_list[0]))
                 else:
                     self.set_result.emit(-1)
-            elif self.opcode is OP_FWUP:
+            elif self.opcode == OP_FWUP:
                 return self.reply
             # sys.stdout.write("%s\r\n" % self.mac_list)
 
@@ -272,7 +268,7 @@ class DataRefresh(QThread):
         QThread.__init__(self)
 
         self.sock = sock
-        self.msg = bytearray(1024)
+        self.msg = bytearray(PACKET_SIZE)
         self.size = 0
 
         self.inputs = [self.sock.sock]
@@ -296,7 +292,7 @@ class DataRefresh(QThread):
         for cmd in self.cmd_list:
             self.msg[self.size:] = str.encode(cmd[0])
             self.size += len(cmd[0])
-            if cmd[0] is "MA":
+            if cmd[0] == "MA":
                 cmd[1] = cmd[1].replace(":", "")
                 hex_string = codecs.decode(cmd[1], 'hex')
 

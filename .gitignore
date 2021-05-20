@@ -112,3 +112,4 @@ gui/wizconfig_gui-bak.ui
 *old*
 *.crt
 *.patch
+*pem
