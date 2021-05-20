@@ -11,9 +11,9 @@
 
 # Overview
 
-WIZnet-S2E-Tool-GUI == Configuration Tool for WIZnet serial to ethernet devices.
+WIZnet-S2E-Tool-GUI is Configuration Tool for WIZnet serial to ethernet devices.
 
-Python interpreter based and it == platform independent. It works on version 3.x python.
+Python interpreter based and it is platform independent. It works on python version 3.6 or later.
 
 <img src="https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/blob/master/doc/images/wizconfig_main_V1.0.0.png" width="85%"></img>
 
@@ -38,6 +38,10 @@ Python interpreter based and it == platform independent. It works on version 3.x
 ### Pre-programmed MCU
 - [W7500(P)-S2E](http://wizwiki.net/wiki/doku.php?id=products:w7500x-s2e:en)
 
+### Security Serial to Ethernet Module
+
+- WIZ510SSL (Comming soon)
+
 ---
 
 # Wiki
@@ -60,7 +64,7 @@ You can refer to below wiki page.
 
 * Windows 7
 
-  - If the Windows 7 service pack version == low, there may be a problem running this tool.
+  - If the Windows 7 service pack version is low, there may be a problem running this tool.
 
 * Windows 10
 
@@ -76,21 +80,26 @@ You can refer to below wiki page.
 
 ### Ubuntu
 
-WIZnet-S2E-Tool-GUI == worked on **python 3.x** version.
+WIZnet-S2E-Tool-GUI is worked on **python 3.x** version.
 
-So please check the version.
+Check the python version with below command
 
-    $ python --version
+```
+$ python --version
+```
 
 Install:
 
-    $ git clone https://github.com/Wiznet/WIZnet-S2E-Tool-GUI
-    $ cd WIZnet-S2E-Tool-GUI
-    $ sudo pip install -r requirements.txt
+```
+$ git clone https://github.com/Wiznet/WIZnet-S2E-Tool-GUI
+$ cd WIZnet-S2E-Tool-GUI
+$ sudo pip install -r requirements.txt
+```
 
 Now, run the configuration tool.
-
-    $ python main.py
+```
+$ python main_gui.py
+```
 
 You can use the [CLI configuration tool](https://github.com/Wiznet/WIZnet-S2E-Tool) also.
 
@@ -102,7 +111,7 @@ In addition to this GUI configuration tool, we provides a command line based con
 
 With just a few options, you can easily set up your device.
 
-One of the features of the CLI tool == that **it supports multi device configuration**. If you have multiple devices, try it.
+One of the features of the CLI tool is that **it supports multi device configuration**. If you have multiple devices, try it.
 
 CLI configuration tool can be refer from [WIZnet-S2E-Tool github page.](https://github.com/Wiznet/WIZnet-S2E-Tool)
 
