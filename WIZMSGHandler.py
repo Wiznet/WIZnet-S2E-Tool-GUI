@@ -24,7 +24,7 @@ PACKET_SIZE = 2048
 
 
 def timeout_func():
-    #	print('timeout')
+    # print('timeout')
     global exitflag
     exitflag = 1
 
@@ -112,7 +112,7 @@ class WIZMSGHandler(QThread):
                         print('[ERROR] makecommands() encode param:',
                               cmd[0], cmd[1], e)
                     self.size += len(cmd[1])
-                if not "\r\n" in cmd[1]:
+                if "\r\n" not in cmd[1]:
                     self.msg[self.size:] = str.encode("\r\n")
                     self.size += 2
 
@@ -182,14 +182,14 @@ class WIZMSGHandler(QThread):
                     if sock == self.sock.sock:
                         data = self.sock.recvfrom()
 
-                        #! check if data reduplication
+                        # check if data reduplication
                         if data in self.rcv_list:
                             replylists = []
                         else:
                             self.rcv_list.append(data)  # received data backup
                             # replylists = data.splitlines()
                             replylists = data.split(b"\r\n")
-                            
+
                             print('replylists', replylists)
                             self.getreply = replylists
 
@@ -216,15 +216,14 @@ class WIZMSGHandler(QThread):
                         elif self.opcode == OP_FWUP:
                             for i in range(0, len(replylists)):
                                 if b'MA' in replylists[i][:2]:
-                                    dest_mac = self.dest_mac
-                                    reply_mac = replylists[i][2:]
+                                    pass
                                     # self.isvalid = True
                                 else:
                                     self.isvalid = False
                                 # sys.stdout.write("%r\r\n" % replylists[i][:2])
                                 if b'FW' in replylists[i][:2]:
                                     # sys.stdout.write('self.isvalid == True\r\n')
-                                    param = replylists[i][2:].split(b':')
+                                    # param = replylists[i][2:].split(b':')
                                     self.reply = replylists[i][2:]
                         elif self.opcode == OP_SETCOMMAND:
                             for i in range(0, len(replylists)):
@@ -302,7 +301,7 @@ class DataRefresh(QThread):
             else:
                 self.msg[self.size:] = str.encode(cmd[1])
                 self.size += len(cmd[1])
-            if not "\r\n" in cmd[1]:
+            if "\r\n" not in cmd[1]:
                 self.msg[self.size:] = str.encode("\r\n")
                 self.size += 2
 
@@ -322,8 +321,7 @@ class DataRefresh(QThread):
         except Exception as e:
             print(e)
 
-        replylists = None
-
+        # replylists = None
         checknum = 0
 
         while True:
@@ -340,7 +338,7 @@ class DataRefresh(QThread):
                     data = self.sock.recvfrom()
                     self.rcv_list.append(data)  # 수신 데이터 저장
                     # replylists = data.splitlines()
-                    replylists = data.split(b"\r\n")
+                    # replylists = data.split(b"\r\n")
                     # print('replylists', replylists)
 
             checknum += 1
