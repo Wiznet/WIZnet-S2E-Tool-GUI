@@ -85,8 +85,8 @@ class TCPServer:
 
             if index != -1:
                 # self.logger.debug("3 buflen: %d\r\n" % self.buflen)
-                retval = self.rcvbuf[0 : index + 1]
-                self.rcvbuf[0:] = self.rcvbuf[index + 1 :]
+                retval = self.rcvbuf[0: index + 1]
+                self.rcvbuf[0:] = self.rcvbuf[index + 1:]
                 self.buflen -= index + 1
                 # self.logger.debug("4 buflen: %d\r\n" % self.buflen)
                 # self.logger.debug("1. start time: %r\r\n" % self.time)
@@ -110,7 +110,7 @@ class TCPServer:
 
                 # print('tmpbuf:', tmpbuf)
                 # self.logger.debug("tmpbuf: %s\r\n" % tmpbuf)
-                self.rcvbuf[self.buflen :] = tmpbuf
+                self.rcvbuf[self.buflen:] = tmpbuf
                 # self.logger.debug("1 buflen: %d\r\n" % self.buflen)
                 self.buflen += len(tmpbuf)
                 # self.logger.debug("2 buflen: %d\r\n" % self.buflen)
@@ -118,8 +118,8 @@ class TCPServer:
                 index = self.rcvbuf.find("\r", 0, self.buflen)
                 if index != -1:
                     # sys.stdout.write("index %d\r\n" % index)
-                    retval = self.rcvbuf[0 : index + 1]
-                    self.rcvbuf[0:] = self.rcvbuf[index + 1 :]
+                    retval = self.rcvbuf[0: index + 1]
+                    self.rcvbuf[0:] = self.rcvbuf[index + 1:]
                     self.buflen -= index + 1
                     self.time = time.time()
                     # self.logger.debug("2. start time: %r\r\n" % self.time)
@@ -134,7 +134,7 @@ class TCPServer:
 
         if (cur_time - self.time) > 2.0:
             if self.buflen > 0:
-                retval = self.rcvbuf[0 : self.buflen]
+                retval = self.rcvbuf[0: self.buflen]
                 self.buflen = 0
                 self.time = time.time()
                 return retval
