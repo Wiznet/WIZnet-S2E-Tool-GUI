@@ -56,7 +56,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.4.1'
+VERSION = 'V1.4.2'
 
 
 def resource_path(relative_path):
@@ -533,6 +533,19 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.ch1_mqttclient.setEnabled(False)
             self.ch1_mqtts_client.setEnabled(False)
 
+        # SC: Status pin option
+        if 'WIZ107' in self.curr_dev or 'WIZ108' in self.curr_dev:
+            pass
+        else:
+            if 'WIZ510SSL' in self.curr_dev:
+                self.radiobtn_group_s0.hide()
+                self.radiobtn_group_s1.hide()
+                self.group_dtrdsr.show()
+            else:
+                self.radiobtn_group_s0.show()
+                self.radiobtn_group_s1.show()
+                self.group_dtrdsr.hide()
+
         if 'WIZ510SSL' in self.curr_dev:
             self.tcp_timeout.setEnabled(True)
             self.factory_setting_action.setEnabled(True)
@@ -543,10 +556,6 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.ch1_mqtts_client.setEnabled(True)
             # Current bank (RO)
             self.group_current_bank.show()
-            # SC: Status pin option
-            self.radiobtn_group_s0.hide()
-            self.radiobtn_group_s1.hide()
-            self.group_dtrdsr.show()
         else:
             self.factory_setting_action.setEnabled(True)
             self.factory_firmware_action.setEnabled(False)
@@ -556,10 +565,6 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.ch1_mqtts_client.setEnabled(False)
             # Current bank (RO)
             self.group_current_bank.hide()
-            # SC: Status pin option
-            self.radiobtn_group_s0.show()
-            self.radiobtn_group_s1.show()
-            self.group_dtrdsr.hide()
 
         # op channel#2 option
         self.ch2_ssl_tcpclient.setEnabled(False)
@@ -1146,7 +1151,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             # print('get_dev_list()', self.searched_dev, self.dev_data)
             self.search_each_dev(self.searched_dev)
         else:
-            self.logging.info('There == no device.')
+            self.logging.info('There is no device.')
 
     def dev_clicked(self):
         # dev_info = []
@@ -2653,7 +2658,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 cmdset = '%s%s\n' % (cmd, setcmd.get(cmd))
                 f.write(cmdset)
 
-        self.statusbar.showMessage(' Configuration == saved to \'%s\'.' % filename)
+        self.statusbar.showMessage(' Configuration is saved to \'%s\'.' % filename)
 
     def dialog_load_file(self):
         if self.saved_path is None:
