@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
-## Make Serial command
+"""
+Make Serial command
+"""
+
 import sys
 import logging
 import re
-import logging
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
@@ -36,9 +38,9 @@ cmd_ch1 = [
     "KA", "KI", "KE", "RI", "LI", "SM", "GW", "DS", "PI", "PP",
     "DX", "DP", "DI", "DW", "DH", "LP", "RP", "RH", "BR", "DB",
     "PR", "SB", "FL", "IT", "PT", "PS", "PD", "TE", "SS", "NP",
-    "SP", "S0", "S1"
+    "SP"
 ]
-# cmd_ch1 = ['MC','VR','MN','UN','ST','IM','OP','DD','CP','PO','DG','KA','KI','KE','RI','LI','SM','GW','DS','PI','PP','DX','DP','DI','DW','DH','LP','RP','RH','BR','DB','PR','SB','FL','IT','PT','PS','PD','TE','SS','NP','SP']
+cmd_wiz75xsr = ["S0", "S1"]
 cmd_added = ["SC", "TR"]  # for WIZ750SR F/W version 1.2.0 or later
 cmd_ch2 = [
     "QS", "QO", "QH", "QP", "QL", "RV", "RA", "RE", "RR", "EN",
@@ -63,9 +65,9 @@ cmd_wiz510ssl = [
     "QK", "PU", "U0", "U1", "U2", "QO", "RC", "CE", "BA"
 ]
 
-### CMD list
+# Command list
 cmd_1p_default = cmd_ch1
-cmd_1p_advanced = cmd_ch1 + cmd_added
+cmd_1p_advanced = cmd_ch1 + cmd_wiz75xsr + cmd_added
 cmd_2p_default = cmd_ch1 + cmd_ch2
 
 
@@ -143,9 +145,8 @@ class WIZMakeCMD:
     # TODO: device profile 적용
     def setcommand(self, mac_addr, idcode, set_pw, command_list, param_list, devname, version):
         cmd_list = self.make_header(mac_addr, idcode, devname=devname, set_pw=set_pw)
+        # print('Macaddr: %s' % mac_addr)
         try:
-            # print('Macaddr: %s' % mac_addr)
-
             for i in range(len(command_list)):
                 cmd_list.append([command_list[i], param_list[i]])
 
@@ -157,8 +158,6 @@ class WIZMakeCMD:
                     for cmd in cmd_1p_default:
                         cmd_list.append([cmd, ""])
             elif devname in TWO_PORT_DEV or "752" in devname:
-                # for cmd in cmd_2p_default:
-                #     cmd_list.append([cmd, ""])
                 # for WIZ752SR-12x
                 for cmd in cmd_ch2:
                     cmd_list.append([cmd, ""])
@@ -187,4 +186,3 @@ class WIZMakeCMD:
         cmd_list = self.make_header(mac_addr, idcode, devname=devname, set_pw=set_pw)
         cmd_list.append(["FR", param])
         return cmd_list
-

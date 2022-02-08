@@ -12,8 +12,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>934</width>
-    <height>716</height>
+    <width>951</width>
+    <height>765</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -24,8 +24,8 @@
   </property>
   <property name="maximumSize">
    <size>
-    <width>1000</width>
-    <height>800</height>
+    <width>1800</width>
+    <height>1200</height>
    </size>
   </property>
   <property name="palette">
@@ -180,8 +180,8 @@
             </property>
             <property name="maximumSize">
              <size>
-              <width>225</width>
-              <height>380</height>
+              <width>450</width>
+              <height>600</height>
              </size>
             </property>
             <property name="palette">
@@ -495,8 +495,8 @@
             </property>
             <property name="maximumSize">
              <size>
-              <width>225</width>
-              <height>60</height>
+              <width>350</width>
+              <height>90</height>
              </size>
             </property>
             <property name="title">
@@ -513,8 +513,8 @@
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>45</width>
-                 <height>22</height>
+                 <width>90</width>
+                 <height>44</height>
                 </size>
                </property>
                <property name="font">
@@ -538,8 +538,8 @@
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>65</width>
-                 <height>22</height>
+                 <width>130</width>
+                 <height>44</height>
                 </size>
                </property>
                <property name="font">
@@ -572,8 +572,8 @@
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>76</width>
-                 <height>22</height>
+                 <width>145</width>
+                 <height>44</height>
                 </size>
                </property>
                <property name="font">
@@ -603,8 +603,8 @@
             </property>
             <property name="maximumSize">
              <size>
-              <width>225</width>
-              <height>120</height>
+              <width>440</width>
+              <height>240</height>
              </size>
             </property>
             <property name="font">
@@ -627,8 +627,8 @@
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>16777215</width>
-                 <height>22</height>
+                 <width>300</width>
+                 <height>45</height>
                 </size>
                </property>
                <property name="font">
@@ -660,8 +660,8 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>16777215</width>
-                   <height>22</height>
+                   <width>300</width>
+                   <height>45</height>
                   </size>
                  </property>
                  <property name="font">
@@ -682,6 +682,12 @@
                    <property name="enabled">
                     <bool>false</bool>
                    </property>
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
                    <property name="minimumSize">
                     <size>
                      <width>105</width>
@@ -690,8 +696,8 @@
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>105</width>
-                     <height>23</height>
+                     <width>210</width>
+                     <height>45</height>
                     </size>
                    </property>
                    <property name="font">
@@ -749,6 +755,12 @@
                    <property name="enabled">
                     <bool>false</bool>
                    </property>
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
                    <property name="minimumSize">
                     <size>
                      <width>57</width>
@@ -785,7 +797,10 @@
          </layout>
         </item>
         <item row="0" column="1">
-         <layout class="QGridLayout" name="gridLayout_141">
+         <layout class="QGridLayout" name="gridLayout_141" rowstretch="0,0,0">
+          <property name="sizeConstraint">
+           <enum>QLayout::SetMinimumSize</enum>
+          </property>
           <property name="verticalSpacing">
            <number>8</number>
           </property>
@@ -794,16 +809,22 @@
             <property name="enabled">
              <bool>false</bool>
             </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="minimumSize">
              <size>
-              <width>0</width>
-              <height>352</height>
+              <width>700</width>
+              <height>380</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
-              <width>16777215</width>
-              <height>352</height>
+              <width>1400</width>
+              <height>700</height>
              </size>
             </property>
             <property name="font">
@@ -986,8 +1007,8 @@
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>225</width>
-                    <height>100</height>
+                    <width>450</width>
+                    <height>200</height>
                    </size>
                   </property>
                   <property name="font">
@@ -1198,8 +1219,8 @@
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>230</width>
-                    <height>50</height>
+                    <width>450</width>
+                    <height>100</height>
                    </size>
                   </property>
                   <property name="title">
@@ -1297,8 +1318,8 @@
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>230</width>
-                    <height>105</height>
+                    <width>450</width>
+                    <height>140</height>
                    </size>
                   </property>
                   <property name="font">
@@ -1448,8 +1469,8 @@
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>215</width>
-                    <height>125</height>
+                    <width>430</width>
+                    <height>240</height>
                    </size>
                   </property>
                   <property name="font">
@@ -1461,7 +1482,10 @@
                   <property name="title">
                    <string>Serial data packing condition</string>
                   </property>
-                  <layout class="QGridLayout" name="gridLayout_2">
+                  <layout class="QGridLayout" name="gridLayout_2" rowminimumheight="1,1,1">
+                   <property name="bottomMargin">
+                    <number>6</number>
+                   </property>
                    <item row="0" column="0">
                     <layout class="QHBoxLayout" name="horizontalLayout_124">
                      <item>
@@ -1644,13 +1668,13 @@
                   <property name="minimumSize">
                    <size>
                     <width>215</width>
-                    <height>175</height>
+                    <height>185</height>
                    </size>
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>215</width>
-                    <height>180</height>
+                    <width>430</width>
+                    <height>350</height>
                    </size>
                   </property>
                   <property name="font">
@@ -1663,6 +1687,9 @@
                    <string>Serial options</string>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_10">
+                   <property name="topMargin">
+                    <number>6</number>
+                   </property>
                    <item row="3" column="0">
                     <layout class="QHBoxLayout" name="horizontalLayout_16">
                      <item>
@@ -1675,8 +1702,8 @@
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>16777215</width>
-                         <height>22</height>
+                         <width>140</width>
+                         <height>45</height>
                         </size>
                        </property>
                        <property name="font">
@@ -1742,8 +1769,8 @@
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>16777215</width>
-                         <height>22</height>
+                         <width>140</width>
+                         <height>45</height>
                         </size>
                        </property>
                        <property name="font">
@@ -1877,8 +1904,8 @@
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>16777215</width>
-                         <height>22</height>
+                         <width>140</width>
+                         <height>45</height>
                         </size>
                        </property>
                        <property name="font">
@@ -1965,8 +1992,8 @@
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>16777215</width>
-                         <height>22</height>
+                         <width>140</width>
+                         <height>45</height>
                         </size>
                        </property>
                        <property name="font">
@@ -2032,8 +2059,8 @@
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>16777215</width>
-                         <height>22</height>
+                         <width>140</width>
+                         <height>45</height>
                         </size>
                        </property>
                        <property name="font">
@@ -2109,8 +2136,8 @@
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>210</width>
-                    <height>95</height>
+                    <width>420</width>
+                    <height>180</height>
                    </size>
                   </property>
                   <property name="font">
@@ -2141,8 +2168,8 @@
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>85</width>
-                         <height>22</height>
+                         <width>170</width>
+                         <height>50</height>
                         </size>
                        </property>
                        <property name="font">
@@ -2235,8 +2262,8 @@
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>85</width>
-                         <height>25</height>
+                         <width>170</width>
+                         <height>50</height>
                         </size>
                        </property>
                        <property name="font">
@@ -2328,8 +2355,8 @@ interval</string>
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>210</width>
-                    <height>100</height>
+                    <width>420</width>
+                    <height>200</height>
                    </size>
                   </property>
                   <property name="font">
@@ -2373,8 +2400,8 @@ interval</string>
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>85</width>
-                         <height>22</height>
+                         <width>170</width>
+                         <height>45</height>
                         </size>
                        </property>
                        <property name="font">
@@ -2467,8 +2494,8 @@ interval</string>
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>85</width>
-                         <height>22</height>
+                         <width>170</width>
+                         <height>45</height>
                         </size>
                        </property>
                        <property name="font">
@@ -2554,13 +2581,13 @@ interval</string>
                   <property name="minimumSize">
                    <size>
                     <width>210</width>
-                    <height>90</height>
+                    <height>80</height>
                    </size>
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>16777215</width>
-                    <height>90</height>
+                    <width>420</width>
+                    <height>160</height>
                    </size>
                   </property>
                   <property name="frameShape">
@@ -4327,16 +4354,28 @@ interval</string>
             <property name="enabled">
              <bool>false</bool>
             </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="minimumSize">
              <size>
-              <width>0</width>
-              <height>240</height>
+              <width>700</width>
+              <height>260</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
-              <width>16777215</width>
-              <height>240</height>
+              <width>1400</width>
+              <height>520</height>
+             </size>
+            </property>
+            <property name="baseSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
              </size>
             </property>
             <property name="font">
@@ -4358,25 +4397,43 @@ interval</string>
              <property name="enabled">
               <bool>false</bool>
              </property>
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
              <attribute name="title">
               <string>Basic settings</string>
              </attribute>
              <attribute name="toolTip">
               <string>Basic settings</string>
              </attribute>
-             <layout class="QGridLayout" name="gridLayout_20">
+             <layout class="QGridLayout" name="gridLayout_50">
               <item row="0" column="0">
                <widget class="QGroupBox" name="status_5">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="minimumSize">
                  <size>
                   <width>240</width>
-                  <height>90</height>
+                  <height>110</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>240</width>
-                  <height>100</height>
+                  <width>480</width>
+                  <height>180</height>
                  </size>
                 </property>
                 <property name="font">
@@ -4389,8 +4446,23 @@ interval</string>
                  <string>Device information</string>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_33">
+                 <property name="verticalSpacing">
+                  <number>3</number>
+                 </property>
                  <item row="0" column="0">
                   <layout class="QGridLayout" name="gridLayout_17">
+                   <property name="leftMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>6</number>
+                   </property>
                    <item row="0" column="0">
                     <widget class="QLabel" name="devtype_label">
                      <property name="minimumSize">
@@ -4401,8 +4473,8 @@ interval</string>
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>60</width>
-                       <height>16777215</height>
+                       <width>80</width>
+                       <height>30</height>
                       </size>
                      </property>
                      <property name="font">
@@ -4421,6 +4493,12 @@ interval</string>
                    </item>
                    <item row="0" column="1">
                     <widget class="QLineEdit" name="dev_type">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
                      <property name="minimumSize">
                       <size>
                        <width>135</width>
@@ -4430,7 +4508,7 @@ interval</string>
                      <property name="maximumSize">
                       <size>
                        <width>150</width>
-                       <height>22</height>
+                       <height>60</height>
                       </size>
                      </property>
                      <property name="font">
@@ -4477,8 +4555,26 @@ interval</string>
                  </item>
                  <item row="1" column="0">
                   <layout class="QGridLayout" name="gridLayout_77">
+                   <property name="leftMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>6</number>
+                   </property>
                    <item row="0" column="1">
                     <widget class="QLineEdit" name="fw_version">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
                      <property name="minimumSize">
                       <size>
                        <width>135</width>
@@ -4488,7 +4584,7 @@ interval</string>
                      <property name="maximumSize">
                       <size>
                        <width>150</width>
-                       <height>22</height>
+                       <height>60</height>
                       </size>
                      </property>
                      <property name="font">
@@ -4541,8 +4637,8 @@ interval</string>
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>60</width>
-                       <height>16777215</height>
+                       <width>80</width>
+                       <height>30</height>
                       </size>
                      </property>
                      <property name="font">
@@ -4561,18 +4657,18 @@ interval</string>
                 </layout>
                </widget>
               </item>
-              <item row="0" column="1" rowspan="3">
+              <item row="0" column="1" rowspan="2">
                <widget class="QGroupBox" name="network_config">
                 <property name="minimumSize">
                  <size>
-                  <width>265</width>
+                  <width>250</width>
                   <height>195</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>265</width>
-                  <height>195</height>
+                  <width>530</width>
+                  <height>400</height>
                  </size>
                 </property>
                 <property name="font">
@@ -4585,18 +4681,21 @@ interval</string>
                  <string>Network configuration</string>
                 </property>
                 <layout class="QGridLayout" name="gridLayout4">
+                 <property name="verticalSpacing">
+                  <number>1</number>
+                 </property>
                  <item row="0" column="0">
                   <layout class="QGridLayout" name="gridLayout_19">
                    <property name="leftMargin">
-                    <number>10</number>
+                    <number>6</number>
                    </property>
                    <property name="rightMargin">
-                    <number>10</number>
+                    <number>6</number>
                    </property>
                    <property name="bottomMargin">
-                    <number>8</number>
+                    <number>6</number>
                    </property>
-                   <item row="0" column="0">
+                   <item row="0" column="0" alignment="Qt::AlignHCenter">
                     <widget class="QRadioButton" name="ip_static">
                      <property name="minimumSize">
                       <size>
@@ -4606,8 +4705,8 @@ interval</string>
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>80</width>
-                       <height>16777215</height>
+                       <width>160</width>
+                       <height>45</height>
                       </size>
                      </property>
                      <property name="font">
@@ -4624,7 +4723,7 @@ interval</string>
                      </property>
                     </widget>
                    </item>
-                   <item row="0" column="1">
+                   <item row="0" column="1" alignment="Qt::AlignHCenter">
                     <widget class="QRadioButton" name="ip_dhcp">
                      <property name="minimumSize">
                       <size>
@@ -4634,8 +4733,8 @@ interval</string>
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>80</width>
-                       <height>16777215</height>
+                       <width>160</width>
+                       <height>45</height>
                       </size>
                      </property>
                      <property name="font">
@@ -4653,8 +4752,29 @@ interval</string>
                  </item>
                  <item row="1" column="0">
                   <layout class="QGridLayout" name="gridLayout0">
+                   <property name="leftMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="verticalSpacing">
+                    <number>1</number>
+                   </property>
                    <item row="0" column="1">
                     <widget class="QLineEdit" name="localip">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
                      <property name="minimumSize">
                       <size>
                        <width>130</width>
@@ -4664,7 +4784,7 @@ interval</string>
                      <property name="maximumSize">
                       <size>
                        <width>150</width>
-                       <height>22</height>
+                       <height>60</height>
                       </size>
                      </property>
                      <property name="font">
@@ -4694,14 +4814,14 @@ interval</string>
                     <widget class="QLabel" name="localip_label">
                      <property name="minimumSize">
                       <size>
-                       <width>85</width>
-                       <height>0</height>
+                       <width>80</width>
+                       <height>20</height>
                       </size>
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>85</width>
-                       <height>16777215</height>
+                       <width>200</width>
+                       <height>50</height>
                       </size>
                      </property>
                      <property name="font">
@@ -4719,18 +4839,33 @@ interval</string>
                  </item>
                  <item row="2" column="0">
                   <layout class="QGridLayout" name="gridLayout1">
+                   <property name="leftMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="verticalSpacing">
+                    <number>1</number>
+                   </property>
                    <item row="0" column="0">
                     <widget class="QLabel" name="subnet_label">
                      <property name="minimumSize">
                       <size>
-                       <width>85</width>
-                       <height>0</height>
+                       <width>80</width>
+                       <height>20</height>
                       </size>
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>85</width>
-                       <height>16777215</height>
+                       <width>200</width>
+                       <height>50</height>
                       </size>
                      </property>
                      <property name="baseSize">
@@ -4755,6 +4890,12 @@ interval</string>
                    </item>
                    <item row="0" column="1">
                     <widget class="QLineEdit" name="subnet">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
                      <property name="minimumSize">
                       <size>
                        <width>130</width>
@@ -4764,7 +4905,7 @@ interval</string>
                      <property name="maximumSize">
                       <size>
                        <width>150</width>
-                       <height>16777215</height>
+                       <height>60</height>
                       </size>
                      </property>
                      <property name="font">
@@ -4788,18 +4929,33 @@ interval</string>
                  </item>
                  <item row="3" column="0">
                   <layout class="QGridLayout" name="gridLayout2">
+                   <property name="leftMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="verticalSpacing">
+                    <number>1</number>
+                   </property>
                    <item row="0" column="0">
                     <widget class="QLabel" name="gateway_label">
                      <property name="minimumSize">
                       <size>
-                       <width>85</width>
-                       <height>0</height>
+                       <width>80</width>
+                       <height>20</height>
                       </size>
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>85</width>
-                       <height>16777215</height>
+                       <width>200</width>
+                       <height>50</height>
                       </size>
                      </property>
                      <property name="font">
@@ -4815,6 +4971,12 @@ interval</string>
                    </item>
                    <item row="0" column="1">
                     <widget class="QLineEdit" name="gateway">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
                      <property name="minimumSize">
                       <size>
                        <width>130</width>
@@ -4824,7 +4986,7 @@ interval</string>
                      <property name="maximumSize">
                       <size>
                        <width>150</width>
-                       <height>16777215</height>
+                       <height>60</height>
                       </size>
                      </property>
                      <property name="font">
@@ -4848,18 +5010,33 @@ interval</string>
                  </item>
                  <item row="4" column="0">
                   <layout class="QGridLayout" name="gridLayout3">
+                   <property name="leftMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="verticalSpacing">
+                    <number>1</number>
+                   </property>
                    <item row="0" column="0">
                     <widget class="QLabel" name="dns_addr_label">
                      <property name="minimumSize">
                       <size>
-                       <width>85</width>
-                       <height>0</height>
+                       <width>80</width>
+                       <height>20</height>
                       </size>
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>85</width>
-                       <height>16777215</height>
+                       <width>200</width>
+                       <height>50</height>
                       </size>
                      </property>
                      <property name="font">
@@ -4875,6 +5052,12 @@ interval</string>
                    </item>
                    <item row="0" column="1">
                     <widget class="QLineEdit" name="dns_addr">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
                      <property name="minimumSize">
                       <size>
                        <width>130</width>
@@ -4884,7 +5067,7 @@ interval</string>
                      <property name="maximumSize">
                       <size>
                        <width>150</width>
-                       <height>16777215</height>
+                       <height>60</height>
                       </size>
                      </property>
                      <property name="font">
@@ -4910,53 +5093,91 @@ interval</string>
                </widget>
               </item>
               <item row="0" column="2" rowspan="2">
-               <widget class="QGroupBox" name="group_current_bank">
-                <property name="minimumSize">
-                 <size>
-                  <width>125</width>
-                  <height>110</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>130</width>
-                  <height>110</height>
-                 </size>
-                </property>
-                <property name="title">
-                 <string>Current flash bank</string>
-                </property>
-                <layout class="QGridLayout" name="gridLayout_44">
-                 <property name="topMargin">
-                  <number>3</number>
-                 </property>
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="label_current_bank">
-                   <property name="minimumSize">
-                    <size>
-                     <width>60</width>
-                     <height>30</height>
-                    </size>
+               <layout class="QGridLayout" name="gridLayout_20">
+                <item row="2" column="0">
+                 <widget class="QFrame" name="frame_4">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="minimumSize">
+                   <size>
+                    <width>130</width>
+                    <height>30</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>260</width>
+                    <height>60</height>
+                   </size>
+                  </property>
+                  <property name="frameShape">
+                   <enum>QFrame::StyledPanel</enum>
+                  </property>
+                  <property name="frameShadow">
+                   <enum>QFrame::Raised</enum>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0" alignment="Qt::AlignTop">
+                 <widget class="QGroupBox" name="group_current_bank">
+                  <property name="minimumSize">
+                   <size>
+                    <width>165</width>
+                    <height>60</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>250</width>
+                    <height>120</height>
+                   </size>
+                  </property>
+                  <property name="title">
+                   <string>Current flash bank</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_44">
+                   <property name="topMargin">
+                    <number>3</number>
                    </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>60</width>
-                     <height>40</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:24pt; font-weight:600;&quot;&gt;-&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </widget>
+                   <item row="0" column="0">
+                    <widget class="QLabel" name="label_current_bank">
+                     <property name="minimumSize">
+                      <size>
+                       <width>60</width>
+                       <height>30</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>60</width>
+                       <height>40</height>
+                      </size>
+                     </property>
+                     <property name="text">
+                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:24pt; font-weight:600;&quot;&gt;-&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     </property>
+                     <property name="alignment">
+                      <set>Qt::AlignCenter</set>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+               </layout>
               </item>
-              <item row="1" column="0" rowspan="2">
+              <item row="1" column="0">
                <widget class="QGroupBox" name="group_packing_8">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="minimumSize">
                  <size>
                   <width>240</width>
@@ -4965,8 +5186,8 @@ interval</string>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>240</width>
-                  <height>100</height>
+                  <width>480</width>
+                  <height>180</height>
                  </size>
                 </property>
                 <property name="font">
@@ -5004,6 +5225,12 @@ interval</string>
                    </property>
                    <item row="0" column="0">
                     <widget class="QLineEdit" name="searchcode">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
                      <property name="minimumSize">
                       <size>
                        <width>100</width>
@@ -5012,8 +5239,8 @@ interval</string>
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>100</width>
-                       <height>16777215</height>
+                       <width>200</width>
+                       <height>45</height>
                       </size>
                      </property>
                      <property name="font">
@@ -5049,8 +5276,8 @@ interval</string>
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>90</width>
-                       <height>16777215</height>
+                       <width>180</width>
+                       <height>45</height>
                       </size>
                      </property>
                      <property name="font">
@@ -5083,6 +5310,12 @@ interval</string>
                       <size>
                        <width>100</width>
                        <height>22</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>200</width>
+                       <height>45</height>
                       </size>
                      </property>
                      <property name="font">
@@ -5123,28 +5356,6 @@ interval</string>
                 </layout>
                </widget>
               </item>
-              <item row="2" column="2">
-               <widget class="QFrame" name="frame_4">
-                <property name="minimumSize">
-                 <size>
-                  <width>130</width>
-                  <height>30</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>130</width>
-                  <height>30</height>
-                 </size>
-                </property>
-                <property name="frameShape">
-                 <enum>QFrame::StyledPanel</enum>
-                </property>
-                <property name="frameShadow">
-                 <enum>QFrame::Raised</enum>
-                </property>
-               </widget>
-              </item>
              </layout>
             </widget>
             <widget class="QWidget" name="advance_tab">
@@ -5155,6 +5366,9 @@ interval</string>
               <string>Advanced options</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_46">
+              <property name="horizontalSpacing">
+               <number>6</number>
+              </property>
               <item row="0" column="0" rowspan="3">
                <layout class="QGridLayout" name="gridLayout_21">
                 <property name="verticalSpacing">
@@ -5170,8 +5384,8 @@ interval</string>
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>224</width>
-                    <height>60</height>
+                    <width>460</width>
+                    <height>120</height>
                    </size>
                   </property>
                   <property name="font">
@@ -5195,8 +5409,14 @@ interval</string>
                    </property>
                    <item row="0" column="0">
                     <layout class="QGridLayout" name="gridLayout_125">
+                     <property name="topMargin">
+                      <number>6</number>
+                     </property>
                      <property name="rightMargin">
                       <number>8</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>6</number>
                      </property>
                      <property name="horizontalSpacing">
                       <number>6</number>
@@ -5214,8 +5434,8 @@ interval</string>
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>100</width>
-                         <height>16777215</height>
+                         <width>200</width>
+                         <height>56</height>
                         </size>
                        </property>
                        <property name="font">
@@ -5246,8 +5466,8 @@ Retry count</string>
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>60</width>
-                         <height>22</height>
+                         <width>120</width>
+                         <height>45</height>
                         </size>
                        </property>
                        <property name="font">
@@ -5282,8 +5502,8 @@ Retry count</string>
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>224</width>
-                    <height>70</height>
+                    <width>460</width>
+                    <height>120</height>
                    </size>
                   </property>
                   <property name="font">
@@ -5312,8 +5532,8 @@ Retry count</string>
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>118</width>
-                       <height>44</height>
+                       <width>240</width>
+                       <height>90</height>
                       </size>
                      </property>
                      <property name="title">
@@ -5356,8 +5576,8 @@ Retry count</string>
                           </property>
                           <property name="maximumSize">
                            <size>
-                            <width>110</width>
-                            <height>22</height>
+                            <width>220</width>
+                            <height>45</height>
                            </size>
                           </property>
                           <property name="font">
@@ -5384,8 +5604,8 @@ Retry count</string>
                           </property>
                           <property name="maximumSize">
                            <size>
-                            <width>110</width>
-                            <height>22</height>
+                            <width>220</width>
+                            <height>45</height>
                            </size>
                           </property>
                           <property name="font">
@@ -5414,8 +5634,8 @@ Retry count</string>
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>80</width>
-                       <height>44</height>
+                       <width>160</width>
+                       <height>90</height>
                       </size>
                      </property>
                      <property name="title">
@@ -5461,8 +5681,8 @@ Retry count</string>
                           </property>
                           <property name="maximumSize">
                            <size>
-                            <width>70</width>
-                            <height>22</height>
+                            <width>140</width>
+                            <height>45</height>
                            </size>
                           </property>
                           <property name="font">
@@ -5489,8 +5709,8 @@ Retry count</string>
                           </property>
                           <property name="maximumSize">
                            <size>
-                            <width>70</width>
-                            <height>22</height>
+                            <width>140</width>
+                            <height>45</height>
                            </size>
                           </property>
                           <property name="font">
@@ -5514,6 +5734,18 @@ Retry count</string>
                      <layout class="QGridLayout" name="gridLayout_48">
                       <item row="0" column="0">
                        <widget class="QCheckBox" name="checkbox_enable_dtr">
+                        <property name="minimumSize">
+                         <size>
+                          <width>90</width>
+                          <height>22</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>180</width>
+                          <height>45</height>
+                         </size>
+                        </property>
                         <property name="text">
                          <string>Enable DTR</string>
                         </property>
@@ -5521,6 +5753,18 @@ Retry count</string>
                       </item>
                       <item row="0" column="1">
                        <widget class="QCheckBox" name="checkbox_enable_dsr">
+                        <property name="minimumSize">
+                         <size>
+                          <width>90</width>
+                          <height>22</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>180</width>
+                          <height>45</height>
+                         </size>
+                        </property>
                         <property name="text">
                          <string>Enable DSR</string>
                         </property>
@@ -5542,8 +5786,8 @@ Retry count</string>
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>224</width>
-                    <height>55</height>
+                    <width>460</width>
+                    <height>120</height>
                    </size>
                   </property>
                   <property name="font">
@@ -5557,10 +5801,13 @@ Retry count</string>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_93">
                    <property name="leftMargin">
-                    <number>15</number>
+                    <number>50</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>6</number>
                    </property>
                    <property name="rightMargin">
-                    <number>15</number>
+                    <number>50</number>
                    </property>
                    <item row="0" column="0">
                     <widget class="QComboBox" name="serial_debug">
@@ -5572,8 +5819,8 @@ Retry count</string>
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>130</width>
-                       <height>22</height>
+                       <width>240</width>
+                       <height>45</height>
                       </size>
                      </property>
                      <property name="currentText">
@@ -5620,8 +5867,8 @@ Retry count</string>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>225</width>
-                  <height>16777215</height>
+                  <width>420</width>
+                  <height>170</height>
                  </size>
                 </property>
                 <property name="font">
@@ -5826,14 +6073,14 @@ Retry count</string>
                <widget class="QFrame" name="frame_6">
                 <property name="minimumSize">
                  <size>
-                  <width>180</width>
-                  <height>191</height>
+                  <width>160</width>
+                  <height>190</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>180</width>
-                  <height>190</height>
+                  <width>340</width>
+                  <height>380</height>
                  </size>
                 </property>
                 <property name="frameShape">
@@ -5854,8 +6101,8 @@ Retry count</string>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>225</width>
-                  <height>16777215</height>
+                  <width>420</width>
+                  <height>170</height>
                  </size>
                 </property>
                 <property name="font">
@@ -5996,13 +6243,13 @@ Retry count</string>
                <widget class="QFrame" name="fr2me">
                 <property name="minimumSize">
                  <size>
-                  <width>0</width>
+                  <width>210</width>
                   <height>25</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>16777215</width>
+                  <width>420</width>
                   <height>25</height>
                  </size>
                 </property>
@@ -7766,16 +8013,22 @@ Analog input: Read only</string>
           </property>
           <item row="0" column="0">
            <widget class="QPushButton" name="btn_search">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="minimumSize">
              <size>
-              <width>106</width>
+              <width>110</width>
               <height>55</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
-              <width>120</width>
-              <height>52</height>
+              <width>240</width>
+              <height>100</height>
              </size>
             </property>
             <property name="font">
@@ -7829,16 +8082,22 @@ Search</string>
             <property name="enabled">
              <bool>false</bool>
             </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="minimumSize">
              <size>
-              <width>106</width>
+              <width>110</width>
               <height>55</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
-              <width>120</width>
-              <height>52</height>
+              <width>240</width>
+              <height>100</height>
              </size>
             </property>
             <property name="font">
@@ -7874,16 +8133,22 @@ Settings</string>
             <property name="enabled">
              <bool>false</bool>
             </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="minimumSize">
              <size>
-              <width>106</width>
+              <width>110</width>
               <height>55</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
-              <width>120</width>
-              <height>52</height>
+              <width>240</width>
+              <height>100</height>
              </size>
             </property>
             <property name="font">
@@ -7919,16 +8184,22 @@ Upload</string>
             <property name="enabled">
              <bool>false</bool>
             </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="minimumSize">
              <size>
-              <width>106</width>
+              <width>110</width>
               <height>55</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
-              <width>120</width>
-              <height>52</height>
+              <width>240</width>
+              <height>100</height>
              </size>
             </property>
             <property name="font">
@@ -7976,16 +8247,22 @@ Device</string>
             <property name="enabled">
              <bool>false</bool>
             </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="minimumSize">
              <size>
-              <width>106</width>
+              <width>110</width>
               <height>55</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
-              <width>120</width>
-              <height>52</height>
+              <width>240</width>
+              <height>100</height>
              </size>
             </property>
             <property name="font">
@@ -8081,8 +8358,8 @@ Reset</string>
             </property>
             <property name="maximumSize">
              <size>
-              <width>120</width>
-              <height>52</height>
+              <width>240</width>
+              <height>100</height>
              </size>
             </property>
             <property name="font">
@@ -8122,8 +8399,8 @@ Config</string>
             </property>
             <property name="maximumSize">
              <size>
-              <width>120</width>
-              <height>52</height>
+              <width>240</width>
+              <height>100</height>
              </size>
             </property>
             <property name="font">
@@ -8180,8 +8457,8 @@ Config</string>
           </property>
           <property name="maximumSize">
            <size>
-            <width>120</width>
-            <height>52</height>
+            <width>240</width>
+            <height>100</height>
            </size>
           </property>
           <property name="font">
@@ -8292,8 +8569,8 @@ Config</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>934</width>
-     <height>21</height>
+     <width>951</width>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
