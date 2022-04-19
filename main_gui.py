@@ -2491,7 +2491,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             + "<br><br><font size=5 color=black>WIZnet website</font><br>" \
             + "<a href='http://www.wiznet.io/'><font color=black>WIZnet Official homepage</font></a>"  \
             + "<br><a href='https://forum.wiznet.io/'><font color=black>WIZnet Forum</font></a>" \
-            + "<br><a href='https://wizwiki.net/'><font color=black>WIZnet Wiki</font></a>" \
+            + "<br><a href='https://docs.wiznet.io/'><font color=black>WIZnet Documents</font></a>" \
             + "<br><br>2018 WIZnet Co.</font><br></div>"
         msgbox.about(self, "About WIZnet-S2E-Tool-GUI", text)
 
