@@ -62,9 +62,9 @@ You can check the contents of configuration tool wiki on the [Wiki tab.](https:/
 
 ## Windows
 
-You can refer to below wiki page.
+Please refer to below repository's wiki page.
 
-- [WIZnet-S2E-Tool-GUI wiki: Getting started guide](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki/Getting-started-guide)
+- [WIZnet-S2E-Tool-GUI wiki: Getting started guide](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki/Getting-started-guide_en)
 
 * Windows 7
 
@@ -78,9 +78,9 @@ You can download Windows excutable file from [release page.](https://github.com/
 
 ## Linux
 
-You can refer to below wiki page.
+Please refer to refer to below wiki page.
 
-- [Getting started guide: Using Python - Linux](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki/Getting-started-guide#using-python-linux)
+- [Getting started guide: Using Python - Linux](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki/Getting-started-guide_en#using-python-linux)
 
 ### Ubuntu
 
@@ -126,6 +126,6 @@ CLI configuration tool can be refer from [WIZnet-S2E-Tool github page.](https://
 If you have any problems, use one of the links below and **please report the problem.**
 
 - [Github Issue page](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/issues)
-- [WIZnet Forum](https://forum.wiznet.io/)
+- [WIZnet Developer Forum](https://forum.wiznet.io/)
 
 ---
