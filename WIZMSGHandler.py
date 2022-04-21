@@ -190,7 +190,7 @@ class WIZMSGHandler(QThread):
                             # replylists = data.splitlines()
                             replylists = data.split(b"\r\n")
 
-                            print('replylists', replylists)
+                            # print('replylists', replylists)
                             self.getreply = replylists
 
                         if self.opcode == OP_SEARCHALL:
