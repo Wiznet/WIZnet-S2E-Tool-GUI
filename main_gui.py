@@ -56,7 +56,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.4.2'
+VERSION = 'V1.4.3 Dev'
 
 
 def resource_path(relative_path):
@@ -250,15 +250,6 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         self.gpioc_config.currentIndexChanged.connect(self.gpio_check)
         self.gpiod_config.currentIndexChanged.connect(self.gpio_check)
 
-        # for certificate management
-        # self.btn_cert_server_run.clicked.connect(self.get_certificate_from_server)
-        # self.btn_cert_save_file.clicked.connect(self.dialog_save_certificate)
-        # self.btn_cert_load_file.clicked.connect(self.dialog_load_certificate)
-        # device certificate update
-        # self.btn_device_cert_update.clicked.connect(self.btn_cert_update_clicked)
-        # self.btn_cert_copy_clipboard.clicked.connect(self.btn_cert_copy_clipboard_clicked)
-        # self.certificate_detail.textChanged.connect(self.event_cert_changed)
-
         # Manage certificate for WIZ510SSL
         self.btn_load_rootca.clicked.connect(lambda: self.load_cert_btn_clicked('OC'))
         self.btn_load_client_cert.clicked.connect(lambda: self.load_cert_btn_clicked('LC'))
@@ -310,16 +301,18 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
     def tab_changed(self):
         # self.selected_devinfo()
-        if self.generalTab.currentIndex() == 0:
-            try:
-                if self.datarefresh is not None:
-                    if self.datarefresh.isRunning():
-                        self.datarefresh.terminate()
-            except Exception as e:
-                self.logging.error(e)
-        elif self.generalTab.currentIndex() == 2 and 'WIZ750' in self.curr_dev:
-            self.gpio_check()
-            self.get_refresh_time()
+        if 'WIZ750' in self.curr_dev or 'WIZ1XX' in self.curr_dev:
+            if self.generalTab.currentIndex() == 0:
+                try:
+                    if self.datarefresh is not None:
+                        if self.datarefresh.isRunning():
+                            self.datarefresh.terminate()
+                except Exception as e:
+                    self.logging.error(e)
+            elif self.generalTab.currentIndex() == 2:
+                # Expansion GPIO tab
+                self.gpio_check()
+                self.get_refresh_time()
 
     def net_ifs_selected(self, netifs):
         ifs = netifs.text().split(':')
@@ -457,17 +450,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         else:
             self.btn_save_privatekey.setEnabled(False)
 
-    # def event_uploadfw_changed(self):
-    #     if (len(self.textedit_upload_fw.toPlainText()) > 0):
-    #         self.btn_upload_fw.setEnabled(True)
-    #     else:
-    #         self.btn_upload_fw.setEnabled(False)
-
-    # def event_certificate_clicked(self):
-    #     # Move to certificate tab
-    #     self.generalTab.setCurrentIndex(4)
-
-    # # button click events
+    # Button click events
     def event_setting_clicked(self):
         if 'WIZ2000' in self.curr_dev:
             self.input_setting_pw('setting')
@@ -588,7 +571,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.generalTab.removeTab(3)
 
         # User I/O tab (WIZ750SR)
-        if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev:
+        if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev or 'WIZ1XX' in self.curr_dev:
             self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
             self.generalTab.setTabEnabled(2, True)
         else:
@@ -609,19 +592,6 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.channel_tab.insertTab(1, self.tab_ch1, self.ch1_tab_text)
             self.channel_tab.setTabEnabled(0, True)
             self.channel_tab.setTabEnabled(1, True)
-
-    # def event_cert_changed(self):
-    #     cert = self.certificate_detail.toPlainText()
-    #     if len(cert) > 0:
-    #         self.btn_device_cert_update.setEnabled(True)
-    #     else:
-    #         self.btn_device_cert_update.setEnabled(False)
-
-    # def event_setting_pw(self):
-    #     if self.enable_setting_pw.isChecked():
-    #         self.lineedit_setting_pw.setEnabled(True)
-    #     else:
-    #         self.lineedit_setting_pw.setEnabled(False)
 
     def event_localport_fix(self):
         if self.ch1_localport_fix.isChecked():
@@ -689,12 +659,6 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.lineedit_setting_pw.setEchoMode(QtWidgets.QLineEdit.Normal)
         else:
             self.lineedit_setting_pw.setEchoMode(QtWidgets.QLineEdit.Password)
-
-    # def event_client_cert_pw_show(self):
-    #     if self.checkbox_show_client_cert_pw.isChecked():
-    #         self.lineedit_client_cert_pw.setEchoMode(QtWidgets.QLineEdit.Normal)
-    #     else:
-    #         self.lineedit_client_cert_pw.setEchoMode(QtWidgets.QLineEdit.Password)
 
     def event_passwd_enable(self):
         if self.enable_connect_pw.isChecked():
@@ -1178,8 +1142,8 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.fill_devinfo(dev_data)
         else:
             if (len(self.dev_profile) != self.searched_devnum):
-                self.logging.info('warning: 검색된 장치의 수와 프로파일된 장치의 수가 다릅니다.')
-            self.logging.info('warning: retry search')
+                self.logging.info('[Warning] 검색된 장치의 수와 프로파일된 장치의 수가 다릅니다.')
+            self.logging.info('[Warning] retry search')
 
     def remove_empty_value(self, data):
         # remove empty value
@@ -1245,8 +1209,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                     self.searchcode.setText(dev_data['SP'])
             # Debug msg - for test
             if 'DG' in dev_data:
-                pass
-                # TODO => serial debug 드랍박스로 다시 변경: 동작 변경요망
+                # serial debug (dropbox)
                 if int(dev_data['DG']) < 2:
                     self.serial_debug.setCurrentIndex(int(dev_data['DG']))
                 elif dev_data['DG'] == '4':
@@ -1396,44 +1359,6 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                     self.ch2_reconnection.setText(dev_data['RR'])
 
             elif 'WIZ510SSL' in self.curr_dev:
-                # if 'SE' in dev_data:    # tls 1.2 option
-                #     if dev_data['SE'] == '0':
-                #         self.tls_enable.setChecked(False)
-                #     elif dev_data['SE'] == '1':
-                #         self.tls_enable.setChecked(True)
-                # device alias
-                # dev_alias / dev_group
-                # if 'AL' in dev_data:
-                #     self.dev_alias.setText(dev_data['AL'])
-                # if 'GR' in dev_data:
-                #     self.dev_group.setText(dev_data['GR'])
-                # TCP connection success msg
-                # if 'AM' in dev_data:
-                #     self.tcp_success_msg.setCurrentIndex(int(dev_data['AM']))
-                # Local port fix
-                # if 'LF' in dev_data:
-                #     if dev_data['LF'] == '1':
-                #         self.ch1_localport_fix.setChecked(True)
-                #     elif dev_data['LF'] == '0':
-                #         self.ch1_localport_fix.setChecked(False)
-                # setting password enable
-                # if 'AE' in dev_data:
-                #     if dev_data['AE'] == '1':
-                #         self.enable_setting_pw.setChecked(True)
-                #         # setting password
-                #         if 'AP' in dev_data:
-                #             # print('<AP> parameter:', dev_data['AP'], type(dev_data['AP']), isinstance(dev_data['AP'], type('\xd3M4\xd3M4')))
-                #             # print('<AP> parameter b64decode:', base64.b64decode(dev_data['AP'].encode('utf-8')))
-                #             # TODO: base64로 인코딩된 string인지 체크
-                #             try:
-                #                 self.curr_setting_pw = base64.b64decode(
-                #                     dev_data['AP'].encode('utf-8')).decode()
-                #             except Exception as e:
-                #                 self.logging.error(e)
-                #             self.lineedit_setting_pw.setText(self.curr_setting_pw)
-                #     elif dev_data['AE'] == '0':
-                #         self.enable_setting_pw.setChecked(False)
-
                 # New options for WIZ510SSL
                 # mqtt options
                 if 'QU' in dev_data:
@@ -1696,36 +1621,6 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 # reconnection - channel 2
                 setcmd['RR'] = self.ch2_reconnection.text()
             if 'WIZ510SSL' in self.curr_dev:
-                # tls 1.2 option
-                # if not self.tls_enable.isChecked():
-                #     setcmd['SE'] = '0'
-                # elif self.tls_enable.isChecked():
-                #     setcmd['SE'] = '1'
-                # setting pw
-                # if self.enable_setting_pw.isChecked():
-                #     setcmd['AE'] = '1'
-                #     if self.lineedit_setting_pw.text():
-                #         try:
-                #             # print('new Set PW', self.lineedit_setting_pw.text(), base64.b64encode(
-                #             self.lineedit_setting_pw.text().encode('utf-8').decode()
-                #             setcmd['AP'] = base64.b64encode(
-                #                 self.lineedit_setting_pw.text().encode('utf-8').decode())
-                #         except Exception as e:
-                #             self.logging.error(e)
-                #     else:
-                #         self.logging.info('Setting pw enabled, but empty')
-                # device alias config
-                # setcmd['AL'] = self.dev_alias.text()
-                # setcmd['GR'] = self.dev_group.text()
-                # tcp auto msg
-                # setcmd['AM'] = str(self.tcp_success_msg.currentIndex())
-
-                # local port fix
-                # if not self.ch1_localport_fix.isChecked():
-                #     setcmd['LF'] = '0'
-                # elif self.ch1_localport_fix.isChecked():
-                #     setcmd['LF'] = '1'
-
                 # New options for WIZ510SSL
                 # mqtt options
                 setcmd['QU'] = self.lineedit_mqtt_username.text()
@@ -1753,123 +1648,6 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         # print('setcmd:', setcmd)
         return setcmd
 
-    def update_cert_net_check(self):
-        self.logging.info('update_cert_net_check()')
-        response = self.net_check_ping(self.localip_addr)
-        if response == 0:
-            self.input_setting_pw('update_cert')
-        else:
-            self.statusbar.showMessage(' Certificate update warning.')
-            self.msg_upload_warning(self.localip_addr)
-
-    # def update_device_cert(self, type):
-    #     self.logging.info('update_device_cert()')
-    #     self.selected_devinfo()
-    #     mac_addr = self.curr_mac
-
-    #     if len(self.searchcode_input.text()) == 0:
-    #         self.code = " "
-    #     else:
-    #         self.code = self.searchcode_input.text()
-
-    #     # certificate channel type (wiz2000)
-    #     # cert = self.certificate_detail.toPlainText()
-    #     # if self.cert_tcp_client.isChecked():
-    #     #     mode_cmd = 'TC'
-    #     # elif self.cert_cloud.isChecked():
-    #     #     mode_cmd = 'WC'
-
-    #     # Certificate update
-    #     try:
-    #         if self.broadcast.isChecked():
-    #             self.t_certup = CertUploadThread(self.conf_sock, mac_addr, self.code, self.encoded_setting_pw, cert, None, None, self.curr_dev, mode_cmd)
-    #         elif self.unicast_ip.isChecked():
-    #             ip_addr = self.search_ipaddr.text()
-    #             port = int(self.search_port.text())
-    #             self.t_certup = CertUploadThread(self.conf_sock, mac_addr, self.code, self.encoded_setting_pw, cert, ip_addr, port, self.curr_dev, mode_cmd)
-    #         self.t_certup.uploading_size.connect(self.pgbar.setValue)
-    #         self.t_certup.upload_result.connect(self.update_result)
-    #         self.t_certup.error_flag.connect(self.update_error)
-    #         try:
-    #             self.t_certup.start()
-    #         except Exception as e:
-    #             self.logging.error(e)
-    #             self.update_result(-1)
-    #     except Exception as e:
-    #         self.logging.error(e)
-
-    # def get_certificate_from_server(self):
-    #     self.clear_certificate()
-    #     # ?: need host address verify or check if host has SSL certificate
-    #     try:
-    #         url = self.cert_server.text()
-    #         addr = urlsplit(url).hostname
-    #         port = 443
-    #     except Exception as e:
-    #         self.logging.error(e)
-
-    #     try:
-    #         # TODO: CHECK ssl_version
-    #         cert = ssl.get_server_certificate((addr, port))
-    #         self.certificate_detail.setText(cert)
-    #         # certificate size
-    #         self.cert_size.setText(str(len(cert)))
-    #         self.statusbar.showMessage("")
-
-    #         # TODO: 다운받은 certificate를 디바이스로 전송
-    #         # self.msg_certificate_success(file_name)
-
-    #     except Exception as e:
-    #         self.certificate_detail.setText('Fail to get certificate from server.\nPlease check the address')
-    #         self.statusbar.showMessage(' Warning: fail to get certificate from server.')
-    #         self.logging.error(e)
-
-    # def clear_certificate(self):
-    #     self.certificate_detail.setText("")
-    #     self.cert_size.setText("")
-
-    # def dialog_save_certificate(self):
-    #     fname, _ = QtWidgets.QFileDialog.getSaveFileName(
-    #         self, "Save Certificate", "server.crt", "Certificate Files (*.crt);;All Files (*)")
-
-    #     if fname:
-    #         fileName = fname
-    #         print(fileName)
-    #         self.save_certificate(fileName)
-
-    #         self.saved_path = QtCore.QFileInfo(fileName).path()
-    #         self.logging.info(self.saved_path)
-
-    # def save_certificate(self, file_name):
-    #     # file_name = '%s.CA' % self.cert_server.text()
-    #     with open(file_name, 'w', encoding='utf-8') as f:
-    #         text = self.certificate_detail.toPlainText()
-    #         f.write(text)
-
-    def dialog_load_certificate(self):
-        if self.saved_path is None:
-            fname, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self, "Load Certificate", "", "Certificate Files (*.crt);;All Files (*)")
-        else:
-            fname, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self, "Load Certificate", self.saved_path, "Certificate Files (*.crt);;All Files (*)")
-
-        if fname:
-            fileName = fname
-            print(fileName)
-            self.load_certificate(fileName)
-
-    # read certificate from file
-    def load_certificate(self, file_name):
-        try:
-            with open(file_name, 'r', encoding='utf-8') as f:
-                cert = f.read()
-                self.logging.info(cert)
-                self.certificate_detail.setText(cert)
-                self.cert_size.setText(str(len(cert)))
-        except Exception as e:
-            self.logging.error(e)
-
     # ? encode setting password
     def encode_setting_pw(self, setpw, mode):
         self.logging.info(setpw, mode)
@@ -1882,7 +1660,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 self.encoded_setting_pw = base64.b64encode(setpw.encode('utf-8'))
                 self.logging.info(self.encoded_setting_pw)
 
-            # TODO: mode 판별 기준 재정립
+            # TODO: mode 판별 기준
             if mode == 'setting':
                 self.do_setting()
             elif mode == 'reset':
@@ -2346,13 +2124,6 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                     self.encode_setting_pw(text, mode)
             else:
                 self.encode_setting_pw(text, mode)
-
-    # def input_certificate_server(self):
-    #     text, okbtn = QtWidgets.QInputDialog.getText(self, "Update certificate", "Input the host address", QtWidgets.QLineEdit.Normal, "")
-    #     if okbtn:
-    #         print('input_certificate_server()', text, len(text))
-    #         # TODO: certificate update function
-    #         self.get_certificate_from_server(text)
 
     # To set the wait time when no response from the device when searching
     def input_search_wait_time(self):
