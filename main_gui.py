@@ -56,7 +56,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.4.3 Dev'
+VERSION = 'V1.4.3.1 Dev'
 
 
 def resource_path(relative_path):
@@ -301,7 +301,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
     def tab_changed(self):
         # self.selected_devinfo()
-        if 'WIZ750' in self.curr_dev or 'WIZ1XX' in self.curr_dev:
+        if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
             if self.generalTab.currentIndex() == 0:
                 try:
                     if self.datarefresh is not None:
@@ -570,8 +570,13 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.generalTab.removeTab(4)
             self.generalTab.removeTab(3)
 
-        # User I/O tab (WIZ750SR)
-        if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev or 'WIZ1XX' in self.curr_dev:
+        # User I/O tab
+        """
+        - WIZ750SR
+        - WIZ750SR-100
+        - WIZ5XXSR-RP
+        """
+        if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
             self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
             self.generalTab.setTabEnabled(2, True)
         else:
