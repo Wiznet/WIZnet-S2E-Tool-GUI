@@ -21,11 +21,15 @@ OP_FWUP = 6
 # Supported devices
 ONE_PORT_DEV = [
     "WIZ750SR",
-    "WIZ750SR-100",
-    "WIZ750SR-105",
-    "WIZ750SR-110",
+    "WIZ750SR-1xx",
+    # "WIZ750SR-100",
+    # "WIZ750SR-105",
+    # "WIZ750SR-110",
     "WIZ107SR",
     "WIZ108SR",
+    "W7500-S2E",
+    "W7500P-S2E",
+    # 2022.04 added
     "WIZ5XXSR-RP"
 ]
 TWO_PORT_DEV = ["WIZ752SR-12x", "WIZ752SR-120", "WIZ752SR-125"]
@@ -107,18 +111,28 @@ class WIZMakeCMD:
         return cmd_list
 
     def search(self, mac_addr, idcode, devname, version):
-        cmd_list = []
         # Search All Devices on the network
-        cmd_list.append(["MA", mac_addr])
-        cmd_list.append(["PW", idcode])
+        # print('search()', mac_addr, idcode, devname, version)
+        cmd_list = self.make_header(mac_addr, idcode)
 
-        if devname in ONE_PORT_DEV or "750" in devname:
-            if "750" in devname and version_compare("1.2.0", version) <= 0:
-                for cmd in cmd_1p_advanced:
-                    cmd_list.append([cmd, ""])
-            else:
+        if devname in ONE_PORT_DEV:
+            # WIZ107SR/WIZ108SR
+            if "WIZ107SR" in devname or "WIZ108SR" in devname:
                 for cmd in cmd_1p_default:
                     cmd_list.append([cmd, ""])
+            else:
+                # WIZ5XXSR-RP
+                if "WIZ5XX" in devname:
+                    for cmd in cmd_1p_advanced:
+                        cmd_list.append([cmd, ""])
+                else:
+                    # WIZ750SR series / W7500(P)-S2E
+                    if version_compare("1.2.0", version) <= 0:
+                        for cmd in cmd_1p_advanced:
+                            cmd_list.append([cmd, ""])
+                    else:
+                        for cmd in cmd_1p_default:
+                            cmd_list.append([cmd, ""])
         elif devname in TWO_PORT_DEV or "752" in devname:
             for cmd in cmd_2p_default:
                 cmd_list.append([cmd, ""])
@@ -133,6 +147,7 @@ class WIZMakeCMD:
         else:
             pass
 
+        # print("search()", cmd_list)
         return cmd_list
 
     def get_gpiovalue(self, mac_addr, idcode):
@@ -151,13 +166,24 @@ class WIZMakeCMD:
             for i in range(len(command_list)):
                 cmd_list.append([command_list[i], param_list[i]])
 
-            if devname in ONE_PORT_DEV or "750" in devname:
-                if "750" in devname and version_compare("1.2.0", version) <= 0:
-                    for cmd in cmd_1p_advanced:
-                        cmd_list.append([cmd, ""])
-                else:
+            if devname in ONE_PORT_DEV:
+                # WIZ107SR/WIZ108SR
+                if "WIZ107SR" in devname or "WIZ108SR" in devname:
                     for cmd in cmd_1p_default:
                         cmd_list.append([cmd, ""])
+                else:
+                    # WIZ5XXSR-RP
+                    if "WIZ5XX" in devname:
+                        for cmd in cmd_1p_advanced:
+                            cmd_list.append([cmd, ""])
+                    else:
+                        # WIZ750SR series / W7500(P)-S2E
+                        if version_compare("1.2.0", version) <= 0:
+                            for cmd in cmd_1p_advanced:
+                                cmd_list.append([cmd, ""])
+                        else:
+                            for cmd in cmd_1p_default:
+                                cmd_list.append([cmd, ""])
             elif devname in TWO_PORT_DEV or "752" in devname:
                 # for WIZ752SR-12x
                 for cmd in cmd_ch2:
@@ -166,7 +192,6 @@ class WIZMakeCMD:
                 cmds = cmd_1p_advanced + cmd_wiz2000
                 for cmd in cmds:
                     cmd_list.append([cmd, ""])
-
             elif "WIZ510SSL" in devname:
                 for cmd in cmd_wiz510ssl:
                     cmd_list.append([cmd, ""])
