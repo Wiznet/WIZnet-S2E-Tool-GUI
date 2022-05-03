@@ -5,7 +5,7 @@ from wizsocket.TCPClient import TCPClient
 from WIZUDPSock import WIZUDPSock
 from WIZMSGHandler import WIZMSGHandler
 from WIZMakeCMD import SECURITY_DEVICE
-from utils import getLogger
+from utils import get_logger
 
 import binascii
 import time
@@ -41,7 +41,7 @@ class FWUploadThread(QThread):
     def __init__(self, conf_sock, dest_mac, idcode, set_pw, filename, filesize, ipaddr, port, dev_name):
         QThread.__init__(self)
 
-        self.logger = getLogger(os.path.expanduser('~'), 'wizconfig')
+        self.logger = get_logger(self.__class__.__name__, os.path.expanduser('~'), 'wizconfig')
 
         self.bin_filename = filename
         self.fd = None
@@ -79,7 +79,7 @@ class FWUploadThread(QThread):
         self.fd.close()
 
     def myTimer(self):
-        # self.logger.info('timer1 timeout')
+        self.logger.info('timer1 timeout')
         self.istimeout = 1
 
     def jumpToApp(self):
@@ -134,7 +134,7 @@ class FWUploadThread(QThread):
         self.setparam()
         # wiz2000/wiz510ssl: not use 'AB' command
         if self.dev_name in SECURITY_DEVICE:
-            self.logger.info('Security device firmware upload', self.dev_name)
+            self.logger.info(f'Security device firmware upload: {self.dev_name}')
         else:
             self.jumpToApp()
 
