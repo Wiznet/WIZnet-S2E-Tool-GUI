@@ -505,6 +505,9 @@
               <property name="alignment">
                <set>Qt::AlignCenter</set>
               </property>
+              <property name="buddy">
+               <cstring>frame_gpioc</cstring>
+              </property>
              </widget>
             </item>
            </layout>
@@ -5596,6 +5599,12 @@ Retry count</string>
                      </item>
                      <item row="0" column="1">
                       <widget class="QLineEdit" name="tcp_timeout">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
                        <property name="minimumSize">
                         <size>
                          <width>60</width>
@@ -5605,7 +5614,7 @@ Retry count</string>
                        <property name="maximumSize">
                         <size>
                          <width>120</width>
-                         <height>45</height>
+                         <height>30</height>
                         </size>
                        </property>
                        <property name="baseSize">
@@ -6568,513 +6577,560 @@ Retry count</string>
                     <property name="title">
                      <string>Expansion GPIO</string>
                     </property>
-                    <layout class="QGridLayout" name="gridLayout9">
-                     <property name="leftMargin">
-                      <number>6</number>
-                     </property>
-                     <property name="topMargin">
-                      <number>6</number>
-                     </property>
-                     <property name="rightMargin">
-                      <number>6</number>
-                     </property>
-                     <property name="bottomMargin">
-                      <number>6</number>
-                     </property>
-                     <property name="spacing">
-                      <number>9</number>
-                     </property>
+                    <layout class="QGridLayout" name="gridLayout_73">
                      <item row="0" column="0">
-                      <layout class="QGridLayout" name="gridLayout5">
-                       <item row="0" column="0">
-                        <widget class="QLabel" name="gpioa_label">
-                         <property name="minimumSize">
-                          <size>
-                           <width>56</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>56</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <property name="font">
-                          <font>
-                           <family>맑은 고딕</family>
-                           <pointsize>10</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>GPIO A</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="1">
-                        <widget class="QComboBox" name="gpioa_config">
-                         <property name="minimumSize">
-                          <size>
-                           <width>100</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>100</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <item>
-                          <property name="text">
-                           <string>Digital Input</string>
+                      <widget class="QFrame" name="frame_gpioa">
+                       <layout class="QGridLayout" name="gridLayout_72">
+                        <property name="leftMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>0</number>
+                        </property>
+                        <item row="0" column="0">
+                         <widget class="QLabel" name="gpioa_label">
+                          <property name="minimumSize">
+                           <size>
+                            <width>56</width>
+                            <height>0</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Digital Output</string>
+                          <property name="maximumSize">
+                           <size>
+                            <width>56</width>
+                            <height>16777215</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Analog Input</string>
+                          <property name="font">
+                           <font>
+                            <family>맑은 고딕</family>
+                            <pointsize>10</pointsize>
+                           </font>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="2">
-                        <widget class="QComboBox" name="gpioa_set">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <item>
                           <property name="text">
-                           <string>Low</string>
+                           <string>GPIO A</string>
                           </property>
-                         </item>
-                         <item>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QComboBox" name="gpioa_config">
+                          <property name="minimumSize">
+                           <size>
+                            <width>100</width>
+                            <height>0</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>100</width>
+                            <height>16777215</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Digital Input</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Digital Output</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Analog Input</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="2">
+                         <widget class="QComboBox" name="gpioa_set">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Low</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>High</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="3">
+                         <widget class="QLineEdit" name="gpioa_get">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="inputMask">
+                           <string notr="true"/>
+                          </property>
                           <property name="text">
-                           <string>High</string>
+                           <string notr="true"/>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="3">
-                        <widget class="QLineEdit" name="gpioa_get">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="inputMask">
-                          <string notr="true"/>
-                         </property>
-                         <property name="text">
-                          <string notr="true"/>
-                         </property>
-                         <property name="maxLength">
-                          <number>4</number>
-                         </property>
-                         <property name="frame">
-                          <bool>true</bool>
-                         </property>
-                         <property name="alignment">
-                          <set>Qt::AlignCenter</set>
-                         </property>
-                         <property name="dragEnabled">
-                          <bool>true</bool>
-                         </property>
-                         <property name="readOnly">
-                          <bool>true</bool>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
+                          <property name="maxLength">
+                           <number>4</number>
+                          </property>
+                          <property name="frame">
+                           <bool>true</bool>
+                          </property>
+                          <property name="alignment">
+                           <set>Qt::AlignCenter</set>
+                          </property>
+                          <property name="dragEnabled">
+                           <bool>true</bool>
+                          </property>
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </widget>
                      </item>
                      <item row="1" column="0">
-                      <layout class="QGridLayout" name="gridLayout6">
-                       <item row="0" column="0">
-                        <widget class="QLabel" name="gpiob_label">
-                         <property name="minimumSize">
-                          <size>
-                           <width>56</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>56</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <property name="font">
-                          <font>
-                           <family>맑은 고딕</family>
-                           <pointsize>10</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>GPIO B</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="1">
-                        <widget class="QComboBox" name="gpiob_config">
-                         <property name="minimumSize">
-                          <size>
-                           <width>100</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>100</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <item>
-                          <property name="text">
-                           <string>Digital Input</string>
+                      <widget class="QFrame" name="frame_gpiob">
+                       <layout class="QGridLayout" name="gridLayout_74">
+                        <property name="leftMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>0</number>
+                        </property>
+                        <item row="0" column="0">
+                         <widget class="QLabel" name="gpiob_label">
+                          <property name="minimumSize">
+                           <size>
+                            <width>56</width>
+                            <height>0</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Digital Output</string>
+                          <property name="maximumSize">
+                           <size>
+                            <width>56</width>
+                            <height>16777215</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Analog Input</string>
+                          <property name="font">
+                           <font>
+                            <family>맑은 고딕</family>
+                            <pointsize>10</pointsize>
+                           </font>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="2">
-                        <widget class="QComboBox" name="gpiob_set">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <item>
                           <property name="text">
-                           <string>Low</string>
+                           <string>GPIO B</string>
                           </property>
-                         </item>
-                         <item>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QComboBox" name="gpiob_config">
+                          <property name="minimumSize">
+                           <size>
+                            <width>100</width>
+                            <height>0</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>100</width>
+                            <height>16777215</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Digital Input</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Digital Output</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Analog Input</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="2">
+                         <widget class="QComboBox" name="gpiob_set">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Low</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>High</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="3">
+                         <widget class="QLineEdit" name="gpiob_get">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="inputMask">
+                           <string notr="true"/>
+                          </property>
                           <property name="text">
-                           <string>High</string>
+                           <string notr="true"/>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="3">
-                        <widget class="QLineEdit" name="gpiob_get">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="inputMask">
-                          <string notr="true"/>
-                         </property>
-                         <property name="text">
-                          <string notr="true"/>
-                         </property>
-                         <property name="maxLength">
-                          <number>4</number>
-                         </property>
-                         <property name="frame">
-                          <bool>true</bool>
-                         </property>
-                         <property name="alignment">
-                          <set>Qt::AlignCenter</set>
-                         </property>
-                         <property name="dragEnabled">
-                          <bool>true</bool>
-                         </property>
-                         <property name="readOnly">
-                          <bool>true</bool>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
+                          <property name="maxLength">
+                           <number>4</number>
+                          </property>
+                          <property name="frame">
+                           <bool>true</bool>
+                          </property>
+                          <property name="alignment">
+                           <set>Qt::AlignCenter</set>
+                          </property>
+                          <property name="dragEnabled">
+                           <bool>true</bool>
+                          </property>
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </widget>
                      </item>
                      <item row="2" column="0">
-                      <layout class="QGridLayout" name="gridLayout7">
-                       <item row="0" column="0">
-                        <widget class="QLabel" name="gpioc_label">
-                         <property name="minimumSize">
-                          <size>
-                           <width>56</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>56</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <property name="font">
-                          <font>
-                           <family>맑은 고딕</family>
-                           <pointsize>10</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>GPIO C</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="1">
-                        <widget class="QComboBox" name="gpioc_config">
-                         <property name="minimumSize">
-                          <size>
-                           <width>100</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>100</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <item>
-                          <property name="text">
-                           <string>Digital Input</string>
+                      <widget class="QFrame" name="frame_gpioc">
+                       <property name="toolTipDuration">
+                        <number>-1</number>
+                       </property>
+                       <layout class="QGridLayout" name="gridLayout_71">
+                        <property name="leftMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>0</number>
+                        </property>
+                        <item row="0" column="0">
+                         <widget class="QLabel" name="gpioc_label">
+                          <property name="minimumSize">
+                           <size>
+                            <width>56</width>
+                            <height>0</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Digital Output</string>
+                          <property name="maximumSize">
+                           <size>
+                            <width>56</width>
+                            <height>16777215</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Analog Input</string>
+                          <property name="font">
+                           <font>
+                            <family>맑은 고딕</family>
+                            <pointsize>10</pointsize>
+                           </font>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="2">
-                        <widget class="QComboBox" name="gpioc_set">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <item>
                           <property name="text">
-                           <string>Low</string>
+                           <string>GPIO C</string>
                           </property>
-                         </item>
-                         <item>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QComboBox" name="gpioc_config">
+                          <property name="minimumSize">
+                           <size>
+                            <width>100</width>
+                            <height>0</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>100</width>
+                            <height>16777215</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Digital Input</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Digital Output</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Analog Input</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="2">
+                         <widget class="QComboBox" name="gpioc_set">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Low</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>High</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="3">
+                         <widget class="QLineEdit" name="gpioc_get">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="inputMask">
+                           <string notr="true"/>
+                          </property>
                           <property name="text">
-                           <string>High</string>
+                           <string notr="true"/>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="3">
-                        <widget class="QLineEdit" name="gpioc_get">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="inputMask">
-                          <string notr="true"/>
-                         </property>
-                         <property name="text">
-                          <string notr="true"/>
-                         </property>
-                         <property name="maxLength">
-                          <number>4</number>
-                         </property>
-                         <property name="frame">
-                          <bool>true</bool>
-                         </property>
-                         <property name="alignment">
-                          <set>Qt::AlignCenter</set>
-                         </property>
-                         <property name="dragEnabled">
-                          <bool>true</bool>
-                         </property>
-                         <property name="readOnly">
-                          <bool>true</bool>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
+                          <property name="maxLength">
+                           <number>4</number>
+                          </property>
+                          <property name="frame">
+                           <bool>true</bool>
+                          </property>
+                          <property name="alignment">
+                           <set>Qt::AlignCenter</set>
+                          </property>
+                          <property name="dragEnabled">
+                           <bool>true</bool>
+                          </property>
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </widget>
                      </item>
                      <item row="3" column="0">
-                      <layout class="QGridLayout" name="gridLayout8">
-                       <item row="0" column="0">
-                        <widget class="QLabel" name="gpiod_label">
-                         <property name="minimumSize">
-                          <size>
-                           <width>56</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>56</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <property name="font">
-                          <font>
-                           <family>맑은 고딕</family>
-                           <pointsize>10</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>GPIO D</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="1">
-                        <widget class="QComboBox" name="gpiod_config">
-                         <property name="minimumSize">
-                          <size>
-                           <width>100</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>100</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <item>
-                          <property name="text">
-                           <string>Digital Input</string>
+                      <widget class="QFrame" name="frame_gpiod">
+                       <layout class="QGridLayout" name="gridlayout_gpiod">
+                        <property name="leftMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>0</number>
+                        </property>
+                        <item row="0" column="0">
+                         <widget class="QLabel" name="gpiod_label">
+                          <property name="minimumSize">
+                           <size>
+                            <width>56</width>
+                            <height>0</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Digital Output</string>
+                          <property name="maximumSize">
+                           <size>
+                            <width>56</width>
+                            <height>16777215</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Analog Input</string>
+                          <property name="font">
+                           <font>
+                            <family>맑은 고딕</family>
+                            <pointsize>10</pointsize>
+                           </font>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="2">
-                        <widget class="QComboBox" name="gpiod_set">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <item>
                           <property name="text">
-                           <string>Low</string>
+                           <string>GPIO D</string>
                           </property>
-                         </item>
-                         <item>
+                          <property name="buddy">
+                           <cstring>frame_gpiod</cstring>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QComboBox" name="gpiod_config">
+                          <property name="minimumSize">
+                           <size>
+                            <width>100</width>
+                            <height>0</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>100</width>
+                            <height>16777215</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Digital Input</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Digital Output</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Analog Input</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="2">
+                         <widget class="QComboBox" name="gpiod_set">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Low</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>High</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="3">
+                         <widget class="QLineEdit" name="gpiod_get">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="inputMask">
+                           <string notr="true"/>
+                          </property>
                           <property name="text">
-                           <string>High</string>
+                           <string notr="true"/>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="3">
-                        <widget class="QLineEdit" name="gpiod_get">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="inputMask">
-                          <string notr="true"/>
-                         </property>
-                         <property name="text">
-                          <string notr="true"/>
-                         </property>
-                         <property name="maxLength">
-                          <number>4</number>
-                         </property>
-                         <property name="frame">
-                          <bool>true</bool>
-                         </property>
-                         <property name="alignment">
-                          <set>Qt::AlignCenter</set>
-                         </property>
-                         <property name="dragEnabled">
-                          <bool>true</bool>
-                         </property>
-                         <property name="readOnly">
-                          <bool>true</bool>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
+                          <property name="maxLength">
+                           <number>4</number>
+                          </property>
+                          <property name="frame">
+                           <bool>true</bool>
+                          </property>
+                          <property name="alignment">
+                           <set>Qt::AlignCenter</set>
+                          </property>
+                          <property name="dragEnabled">
+                           <bool>true</bool>
+                          </property>
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </widget>
                      </item>
                     </layout>
                    </widget>
