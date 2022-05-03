@@ -3,7 +3,7 @@
 """
 Make Serial command
 """
-from utils import getLogger
+from utils import get_logger
 
 import sys
 import re
@@ -55,10 +55,10 @@ cmd_gpio_4pin = ["CA", "CB", "CC", "CD", "GA", "GB", "GC", "GD"]
 cmd_gpio_2pin = ["CA", "CB", "GA", "GB"]
 
 # command for WIZ2000
-cmd_wiz2000 = [
-    "MB", "SE", "CE", "N0", "N1", "N2", "LF", "AE", "AP", "CT",
-    "AL", "GR", "AM", "CM", "C0", "C1", "C2", "C3", "UP",
-]
+# cmd_wiz2000 = [
+#     "MB", "SE", "CE", "N0", "N1", "N2", "LF", "AE", "AP", "CT",
+#     "AL", "GR", "AM", "CM", "C0", "C1", "C2", "C3", "UP",
+# ]
 # cmd_wiz2000 = ['MB', 'MM', 'SE', 'CE', 'N0', 'N1', 'N2', 'LF', 'QF', 'AE', 'AP', 'CT', 'AL', 'GR', 'AM'] # include channel 2 command
 
 cmd_security = [
@@ -88,17 +88,13 @@ def version_compare(version1, version2):
 
 class WIZMakeCMD:
     def __init__(self):
-        self.logger = getLogger(os.path.expanduser('~'), 'wizconfig')
+        self.logger = get_logger(self.__class__.__name__, os.path.expanduser('~'), 'wizconfig')
 
     def make_header(self, mac_addr, idcode, devname="", set_pw=""):
         cmd_header = []
         cmd_header.append(["MA", mac_addr])
         cmd_header.append(["PW", idcode])
         # print('reset', mac_addr, idcode, set_pw, devname)
-        if devname:
-            if "WIZ2000" in devname:
-                cmd_header.append(["AP", set_pw.decode()])
-
         return cmd_header
 
     def presearch(self, mac_addr, idcode):
@@ -129,10 +125,6 @@ class WIZMakeCMD:
                         cmd_list.append([cmd, ""])
         elif devname in TWO_PORT_DEV or "752" in devname:
             for cmd in cmd_2p_default:
-                cmd_list.append([cmd, ""])
-        elif "WIZ2000" in devname:
-            cmds = cmd_1p_advanced + cmd_wiz2000
-            for cmd in cmds:
                 cmd_list.append([cmd, ""])
         elif devname in SECURITY_DEVICE:
             self.logger.info('[Search] Security device')
@@ -180,10 +172,6 @@ class WIZMakeCMD:
             elif devname in TWO_PORT_DEV or "752" in devname:
                 # for WIZ752SR-12x
                 for cmd in cmd_ch2:
-                    cmd_list.append([cmd, ""])
-            elif "WIZ2000" in devname:
-                cmds = cmd_1p_advanced + cmd_wiz2000
-                for cmd in cmds:
                     cmd_list.append([cmd, ""])
             elif "WIZ510SSL" in devname:
                 for cmd in cmd_security:

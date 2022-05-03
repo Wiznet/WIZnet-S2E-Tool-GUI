@@ -6,7 +6,7 @@ import select
 import os
 
 from PyQt5 import QtCore
-from utils import getLogger
+from utils import get_logger
 
 # from wizsocket.TCPClient import TCPClient
 # from WIZUDPSock import WIZUDPSock
@@ -43,7 +43,7 @@ class certificatethread(QtCore.QThread):
     def __init__(self, sock, dest_mac, idcode, set_pw, filename, ipaddr, port, dev_name, cmd):
         QtCore.QThread.__init__(self)
 
-        self.logger = getLogger(os.path.expanduser('~'), 'wizconfig')
+        self.logger = get_logger(self.__class__.__name__, self.__class__.__name__, os.path.expanduser('~'), 'wizconfig')
 
         self.dest_mac = None
         self.bin_cert_name = filename
@@ -170,7 +170,7 @@ class certificatethread(QtCore.QThread):
 
         try:
             if self.error_noresponse < 0:
-                self.logger.error('error_noresponse:', self.error_noresponse)
+                self.logger.error(f'error_noresponse: {self.error_noresponse}')
                 pass
             else:
                 # print("%r" % self.client.state)
@@ -183,7 +183,7 @@ class certificatethread(QtCore.QThread):
                     # print('check size:', PACKET_SIZE - additional_size)
 
                     if self.filesize < PACKET_SIZE - additional_size:
-                        self.logger.info("Certificate file size: ", self.filesize)
+                        self.logger.info(f"Certificate file size: {self.filesize}")
                         # for WIZ510SSL
                         cmdset = self.cmd + self.data.decode() + DELIMITER
                         self.msg[self.size:] = str.encode(cmdset)

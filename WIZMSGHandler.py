@@ -4,7 +4,7 @@
 import select
 import codecs
 import os
-from utils import getLogger
+from utils import get_logger
 from WIZ750CMDSET import WIZ750CMDSET
 from PyQt5.QtCore import QThread, pyqtSignal
 
@@ -36,7 +36,7 @@ class WIZMSGHandler(QThread):
     def __init__(self, udpsock, cmd_list, what_sock, op_code, timeout):
         QThread.__init__(self)
 
-        self.logger = getLogger(os.path.expanduser('~'), 'wizconfig')
+        self.logger = get_logger(self.__class__.__name__, os.path.expanduser('~'), 'wizconfig')
 
         self.sock = udpsock
         self.msg = bytearray(PACKET_SIZE)
@@ -266,7 +266,7 @@ class DataRefresh(QThread):
     def __init__(self, sock, cmd_list, what_sock, interval):
         QThread.__init__(self)
 
-        self.logger = getLogger(os.path.expanduser('~'), 'wizconfig')
+        self.logger = get_logger(self.__class__.__name__, os.path.expanduser('~'), 'wizconfig')
 
         self.sock = sock
         self.msg = bytearray(PACKET_SIZE)
@@ -327,7 +327,6 @@ class DataRefresh(QThread):
         checknum = 0
 
         while True:
-            self.logger.info('DataRefresh:', checknum)
             self.rcv_list = []
             readready, writeready, errorready = select.select(
                 self.inputs, self.outputs, self.errors, 2)
@@ -336,6 +335,8 @@ class DataRefresh(QThread):
             # sys.stdout.write("iter count: %r " % self.iter)
 
             for sock in readready:
+                self.logger.debug(f'DataRefresh: {checknum}')
+
                 if sock == self.sock.sock:
                     data = self.sock.recvfrom()
                     self.rcv_list.append(data)  # 수신 데이터 저장
