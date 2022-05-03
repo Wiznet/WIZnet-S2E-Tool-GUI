@@ -3,12 +3,10 @@
 
 import select
 import codecs
+import os
+from utils import getLogger
 from WIZ750CMDSET import WIZ750CMDSET
 from PyQt5.QtCore import QThread, pyqtSignal
-
-import logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger()
 
 exitflag = 0
 
@@ -38,6 +36,8 @@ class WIZMSGHandler(QThread):
     def __init__(self, udpsock, cmd_list, what_sock, op_code, timeout):
         QThread.__init__(self)
 
+        self.logger = getLogger(os.path.expanduser('~'), 'wizconfig')
+
         self.sock = udpsock
         self.msg = bytearray(PACKET_SIZE)
         self.size = 0
@@ -45,7 +45,7 @@ class WIZMSGHandler(QThread):
         try:
             self.inputs = [self.sock.sock]
         except Exception as e:
-            print('socket error:', e)
+            self.logger.error('socket error:', e)
             self.terminate()
 
         self.outputs = []
@@ -87,7 +87,7 @@ class WIZMSGHandler(QThread):
                 try:
                     self.msg[self.size:] = str.encode(cmd[0])
                 except Exception as e:
-                    print('[ERROR] makecommands() encode:', cmd[0], e)
+                    self.logger.error('[ERROR] makecommands() encode:', cmd[0], e)
                 self.size += len(cmd[0])
                 if cmd[0] == "MA":
                     # sys.stdout.write('cmd[1]: %r\r\n' % cmd[1])
@@ -97,8 +97,8 @@ class WIZMSGHandler(QThread):
                     try:
                         hex_string = codecs.decode(cmd[1], 'hex')
                     except Exception as e:
-                        print('[ERROR] makecommands() decode:',
-                              cmd[0], cmd[1], e)
+                        self.logger.error(
+                            '[ERROR] makecommands() decode:', cmd[0], cmd[1], e)
 
                     self.msg[self.size:] = hex_string
                     self.dest_mac = hex_string
@@ -109,8 +109,8 @@ class WIZMSGHandler(QThread):
                     try:
                         self.msg[self.size:] = str.encode(cmd[1])
                     except Exception as e:
-                        print('[ERROR] makecommands() encode param:',
-                              cmd[0], cmd[1], e)
+                        self.logger.error(
+                            '[ERROR] makecommands() encode param:', cmd[0], cmd[1], e)
                     self.size += len(cmd[1])
                 if "\r\n" not in cmd[1]:
                     self.msg[self.size:] = str.encode("\r\n")
@@ -118,7 +118,7 @@ class WIZMSGHandler(QThread):
 
                     # print(self.size, self.msg)
         except Exception as e:
-            print('[ERROR] WIZMSGHandler makecommands(): %r' % e)
+            self.logger.error('[ERROR] WIZMSGHandler makecommands(): %r' % e)
 
     def sendcommands(self):
         self.sock.sendto(self.msg)
@@ -138,7 +138,7 @@ class WIZMSGHandler(QThread):
             else:
                 return False
         except Exception as e:
-            print('[ERROR] WIZMSGHandler check_parameter(): %r' % e)
+            self.logger.error('[ERROR] WIZMSGHandler check_parameter(): %r' % e)
 
     # def parseresponse(self):
     def run(self):
@@ -149,7 +149,7 @@ class WIZMSGHandler(QThread):
             elif self.what_sock == 'tcp':
                 self.sendcommandsTCP()
         except Exception as e:
-            print('[ERROR] WIZMSGHandler thread: %r' % e)
+            self.logger.error('[ERROR] WIZMSGHandler thread: %r' % e)
 
         readready, writeready, errorready = select.select(
             self.inputs, self.outputs, self.errors, self.timeout)
@@ -212,7 +212,7 @@ class WIZMSGHandler(QThread):
                                         if self.check_parameter(replylists[i]):
                                             self.st_list.append(replylists[i][2:])
                             except Exception as e:
-                                print('[ERROR] WIZMSGHandler makecommands(): %r' % e)
+                                self.logger.error('[ERROR] WIZMSGHandler makecommands(): %r' % e)
                         elif self.opcode == OP_FWUP:
                             for i in range(0, len(replylists)):
                                 if b'MA' in replylists[i][:2]:
@@ -265,6 +265,8 @@ class DataRefresh(QThread):
 
     def __init__(self, sock, cmd_list, what_sock, interval):
         QThread.__init__(self)
+
+        self.logger = getLogger(os.path.expanduser('~'), 'wizconfig')
 
         self.sock = sock
         self.msg = bytearray(PACKET_SIZE)
@@ -319,13 +321,13 @@ class DataRefresh(QThread):
             elif self.what_sock == 'tcp':
                 self.sendcommandsTCP()
         except Exception as e:
-            print(e)
+            self.logger.error(str(e))
 
         # replylists = None
         checknum = 0
 
         while True:
-            print('Refresh', checknum)
+            self.logger.info('DataRefresh:', checknum)
             self.rcv_list = []
             readready, writeready, errorready = select.select(
                 self.inputs, self.outputs, self.errors, 2)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from wizsocket.TCPClient import TCPClient
-from WIZMakeCMD import WIZMakeCMD, version_compare, ONE_PORT_DEV, TWO_PORT_DEV
+from WIZMakeCMD import WIZMakeCMD, version_compare, ONE_PORT_DEV, TWO_PORT_DEV, SECURITY_DEVICE
 from WIZ2000CMDSET import WIZ2000CMDSET
 from WIZ752CMDSET import WIZ752CMDSET
 from WIZ750CMDSET import WIZ750CMDSET
@@ -10,6 +10,7 @@ from WIZUDPSock import WIZUDPSock
 from FWUploadThread import FWUploadThread
 from WIZMSGHandler import WIZMSGHandler, DataRefresh
 from certificatethread import certificatethread
+from utils import getLogger
 
 import sys
 import time
@@ -18,30 +19,11 @@ import os
 import subprocess
 import base64
 # import ssl
-# from urllib.parse import urlsplit
 
-# need to install package
+# Additional package
 from PyQt5 import QtWidgets, QtCore, QtGui, uic
 import ifaddr
 
-import logging
-import logging.handlers
-
-testlog = logging.getLogger('testlogging')
-testlog.setLevel(logging.INFO)
-
-fileformatter = logging.Formatter(
-    '[%(levelname)s][%(asctime)s]-(%(funcName)s)(%(lineno)s) %(message)s')
-
-fileHandler = logging.FileHandler('./toollogging.log', encoding='utf-8')
-streamHandler = logging.StreamHandler()
-
-fileHandler.setFormatter(fileformatter)
-streamHandler.setFormatter(fileformatter)
-
-# log handler
-testlog.addHandler(fileHandler)
-testlog.addHandler(streamHandler)
 
 OP_SEARCHALL = 1
 OP_GETCOMMAND = 2
@@ -56,7 +38,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.4.3.1 Dev'
+VERSION = 'V1.4.3.3 Dev'
 
 
 def resource_path(relative_path):
@@ -76,7 +58,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
         self.setWindowTitle('WIZnet S2E Configuration Tool ' + VERSION)
 
-        self.logging = testlog
+        self.logging = getLogger(os.path.expanduser('~'), 'wizconfig')
 
         # GUI font size init
         self.midfont = None
@@ -300,19 +282,22 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         self.btn_factory.addAction(self.factory_firmware_action)
 
     def tab_changed(self):
-        # self.selected_devinfo()
+        """
+        When tab changed
+        - check user IO tab
+        """
         if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
-            if self.generalTab.currentIndex() == 0:
+            if self.generalTab.currentIndex() == 2:
+                # Expansion GPIO tab
+                self.gpio_check()
+                self.get_refresh_time()
+            else:
                 try:
                     if self.datarefresh is not None:
                         if self.datarefresh.isRunning():
                             self.datarefresh.terminate()
                 except Exception as e:
                     self.logging.error(e)
-            elif self.generalTab.currentIndex() == 2:
-                # Expansion GPIO tab
-                self.gpio_check()
-                self.get_refresh_time()
 
     def net_ifs_selected(self, netifs):
         ifs = netifs.text().split(':')
@@ -493,7 +478,11 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.show_msgbox("Warning", "Local IP information could not be found. Check the Network configuration.", QtWidgets.QMessageBox.Warning)
 
     def gpio_check(self):
-        gpio_list = ['a', 'b', 'c', 'd']
+        if 'WIZ5XX' in self.curr_dev:
+            gpio_list = ['a', 'b']
+        else:
+            gpio_list = ['a', 'b', 'c', 'd']
+
         for name in gpio_list:
             gpio_config = getattr(self, 'gpio' + name + '_config')
             gpio_set = getattr(self, 'gpio' + name + '_set')
@@ -520,7 +509,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         if 'WIZ107' in self.curr_dev or 'WIZ108' in self.curr_dev:
             pass
         else:
-            if 'WIZ510SSL' in self.curr_dev:
+            if self.curr_dev in SECURITY_DEVICE:
                 self.radiobtn_group_s0.hide()
                 self.radiobtn_group_s1.hide()
                 self.group_dtrdsr.show()
@@ -529,7 +518,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 self.radiobtn_group_s1.show()
                 self.group_dtrdsr.hide()
 
-        if 'WIZ510SSL' in self.curr_dev:
+        if self.curr_dev in SECURITY_DEVICE:
             self.tcp_timeout.setEnabled(True)
             self.factory_setting_action.setEnabled(True)
             self.factory_firmware_action.setEnabled(True)
@@ -556,7 +545,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
     def general_tab_config(self):
         # General tab ui setup by device
-        if 'WIZ510SSL' in self.curr_dev:
+        if self.curr_dev in SECURITY_DEVICE:
             # self.generalTab.insertTab(3, self.wiz510ssl_tab, self.wiz510ssl_tab_text)
             self.generalTab.insertTab(3, self.mqtt_tab, self.mqtt_tab_text)
             self.generalTab.insertTab(4, self.certificate_tab, self.certificate_tab_text)
@@ -574,14 +563,22 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         """
         - WIZ750SR
         - WIZ750SR-100
-        - WIZ5XXSR-RP
+        - WIZ5XXSR-RP (only use A,B)
         """
         if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
             self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
             self.generalTab.setTabEnabled(2, True)
+            if 'WIZ5XX' in self.curr_dev:
+                # Use IO A, B only
+                self.frame_gpioc.setEnabled(False)
+                self.frame_gpiod.setEnabled(False)
+            else:
+                self.frame_gpioc.setEnabled(True)
+                self.frame_gpiod.setEnabled(True)
         else:
             if 'WIZ510SSL' in self.curr_dev:
                 if len(self.generalTab) == 5:
+                    # Remove userio tab
                     self.generalTab.removeTab(2)
                 elif len(self.generalTab) == 4:
                     pass
@@ -590,7 +587,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
     def channel_tab_config(self):
         # channel tab config
-        if self.curr_dev in ONE_PORT_DEV or 'WIZ750' in self.curr_dev or 'WIZ510SSL' in self.curr_dev:
+        if self.curr_dev in ONE_PORT_DEV or 'WIZ750' in self.curr_dev or self.curr_dev in SECURITY_DEVICE:
             self.channel_tab.removeTab(1)
             self.channel_tab.setTabEnabled(0, True)
         elif self.curr_dev in TWO_PORT_DEV or 'WIZ752' in self.curr_dev:
@@ -797,7 +794,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 else:
                     self.code = self.searchcode_input.text()
 
-                cmd_list = self.wizmakecmd.get_gpiovalue(mac_addr, self.code)
+                cmd_list = self.wizmakecmd.get_gpiovalue(mac_addr, self.code, self.curr_dev)
                 # print('refresh_gpio', cmd_list)
 
                 if self.unicast_ip.isChecked():
@@ -1363,7 +1360,10 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 if 'RR' in dev_data:
                     self.ch2_reconnection.setText(dev_data['RR'])
 
-            elif 'WIZ510SSL' in self.curr_dev:
+            elif self.curr_dev in SECURITY_DEVICE:
+                """
+                Security device options
+                """
                 # New options for WIZ510SSL
                 # mqtt options
                 if 'QU' in dev_data:
@@ -1487,7 +1487,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 setcmd['DG'] = str(self.serial_debug.currentIndex())
 
             # Network - channel 1
-            if 'WIZ510SSL' in self.curr_dev:
+            if self.curr_dev in SECURITY_DEVICE:
                 if self.ch1_tcpclient.isChecked():
                     setcmd['OP'] = '0'
                 elif self.ch1_tcpserver.isChecked():
@@ -1543,7 +1543,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 # initial value
                 upper_val = '0'
                 lower_val = '0'
-                if 'WIZ510SSL' in self.curr_dev:
+                if self.curr_dev in SECURITY_DEVICE:
                     if self.checkbox_enable_dtr.isChecked():
                         upper_val = '1'
                     else:
@@ -1625,8 +1625,8 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                     setcmd['RA'] = '0'
                 # reconnection - channel 2
                 setcmd['RR'] = self.ch2_reconnection.text()
-            if 'WIZ510SSL' in self.curr_dev:
-                # New options for WIZ510SSL
+            if self.curr_dev in SECURITY_DEVICE:
+                # New options for WIZ510SSL (Security devices)
                 # mqtt options
                 setcmd['QU'] = self.lineedit_mqtt_username.text()
                 setcmd['QP'] = self.lineedit_mqtt_password.text()
@@ -1733,7 +1733,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                                           (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
                         self.msg_invalid(setcmd.get(setcmd_cmd[i]))
                         invalid_flag += 1
-            elif 'WIZ510SSL' in self.curr_dev:
+            elif self.curr_dev in SECURITY_DEVICE:
                 self.logging.info('WIZ510SSL device setting...')
                 invalid_flag = 0
                 # ! temp comment to develop
@@ -1974,7 +1974,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
                 self.logging.info(self.fw_filesize)
 
-            if 'WIZ510SSL' in self.curr_dev:
+            if self.curr_dev in SECURITY_DEVICE:
                 print('WIZ510SSL update')
                 # Get current bank number
                 doc = QtGui.QTextDocument()
