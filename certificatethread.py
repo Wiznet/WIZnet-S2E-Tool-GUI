@@ -43,7 +43,7 @@ class certificatethread(QtCore.QThread):
     def __init__(self, sock, dest_mac, idcode, set_pw, filename, ipaddr, port, dev_name, cmd):
         QtCore.QThread.__init__(self)
 
-        self.logger = get_logger(self.__class__.__name__, self.__class__.__name__, os.path.expanduser('~'), 'wizconfig')
+        self.logger = get_logger(self.__class__.__name__, os.path.expanduser('~'), 'wizconfig')
 
         self.dest_mac = None
         self.bin_cert_name = filename
@@ -174,7 +174,7 @@ class certificatethread(QtCore.QThread):
                 pass
             else:
                 # print("%r" % self.client.state)
-                self.logger.info("Header:", self.size, self.msg)
+                self.logger.info(f"Header: size: {self.size}, msg: {self.msg}")
                 try:
                     additional_size = 0
                     if self.curr_ptr == 0:
