@@ -39,7 +39,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.4.3.3 Dev'
+VERSION = 'V1.4.3.4 Dev'
 
 
 def resource_path(relative_path):
@@ -343,7 +343,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         self.net_list = []
 
         for adapter in adapters:
-            # print("Net Interface:", adapter.nice_name)
+            self.logger.debug(f"Net Interface: {adapter.nice_name}")
             for ip in adapter.ips:
                 if len(ip.ip) > 6:
                     ipv4_addr = ip.ip
@@ -2184,7 +2184,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             # Need to verify selected certificate
 
     def save_cert_btn_clicked(self, cmd):
-        self.logger.debug("save_cert_btn_clicked()", cmd)
+        self.logger.debug(cmd)
         self.selected_devinfo()
         mac_addr = self.curr_mac
 
