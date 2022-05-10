@@ -39,7 +39,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.4.3.4 Dev'
+VERSION = 'V1.4.3.5 Dev'
 
 
 def resource_path(relative_path):
@@ -293,12 +293,14 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         """
         if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
             if self.generalTab.currentIndex() == 2:
+                self.logger.debug(f'Start DataRefresh: {self.curr_dev}, currentTab: {self.generalTab.currentIndex()}')
                 # Expansion GPIO tab
                 self.gpio_check()
                 self.get_refresh_time()
             else:
                 try:
                     if self.datarefresh is not None:
+                        self.logger.debug(f'Stop DataRefresh: {self.curr_dev}, currentTab: {self.generalTab.currentIndex()}')
                         if self.datarefresh.isRunning():
                             self.datarefresh.terminate()
                 except Exception as e:
@@ -489,8 +491,8 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             gpio_list = ['a', 'b', 'c', 'd']
 
         for name in gpio_list:
-            gpio_config = getattr(self, 'gpio' + name + '_config')
-            gpio_set = getattr(self, 'gpio' + name + '_set')
+            gpio_config = getattr(self, f'gpio{name}_config')
+            gpio_set = getattr(self, f'gpio{name}_set')
             if gpio_config.currentIndex() == 1:
                 gpio_set.setEnabled(True)
             else:
@@ -551,14 +553,16 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
     def general_tab_config(self):
         # General tab ui setup by device
         if self.curr_dev in SECURITY_DEVICE:
-            # self.generalTab.insertTab(3, self.wiz510ssl_tab, self.wiz510ssl_tab_text)
-            self.generalTab.insertTab(3, self.mqtt_tab, self.mqtt_tab_text)
-            self.generalTab.insertTab(4, self.certificate_tab, self.certificate_tab_text)
+            self.logger.debug(f'general_tab_config() length: {len(self.generalTab)}')
+            if len(self.generalTab) < 4:
+                # self.generalTab.insertTab(3, self.wiz510ssl_tab, self.wiz510ssl_tab_text)
+                self.generalTab.insertTab(3, self.mqtt_tab, self.mqtt_tab_text)
+                self.generalTab.insertTab(4, self.certificate_tab, self.certificate_tab_text)
 
-            self.generalTab.setTabEnabled(3, True)
-            self.generalTab.setTabEnabled(4, True)
-            # self.generalTab.setTabEnabled(5, True)
-            # self.group_setting_pw.setEnabled(False)
+                self.generalTab.setTabEnabled(3, True)
+                self.generalTab.setTabEnabled(4, True)
+                # self.generalTab.setTabEnabled(5, True)
+                # self.group_setting_pw.setEnabled(False)
         else:
             # self.generalTab.removeTab(5)
             self.generalTab.removeTab(4)
@@ -571,13 +575,23 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         - WIZ5XXSR-RP (only use A,B)
         """
         if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
-            self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
-            self.generalTab.setTabEnabled(2, True)
+            # ! Check current tab length
+            self.logger.debug(f'totalTab: {len(self.generalTab)}, currentTab: {self.generalTab.currentIndex()}')
+            # self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
+            # self.generalTab.setTabEnabled(2, True)
             if 'WIZ5XX' in self.curr_dev:
+                if len(self.generalTab) == 4:
+                    # Basic settings / User I/O / Options / MQTT Options / Certificate manager
+                    self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
+                    self.generalTab.setTabEnabled(2, True)
                 # Use IO A, B only
                 self.frame_gpioc.setEnabled(False)
                 self.frame_gpiod.setEnabled(False)
             else:
+                if len(self.generalTab) == 2:
+                    # Basic settings / User I/O / Options
+                    self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
+                    self.generalTab.setTabEnabled(2, True)
                 self.frame_gpioc.setEnabled(True)
                 self.frame_gpiod.setEnabled(True)
         else:
@@ -586,6 +600,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                     # Remove userio tab
                     self.generalTab.removeTab(2)
                 elif len(self.generalTab) == 4:
+                    # Already removed userio tab
                     pass
             else:
                 self.generalTab.removeTab(2)
@@ -1127,9 +1142,10 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
     def dev_clicked(self):
         # dev_info = []
         # clicked_mac = ""
-        if self.generalTab.currentIndex() == 2 and 'WIZ750' in self.curr_dev:
-            self.gpio_check()
-            self.get_refresh_time()
+        if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
+            if self.generalTab.currentIndex() == 2:
+                self.gpio_check()
+                self.get_refresh_time()
         # for currentItem in self.list_device.selectedItems():
             # print('Click info:', currentItem, currentItem.row(), currentItem.column(), currentItem.text())
             # print('clicked', self.list_device.selectedItems()[0].text())
@@ -1729,7 +1745,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                         self.msg_invalid(setcmd.get(setcmd_cmd[i]))
                         invalid_flag += 1
             elif self.curr_dev in SECURITY_DEVICE:
-                self.logger.info('WIZ510SSL device setting...')
+                self.logger.info('Security device setting...')
                 invalid_flag = 0
                 # ! temp comment to develop
                 # setcmd_cmd = list(setcmd.keys())
@@ -1970,7 +1986,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 self.logger.info(self.fw_filesize)
 
             if self.curr_dev in SECURITY_DEVICE:
-                print('WIZ510SSL update')
+                print('SECURITY_DEVICE update')
                 # Get current bank number
                 doc = QtGui.QTextDocument()
                 doc.setHtml(self.label_current_bank.text())

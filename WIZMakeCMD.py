@@ -91,6 +91,9 @@ class WIZMakeCMD:
         self.logger = get_logger(self.__class__.__name__, os.path.expanduser('~'), 'wizconfig')
 
     def make_header(self, mac_addr, idcode, devname="", set_pw=""):
+        """
+        Common command set
+        """
         cmd_header = []
         cmd_header.append(["MA", mac_addr])
         cmd_header.append(["PW", idcode])
@@ -150,12 +153,18 @@ class WIZMakeCMD:
     # Set device
     # TODO: device profile 적용
     def setcommand(self, mac_addr, idcode, set_pw, command_list, param_list, devname, version):
+        """
+        Make device setting command set
+        - set commands + get commands
+        """
         cmd_list = self.make_header(mac_addr, idcode, devname=devname, set_pw=set_pw)
         # print('Macaddr: %s' % mac_addr)
         try:
+            # Set commands
             for i in range(len(command_list)):
                 cmd_list.append([command_list[i], param_list[i]])
 
+            # Get commands
             if devname in ONE_PORT_DEV:
                 # WIZ107SR/WIZ108SR
                 if "WIZ107SR" in devname or "WIZ108SR" in devname:
@@ -173,7 +182,7 @@ class WIZMakeCMD:
                 # for WIZ752SR-12x
                 for cmd in cmd_ch2:
                     cmd_list.append([cmd, ""])
-            elif "WIZ510SSL" in devname:
+            elif devname in SECURITY_DEVICE:
                 for cmd in cmd_security:
                     cmd_list.append([cmd, ""])
             cmd_list.append(["SV", ""])  # save device setting

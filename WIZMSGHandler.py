@@ -335,7 +335,7 @@ class DataRefresh(QThread):
             # sys.stdout.write("iter count: %r " % self.iter)
 
             for sock in readready:
-                self.logger.debug(f'DataRefresh: {checknum}')
+                self.logger.info(f'DataRefresh: {checknum}')
 
                 if sock == self.sock.sock:
                     data = self.sock.recvfrom()
