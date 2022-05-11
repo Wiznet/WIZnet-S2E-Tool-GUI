@@ -40,7 +40,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.4.3.6 Dev'
+VERSION = 'V1.4.3.7 Dev'
 
 
 def resource_path(relative_path):
@@ -60,11 +60,13 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         super().__init__()
         self.setupUi(self)
 
-        self.setWindowTitle('WIZnet S2E Configuration Tool ' + VERSION)
+        self.setWindowTitle(f'WIZnet S2E Configuration Tool {VERSION}')
 
         self.logger = get_logger(self.__class__.__name__, os.path.expanduser('~'), 'wizconfig')
         if 'Dev' in VERSION:
             self.logger.setLevel(logging.DEBUG)
+
+        self.logger.info(f'Start configuration tool (version: {VERSION})')
 
         # GUI font size init
         self.midfont = None
@@ -296,7 +298,8 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         When tab changed
         - check user IO tab
         """
-        if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
+        # if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
+        if 'WIZ750' in self.curr_dev:
             if self.generalTab.currentIndex() == 2:
                 self.logger.debug(f'Start DataRefresh: {self.curr_dev}, currentTab: {self.generalTab.currentIndex()}')
                 # Expansion GPIO tab
@@ -568,7 +571,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
     def general_tab_config(self):
         # General tab ui setup by device
         if self.curr_dev in SECURITY_DEVICE:
-            self.logger.debug(f'general_tab_config() length: {len(self.generalTab)}')
+            # self.logger.debug(f'general_tab_config() length: {len(self.generalTab)}')
             if len(self.generalTab) < 4:
                 # self.generalTab.insertTab(3, self.wiz510ssl_tab, self.wiz510ssl_tab_text)
                 self.generalTab.insertTab(3, self.mqtt_tab, self.mqtt_tab_text)
@@ -589,19 +592,21 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         - WIZ750SR-100
         - WIZ5XXSR-RP (only use A,B)
         """
-        if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
+        # if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
+        if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev:
             # ! Check current tab length
             self.logger.debug(f'totalTab: {len(self.generalTab)}, currentTab: {self.generalTab.currentIndex()}')
             # self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
             # self.generalTab.setTabEnabled(2, True)
             if 'WIZ5XXSR' in self.curr_dev:
-                if len(self.generalTab) == 4:
-                    # Basic settings / User I/O / Options / MQTT Options / Certificate manager
-                    self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
-                    self.generalTab.setTabEnabled(2, True)
-                # Use IO A, B only
-                self.frame_gpioc.setEnabled(False)
-                self.frame_gpiod.setEnabled(False)
+                # if len(self.generalTab) == 4:
+                #     # Basic settings / User I/O / Options / MQTT Options / Certificate manager
+                #     self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
+                #     self.generalTab.setTabEnabled(2, True)
+                # # Use IO A, B only
+                # self.frame_gpioc.setEnabled(False)
+                # self.frame_gpiod.setEnabled(False)
+                pass
             else:
                 if len(self.generalTab) == 2:
                     # Basic settings / User I/O / Options
@@ -610,15 +615,16 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 self.frame_gpioc.setEnabled(True)
                 self.frame_gpiod.setEnabled(True)
         else:
-            if 'WIZ510SSL' in self.curr_dev:
+            # if 'WIZ510SSL' in self.curr_dev:
+            if self.curr_dev in SECURITY_DEVICE:
                 if len(self.generalTab) == 5:
                     # Remove userio tab
                     self.generalTab.removeTab(2)
                 elif len(self.generalTab) == 4:
                     # Already removed userio tab
                     pass
-            else:
-                self.generalTab.removeTab(2)
+            # else:
+            #     self.generalTab.removeTab(2)
 
     def channel_tab_config(self):
         # channel tab config
@@ -1157,7 +1163,8 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
     def dev_clicked(self):
         # dev_info = []
         # clicked_mac = ""
-        if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
+        # if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
+        if 'WIZ750' in self.curr_dev:
             if self.generalTab.currentIndex() == 2:
                 self.gpio_check()
                 self.get_refresh_time()
