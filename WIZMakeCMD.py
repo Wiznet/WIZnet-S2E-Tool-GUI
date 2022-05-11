@@ -68,6 +68,8 @@ cmd_security = [
     "NP", "SP", "UN", "ST", "EC", "SC", "TR", "QU", "QP", "QC",
     "QK", "PU", "U0", "U1", "U2", "QO", "RC", "CE", "BA"
 ]
+# 2022.05.10 add for WIZ5XXSR-RP
+cmd_security_added = ['SO']
 
 # Command list
 cmd_1p_default = cmd_ch1
@@ -133,6 +135,9 @@ class WIZMakeCMD:
             self.logger.info('[Search] Security device')
             for cmd in cmd_security:
                 cmd_list.append([cmd, ""])
+            if 'WIZ5XXSR' in devname:
+                for cmd in cmd_security_added:
+                    cmd_list.append([cmd, ""])
         else:
             pass
 
@@ -185,6 +190,9 @@ class WIZMakeCMD:
             elif devname in SECURITY_DEVICE:
                 for cmd in cmd_security:
                     cmd_list.append([cmd, ""])
+                if 'WIZ5XXSR' in devname:
+                    for cmd in cmd_security_added:
+                        cmd_list.append([cmd, ""])
             cmd_list.append(["SV", ""])  # save device setting
             cmd_list.append(["RT", ""])  # Device reboot
             # print("setcommand()", cmd_list)

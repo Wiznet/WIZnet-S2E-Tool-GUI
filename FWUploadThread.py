@@ -156,11 +156,13 @@ class FWUploadThread(QThread):
 
             self.uploading_size.emit(3)
         else:
+            params = None
             self.logger.warning('No response from device. Check the network or device status.')
             self.error_flag.emit(-1)
             self.error_noresponse = -1
         try:
-            self.client = TCPClient(2, params[0], int(params[1]))
+            if params is not None:
+                self.client = TCPClient(2, params[0], int(params[1]))
         except Exception as e:
             self.logger.error(str(e))
         try:
@@ -340,7 +342,7 @@ class FWUploadThread(QThread):
             if self.conf_sock is None:
                 # self.isConnected = False
                 self.logger.warning('TCP connection failed!: %s' % self.conf_sock)
-                self.error_flag.emit(-3)
+                self.error_flag.emit(-2)
                 self.terminate()
             else:
                 self.isConnected = True

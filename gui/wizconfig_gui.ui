@@ -12,7 +12,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>949</width>
+    <width>938</width>
     <height>781</height>
    </rect>
   </property>
@@ -1523,6 +1523,615 @@
                 </item>
                </layout>
               </item>
+              <item row="0" column="2">
+               <layout class="QGridLayout" name="gridLayout_11">
+                <property name="verticalSpacing">
+                 <number>7</number>
+                </property>
+                <item row="1" column="0">
+                 <widget class="QGroupBox" name="ch1_packing">
+                  <property name="minimumSize">
+                   <size>
+                    <width>210</width>
+                    <height>100</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>420</width>
+                    <height>200</height>
+                   </size>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <family>맑은 고딕</family>
+                    <pointsize>8</pointsize>
+                   </font>
+                  </property>
+                  <property name="title">
+                   <string>TCP Keep-alive interval</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_43">
+                   <item row="0" column="0">
+                    <widget class="QCheckBox" name="ch1_keepalive_enable">
+                     <property name="font">
+                      <font>
+                       <family>맑은 고딕</family>
+                       <pointsize>8</pointsize>
+                      </font>
+                     </property>
+                     <property name="text">
+                      <string>Enable</string>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="0">
+                    <layout class="QGridLayout" name="gridLayout_41">
+                     <property name="horizontalSpacing">
+                      <number>6</number>
+                     </property>
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="label_128">
+                       <property name="minimumSize">
+                        <size>
+                         <width>85</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>170</width>
+                         <height>45</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>Initial Interval</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QLineEdit" name="ch1_keepalive_initial">
+                       <property name="minimumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>00</string>
+                       </property>
+                       <property name="maxLength">
+                        <number>5</number>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="2">
+                      <widget class="QLabel" name="label_158">
+                       <property name="minimumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>ms</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item row="2" column="0">
+                    <layout class="QGridLayout" name="gridLayout_42">
+                     <property name="horizontalSpacing">
+                      <number>6</number>
+                     </property>
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="label_129">
+                       <property name="minimumSize">
+                        <size>
+                         <width>85</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>170</width>
+                         <height>45</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>Retry interval</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QLineEdit" name="ch1_keepalive_retry">
+                       <property name="minimumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>0</string>
+                       </property>
+                       <property name="maxLength">
+                        <number>5</number>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="2">
+                      <widget class="QLabel" name="label_157">
+                       <property name="minimumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>ms</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item row="3" column="0">
+                 <widget class="QGroupBox" name="groupbox_ch1_timeout">
+                  <property name="minimumSize">
+                   <size>
+                    <width>210</width>
+                    <height>35</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>420</width>
+                    <height>100</height>
+                   </size>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <family>맑은 고딕</family>
+                    <pointsize>8</pointsize>
+                   </font>
+                  </property>
+                  <property name="title">
+                   <string>Timeout</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_75">
+                   <property name="topMargin">
+                    <number>6</number>
+                   </property>
+                   <item row="0" column="0">
+                    <layout class="QGridLayout" name="gridLayout_78">
+                     <property name="horizontalSpacing">
+                      <number>6</number>
+                     </property>
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="label_ssl_recv_timeout">
+                       <property name="minimumSize">
+                        <size>
+                         <width>85</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>170</width>
+                         <height>45</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>SSL receive</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QLineEdit" name="lineedit_ch1_ssl_recv_timeout">
+                       <property name="minimumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>0</string>
+                       </property>
+                       <property name="maxLength">
+                        <number>5</number>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="2">
+                      <widget class="QLabel" name="label_166">
+                       <property name="minimumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>ms</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item row="0" column="0">
+                 <widget class="QGroupBox" name="group_packing_5">
+                  <property name="minimumSize">
+                   <size>
+                    <width>210</width>
+                    <height>90</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>420</width>
+                    <height>180</height>
+                   </size>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <family>맑은 고딕</family>
+                    <pointsize>8</pointsize>
+                   </font>
+                  </property>
+                  <property name="title">
+                   <string>Timer interval</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_40">
+                   <property name="topMargin">
+                    <number>9</number>
+                   </property>
+                   <item row="0" column="0">
+                    <layout class="QGridLayout" name="gridLayout_9">
+                     <property name="horizontalSpacing">
+                      <number>6</number>
+                     </property>
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="label_135">
+                       <property name="minimumSize">
+                        <size>
+                         <width>85</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>170</width>
+                         <height>50</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>Inactivity timer</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QLineEdit" name="ch1_inact_timer">
+                       <property name="minimumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>57</width>
+                         <height>16777215</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;0~65535 (sec.)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>65535</string>
+                       </property>
+                       <property name="maxLength">
+                        <number>5</number>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="2">
+                      <widget class="QLabel" name="label_156">
+                       <property name="minimumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>sec</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item row="1" column="0">
+                    <layout class="QGridLayout" name="gridLayout_39">
+                     <property name="horizontalSpacing">
+                      <number>6</number>
+                     </property>
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="ch1_reconnection_label">
+                       <property name="minimumSize">
+                        <size>
+                         <width>85</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>170</width>
+                         <height>50</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>Reconnection
+interval</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QLineEdit" name="ch1_reconnection">
+                       <property name="minimumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>0</string>
+                       </property>
+                       <property name="maxLength">
+                        <number>5</number>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="2">
+                      <widget class="QLabel" name="label_155">
+                       <property name="minimumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>ms</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item row="4" column="0">
+                 <widget class="QFrame" name="frame_8">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="minimumSize">
+                   <size>
+                    <width>130</width>
+                    <height>45</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>260</width>
+                    <height>200</height>
+                   </size>
+                  </property>
+                  <property name="frameShape">
+                   <enum>QFrame::StyledPanel</enum>
+                  </property>
+                  <property name="frameShadow">
+                   <enum>QFrame::Raised</enum>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
               <item row="0" column="1">
                <layout class="QGridLayout" name="gr2dLayout">
                 <property name="verticalSpacing">
@@ -2195,485 +2804,6 @@
                     </layout>
                    </item>
                   </layout>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item row="0" column="2">
-               <layout class="QGridLayout" name="gridLayout_11">
-                <property name="verticalSpacing">
-                 <number>7</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="QGroupBox" name="group_packing_5">
-                  <property name="minimumSize">
-                   <size>
-                    <width>210</width>
-                    <height>90</height>
-                   </size>
-                  </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>420</width>
-                    <height>180</height>
-                   </size>
-                  </property>
-                  <property name="font">
-                   <font>
-                    <family>맑은 고딕</family>
-                    <pointsize>8</pointsize>
-                   </font>
-                  </property>
-                  <property name="title">
-                   <string>Timer interval</string>
-                  </property>
-                  <layout class="QGridLayout" name="gridLayout_40">
-                   <property name="topMargin">
-                    <number>9</number>
-                   </property>
-                   <item row="0" column="0">
-                    <layout class="QGridLayout" name="gridLayout_9">
-                     <property name="horizontalSpacing">
-                      <number>6</number>
-                     </property>
-                     <item row="0" column="0">
-                      <widget class="QLabel" name="label_135">
-                       <property name="minimumSize">
-                        <size>
-                         <width>85</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>170</width>
-                         <height>50</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Inactivity timer</string>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="1">
-                      <widget class="QLineEdit" name="ch1_inact_timer">
-                       <property name="minimumSize">
-                        <size>
-                         <width>57</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>57</width>
-                         <height>16777215</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;0~65535 (sec.)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="text">
-                        <string>65535</string>
-                       </property>
-                       <property name="maxLength">
-                        <number>5</number>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="2">
-                      <widget class="QLabel" name="label_156">
-                       <property name="minimumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>sec</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item row="1" column="0">
-                    <layout class="QGridLayout" name="gridLayout_39">
-                     <property name="horizontalSpacing">
-                      <number>6</number>
-                     </property>
-                     <item row="0" column="0">
-                      <widget class="QLabel" name="ch1_reconnection_label">
-                       <property name="minimumSize">
-                        <size>
-                         <width>85</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>170</width>
-                         <height>50</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Reconnection
-interval</string>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="1">
-                      <widget class="QLineEdit" name="ch1_reconnection">
-                       <property name="minimumSize">
-                        <size>
-                         <width>57</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>57</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="text">
-                        <string>0</string>
-                       </property>
-                       <property name="maxLength">
-                        <number>5</number>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="2">
-                      <widget class="QLabel" name="label_155">
-                       <property name="minimumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>ms</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                  </layout>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QGroupBox" name="ch1_packing">
-                  <property name="minimumSize">
-                   <size>
-                    <width>210</width>
-                    <height>100</height>
-                   </size>
-                  </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>420</width>
-                    <height>200</height>
-                   </size>
-                  </property>
-                  <property name="font">
-                   <font>
-                    <family>맑은 고딕</family>
-                    <pointsize>8</pointsize>
-                   </font>
-                  </property>
-                  <property name="title">
-                   <string>TCP Keep-alive interval</string>
-                  </property>
-                  <layout class="QGridLayout" name="gridLayout_43">
-                   <item row="0" column="0">
-                    <widget class="QCheckBox" name="ch1_keepalive_enable">
-                     <property name="font">
-                      <font>
-                       <family>맑은 고딕</family>
-                       <pointsize>8</pointsize>
-                      </font>
-                     </property>
-                     <property name="text">
-                      <string>Enable</string>
-                     </property>
-                     <property name="checked">
-                      <bool>true</bool>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="1" column="0">
-                    <layout class="QGridLayout" name="gridLayout_41">
-                     <property name="horizontalSpacing">
-                      <number>6</number>
-                     </property>
-                     <item row="0" column="0">
-                      <widget class="QLabel" name="label_128">
-                       <property name="minimumSize">
-                        <size>
-                         <width>85</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>170</width>
-                         <height>45</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Initial Interval</string>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="1">
-                      <widget class="QLineEdit" name="ch1_keepalive_initial">
-                       <property name="minimumSize">
-                        <size>
-                         <width>57</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>57</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="text">
-                        <string>00</string>
-                       </property>
-                       <property name="maxLength">
-                        <number>5</number>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="2">
-                      <widget class="QLabel" name="label_158">
-                       <property name="minimumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>ms</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item row="2" column="0">
-                    <layout class="QGridLayout" name="gridLayout_42">
-                     <property name="horizontalSpacing">
-                      <number>6</number>
-                     </property>
-                     <item row="0" column="0">
-                      <widget class="QLabel" name="label_129">
-                       <property name="minimumSize">
-                        <size>
-                         <width>85</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>170</width>
-                         <height>45</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Retry interval</string>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="1">
-                      <widget class="QLineEdit" name="ch1_keepalive_retry">
-                       <property name="minimumSize">
-                        <size>
-                         <width>57</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>57</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="text">
-                        <string>0</string>
-                       </property>
-                       <property name="maxLength">
-                        <number>5</number>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="2">
-                      <widget class="QLabel" name="label_157">
-                       <property name="minimumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>ms</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                  </layout>
-                 </widget>
-                </item>
-                <item row="2" column="0">
-                 <widget class="QFrame" name="frame">
-                  <property name="minimumSize">
-                   <size>
-                    <width>210</width>
-                    <height>80</height>
-                   </size>
-                  </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>420</width>
-                    <height>160</height>
-                   </size>
-                  </property>
-                  <property name="frameShape">
-                   <enum>QFrame::StyledPanel</enum>
-                  </property>
-                  <property name="frameShadow">
-                   <enum>QFrame::Raised</enum>
-                  </property>
                  </widget>
                 </item>
                </layout>
@@ -5273,25 +5403,37 @@ interval</string>
                     <number>3</number>
                    </property>
                    <item row="0" column="0">
-                    <widget class="QLabel" name="label_current_bank">
+                    <widget class="QComboBox" name="combobox_current_bank">
                      <property name="minimumSize">
                       <size>
-                       <width>60</width>
-                       <height>30</height>
+                       <width>110</width>
+                       <height>25</height>
                       </size>
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>60</width>
-                       <height>40</height>
+                       <width>150</width>
+                       <height>25</height>
                       </size>
                      </property>
-                     <property name="text">
-                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:24pt; font-weight:600;&quot;&gt;-&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     <property name="font">
+                      <font>
+                       <family>맑은 고딕</family>
+                       <pointsize>9</pointsize>
+                       <weight>50</weight>
+                       <bold>false</bold>
+                      </font>
                      </property>
-                     <property name="alignment">
-                      <set>Qt::AlignCenter</set>
-                     </property>
+                     <item>
+                      <property name="text">
+                       <string>Flash bank 0</string>
+                      </property>
+                     </item>
+                     <item>
+                      <property name="text">
+                       <string>Flash bank 1</string>
+                      </property>
+                     </item>
                     </widget>
                    </item>
                   </layout>
@@ -5614,7 +5756,7 @@ Retry count</string>
                        <property name="maximumSize">
                         <size>
                          <width>120</width>
-                         <height>30</height>
+                         <height>25</height>
                         </size>
                        </property>
                        <property name="baseSize">
@@ -5994,7 +6136,7 @@ Retry count</string>
                      <property name="maximumSize">
                       <size>
                        <width>240</width>
-                       <height>30</height>
+                       <height>25</height>
                       </size>
                      </property>
                      <property name="baseSize">
@@ -8874,7 +9016,7 @@ Config</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>949</width>
+     <width>938</width>
      <height>21</height>
     </rect>
    </property>

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from binascii import Incomplete
 from wizsocket.TCPClient import TCPClient
 from WIZMakeCMD import WIZMakeCMD, version_compare, ONE_PORT_DEV, TWO_PORT_DEV, SECURITY_DEVICE
 from WIZ2000CMDSET import WIZ2000CMDSET
@@ -39,7 +40,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.4.3.5 Dev'
+VERSION = 'V1.4.3.6 Dev'
 
 
 def resource_path(relative_path):
@@ -277,6 +278,10 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         # for WIZ510SSL (not default)
         self.group_current_bank.hide()
         self.group_dtrdsr.hide()
+
+        # for WIZ5XXSR-RP
+        self.groupbox_ch1_timeout.hide()
+        # self.groupbox_ch1_timeout.setEnabled(False)
 
     def init_btn_factory(self):
         # factory_option = ['Factory default settings', 'Factory default firmware']
@@ -520,10 +525,16 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 self.radiobtn_group_s0.hide()
                 self.radiobtn_group_s1.hide()
                 self.group_dtrdsr.show()
+                self.groupbox_ch1_timeout.show()
+                if 'WIZ5XXSR' in self.curr_dev:
+                    self.groupbox_ch1_timeout.setEnabled(True)
+                else:
+                    self.groupbox_ch1_timeout.setEnabled(False)
             else:
                 self.radiobtn_group_s0.show()
                 self.radiobtn_group_s1.show()
                 self.group_dtrdsr.hide()
+                self.groupbox_ch1_timeout.hide()
 
         if self.curr_dev in SECURITY_DEVICE:
             self.tcp_timeout.setEnabled(True)
@@ -535,6 +546,10 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.ch1_mqtts_client.setEnabled(True)
             # Current bank (RO)
             self.group_current_bank.show()
+            if 'WIZ5XXSR' in self.curr_dev:
+                self.combobox_current_bank.setEnabled(True)
+            else:
+                self.combobox_current_bank.setEnabled(False)
         else:
             self.factory_setting_action.setEnabled(True)
             self.factory_firmware_action.setEnabled(False)
@@ -579,7 +594,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.logger.debug(f'totalTab: {len(self.generalTab)}, currentTab: {self.generalTab.currentIndex()}')
             # self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
             # self.generalTab.setTabEnabled(2, True)
-            if 'WIZ5XX' in self.curr_dev:
+            if 'WIZ5XXSR' in self.curr_dev:
                 if len(self.generalTab) == 4:
                     # Basic settings / User I/O / Options / MQTT Options / Certificate manager
                     self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
@@ -1442,7 +1457,11 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                         self.checkbox_enable_client_cert.setChecked(False)
                 # Current flash bank (RO)
                 if 'BA' in dev_data:
-                    self.label_current_bank.setText(dev_data['BA'])
+                    self.combobox_current_bank.setCurrentIndex(int(dev_data['BA']))
+                # SSL Timeout
+                if 'WIZ5XXSR' in self.curr_dev:
+                    if 'SO' in dev_data:
+                        self.lineedit_ch1_ssl_recv_timeout.setText(dev_data['SO'])
 
             self.object_config()
         except Exception as e:
@@ -1667,6 +1686,12 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                     # setcmd[''] = self.lineedit_client_cert_pw.text()
                 else:
                     setcmd['CE'] = '0'
+                # 2022.05.10 add option
+                if 'WIZ5XXSR' in self.curr_dev:
+                    # Bank setting (WIZ510SSL's BA command -> RO)
+                    setcmd['BA'] = str(self.combobox_current_bank.currentIndex())
+                    # Add ssl timeout option
+                    setcmd['SO'] = self.lineedit_ch1_ssl_recv_timeout.text()
 
         except Exception as e:
             self.logger.error(e)
@@ -1868,7 +1893,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 text += "Please check the device's status."
             elif result == -2:
                 text += "No response from device."
-            self.show_msgbox("Error", text, QtWidgets.QMessageBox.Critical)
+            # self.show_msgbox("Error", text, QtWidgets.QMessageBox.Critical)
         elif result > 0:
             self.statusbar.showMessage(' Firmware update complete!')
             self.logger.info('FW Update OK')
@@ -1879,21 +1904,28 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         self.pgbar.hide()
 
     def update_error(self, error):
+        self.logger.error(f'Firmware update error: {error}')
+
+        text = ""
+        if error == -1:
+            text = ' Firmware update failed. No response from device.'
+            self.statusbar.showMessage(text)
+            self.show_msgbox("Error", text, QtWidgets.QMessageBox.Critical)
+            # self.msg_upload_failed()
+        elif error == -2:
+            text = ' Firmware update: Network connection failed.'
+            self.statusbar.showMessage(text)
+            self.msg_connection_failed()
+        elif error == -3:
+            text = ' Firmware update error.'
+            self.statusbar.showMessage(text)
+        self.logger.error(text)
+
         try:
             if self.t_fwup.isRunning():
                 self.t_fwup.terminate()
         except Exception as e:
             self.logger.error(e)
-
-        if error == -1:
-            self.statusbar.showMessage(' Firmware update failed. No response from device.')
-            self.show_msgbox("Error", "Firmware update failed. No response from device.", QtWidgets.QMessageBox.Critical)
-            # self.msg_upload_failed()
-        elif error == -2:
-            self.statusbar.showMessage(' Firmware update: Nework connection failed.')
-            self.msg_connection_failed()
-        elif error == -3:
-            self.statusbar.showMessage(' Firmware update error.')
 
     def cert_result(self, result):
         if result < 0:
@@ -1947,8 +1979,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         else:
             self.code = self.searchcode_input.text()
 
-        # WIZ2000 not use 'AB' command
-        # FW update
+        # Firmware update
         if self.broadcast.isChecked():
             self.t_fwup = FWUploadThread(self.conf_sock, mac_addr, self.code,
                                          self.encoded_setting_pw, filename, filesize, None, None, self.curr_dev)
@@ -1986,21 +2017,25 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 self.logger.info(self.fw_filesize)
 
             if self.curr_dev in SECURITY_DEVICE:
-                print('SECURITY_DEVICE update')
-                # Get current bank number
-                doc = QtGui.QTextDocument()
-                doc.setHtml(self.label_current_bank.text())
-                bankval = doc.toPlainText()
-
-                msgbox = QtWidgets.QMessageBox(self)
-                msgbox.setTextFormat(QtCore.Qt.RichText)
-                text = "Current bank: {}\nSelected file: {}\n\nThe bank number must match with current device bank number.\nDo you update with the file?".format(bankval, self.fw_filename.split('/')[-1])
-                btnReply = msgbox.question(
-                    self, "Firmware upload - Check the Bank number", text, QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-                if btnReply == QtWidgets.QMessageBox.Yes:
+                self.logger.info('SECURITY_DEVICE update')
+                if 'WIZ5XXSR' in self.curr_dev:
+                    self.logger.info('WIZ5XXSR update')
                     self.firmware_update(self.fw_filename, self.fw_filesize)
                 else:
-                    pass
+                    # Get current bank number
+                    doc = QtGui.QTextDocument()
+                    doc.setHtml(str(self.combobox_current_bank.currentIndex()))
+                    bankval = doc.toPlainText()
+
+                    msgbox = QtWidgets.QMessageBox(self)
+                    msgbox.setTextFormat(QtCore.Qt.RichText)
+                    text = f"- Current bank: {bankval}\n- Selected file: {self.fw_filename.split('/')[-1]}\n\nThe bank number must match with current device bank number.\nDo you want to update now?"
+                    btnReply = msgbox.question(
+                        self, "Firmware upload - Check the Bank number", text, QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+                    if btnReply == QtWidgets.QMessageBox.Yes:
+                        self.firmware_update(self.fw_filename, self.fw_filesize)
+                    else:
+                        pass
             else:
                 # upload start
                 self.firmware_update(self.fw_filename, self.fw_filesize)
@@ -2558,7 +2593,6 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         self.gpiod_label.setFont(self.smallfont)
 
         # self.certificate_detail.setFont(self.certfont)
-        self.label_current_bank.setFont(self.largefont)
 
 
 class ThreadProgress(QtCore.QThread):
