@@ -19,6 +19,7 @@ import re
 import os
 import subprocess
 import base64
+import webbrowser
 import logging
 # import ssl
 
@@ -213,6 +214,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
         # Menu event - Help
         self.about_wiz.triggered.connect(self.about_info)
+        self.action_document.triggered.connect(self.menu_document)
 
         # Menu event - Option
         self.net_adapter_info()
@@ -2327,6 +2329,11 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             + "<br><a href='https://docs.wiznet.io/'><font color=black>WIZnet Documents</font></a>" \
             + "<br><br>2022 WIZnet Co.</font><br></div>"
         msgbox.about(self, "About WIZnet-S2E-Tool-GUI", text)
+
+    def menu_document(self):
+        self.logger.info('Menu: documentation')
+        # documentation pop-up
+        webbrowser.open('https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki')
 
     def msg_not_support(self):
         msgbox = QtWidgets.QMessageBox(self)

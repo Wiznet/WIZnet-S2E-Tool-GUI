@@ -8014,13 +8014,13 @@ Analog input: Read only</string>
                 <property name="minimumSize">
                  <size>
                   <width>200</width>
-                  <height>194</height>
+                  <height>180</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>220</width>
-                  <height>194</height>
+                  <height>250</height>
                  </size>
                 </property>
                 <property name="title">
@@ -8089,7 +8089,7 @@ Analog input: Read only</string>
                    <property name="maximumSize">
                     <size>
                      <width>200</width>
-                     <height>95</height>
+                     <height>150</height>
                     </size>
                    </property>
                    <property name="font">
@@ -8204,13 +8204,13 @@ Analog input: Read only</string>
                 <property name="minimumSize">
                  <size>
                   <width>200</width>
-                  <height>194</height>
+                  <height>180</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>220</width>
-                  <height>194</height>
+                  <height>250</height>
                  </size>
                 </property>
                 <property name="title">
@@ -8332,7 +8332,7 @@ Analog input: Read only</string>
                    <property name="maximumSize">
                     <size>
                      <width>200</width>
-                     <height>95</height>
+                     <height>150</height>
                     </size>
                    </property>
                    <property name="font">
@@ -8354,13 +8354,13 @@ Analog input: Read only</string>
                 <property name="minimumSize">
                  <size>
                   <width>200</width>
-                  <height>194</height>
+                  <height>180</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>220</width>
-                  <height>194</height>
+                  <height>250</height>
                  </size>
                 </property>
                 <property name="title">
@@ -8423,7 +8423,7 @@ Analog input: Read only</string>
                    <property name="maximumSize">
                     <size>
                      <width>200</width>
-                     <height>130</height>
+                     <height>150</height>
                     </size>
                    </property>
                    <property name="font">
@@ -9057,6 +9057,7 @@ Config</string>
     <property name="title">
      <string>Help</string>
     </property>
+    <addaction name="action_document"/>
     <addaction name="separator"/>
     <addaction name="about_wiz"/>
     <addaction name="separator"/>
@@ -9245,6 +9246,11 @@ Config</string>
   <action name="action_retry_search">
    <property name="text">
     <string>Retry search devices</string>
+   </property>
+  </action>
+  <action name="action_document">
+   <property name="text">
+    <string>Documentation</string>
    </property>
   </action>
  </widget>
