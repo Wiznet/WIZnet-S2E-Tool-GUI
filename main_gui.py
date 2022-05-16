@@ -528,10 +528,11 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 self.radiobtn_group_s0.hide()
                 self.radiobtn_group_s1.hide()
                 self.group_dtrdsr.show()
-                self.groupbox_ch1_timeout.show()
                 if 'WIZ5XXSR' in self.curr_dev:
+                    self.groupbox_ch1_timeout.show()
                     self.groupbox_ch1_timeout.setEnabled(True)
                 else:
+                    self.groupbox_ch1_timeout.hide()
                     self.groupbox_ch1_timeout.setEnabled(False)
             else:
                 self.radiobtn_group_s0.show()
@@ -550,7 +551,8 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             # Current bank (RO)
             self.group_current_bank.show()
             if 'WIZ5XXSR' in self.curr_dev:
-                self.combobox_current_bank.setEnabled(True)
+                self.group_current_bank.hide()
+                # self.combobox_current_bank.setEnabled(True)
             else:
                 self.combobox_current_bank.setEnabled(False)
         else:
@@ -2321,7 +2323,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             + "<a href='http://www.wiznet.io/'><font color=black>WIZnet Official homepage</font></a>"  \
             + "<br><a href='https://forum.wiznet.io/'><font color=black>WIZnet Forum</font></a>" \
             + "<br><a href='https://docs.wiznet.io/'><font color=black>WIZnet Documents</font></a>" \
-            + "<br><br>2018 WIZnet Co.</font><br></div>"
+            + "<br><br>2022 WIZnet Co.</font><br></div>"
         msgbox.about(self, "About WIZnet-S2E-Tool-GUI", text)
 
     def msg_not_support(self):
