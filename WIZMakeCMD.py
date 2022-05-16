@@ -31,6 +31,9 @@ ONE_PORT_DEV = [
 SECURITY_DEVICE = ["WIZ510SSL", "WIZ5XXSR-RP"]
 TWO_PORT_DEV = ["WIZ752SR-12x", "WIZ752SR-120", "WIZ752SR-125"]
 
+"""
+Command List
+"""
 # for pre-search
 cmd_presearch = ["MC", "VR", "MN", "ST", "IM", "OP", "LI", "SM", "GW"]
 
@@ -47,34 +50,40 @@ cmd_added = ["SC", "TR"]  # for WIZ750SR F/W version 1.2.0 or later
 cmd_ch2 = [
     "QS", "QO", "QH", "QP", "QL", "RV", "RA", "RE", "RR", "EN",
     "RS", "EB", "ED", "EP", "ES", "EF", "E0", "E1", "NT", "NS",
-    "ND",
+    "ND"
 ]
 
 # for expansion GPIO
 cmd_gpio_4pin = ["CA", "CB", "CC", "CD", "GA", "GB", "GC", "GD"]  
 cmd_gpio_2pin = ["CA", "CB", "GA", "GB"]
 
-# command for WIZ2000
-# cmd_wiz2000 = [
-#     "MB", "SE", "CE", "N0", "N1", "N2", "LF", "AE", "AP", "CT",
-#     "AL", "GR", "AM", "CM", "C0", "C1", "C2", "C3", "UP",
-# ]
-# cmd_wiz2000 = ['MB', 'MM', 'SE', 'CE', 'N0', 'N1', 'N2', 'LF', 'QF', 'AE', 'AP', 'CT', 'AL', 'GR', 'AM'] # include channel 2 command
-
-cmd_security = [
+# Security device base commands
+cmd_security_base = [
     "MC", "VR", "MN", "IM", "OP", "CP", "DG", "KA", "KI", "KE",
     "RI", "LI", "SM", "GW", "DS", "DH", "LP", "RP", "RH", "BR",
     "DB", "PR", "SB", "FL", "IT", "PT", "PS", "PD", "TE", "SS",
     "NP", "SP", "UN", "ST", "EC", "SC", "TR", "QU", "QP", "QC",
-    "QK", "PU", "U0", "U1", "U2", "QO", "RC", "CE", "BA"
+    "QK", "PU", "U0", "U1", "U2", "QO", "RC", "CE"
 ]
-# 2022.05.10 add for WIZ5XXSR-RP
-cmd_security_added = ['SO']
 
-# Command list
+# WIZ510SSL commands
+cmd_wiz510ssl_added = ['BA']
+
+# 2022.05.10
+# WIZ5XXSR-RP added commands
+cmd_wiz5xxsr_added = ['SO']
+
+
+"""
+Command Set
+"""
 cmd_1p_default = cmd_ch1
 cmd_1p_advanced = cmd_ch1 + cmd_wiz75xsr + cmd_added
 cmd_2p_default = cmd_ch1 + cmd_ch2
+
+# Security devices
+cmd_wiz510ssl = cmd_security_base + cmd_wiz510ssl_added
+cmd_wiz5xxsr = cmd_security_base + cmd_wiz5xxsr_added
 
 
 def version_compare(version1, version2):
@@ -132,15 +141,15 @@ class WIZMakeCMD:
             for cmd in cmd_2p_default:
                 cmd_list.append([cmd, ""])
         elif devname in SECURITY_DEVICE:
-            self.logger.info('[Search] Security device')
-            for cmd in cmd_security:
-                cmd_list.append([cmd, ""])
-            if 'WIZ5XXSR' in devname:
-                for cmd in cmd_security_added:
+            self.logger.info(f'[Search] Security device: {devname}')
+            if 'WIZ510SSL' in devname:
+                for cmd in cmd_wiz510ssl:
+                    cmd_list.append([cmd, ""])
+            elif 'WIZ5XXSR' in devname:
+                for cmd in cmd_wiz5xxsr:
                     cmd_list.append([cmd, ""])
         else:
             pass
-
         # print("search()", cmd_list)
         return cmd_list
 
@@ -188,25 +197,35 @@ class WIZMakeCMD:
                 for cmd in cmd_ch2:
                     cmd_list.append([cmd, ""])
             elif devname in SECURITY_DEVICE:
-                for cmd in cmd_security:
-                    cmd_list.append([cmd, ""])
-                if 'WIZ5XXSR' in devname:
-                    for cmd in cmd_security_added:
+                if 'WIZ510SSL' in devname:
+                    for cmd in cmd_wiz510ssl:
+                        cmd_list.append([cmd, ""])
+                elif 'WIZ5XXSR' in devname:
+                    for cmd in cmd_wiz5xxsr:
                         cmd_list.append([cmd, ""])
             cmd_list.append(["SV", ""])  # save device setting
             cmd_list.append(["RT", ""])  # Device reboot
             # print("setcommand()", cmd_list)
             return cmd_list
         except Exception as e:
-            sys.stdout.write("[ERROR] setcommand(): %r\r\n" % e)
+            self.logger.error("[ERROR] setcommand(): %r\r\n" % e)
 
     def reset(self, mac_addr, idcode, set_pw, devname):
-        print("reset", mac_addr, idcode, set_pw, devname)
-        cmd_list = self.make_header(mac_addr, idcode, devname=devname, set_pw=set_pw)
-        cmd_list.append(["RT", ""])
+        self.logger.info(f'Reset: {mac_addr}')
+        try:
+            print("reset", mac_addr, idcode, set_pw, devname)
+            cmd_list = self.make_header(mac_addr, idcode, devname=devname, set_pw=set_pw)
+            cmd_list.append(["RT", ""])
+        except Exception as e:
+            self.logger.error(e)
         return cmd_list
 
+
     def factory_reset(self, mac_addr, idcode, set_pw, devname, param):
-        cmd_list = self.make_header(mac_addr, idcode, devname=devname, set_pw=set_pw)
-        cmd_list.append(["FR", param])
+        self.logger.info(f'Factory: {mac_addr}')
+        try:
+            cmd_list = self.make_header(mac_addr, idcode, devname=devname, set_pw=set_pw)
+            cmd_list.append(["FR", param])
+        except Exception as e:
+            self.logger.error(e)
         return cmd_list
