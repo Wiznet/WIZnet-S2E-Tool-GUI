@@ -71,7 +71,7 @@ cmd_wiz510ssl_added = ['BA']
 
 # 2022.05.10
 # WIZ5XXSR-RP added commands
-cmd_wiz5xxsr_added = ['SO']
+cmd_wiz5xxsr_added = ['SO', 'UF']
 
 
 """

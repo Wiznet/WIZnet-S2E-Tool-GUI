@@ -40,7 +40,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.4.3.7 Dev'
+VERSION = 'V1.4.3.8 Dev'
 
 
 def resource_path(relative_path):
@@ -1469,6 +1469,8 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                     self.combobox_current_bank.setCurrentIndex(int(dev_data['BA']))
                 # SSL Timeout
                 if 'WIZ5XXSR' in self.curr_dev:
+                    # if 'UF' in dev_data:
+                    #     self.combobox_current_bank.setCurrentIndex(int(dev_data['UF']))
                     if 'SO' in dev_data:
                         self.lineedit_ch1_ssl_recv_timeout.setText(dev_data['SO'])
 
@@ -1697,8 +1699,8 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                     setcmd['CE'] = '0'
                 # 2022.05.10 add option
                 if 'WIZ5XXSR' in self.curr_dev:
-                    # Bank setting (WIZ510SSL's BA command -> RO)
-                    setcmd['BA'] = str(self.combobox_current_bank.currentIndex())
+                    # Bank setting
+                    # setcmd['UF'] = str(self.combobox_current_bank.currentIndex())
                     # Add ssl timeout option
                     setcmd['SO'] = self.lineedit_ch1_ssl_recv_timeout.text()
 
