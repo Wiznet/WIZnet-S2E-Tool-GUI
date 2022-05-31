@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from binascii import Incomplete
 from wizsocket.TCPClient import TCPClient
 from WIZMakeCMD import WIZMakeCMD, version_compare, ONE_PORT_DEV, TWO_PORT_DEV, SECURITY_DEVICE
 from WIZ2000CMDSET import WIZ2000CMDSET
@@ -41,7 +40,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.4.3.8 Dev'
+VERSION = 'V1.4.3.9 Dev'
 
 
 def resource_path(relative_path):
@@ -1616,13 +1615,17 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                         lower_val = '1'
                 setcmd['SC'] = upper_val + lower_val
 
-            if 'WIZ750' in self.curr_dev:
-                if version_compare('1.2.0', self.curr_ver) <= 0:
-                    setcmd['TR'] = self.tcp_timeout.text()
-                else:
-                    pass
-            elif 'WIZ752' in self.curr_dev:
+            if 'WIZ752' in self.curr_dev:
                 pass
+            else:
+                if 'WIZ750' in self.curr_dev:
+                    # Check version
+                    if version_compare('1.2.0', self.curr_ver) <= 0:
+                        setcmd['TR'] = self.tcp_timeout.text()
+                    else:
+                        pass
+                else:
+                    setcmd['TR'] = self.tcp_timeout.text()
 
             # Expansion GPIO
             if self.curr_st == 'BOOT':
