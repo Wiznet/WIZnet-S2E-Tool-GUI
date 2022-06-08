@@ -12,9 +12,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>951</width>
-    <height>765</height>
+    <width>938</width>
+    <height>781</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="minimumSize">
    <size>
@@ -120,6 +126,18 @@
    <bool>false</bool>
   </property>
   <widget class="QWidget" name="centralwidget">
+   <property name="minimumSize">
+    <size>
+     <width>900</width>
+     <height>600</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>1800</width>
+     <height>1200</height>
+    </size>
+   </property>
    <layout class="QGridLayout" name="gridLayout_24">
     <item row="0" column="0">
      <layout class="QGridLayout" name="gridLayout_143">
@@ -143,7 +161,13 @@
             </property>
             <property name="maximumSize">
              <size>
-              <width>225</width>
+              <width>300</width>
+              <height>22</height>
+             </size>
+            </property>
+            <property name="baseSize">
+             <size>
+              <width>220</width>
               <height>22</height>
              </size>
             </property>
@@ -481,6 +505,9 @@
               <property name="alignment">
                <set>Qt::AlignCenter</set>
               </property>
+              <property name="buddy">
+               <cstring>frame_gpioc</cstring>
+              </property>
              </widget>
             </item>
            </layout>
@@ -810,7 +837,7 @@
              <bool>false</bool>
             </property>
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
@@ -818,7 +845,7 @@
             <property name="minimumSize">
              <size>
               <width>700</width>
-              <height>380</height>
+              <height>360</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -850,10 +877,19 @@
               <string>Channel #0</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_47">
+              <property name="horizontalSpacing">
+               <number>7</number>
+              </property>
               <item row="0" column="0">
                <layout class="QGridLayout" name="gridLayout_45">
+                <property name="verticalSpacing">
+                 <number>7</number>
+                </property>
                 <item row="0" column="0">
                  <layout class="QGridLayout" name="gridLayout_12">
+                  <property name="topMargin">
+                   <number>3</number>
+                  </property>
                   <item row="0" column="0">
                    <widget class="QLabel" name="ch1_status_label">
                     <property name="minimumSize">
@@ -928,6 +964,9 @@
                 </item>
                 <item row="1" column="0">
                  <layout class="QGridLayout" name="gridLayout_13">
+                  <property name="bottomMargin">
+                   <number>3</number>
+                  </property>
                   <item row="0" column="0">
                    <widget class="QLabel" name="ch1_uart_name_label">
                     <property name="minimumSize">
@@ -999,6 +1038,12 @@
                 </item>
                 <item row="2" column="0">
                  <widget class="QGroupBox" name="ch1_opmode">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
                   <property name="minimumSize">
                    <size>
                     <width>230</width>
@@ -1009,6 +1054,12 @@
                    <size>
                     <width>450</width>
                     <height>200</height>
+                   </size>
+                  </property>
+                  <property name="baseSize">
+                   <size>
+                    <width>230</width>
+                    <height>100</height>
                    </size>
                   </property>
                   <property name="font">
@@ -1026,6 +1077,9 @@
                    </property>
                    <item row="0" column="0">
                     <layout class="QGridLayout" name="gridLayout_14">
+                     <property name="verticalSpacing">
+                      <number>8</number>
+                     </property>
                      <item row="2" column="0">
                       <widget class="QRadioButton" name="ch1_tcpmixed">
                        <property name="minimumSize">
@@ -1211,16 +1265,22 @@
                 </item>
                 <item row="3" column="0">
                  <widget class="QGroupBox" name="groupBox">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
                   <property name="minimumSize">
                    <size>
                     <width>230</width>
-                    <height>50</height>
+                    <height>40</height>
                    </size>
                   </property>
                   <property name="maximumSize">
                    <size>
                     <width>450</width>
-                    <height>100</height>
+                    <height>60</height>
                    </size>
                   </property>
                   <property name="title">
@@ -1310,6 +1370,12 @@
                   <property name="enabled">
                    <bool>false</bool>
                   </property>
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
                   <property name="minimumSize">
                    <size>
                     <width>230</width>
@@ -1319,7 +1385,7 @@
                   <property name="maximumSize">
                    <size>
                     <width>450</width>
-                    <height>140</height>
+                    <height>100</height>
                    </size>
                   </property>
                   <property name="font">
@@ -1457,8 +1523,620 @@
                 </item>
                </layout>
               </item>
+              <item row="0" column="2">
+               <layout class="QGridLayout" name="gridLayout_11">
+                <property name="verticalSpacing">
+                 <number>7</number>
+                </property>
+                <item row="1" column="0">
+                 <widget class="QGroupBox" name="ch1_packing">
+                  <property name="minimumSize">
+                   <size>
+                    <width>210</width>
+                    <height>100</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>420</width>
+                    <height>200</height>
+                   </size>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <family>맑은 고딕</family>
+                    <pointsize>8</pointsize>
+                   </font>
+                  </property>
+                  <property name="title">
+                   <string>TCP Keep-alive interval</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_43">
+                   <item row="0" column="0">
+                    <widget class="QCheckBox" name="ch1_keepalive_enable">
+                     <property name="font">
+                      <font>
+                       <family>맑은 고딕</family>
+                       <pointsize>8</pointsize>
+                      </font>
+                     </property>
+                     <property name="text">
+                      <string>Enable</string>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="0">
+                    <layout class="QGridLayout" name="gridLayout_41">
+                     <property name="horizontalSpacing">
+                      <number>6</number>
+                     </property>
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="label_128">
+                       <property name="minimumSize">
+                        <size>
+                         <width>85</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>170</width>
+                         <height>45</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>Initial Interval</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QLineEdit" name="ch1_keepalive_initial">
+                       <property name="minimumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>00</string>
+                       </property>
+                       <property name="maxLength">
+                        <number>5</number>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="2">
+                      <widget class="QLabel" name="label_158">
+                       <property name="minimumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>ms</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item row="2" column="0">
+                    <layout class="QGridLayout" name="gridLayout_42">
+                     <property name="horizontalSpacing">
+                      <number>6</number>
+                     </property>
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="label_129">
+                       <property name="minimumSize">
+                        <size>
+                         <width>85</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>170</width>
+                         <height>45</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>Retry interval</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QLineEdit" name="ch1_keepalive_retry">
+                       <property name="minimumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>0</string>
+                       </property>
+                       <property name="maxLength">
+                        <number>5</number>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="2">
+                      <widget class="QLabel" name="label_157">
+                       <property name="minimumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>ms</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item row="3" column="0">
+                 <widget class="QGroupBox" name="groupbox_ch1_timeout">
+                  <property name="minimumSize">
+                   <size>
+                    <width>210</width>
+                    <height>35</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>420</width>
+                    <height>100</height>
+                   </size>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <family>맑은 고딕</family>
+                    <pointsize>8</pointsize>
+                   </font>
+                  </property>
+                  <property name="title">
+                   <string>Timeout</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_75">
+                   <property name="topMargin">
+                    <number>6</number>
+                   </property>
+                   <item row="0" column="0">
+                    <layout class="QGridLayout" name="gridLayout_78">
+                     <property name="horizontalSpacing">
+                      <number>6</number>
+                     </property>
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="label_ssl_recv_timeout">
+                       <property name="minimumSize">
+                        <size>
+                         <width>85</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>170</width>
+                         <height>45</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>SSL receive</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QLineEdit" name="lineedit_ch1_ssl_recv_timeout">
+                       <property name="minimumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>0</string>
+                       </property>
+                       <property name="maxLength">
+                        <number>5</number>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="2">
+                      <widget class="QLabel" name="label_166">
+                       <property name="minimumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>ms</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item row="0" column="0">
+                 <widget class="QGroupBox" name="group_packing_5">
+                  <property name="minimumSize">
+                   <size>
+                    <width>210</width>
+                    <height>90</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>420</width>
+                    <height>180</height>
+                   </size>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <family>맑은 고딕</family>
+                    <pointsize>8</pointsize>
+                   </font>
+                  </property>
+                  <property name="title">
+                   <string>Timer interval</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_40">
+                   <property name="topMargin">
+                    <number>9</number>
+                   </property>
+                   <item row="0" column="0">
+                    <layout class="QGridLayout" name="gridLayout_9">
+                     <property name="horizontalSpacing">
+                      <number>6</number>
+                     </property>
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="label_135">
+                       <property name="minimumSize">
+                        <size>
+                         <width>85</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>170</width>
+                         <height>50</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>Inactivity timer</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QLineEdit" name="ch1_inact_timer">
+                       <property name="minimumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>57</width>
+                         <height>16777215</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;0~65535 (sec.)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>65535</string>
+                       </property>
+                       <property name="maxLength">
+                        <number>5</number>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="2">
+                      <widget class="QLabel" name="label_156">
+                       <property name="minimumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>sec</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item row="1" column="0">
+                    <layout class="QGridLayout" name="gridLayout_39">
+                     <property name="horizontalSpacing">
+                      <number>6</number>
+                     </property>
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="ch1_reconnection_label">
+                       <property name="minimumSize">
+                        <size>
+                         <width>85</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>170</width>
+                         <height>50</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>Reconnection
+interval</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QLineEdit" name="ch1_reconnection">
+                       <property name="minimumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>57</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="text">
+                        <string>0</string>
+                       </property>
+                       <property name="maxLength">
+                        <number>5</number>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="2">
+                      <widget class="QLabel" name="label_155">
+                       <property name="minimumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>30</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>ms</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item row="4" column="0">
+                 <widget class="QFrame" name="frame_8">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="minimumSize">
+                   <size>
+                    <width>130</width>
+                    <height>45</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>260</width>
+                    <height>200</height>
+                   </size>
+                  </property>
+                  <property name="frameShape">
+                   <enum>QFrame::StyledPanel</enum>
+                  </property>
+                  <property name="frameShadow">
+                   <enum>QFrame::Raised</enum>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
               <item row="0" column="1">
                <layout class="QGridLayout" name="gr2dLayout">
+                <property name="verticalSpacing">
+                 <number>7</number>
+                </property>
                 <item row="1" column="0">
                  <widget class="QGroupBox" name="group_packing_6">
                   <property name="minimumSize">
@@ -1470,7 +2148,7 @@
                   <property name="maximumSize">
                    <size>
                     <width>430</width>
-                    <height>240</height>
+                    <height>200</height>
                    </size>
                   </property>
                   <property name="font">
@@ -1485,6 +2163,9 @@
                   <layout class="QGridLayout" name="gridLayout_2" rowminimumheight="1,1,1">
                    <property name="bottomMargin">
                     <number>6</number>
+                   </property>
+                   <property name="verticalSpacing">
+                    <number>8</number>
                    </property>
                    <item row="0" column="0">
                     <layout class="QHBoxLayout" name="horizontalLayout_124">
@@ -1668,7 +2349,7 @@
                   <property name="minimumSize">
                    <size>
                     <width>215</width>
-                    <height>185</height>
+                    <height>200</height>
                    </size>
                   </property>
                   <property name="maximumSize">
@@ -1689,6 +2370,9 @@
                   <layout class="QGridLayout" name="gridLayout_10">
                    <property name="topMargin">
                     <number>6</number>
+                   </property>
+                   <property name="verticalSpacing">
+                    <number>8</number>
                    </property>
                    <item row="3" column="0">
                     <layout class="QHBoxLayout" name="horizontalLayout_16">
@@ -2124,505 +2808,38 @@
                 </item>
                </layout>
               </item>
-              <item row="0" column="2">
-               <layout class="QGridLayout" name="gridLayout_11">
-                <item row="0" column="0">
-                 <widget class="QGroupBox" name="group_packing_5">
-                  <property name="minimumSize">
-                   <size>
-                    <width>210</width>
-                    <height>90</height>
-                   </size>
-                  </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>420</width>
-                    <height>180</height>
-                   </size>
-                  </property>
-                  <property name="font">
-                   <font>
-                    <family>맑은 고딕</family>
-                    <pointsize>8</pointsize>
-                   </font>
-                  </property>
-                  <property name="title">
-                   <string>Timer interval</string>
-                  </property>
-                  <layout class="QGridLayout" name="gridLayout_40">
-                   <property name="topMargin">
-                    <number>9</number>
-                   </property>
-                   <item row="0" column="0">
-                    <layout class="QGridLayout" name="gridLayout_9">
-                     <property name="horizontalSpacing">
-                      <number>6</number>
-                     </property>
-                     <item row="0" column="0">
-                      <widget class="QLabel" name="label_135">
-                       <property name="minimumSize">
-                        <size>
-                         <width>85</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>170</width>
-                         <height>50</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Inactivity timer</string>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="1">
-                      <widget class="QLineEdit" name="ch1_inact_timer">
-                       <property name="minimumSize">
-                        <size>
-                         <width>57</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>57</width>
-                         <height>16777215</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;0~65535 (sec.)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="text">
-                        <string>65535</string>
-                       </property>
-                       <property name="maxLength">
-                        <number>5</number>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="2">
-                      <widget class="QLabel" name="label_156">
-                       <property name="minimumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>sec</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item row="1" column="0">
-                    <layout class="QGridLayout" name="gridLayout_39">
-                     <property name="horizontalSpacing">
-                      <number>6</number>
-                     </property>
-                     <item row="0" column="0">
-                      <widget class="QLabel" name="ch1_reconnection_label">
-                       <property name="minimumSize">
-                        <size>
-                         <width>85</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>170</width>
-                         <height>50</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Reconnection
-interval</string>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="1">
-                      <widget class="QLineEdit" name="ch1_reconnection">
-                       <property name="minimumSize">
-                        <size>
-                         <width>57</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>57</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="text">
-                        <string>0</string>
-                       </property>
-                       <property name="maxLength">
-                        <number>5</number>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="2">
-                      <widget class="QLabel" name="label_155">
-                       <property name="minimumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>ms</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                  </layout>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QGroupBox" name="ch1_packing">
-                  <property name="minimumSize">
-                   <size>
-                    <width>210</width>
-                    <height>100</height>
-                   </size>
-                  </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>420</width>
-                    <height>200</height>
-                   </size>
-                  </property>
-                  <property name="font">
-                   <font>
-                    <family>맑은 고딕</family>
-                    <pointsize>8</pointsize>
-                   </font>
-                  </property>
-                  <property name="title">
-                   <string>TCP Keep-alive interval</string>
-                  </property>
-                  <layout class="QGridLayout" name="gridLayout_43">
-                   <item row="0" column="0">
-                    <widget class="QCheckBox" name="ch1_keepalive_enable">
-                     <property name="font">
-                      <font>
-                       <family>맑은 고딕</family>
-                       <pointsize>8</pointsize>
-                      </font>
-                     </property>
-                     <property name="text">
-                      <string>Enable</string>
-                     </property>
-                     <property name="checked">
-                      <bool>true</bool>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="1" column="0">
-                    <layout class="QGridLayout" name="gridLayout_41">
-                     <property name="horizontalSpacing">
-                      <number>6</number>
-                     </property>
-                     <item row="0" column="0">
-                      <widget class="QLabel" name="label_128">
-                       <property name="minimumSize">
-                        <size>
-                         <width>85</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>170</width>
-                         <height>45</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Initial Interval</string>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="1">
-                      <widget class="QLineEdit" name="ch1_keepalive_initial">
-                       <property name="minimumSize">
-                        <size>
-                         <width>57</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>57</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="text">
-                        <string>00</string>
-                       </property>
-                       <property name="maxLength">
-                        <number>5</number>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="2">
-                      <widget class="QLabel" name="label_158">
-                       <property name="minimumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>ms</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item row="2" column="0">
-                    <layout class="QGridLayout" name="gridLayout_42">
-                     <property name="horizontalSpacing">
-                      <number>6</number>
-                     </property>
-                     <item row="0" column="0">
-                      <widget class="QLabel" name="label_129">
-                       <property name="minimumSize">
-                        <size>
-                         <width>85</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>170</width>
-                         <height>45</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Retry interval</string>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="1">
-                      <widget class="QLineEdit" name="ch1_keepalive_retry">
-                       <property name="minimumSize">
-                        <size>
-                         <width>57</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>57</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="toolTip">
-                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;1~65535 (ms)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                       </property>
-                       <property name="text">
-                        <string>0</string>
-                       </property>
-                       <property name="maxLength">
-                        <number>5</number>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="2">
-                      <widget class="QLabel" name="label_157">
-                       <property name="minimumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>30</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>ms</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                  </layout>
-                 </widget>
-                </item>
-                <item row="2" column="0">
-                 <widget class="QFrame" name="frame">
-                  <property name="minimumSize">
-                   <size>
-                    <width>210</width>
-                    <height>80</height>
-                   </size>
-                  </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>420</width>
-                    <height>160</height>
-                   </size>
-                  </property>
-                  <property name="frameShape">
-                   <enum>QFrame::StyledPanel</enum>
-                  </property>
-                  <property name="frameShadow">
-                   <enum>QFrame::Raised</enum>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
              </layout>
             </widget>
             <widget class="QWidget" name="tab_ch1">
              <attribute name="title">
               <string>Channel #1</string>
              </attribute>
-             <layout class="QGridLayout" name="gridLayout_3">
+             <layout class="QGridLayout" name="gridLayout_70">
+              <property name="horizontalSpacing">
+               <number>7</number>
+              </property>
               <item row="0" column="0">
-               <layout class="QGridLayout" name="gridLayout_149">
+               <layout class="QGridLayout" name="gridLayout_60">
+                <property name="verticalSpacing">
+                 <number>7</number>
+                </property>
                 <item row="0" column="0">
-                 <layout class="QGridLayout" name="gridLayout_150">
+                 <layout class="QGridLayout" name="gridLayout_61">
+                  <property name="topMargin">
+                   <number>3</number>
+                  </property>
                   <item row="0" column="0">
                    <widget class="QLabel" name="ch2_status_label">
                     <property name="minimumSize">
                      <size>
                       <width>90</width>
-                      <height>0</height>
+                      <height>22</height>
                      </size>
                     </property>
                     <property name="maximumSize">
                      <size>
                       <width>90</width>
-                      <height>16777215</height>
+                      <height>22</height>
                      </size>
                     </property>
                     <property name="font">
@@ -2647,7 +2864,7 @@ interval</string>
                     <property name="maximumSize">
                      <size>
                       <width>100</width>
-                      <height>16777215</height>
+                      <height>22</height>
                      </size>
                     </property>
                     <property name="font">
@@ -2684,19 +2901,22 @@ interval</string>
                  </layout>
                 </item>
                 <item row="1" column="0">
-                 <layout class="QGridLayout" name="gridLayout_151">
+                 <layout class="QGridLayout" name="gridLayout_62">
+                  <property name="bottomMargin">
+                   <number>3</number>
+                  </property>
                   <item row="0" column="0">
                    <widget class="QLabel" name="ch2_uart_name_label">
                     <property name="minimumSize">
                      <size>
                       <width>90</width>
-                      <height>0</height>
+                      <height>22</height>
                      </size>
                     </property>
                     <property name="maximumSize">
                      <size>
                       <width>90</width>
-                      <height>16777215</height>
+                      <height>22</height>
                      </size>
                     </property>
                     <property name="font">
@@ -2721,7 +2941,7 @@ interval</string>
                     <property name="maximumSize">
                      <size>
                       <width>100</width>
-                      <height>16777215</height>
+                      <height>22</height>
                      </size>
                     </property>
                     <property name="font">
@@ -2756,6 +2976,12 @@ interval</string>
                 </item>
                 <item row="2" column="0">
                  <widget class="QGroupBox" name="ch2_opmode">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
                   <property name="minimumSize">
                    <size>
                     <width>230</width>
@@ -2764,8 +2990,8 @@ interval</string>
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>225</width>
-                    <height>100</height>
+                    <width>450</width>
+                    <height>200</height>
                    </size>
                   </property>
                   <property name="font">
@@ -2777,12 +3003,15 @@ interval</string>
                   <property name="title">
                    <string>Operation mode</string>
                   </property>
-                  <layout class="QGridLayout" name="gridLayout_152">
+                  <layout class="QGridLayout" name="gridLayout_63">
                    <property name="topMargin">
                     <number>6</number>
                    </property>
                    <item row="0" column="0">
-                    <layout class="QGridLayout" name="gridLayout_153">
+                    <layout class="QGridLayout" name="gridLayout_64">
+                     <property name="verticalSpacing">
+                      <number>8</number>
+                     </property>
                      <item row="2" column="0">
                       <widget class="QRadioButton" name="ch2_tcpmixed">
                        <property name="minimumSize">
@@ -2967,23 +3196,23 @@ interval</string>
                  </widget>
                 </item>
                 <item row="3" column="0">
-                 <widget class="QGroupBox" name="groupBox_9">
+                 <widget class="QGroupBox" name="groupBox">
                   <property name="minimumSize">
                    <size>
                     <width>230</width>
-                    <height>50</height>
+                    <height>40</height>
                    </size>
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>230</width>
-                    <height>50</height>
+                    <width>450</width>
+                    <height>60</height>
                    </size>
                   </property>
                   <property name="title">
                    <string>Local port</string>
                   </property>
-                  <layout class="QGridLayout" name="gridLayout_154">
+                  <layout class="QGridLayout" name="gridLayout_65">
                    <property name="topMargin">
                     <number>3</number>
                    </property>
@@ -2991,7 +3220,7 @@ interval</string>
                     <number>3</number>
                    </property>
                    <item row="0" column="0">
-                    <layout class="QGridLayout" name="gridLayout_155">
+                    <layout class="QGridLayout" name="gridLayout_66">
                      <property name="horizontalSpacing">
                       <number>15</number>
                      </property>
@@ -3067,6 +3296,12 @@ interval</string>
                   <property name="enabled">
                    <bool>false</bool>
                   </property>
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
                   <property name="minimumSize">
                    <size>
                     <width>230</width>
@@ -3075,8 +3310,8 @@ interval</string>
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>230</width>
-                    <height>105</height>
+                    <width>450</width>
+                    <height>100</height>
                    </size>
                   </property>
                   <property name="font">
@@ -3088,11 +3323,11 @@ interval</string>
                   <property name="title">
                    <string>Remote host / Port</string>
                   </property>
-                  <layout class="QGridLayout" name="gridLayout_156">
+                  <layout class="QGridLayout" name="gridLayout_67">
                    <item row="0" column="0">
-                    <layout class="QGridLayout" name="gridLayout_157">
+                    <layout class="QGridLayout" name="gridLayout_68">
                      <item row="0" column="0">
-                      <widget class="QLabel" name="label_198">
+                      <widget class="QLabel" name="label_182">
                        <property name="minimumSize">
                         <size>
                          <width>75</width>
@@ -3139,6 +3374,9 @@ interval</string>
                        <property name="text">
                         <string>192.168.11.3</string>
                        </property>
+                       <property name="maxLength">
+                        <number>128</number>
+                       </property>
                        <property name="alignment">
                         <set>Qt::AlignCenter</set>
                        </property>
@@ -3147,9 +3385,9 @@ interval</string>
                     </layout>
                    </item>
                    <item row="1" column="0">
-                    <layout class="QGridLayout" name="gridLayout_158">
+                    <layout class="QGridLayout" name="gridLayout_69">
                      <item row="0" column="0">
-                      <widget class="QLabel" name="label_199">
+                      <widget class="QLabel" name="label_163">
                        <property name="minimumSize">
                         <size>
                          <width>75</width>
@@ -3196,6 +3434,9 @@ interval</string>
                        <property name="text">
                         <string>5000</string>
                        </property>
+                       <property name="maxLength">
+                        <number>5</number>
+                       </property>
                        <property name="alignment">
                         <set>Qt::AlignCenter</set>
                        </property>
@@ -3209,19 +3450,229 @@ interval</string>
                </layout>
               </item>
               <item row="0" column="1">
-               <layout class="QGridLayout" name="gridLayout_159">
-                <item row="0" column="0">
-                 <widget class="QGroupBox" name="group_serialconfig_4">
+               <layout class="QGridLayout" name="gr2dLayout">
+                <property name="verticalSpacing">
+                 <number>7</number>
+                </property>
+                <item row="1" column="0">
+                 <widget class="QGroupBox" name="group_packing_11">
                   <property name="minimumSize">
                    <size>
                     <width>215</width>
-                    <height>175</height>
+                    <height>120</height>
                    </size>
                   </property>
                   <property name="maximumSize">
                    <size>
+                    <width>430</width>
+                    <height>240</height>
+                   </size>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <family>맑은 고딕</family>
+                    <pointsize>8</pointsize>
+                   </font>
+                  </property>
+                  <property name="title">
+                   <string>Serial data packing condition</string>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_3">
+                   <property name="bottomMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="verticalSpacing">
+                    <number>8</number>
+                   </property>
+                   <item row="2" column="0">
+                    <layout class="QHBoxLayout" name="horizontalLayout_128">
+                     <item>
+                      <widget class="QLabel" name="packing_time_7">
+                       <property name="minimumSize">
+                        <size>
+                         <width>70</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>70</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>Time(ms)</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLineEdit" name="ch2_pack_time">
+                       <property name="minimumSize">
+                        <size>
+                         <width>90</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>85</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>0</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item row="0" column="0">
+                    <layout class="QHBoxLayout" name="horizontalLayout_126">
+                     <item>
+                      <widget class="QLabel" name="label_149">
+                       <property name="minimumSize">
+                        <size>
+                         <width>70</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>70</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>Character</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLineEdit" name="ch2_pack_char">
+                       <property name="minimumSize">
+                        <size>
+                         <width>90</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>85</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>00</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item row="1" column="0">
+                    <layout class="QHBoxLayout" name="horizontalLayout_127">
+                     <item>
+                      <widget class="QLabel" name="label_150">
+                       <property name="minimumSize">
+                        <size>
+                         <width>70</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>70</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="frameShadow">
+                        <enum>QFrame::Plain</enum>
+                       </property>
+                       <property name="text">
+                        <string>Size</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLineEdit" name="ch2_pack_size">
+                       <property name="minimumSize">
+                        <size>
+                         <width>90</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>85</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>0</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item row="0" column="0">
+                 <widget class="QGroupBox" name="group_serialconfig">
+                  <property name="minimumSize">
+                   <size>
                     <width>215</width>
-                    <height>180</height>
+                    <height>200</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>430</width>
+                    <height>350</height>
                    </size>
                   </property>
                   <property name="font">
@@ -3233,11 +3684,17 @@ interval</string>
                   <property name="title">
                    <string>Serial options</string>
                   </property>
-                  <layout class="QGridLayout" name="gridLayout_160">
-                   <item row="0" column="0">
-                    <layout class="QHBoxLayout" name="horizontalLayout_27">
+                  <layout class="QGridLayout" name="gridLayout_59">
+                   <property name="topMargin">
+                    <number>6</number>
+                   </property>
+                   <property name="verticalSpacing">
+                    <number>8</number>
+                   </property>
+                   <item row="3" column="0">
+                    <layout class="QHBoxLayout" name="horizontalLayout_18">
                      <item>
-                      <widget class="QLabel" name="label_200">
+                      <widget class="QLabel" name="label_151">
                        <property name="minimumSize">
                         <size>
                          <width>68</width>
@@ -3246,8 +3703,75 @@ interval</string>
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>16777215</width>
+                         <width>140</width>
+                         <height>45</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>Stop bit</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QComboBox" name="ch2_stopbit">
+                       <property name="minimumSize">
+                        <size>
+                         <width>100</width>
                          <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>100</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>맑은 고딕</family>
+                         <pointsize>8</pointsize>
+                        </font>
+                       </property>
+                       <property name="currentText">
+                        <string>1</string>
+                       </property>
+                       <property name="sizeAdjustPolicy">
+                        <enum>QComboBox::AdjustToContents</enum>
+                       </property>
+                       <item>
+                        <property name="text">
+                         <string>1</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>2</string>
+                        </property>
+                       </item>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item row="0" column="0">
+                    <layout class="QHBoxLayout" name="horizontalLayout_19">
+                     <item>
+                      <widget class="QLabel" name="label_142">
+                       <property name="minimumSize">
+                        <size>
+                         <width>68</width>
+                         <height>22</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>140</width>
+                         <height>45</height>
                         </size>
                        </property>
                        <property name="font">
@@ -3369,216 +3893,10 @@ interval</string>
                      </item>
                     </layout>
                    </item>
-                   <item row="1" column="0">
-                    <layout class="QHBoxLayout" name="horizontalLayout_28">
-                     <item>
-                      <widget class="QLabel" name="label_201">
-                       <property name="minimumSize">
-                        <size>
-                         <width>68</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>16777215</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Data bit</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QComboBox" name="ch2_databit">
-                       <property name="minimumSize">
-                        <size>
-                         <width>100</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>100</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="currentText">
-                        <string>7</string>
-                       </property>
-                       <property name="sizeAdjustPolicy">
-                        <enum>QComboBox::AdjustToContents</enum>
-                       </property>
-                       <item>
-                        <property name="text">
-                         <string>7</string>
-                        </property>
-                       </item>
-                       <item>
-                        <property name="text">
-                         <string>8</string>
-                        </property>
-                       </item>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item row="2" column="0">
-                    <layout class="QHBoxLayout" name="horizontalLayout_29">
-                     <item>
-                      <widget class="QLabel" name="label_202">
-                       <property name="minimumSize">
-                        <size>
-                         <width>68</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>16777215</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Parity</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QComboBox" name="ch2_parity">
-                       <property name="minimumSize">
-                        <size>
-                         <width>100</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>100</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="currentText">
-                        <string>NONE</string>
-                       </property>
-                       <property name="sizeAdjustPolicy">
-                        <enum>QComboBox::AdjustToContents</enum>
-                       </property>
-                       <item>
-                        <property name="text">
-                         <string>NONE</string>
-                        </property>
-                       </item>
-                       <item>
-                        <property name="text">
-                         <string>ODD</string>
-                        </property>
-                       </item>
-                       <item>
-                        <property name="text">
-                         <string>EVEN</string>
-                        </property>
-                       </item>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item row="3" column="0">
-                    <layout class="QHBoxLayout" name="horizontalLayout_30">
-                     <item>
-                      <widget class="QLabel" name="label_203">
-                       <property name="minimumSize">
-                        <size>
-                         <width>68</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>16777215</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Stop bit</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QComboBox" name="ch2_stopbit">
-                       <property name="minimumSize">
-                        <size>
-                         <width>100</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>100</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="currentText">
-                        <string>1</string>
-                       </property>
-                       <property name="sizeAdjustPolicy">
-                        <enum>QComboBox::AdjustToContents</enum>
-                       </property>
-                       <item>
-                        <property name="text">
-                         <string>1</string>
-                        </property>
-                       </item>
-                       <item>
-                        <property name="text">
-                         <string>2</string>
-                        </property>
-                       </item>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
                    <item row="4" column="0">
-                    <layout class="QHBoxLayout" name="horizontalLayout_31">
+                    <layout class="QHBoxLayout" name="horizontalLayout_20">
                      <item>
-                      <widget class="QLabel" name="label_204">
+                      <widget class="QLabel" name="label_152">
                        <property name="minimumSize">
                         <size>
                          <width>68</width>
@@ -3587,8 +3905,8 @@ interval</string>
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>16777215</width>
-                         <height>22</height>
+                         <width>140</width>
+                         <height>45</height>
                         </size>
                        </property>
                        <property name="font">
@@ -3663,104 +3981,20 @@ interval</string>
                      </item>
                     </layout>
                    </item>
-                  </layout>
-                 </widget>
-                </item>
-                <item row="1" column="0">
-                 <widget class="QGroupBox" name="group_packing_17">
-                  <property name="minimumSize">
-                   <size>
-                    <width>215</width>
-                    <height>120</height>
-                   </size>
-                  </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>215</width>
-                    <height>125</height>
-                   </size>
-                  </property>
-                  <property name="font">
-                   <font>
-                    <family>맑은 고딕</family>
-                    <pointsize>8</pointsize>
-                   </font>
-                  </property>
-                  <property name="title">
-                   <string>Serial data packing condition</string>
-                  </property>
-                  <layout class="QGridLayout" name="gridLayout_161">
-                   <item row="0" column="0">
-                    <layout class="QHBoxLayout" name="horizontalLayout_135">
-                     <item>
-                      <widget class="QLabel" name="label_205">
-                       <property name="minimumSize">
-                        <size>
-                         <width>70</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>70</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Character</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLineEdit" name="ch2_pack_char">
-                       <property name="minimumSize">
-                        <size>
-                         <width>90</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="maximumSize">
-                        <size>
-                         <width>85</width>
-                         <height>22</height>
-                        </size>
-                       </property>
-                       <property name="font">
-                        <font>
-                         <family>맑은 고딕</family>
-                         <pointsize>8</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>00</string>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
                    <item row="1" column="0">
-                    <layout class="QHBoxLayout" name="horizontalLayout_136">
+                    <layout class="QHBoxLayout" name="horizontalLayout_21">
                      <item>
-                      <widget class="QLabel" name="label_206">
+                      <widget class="QLabel" name="label_143">
                        <property name="minimumSize">
                         <size>
-                         <width>70</width>
+                         <width>68</width>
                          <height>22</height>
                         </size>
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>70</width>
-                         <height>22</height>
+                         <width>140</width>
+                         <height>45</height>
                         </size>
                        </property>
                        <property name="font">
@@ -3769,25 +4003,22 @@ interval</string>
                          <pointsize>8</pointsize>
                         </font>
                        </property>
-                       <property name="frameShadow">
-                        <enum>QFrame::Plain</enum>
-                       </property>
                        <property name="text">
-                        <string>Size</string>
+                        <string>Data bit</string>
                        </property>
                       </widget>
                      </item>
                      <item>
-                      <widget class="QLineEdit" name="ch2_pack_size">
+                      <widget class="QComboBox" name="ch2_databit">
                        <property name="minimumSize">
                         <size>
-                         <width>90</width>
+                         <width>100</width>
                          <height>22</height>
                         </size>
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>85</width>
+                         <width>100</width>
                          <height>22</height>
                         </size>
                        </property>
@@ -3797,30 +4028,40 @@ interval</string>
                          <pointsize>8</pointsize>
                         </font>
                        </property>
-                       <property name="text">
-                        <string>0</string>
+                       <property name="currentText">
+                        <string>7</string>
                        </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
+                       <property name="sizeAdjustPolicy">
+                        <enum>QComboBox::AdjustToContents</enum>
                        </property>
+                       <item>
+                        <property name="text">
+                         <string>7</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>8</string>
+                        </property>
+                       </item>
                       </widget>
                      </item>
                     </layout>
                    </item>
                    <item row="2" column="0">
-                    <layout class="QHBoxLayout" name="horizontalLayout_137">
+                    <layout class="QHBoxLayout" name="horizontalLayout_22">
                      <item>
-                      <widget class="QLabel" name="packing_time_10">
+                      <widget class="QLabel" name="label_154">
                        <property name="minimumSize">
                         <size>
-                         <width>70</width>
+                         <width>68</width>
                          <height>22</height>
                         </size>
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>70</width>
-                         <height>22</height>
+                         <width>140</width>
+                         <height>45</height>
                         </size>
                        </property>
                        <property name="font">
@@ -3830,21 +4071,21 @@ interval</string>
                         </font>
                        </property>
                        <property name="text">
-                        <string>Time(ms)</string>
+                        <string>Parity</string>
                        </property>
                       </widget>
                      </item>
                      <item>
-                      <widget class="QLineEdit" name="ch2_pack_time">
+                      <widget class="QComboBox" name="ch2_parity">
                        <property name="minimumSize">
                         <size>
-                         <width>90</width>
+                         <width>100</width>
                          <height>22</height>
                         </size>
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>85</width>
+                         <width>100</width>
                          <height>22</height>
                         </size>
                        </property>
@@ -3854,12 +4095,27 @@ interval</string>
                          <pointsize>8</pointsize>
                         </font>
                        </property>
-                       <property name="text">
-                        <string>0</string>
+                       <property name="currentText">
+                        <string>NONE</string>
                        </property>
-                       <property name="alignment">
-                        <set>Qt::AlignCenter</set>
+                       <property name="sizeAdjustPolicy">
+                        <enum>QComboBox::AdjustToContents</enum>
                        </property>
+                       <item>
+                        <property name="text">
+                         <string>NONE</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>ODD</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>EVEN</string>
+                        </property>
+                       </item>
                       </widget>
                      </item>
                     </layout>
@@ -3870,9 +4126,12 @@ interval</string>
                </layout>
               </item>
               <item row="0" column="2">
-               <layout class="QGridLayout" name="gridLayout_162">
+               <layout class="QGridLayout" name="gridLayout_52">
+                <property name="verticalSpacing">
+                 <number>7</number>
+                </property>
                 <item row="0" column="0">
-                 <widget class="QGroupBox" name="group_packing_18">
+                 <widget class="QGroupBox" name="group_packing_10">
                   <property name="minimumSize">
                    <size>
                     <width>210</width>
@@ -3881,8 +4140,8 @@ interval</string>
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>210</width>
-                    <height>95</height>
+                    <width>420</width>
+                    <height>180</height>
                    </size>
                   </property>
                   <property name="font">
@@ -3894,17 +4153,17 @@ interval</string>
                   <property name="title">
                    <string>Timer interval</string>
                   </property>
-                  <layout class="QGridLayout" name="gridLayout_163">
+                  <layout class="QGridLayout" name="gridLayout_53">
                    <property name="topMargin">
                     <number>9</number>
                    </property>
                    <item row="0" column="0">
-                    <layout class="QGridLayout" name="gridLayout_164">
+                    <layout class="QGridLayout" name="gridLayout_54">
                      <property name="horizontalSpacing">
                       <number>6</number>
                      </property>
                      <item row="0" column="0">
-                      <widget class="QLabel" name="label_207">
+                      <widget class="QLabel" name="label_136">
                        <property name="minimumSize">
                         <size>
                          <width>85</width>
@@ -3913,8 +4172,8 @@ interval</string>
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>85</width>
-                         <height>22</height>
+                         <width>170</width>
+                         <height>50</height>
                         </size>
                        </property>
                        <property name="font">
@@ -3966,7 +4225,7 @@ interval</string>
                       </widget>
                      </item>
                      <item row="0" column="2">
-                      <widget class="QLabel" name="label_208">
+                      <widget class="QLabel" name="label_159">
                        <property name="minimumSize">
                         <size>
                          <width>30</width>
@@ -3993,7 +4252,7 @@ interval</string>
                     </layout>
                    </item>
                    <item row="1" column="0">
-                    <layout class="QGridLayout" name="gridLayout_165">
+                    <layout class="QGridLayout" name="gridLayout_55">
                      <property name="horizontalSpacing">
                       <number>6</number>
                      </property>
@@ -4007,8 +4266,8 @@ interval</string>
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>85</width>
-                         <height>25</height>
+                         <width>170</width>
+                         <height>50</height>
                         </size>
                        </property>
                        <property name="font">
@@ -4061,7 +4320,7 @@ interval</string>
                       </widget>
                      </item>
                      <item row="0" column="2">
-                      <widget class="QLabel" name="label_209">
+                      <widget class="QLabel" name="label_160">
                        <property name="minimumSize">
                         <size>
                          <width>30</width>
@@ -4100,8 +4359,8 @@ interval</string>
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>210</width>
-                    <height>100</height>
+                    <width>420</width>
+                    <height>200</height>
                    </size>
                   </property>
                   <property name="font">
@@ -4113,7 +4372,7 @@ interval</string>
                   <property name="title">
                    <string>TCP Keep-alive interval</string>
                   </property>
-                  <layout class="QGridLayout" name="gridLayout_166">
+                  <layout class="QGridLayout" name="gridLayout_56">
                    <item row="0" column="0">
                     <widget class="QCheckBox" name="ch2_keepalive_enable">
                      <property name="font">
@@ -4131,12 +4390,12 @@ interval</string>
                     </widget>
                    </item>
                    <item row="1" column="0">
-                    <layout class="QGridLayout" name="gridLayout_167">
+                    <layout class="QGridLayout" name="gridLayout_57">
                      <property name="horizontalSpacing">
                       <number>6</number>
                      </property>
                      <item row="0" column="0">
-                      <widget class="QLabel" name="label_210">
+                      <widget class="QLabel" name="label_130">
                        <property name="minimumSize">
                         <size>
                          <width>85</width>
@@ -4145,8 +4404,8 @@ interval</string>
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>85</width>
-                         <height>22</height>
+                         <width>170</width>
+                         <height>45</height>
                         </size>
                        </property>
                        <property name="font">
@@ -4198,7 +4457,7 @@ interval</string>
                       </widget>
                      </item>
                      <item row="0" column="2">
-                      <widget class="QLabel" name="label_211">
+                      <widget class="QLabel" name="label_161">
                        <property name="minimumSize">
                         <size>
                          <width>30</width>
@@ -4225,12 +4484,12 @@ interval</string>
                     </layout>
                    </item>
                    <item row="2" column="0">
-                    <layout class="QGridLayout" name="gridLayout_168">
+                    <layout class="QGridLayout" name="gridLayout_58">
                      <property name="horizontalSpacing">
                       <number>6</number>
                      </property>
                      <item row="0" column="0">
-                      <widget class="QLabel" name="label_212">
+                      <widget class="QLabel" name="label_131">
                        <property name="minimumSize">
                         <size>
                          <width>85</width>
@@ -4239,8 +4498,8 @@ interval</string>
                        </property>
                        <property name="maximumSize">
                         <size>
-                         <width>85</width>
-                         <height>22</height>
+                         <width>170</width>
+                         <height>45</height>
                         </size>
                        </property>
                        <property name="font">
@@ -4292,7 +4551,7 @@ interval</string>
                       </widget>
                      </item>
                      <item row="0" column="2">
-                      <widget class="QLabel" name="label_213">
+                      <widget class="QLabel" name="label_162">
                        <property name="minimumSize">
                         <size>
                          <width>30</width>
@@ -4322,17 +4581,17 @@ interval</string>
                  </widget>
                 </item>
                 <item row="2" column="0">
-                 <widget class="QFrame" name="frame_9">
+                 <widget class="QFrame" name="frame_7">
                   <property name="minimumSize">
                    <size>
                     <width>210</width>
-                    <height>90</height>
+                    <height>80</height>
                    </size>
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>16777215</width>
-                    <height>90</height>
+                    <width>420</width>
+                    <height>160</height>
                    </size>
                   </property>
                   <property name="frameShape">
@@ -4355,7 +4614,7 @@ interval</string>
              <bool>false</bool>
             </property>
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
@@ -4369,13 +4628,13 @@ interval</string>
             <property name="maximumSize">
              <size>
               <width>1400</width>
-              <height>520</height>
+              <height>270</height>
              </size>
             </property>
             <property name="baseSize">
              <size>
-              <width>0</width>
-              <height>0</height>
+              <width>699</width>
+              <height>260</height>
              </size>
             </property>
             <property name="font">
@@ -4508,7 +4767,7 @@ interval</string>
                      <property name="maximumSize">
                       <size>
                        <width>150</width>
-                       <height>60</height>
+                       <height>25</height>
                       </size>
                      </property>
                      <property name="font">
@@ -4584,7 +4843,7 @@ interval</string>
                      <property name="maximumSize">
                       <size>
                        <width>150</width>
-                       <height>60</height>
+                       <height>25</height>
                       </size>
                      </property>
                      <property name="font">
@@ -5097,7 +5356,7 @@ interval</string>
                 <item row="2" column="0">
                  <widget class="QFrame" name="frame_4">
                   <property name="sizePolicy">
-                   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
                     <horstretch>0</horstretch>
                     <verstretch>0</verstretch>
                    </sizepolicy>
@@ -5126,8 +5385,8 @@ interval</string>
                  <widget class="QGroupBox" name="group_current_bank">
                   <property name="minimumSize">
                    <size>
-                    <width>165</width>
-                    <height>60</height>
+                    <width>150</width>
+                    <height>70</height>
                    </size>
                   </property>
                   <property name="maximumSize">
@@ -5144,25 +5403,37 @@ interval</string>
                     <number>3</number>
                    </property>
                    <item row="0" column="0">
-                    <widget class="QLabel" name="label_current_bank">
+                    <widget class="QComboBox" name="combobox_current_bank">
                      <property name="minimumSize">
                       <size>
-                       <width>60</width>
-                       <height>30</height>
+                       <width>110</width>
+                       <height>25</height>
                       </size>
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>60</width>
-                       <height>40</height>
+                       <width>150</width>
+                       <height>25</height>
                       </size>
                      </property>
-                     <property name="text">
-                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:24pt; font-weight:600;&quot;&gt;-&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     <property name="font">
+                      <font>
+                       <family>맑은 고딕</family>
+                       <pointsize>9</pointsize>
+                       <weight>50</weight>
+                       <bold>false</bold>
+                      </font>
                      </property>
-                     <property name="alignment">
-                      <set>Qt::AlignCenter</set>
-                     </property>
+                     <item>
+                      <property name="text">
+                       <string>Flash bank 0</string>
+                      </property>
+                     </item>
+                     <item>
+                      <property name="text">
+                       <string>Flash bank 1</string>
+                      </property>
+                     </item>
                     </widget>
                    </item>
                   </layout>
@@ -5190,6 +5461,12 @@ interval</string>
                   <height>180</height>
                  </size>
                 </property>
+                <property name="baseSize">
+                 <size>
+                  <width>240</width>
+                  <height>90</height>
+                 </size>
+                </property>
                 <property name="font">
                  <font>
                   <family>맑은 고딕</family>
@@ -5207,10 +5484,10 @@ interval</string>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_36">
                  <property name="leftMargin">
-                  <number>12</number>
+                  <number>14</number>
                  </property>
                  <property name="topMargin">
-                  <number>12</number>
+                  <number>14</number>
                  </property>
                  <property name="rightMargin">
                   <number>6</number>
@@ -5226,7 +5503,7 @@ interval</string>
                    <item row="0" column="0">
                     <widget class="QLineEdit" name="searchcode">
                      <property name="sizePolicy">
-                      <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+                      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
                        <horstretch>0</horstretch>
                        <verstretch>0</verstretch>
                       </sizepolicy>
@@ -5240,7 +5517,13 @@ interval</string>
                      <property name="maximumSize">
                       <size>
                        <width>200</width>
-                       <height>45</height>
+                       <height>25</height>
+                      </size>
+                     </property>
+                     <property name="baseSize">
+                      <size>
+                       <width>100</width>
+                       <height>22</height>
                       </size>
                      </property>
                      <property name="font">
@@ -5458,6 +5741,12 @@ Retry count</string>
                      </item>
                      <item row="0" column="1">
                       <widget class="QLineEdit" name="tcp_timeout">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
                        <property name="minimumSize">
                         <size>
                          <width>60</width>
@@ -5467,7 +5756,13 @@ Retry count</string>
                        <property name="maximumSize">
                         <size>
                          <width>120</width>
-                         <height>45</height>
+                         <height>25</height>
+                        </size>
+                       </property>
+                       <property name="baseSize">
+                        <size>
+                         <width>90</width>
+                         <height>22</height>
                         </size>
                        </property>
                        <property name="font">
@@ -5520,7 +5815,7 @@ Retry count</string>
                     <number>2</number>
                    </property>
                    <property name="bottomMargin">
-                    <number>2</number>
+                    <number>4</number>
                    </property>
                    <item row="0" column="1">
                     <widget class="QGroupBox" name="radiobtn_group_s1">
@@ -5541,16 +5836,16 @@ Retry count</string>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_23">
                       <property name="leftMargin">
-                       <number>2</number>
+                       <number>6</number>
                       </property>
                       <property name="topMargin">
                        <number>2</number>
                       </property>
                       <property name="rightMargin">
-                       <number>2</number>
+                       <number>3</number>
                       </property>
                       <property name="bottomMargin">
-                       <number>2</number>
+                       <number>1</number>
                       </property>
                       <property name="verticalSpacing">
                        <number>3</number>
@@ -5649,16 +5944,16 @@ Retry count</string>
                      </property>
                      <layout class="QGridLayout" name="gridLayout_22">
                       <property name="leftMargin">
-                       <number>2</number>
+                       <number>6</number>
                       </property>
                       <property name="topMargin">
                        <number>2</number>
                       </property>
                       <property name="rightMargin">
-                       <number>2</number>
+                       <number>3</number>
                       </property>
                       <property name="bottomMargin">
-                       <number>2</number>
+                       <number>1</number>
                       </property>
                       <property name="verticalSpacing">
                        <number>3</number>
@@ -5732,6 +6027,18 @@ Retry count</string>
                    <item row="1" column="0" colspan="2">
                     <widget class="QFrame" name="group_dtrdsr">
                      <layout class="QGridLayout" name="gridLayout_48">
+                      <property name="leftMargin">
+                       <number>6</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>6</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>6</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>6</number>
+                      </property>
                       <item row="0" column="0">
                        <widget class="QCheckBox" name="checkbox_enable_dtr">
                         <property name="minimumSize">
@@ -5799,18 +6106,27 @@ Retry count</string>
                   <property name="title">
                    <string>Serial debug</string>
                   </property>
-                  <layout class="QGridLayout" name="gridLayout_93">
+                  <property name="alignment">
+                   <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                  </property>
+                  <layout class="QGridLayout" name="layout_serial_debug">
                    <property name="leftMargin">
                     <number>50</number>
                    </property>
                    <property name="topMargin">
-                    <number>6</number>
+                    <number>9</number>
                    </property>
                    <property name="rightMargin">
                     <number>50</number>
                    </property>
                    <item row="0" column="0">
                     <widget class="QComboBox" name="serial_debug">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
                      <property name="minimumSize">
                       <size>
                        <width>120</width>
@@ -5820,7 +6136,13 @@ Retry count</string>
                      <property name="maximumSize">
                       <size>
                        <width>240</width>
-                       <height>45</height>
+                       <height>25</height>
+                      </size>
+                     </property>
+                     <property name="baseSize">
+                      <size>
+                       <width>120</width>
+                       <height>22</height>
                       </size>
                      </property>
                      <property name="currentText">
@@ -5991,7 +6313,7 @@ Retry count</string>
                      <property name="maximumSize">
                       <size>
                        <width>25</width>
-                       <height>22</height>
+                       <height>23</height>
                       </size>
                      </property>
                      <property name="font">
@@ -6019,7 +6341,7 @@ Retry count</string>
                      <property name="maximumSize">
                       <size>
                        <width>25</width>
-                       <height>22</height>
+                       <height>23</height>
                       </size>
                      </property>
                      <property name="font">
@@ -6047,7 +6369,7 @@ Retry count</string>
                      <property name="maximumSize">
                       <size>
                        <width>25</width>
-                       <height>22</height>
+                       <height>23</height>
                       </size>
                      </property>
                      <property name="font">
@@ -6185,13 +6507,13 @@ Retry count</string>
                    <property name="minimumSize">
                     <size>
                      <width>110</width>
-                     <height>22</height>
+                     <height>23</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
                      <width>110</width>
-                     <height>22</height>
+                     <height>23</height>
                     </size>
                    </property>
                    <property name="font">
@@ -6271,17 +6593,50 @@ Retry count</string>
               <string>User I/O (supported WIZ750SR)</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_124">
+              <property name="horizontalSpacing">
+               <number>12</number>
+              </property>
               <item row="0" column="0">
                <layout class="QGridLayout" name="gridLayout_123">
                 <property name="horizontalSpacing">
-                 <number>12</number>
+                 <number>15</number>
+                </property>
+                <property name="verticalSpacing">
+                 <number>10</number>
                 </property>
                 <item row="0" column="0">
                  <layout class="QGridLayout" name="gridLayout_122">
+                  <property name="verticalSpacing">
+                   <number>9</number>
+                  </property>
                   <item row="0" column="0">
                    <widget class="QGroupBox" name="refresh_grp">
                     <property name="enabled">
                      <bool>false</bool>
+                    </property>
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>390</width>
+                      <height>50</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>390</width>
+                      <height>70</height>
+                     </size>
+                    </property>
+                    <property name="baseSize">
+                     <size>
+                      <width>390</width>
+                      <height>50</height>
+                     </size>
                     </property>
                     <property name="title">
                      <string>Refresh time</string>
@@ -6290,7 +6645,7 @@ Retry count</string>
                      <item row="0" column="0">
                       <layout class="QHBoxLayout" name="horizontalLayout_11">
                        <property name="spacing">
-                        <number>8</number>
+                        <number>6</number>
                        </property>
                        <item>
                         <widget class="QRadioButton" name="refresh_no">
@@ -6349,501 +6704,575 @@ Retry count</string>
                     <property name="enabled">
                      <bool>false</bool>
                     </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>390</width>
+                      <height>150</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>390</width>
+                      <height>150</height>
+                     </size>
+                    </property>
                     <property name="title">
                      <string>Expansion GPIO</string>
                     </property>
-                    <layout class="QGridLayout" name="gridLayout9">
+                    <layout class="QGridLayout" name="gridLayout_73">
                      <item row="0" column="0">
-                      <layout class="QGridLayout" name="gridLayout5">
-                       <item row="0" column="0">
-                        <widget class="QLabel" name="gpioa_label">
-                         <property name="minimumSize">
-                          <size>
-                           <width>56</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>56</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <property name="font">
-                          <font>
-                           <family>맑은 고딕</family>
-                           <pointsize>10</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>GPIO A</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="1">
-                        <widget class="QComboBox" name="gpioa_config">
-                         <property name="minimumSize">
-                          <size>
-                           <width>100</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>100</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <item>
-                          <property name="text">
-                           <string>Digital Input</string>
+                      <widget class="QFrame" name="frame_gpioa">
+                       <layout class="QGridLayout" name="gridLayout_72">
+                        <property name="leftMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>0</number>
+                        </property>
+                        <item row="0" column="0">
+                         <widget class="QLabel" name="gpioa_label">
+                          <property name="minimumSize">
+                           <size>
+                            <width>56</width>
+                            <height>0</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Digital Output</string>
+                          <property name="maximumSize">
+                           <size>
+                            <width>56</width>
+                            <height>16777215</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Analog Input</string>
+                          <property name="font">
+                           <font>
+                            <family>맑은 고딕</family>
+                            <pointsize>10</pointsize>
+                           </font>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="2">
-                        <widget class="QComboBox" name="gpioa_set">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <item>
                           <property name="text">
-                           <string>Low</string>
+                           <string>GPIO A</string>
                           </property>
-                         </item>
-                         <item>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QComboBox" name="gpioa_config">
+                          <property name="minimumSize">
+                           <size>
+                            <width>100</width>
+                            <height>0</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>100</width>
+                            <height>16777215</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Digital Input</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Digital Output</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Analog Input</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="2">
+                         <widget class="QComboBox" name="gpioa_set">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Low</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>High</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="3">
+                         <widget class="QLineEdit" name="gpioa_get">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="inputMask">
+                           <string notr="true"/>
+                          </property>
                           <property name="text">
-                           <string>High</string>
+                           <string notr="true"/>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="3">
-                        <widget class="QLineEdit" name="gpioa_get">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="inputMask">
-                          <string notr="true"/>
-                         </property>
-                         <property name="text">
-                          <string notr="true"/>
-                         </property>
-                         <property name="maxLength">
-                          <number>4</number>
-                         </property>
-                         <property name="frame">
-                          <bool>true</bool>
-                         </property>
-                         <property name="alignment">
-                          <set>Qt::AlignCenter</set>
-                         </property>
-                         <property name="dragEnabled">
-                          <bool>true</bool>
-                         </property>
-                         <property name="readOnly">
-                          <bool>true</bool>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
+                          <property name="maxLength">
+                           <number>4</number>
+                          </property>
+                          <property name="frame">
+                           <bool>true</bool>
+                          </property>
+                          <property name="alignment">
+                           <set>Qt::AlignCenter</set>
+                          </property>
+                          <property name="dragEnabled">
+                           <bool>true</bool>
+                          </property>
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </widget>
                      </item>
                      <item row="1" column="0">
-                      <layout class="QGridLayout" name="gridLayout6">
-                       <item row="0" column="0">
-                        <widget class="QLabel" name="gpiob_label">
-                         <property name="minimumSize">
-                          <size>
-                           <width>56</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>56</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <property name="font">
-                          <font>
-                           <family>맑은 고딕</family>
-                           <pointsize>10</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>GPIO B</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="1">
-                        <widget class="QComboBox" name="gpiob_config">
-                         <property name="minimumSize">
-                          <size>
-                           <width>100</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>100</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <item>
-                          <property name="text">
-                           <string>Digital Input</string>
+                      <widget class="QFrame" name="frame_gpiob">
+                       <layout class="QGridLayout" name="gridLayout_74">
+                        <property name="leftMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>0</number>
+                        </property>
+                        <item row="0" column="0">
+                         <widget class="QLabel" name="gpiob_label">
+                          <property name="minimumSize">
+                           <size>
+                            <width>56</width>
+                            <height>0</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Digital Output</string>
+                          <property name="maximumSize">
+                           <size>
+                            <width>56</width>
+                            <height>16777215</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Analog Input</string>
+                          <property name="font">
+                           <font>
+                            <family>맑은 고딕</family>
+                            <pointsize>10</pointsize>
+                           </font>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="2">
-                        <widget class="QComboBox" name="gpiob_set">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <item>
                           <property name="text">
-                           <string>Low</string>
+                           <string>GPIO B</string>
                           </property>
-                         </item>
-                         <item>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QComboBox" name="gpiob_config">
+                          <property name="minimumSize">
+                           <size>
+                            <width>100</width>
+                            <height>0</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>100</width>
+                            <height>16777215</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Digital Input</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Digital Output</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Analog Input</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="2">
+                         <widget class="QComboBox" name="gpiob_set">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Low</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>High</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="3">
+                         <widget class="QLineEdit" name="gpiob_get">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="inputMask">
+                           <string notr="true"/>
+                          </property>
                           <property name="text">
-                           <string>High</string>
+                           <string notr="true"/>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="3">
-                        <widget class="QLineEdit" name="gpiob_get">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="inputMask">
-                          <string notr="true"/>
-                         </property>
-                         <property name="text">
-                          <string notr="true"/>
-                         </property>
-                         <property name="maxLength">
-                          <number>4</number>
-                         </property>
-                         <property name="frame">
-                          <bool>true</bool>
-                         </property>
-                         <property name="alignment">
-                          <set>Qt::AlignCenter</set>
-                         </property>
-                         <property name="dragEnabled">
-                          <bool>true</bool>
-                         </property>
-                         <property name="readOnly">
-                          <bool>true</bool>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
+                          <property name="maxLength">
+                           <number>4</number>
+                          </property>
+                          <property name="frame">
+                           <bool>true</bool>
+                          </property>
+                          <property name="alignment">
+                           <set>Qt::AlignCenter</set>
+                          </property>
+                          <property name="dragEnabled">
+                           <bool>true</bool>
+                          </property>
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </widget>
                      </item>
                      <item row="2" column="0">
-                      <layout class="QGridLayout" name="gridLayout7">
-                       <item row="0" column="0">
-                        <widget class="QLabel" name="gpioc_label">
-                         <property name="minimumSize">
-                          <size>
-                           <width>56</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>56</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <property name="font">
-                          <font>
-                           <family>맑은 고딕</family>
-                           <pointsize>10</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>GPIO C</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="1">
-                        <widget class="QComboBox" name="gpioc_config">
-                         <property name="minimumSize">
-                          <size>
-                           <width>100</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>100</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <item>
-                          <property name="text">
-                           <string>Digital Input</string>
+                      <widget class="QFrame" name="frame_gpioc">
+                       <property name="toolTipDuration">
+                        <number>-1</number>
+                       </property>
+                       <layout class="QGridLayout" name="gridLayout_71">
+                        <property name="leftMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>0</number>
+                        </property>
+                        <item row="0" column="0">
+                         <widget class="QLabel" name="gpioc_label">
+                          <property name="minimumSize">
+                           <size>
+                            <width>56</width>
+                            <height>0</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Digital Output</string>
+                          <property name="maximumSize">
+                           <size>
+                            <width>56</width>
+                            <height>16777215</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Analog Input</string>
+                          <property name="font">
+                           <font>
+                            <family>맑은 고딕</family>
+                            <pointsize>10</pointsize>
+                           </font>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="2">
-                        <widget class="QComboBox" name="gpioc_set">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <item>
                           <property name="text">
-                           <string>Low</string>
+                           <string>GPIO C</string>
                           </property>
-                         </item>
-                         <item>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QComboBox" name="gpioc_config">
+                          <property name="minimumSize">
+                           <size>
+                            <width>100</width>
+                            <height>0</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>100</width>
+                            <height>16777215</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Digital Input</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Digital Output</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Analog Input</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="2">
+                         <widget class="QComboBox" name="gpioc_set">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Low</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>High</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="3">
+                         <widget class="QLineEdit" name="gpioc_get">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="inputMask">
+                           <string notr="true"/>
+                          </property>
                           <property name="text">
-                           <string>High</string>
+                           <string notr="true"/>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="3">
-                        <widget class="QLineEdit" name="gpioc_get">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="inputMask">
-                          <string notr="true"/>
-                         </property>
-                         <property name="text">
-                          <string notr="true"/>
-                         </property>
-                         <property name="maxLength">
-                          <number>4</number>
-                         </property>
-                         <property name="frame">
-                          <bool>true</bool>
-                         </property>
-                         <property name="alignment">
-                          <set>Qt::AlignCenter</set>
-                         </property>
-                         <property name="dragEnabled">
-                          <bool>true</bool>
-                         </property>
-                         <property name="readOnly">
-                          <bool>true</bool>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
+                          <property name="maxLength">
+                           <number>4</number>
+                          </property>
+                          <property name="frame">
+                           <bool>true</bool>
+                          </property>
+                          <property name="alignment">
+                           <set>Qt::AlignCenter</set>
+                          </property>
+                          <property name="dragEnabled">
+                           <bool>true</bool>
+                          </property>
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </widget>
                      </item>
                      <item row="3" column="0">
-                      <layout class="QGridLayout" name="gridLayout8">
-                       <item row="0" column="0">
-                        <widget class="QLabel" name="gpiod_label">
-                         <property name="minimumSize">
-                          <size>
-                           <width>56</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>56</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <property name="font">
-                          <font>
-                           <family>맑은 고딕</family>
-                           <pointsize>10</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>GPIO D</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="1">
-                        <widget class="QComboBox" name="gpiod_config">
-                         <property name="minimumSize">
-                          <size>
-                           <width>100</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>100</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <item>
-                          <property name="text">
-                           <string>Digital Input</string>
+                      <widget class="QFrame" name="frame_gpiod">
+                       <layout class="QGridLayout" name="gridlayout_gpiod">
+                        <property name="leftMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="topMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="rightMargin">
+                         <number>0</number>
+                        </property>
+                        <property name="bottomMargin">
+                         <number>0</number>
+                        </property>
+                        <item row="0" column="0">
+                         <widget class="QLabel" name="gpiod_label">
+                          <property name="minimumSize">
+                           <size>
+                            <width>56</width>
+                            <height>0</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Digital Output</string>
+                          <property name="maximumSize">
+                           <size>
+                            <width>56</width>
+                            <height>16777215</height>
+                           </size>
                           </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Analog Input</string>
+                          <property name="font">
+                           <font>
+                            <family>맑은 고딕</family>
+                            <pointsize>10</pointsize>
+                           </font>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="2">
-                        <widget class="QComboBox" name="gpiod_set">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <item>
                           <property name="text">
-                           <string>Low</string>
+                           <string>GPIO D</string>
                           </property>
-                         </item>
-                         <item>
+                          <property name="buddy">
+                           <cstring>frame_gpiod</cstring>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="1">
+                         <widget class="QComboBox" name="gpiod_config">
+                          <property name="minimumSize">
+                           <size>
+                            <width>100</width>
+                            <height>0</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>100</width>
+                            <height>16777215</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Digital Input</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Digital Output</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Analog Input</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="2">
+                         <widget class="QComboBox" name="gpiod_set">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <item>
+                           <property name="text">
+                            <string>Low</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>High</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                        <item row="0" column="3">
+                         <widget class="QLineEdit" name="gpiod_get">
+                          <property name="minimumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="maximumSize">
+                           <size>
+                            <width>70</width>
+                            <height>22</height>
+                           </size>
+                          </property>
+                          <property name="inputMask">
+                           <string notr="true"/>
+                          </property>
                           <property name="text">
-                           <string>High</string>
+                           <string notr="true"/>
                           </property>
-                         </item>
-                        </widget>
-                       </item>
-                       <item row="0" column="3">
-                        <widget class="QLineEdit" name="gpiod_get">
-                         <property name="minimumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>70</width>
-                           <height>22</height>
-                          </size>
-                         </property>
-                         <property name="inputMask">
-                          <string notr="true"/>
-                         </property>
-                         <property name="text">
-                          <string notr="true"/>
-                         </property>
-                         <property name="maxLength">
-                          <number>4</number>
-                         </property>
-                         <property name="frame">
-                          <bool>true</bool>
-                         </property>
-                         <property name="alignment">
-                          <set>Qt::AlignCenter</set>
-                         </property>
-                         <property name="dragEnabled">
-                          <bool>true</bool>
-                         </property>
-                         <property name="readOnly">
-                          <bool>true</bool>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
+                          <property name="maxLength">
+                           <number>4</number>
+                          </property>
+                          <property name="frame">
+                           <bool>true</bool>
+                          </property>
+                          <property name="alignment">
+                           <set>Qt::AlignCenter</set>
+                          </property>
+                          <property name="dragEnabled">
+                           <bool>true</bool>
+                          </property>
+                          <property name="readOnly">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </widget>
                      </item>
                     </layout>
                    </widget>
@@ -6855,6 +7284,12 @@ Retry count</string>
                   <item row="0" column="0">
                    <widget class="QFrame" name="frame_5">
                     <property name="minimumSize">
+                     <size>
+                      <width>270</width>
+                      <height>140</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
                      <size>
                       <width>270</width>
                       <height>140</height>
@@ -6872,9 +7307,21 @@ Retry count</string>
                    <widget class="QLabel" name="label_5">
                     <property name="minimumSize">
                      <size>
-                      <width>161</width>
-                      <height>60</height>
+                      <width>250</width>
+                      <height>70</height>
                      </size>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>300</width>
+                      <height>70</height>
+                     </size>
+                    </property>
+                    <property name="font">
+                     <font>
+                      <family>맑은 고딕</family>
+                      <pointsize>9</pointsize>
+                     </font>
                     </property>
                     <property name="text">
                      <string>Digital input: Read only
@@ -7048,226 +7495,7 @@ Analog input: Read only</string>
                 </layout>
                </widget>
               </item>
-              <item row="0" column="1" rowspan="2">
-               <widget class="QGroupBox" name="groupBox_5">
-                <property name="minimumSize">
-                 <size>
-                  <width>281</width>
-                  <height>150</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>281</width>
-                  <height>160</height>
-                 </size>
-                </property>
-                <property name="title">
-                 <string>MQTT topics</string>
-                </property>
-                <layout class="QGridLayout" name="gridLayout_5">
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="localip_label_4">
-                   <property name="minimumSize">
-                    <size>
-                     <width>90</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>90</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <family>맑은 고딕</family>
-                     <pointsize>8</pointsize>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>Publish topic</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QLineEdit" name="lineedit_mqtt_pubtopic">
-                   <property name="minimumSize">
-                    <size>
-                     <width>140</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>160</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <family>맑은 고딕</family>
-                     <pointsize>8</pointsize>
-                    </font>
-                   </property>
-                   <property name="toolTip">
-                    <string/>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="maxLength">
-                    <number>128</number>
-                   </property>
-                   <property name="frame">
-                    <bool>true</bool>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="localip_label_5">
-                   <property name="minimumSize">
-                    <size>
-                     <width>90</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>90</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <family>맑은 고딕</family>
-                     <pointsize>8</pointsize>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>Subscribe topic</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QLineEdit" name="lineedit_mqtt_subtopic_0">
-                   <property name="minimumSize">
-                    <size>
-                     <width>140</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>160</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <family>맑은 고딕</family>
-                     <pointsize>8</pointsize>
-                    </font>
-                   </property>
-                   <property name="toolTip">
-                    <string/>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="maxLength">
-                    <number>128</number>
-                   </property>
-                   <property name="frame">
-                    <bool>true</bool>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="1">
-                  <widget class="QLineEdit" name="lineedit_mqtt_subtopic_1">
-                   <property name="minimumSize">
-                    <size>
-                     <width>140</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>160</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <family>맑은 고딕</family>
-                     <pointsize>8</pointsize>
-                    </font>
-                   </property>
-                   <property name="toolTip">
-                    <string/>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="maxLength">
-                    <number>128</number>
-                   </property>
-                   <property name="frame">
-                    <bool>true</bool>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="3" column="1">
-                  <widget class="QLineEdit" name="lineedit_mqtt_subtopic_2">
-                   <property name="minimumSize">
-                    <size>
-                     <width>140</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>160</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <family>맑은 고딕</family>
-                     <pointsize>8</pointsize>
-                    </font>
-                   </property>
-                   <property name="toolTip">
-                    <string/>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="maxLength">
-                    <number>128</number>
-                   </property>
-                   <property name="frame">
-                    <bool>true</bool>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </widget>
-              </item>
-              <item row="0" column="2" rowspan="3">
+              <item row="0" column="2" rowspan="4">
                <widget class="QFrame" name="frame_2">
                 <property name="minimumSize">
                  <size>
@@ -7277,7 +7505,7 @@ Analog input: Read only</string>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>100</width>
+                  <width>200</width>
                   <height>150</height>
                  </size>
                 </property>
@@ -7289,7 +7517,7 @@ Analog input: Read only</string>
                 </property>
                </widget>
               </item>
-              <item row="1" column="0" rowspan="2">
+              <item row="1" column="0" rowspan="3">
                <widget class="QGroupBox" name="groupBox_8">
                 <property name="minimumSize">
                  <size>
@@ -7533,6 +7761,225 @@ Analog input: Read only</string>
                 </layout>
                </widget>
               </item>
+              <item row="0" column="1" rowspan="2">
+               <widget class="QGroupBox" name="groupBox_5">
+                <property name="minimumSize">
+                 <size>
+                  <width>281</width>
+                  <height>150</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>281</width>
+                  <height>160</height>
+                 </size>
+                </property>
+                <property name="title">
+                 <string>MQTT topics</string>
+                </property>
+                <layout class="QGridLayout" name="gridLayout_5">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="localip_label_4">
+                   <property name="minimumSize">
+                    <size>
+                     <width>90</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>90</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <family>맑은 고딕</family>
+                     <pointsize>8</pointsize>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>Publish topic</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QLineEdit" name="lineedit_mqtt_pubtopic">
+                   <property name="minimumSize">
+                    <size>
+                     <width>140</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>160</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <family>맑은 고딕</family>
+                     <pointsize>8</pointsize>
+                    </font>
+                   </property>
+                   <property name="toolTip">
+                    <string/>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="maxLength">
+                    <number>128</number>
+                   </property>
+                   <property name="frame">
+                    <bool>true</bool>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="localip_label_5">
+                   <property name="minimumSize">
+                    <size>
+                     <width>90</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>90</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <family>맑은 고딕</family>
+                     <pointsize>8</pointsize>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>Subscribe topic</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QLineEdit" name="lineedit_mqtt_subtopic_0">
+                   <property name="minimumSize">
+                    <size>
+                     <width>140</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>160</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <family>맑은 고딕</family>
+                     <pointsize>8</pointsize>
+                    </font>
+                   </property>
+                   <property name="toolTip">
+                    <string/>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="maxLength">
+                    <number>128</number>
+                   </property>
+                   <property name="frame">
+                    <bool>true</bool>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QLineEdit" name="lineedit_mqtt_subtopic_1">
+                   <property name="minimumSize">
+                    <size>
+                     <width>140</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>160</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <family>맑은 고딕</family>
+                     <pointsize>8</pointsize>
+                    </font>
+                   </property>
+                   <property name="toolTip">
+                    <string/>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="maxLength">
+                    <number>128</number>
+                   </property>
+                   <property name="frame">
+                    <bool>true</bool>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="1">
+                  <widget class="QLineEdit" name="lineedit_mqtt_subtopic_2">
+                   <property name="minimumSize">
+                    <size>
+                     <width>140</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>160</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <family>맑은 고딕</family>
+                     <pointsize>8</pointsize>
+                    </font>
+                   </property>
+                   <property name="toolTip">
+                    <string/>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="maxLength">
+                    <number>128</number>
+                   </property>
+                   <property name="frame">
+                    <bool>true</bool>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
               <item row="2" column="1">
                <widget class="QFrame" name="frame_3">
                 <property name="minimumSize">
@@ -7544,7 +7991,7 @@ Analog input: Read only</string>
                 <property name="maximumSize">
                  <size>
                   <width>200</width>
-                  <height>40</height>
+                  <height>100</height>
                  </size>
                 </property>
                 <property name="frameShape">
@@ -7567,13 +8014,13 @@ Analog input: Read only</string>
                 <property name="minimumSize">
                  <size>
                   <width>200</width>
-                  <height>194</height>
+                  <height>180</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>220</width>
-                  <height>194</height>
+                  <height>250</height>
                  </size>
                 </property>
                 <property name="title">
@@ -7642,7 +8089,7 @@ Analog input: Read only</string>
                    <property name="maximumSize">
                     <size>
                      <width>200</width>
-                     <height>95</height>
+                     <height>150</height>
                     </size>
                    </property>
                    <property name="font">
@@ -7757,13 +8204,13 @@ Analog input: Read only</string>
                 <property name="minimumSize">
                  <size>
                   <width>200</width>
-                  <height>194</height>
+                  <height>180</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>220</width>
-                  <height>194</height>
+                  <height>250</height>
                  </size>
                 </property>
                 <property name="title">
@@ -7885,7 +8332,7 @@ Analog input: Read only</string>
                    <property name="maximumSize">
                     <size>
                      <width>200</width>
-                     <height>95</height>
+                     <height>150</height>
                     </size>
                    </property>
                    <property name="font">
@@ -7907,13 +8354,13 @@ Analog input: Read only</string>
                 <property name="minimumSize">
                  <size>
                   <width>200</width>
-                  <height>194</height>
+                  <height>180</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>220</width>
-                  <height>194</height>
+                  <height>250</height>
                  </size>
                 </property>
                 <property name="title">
@@ -7976,7 +8423,7 @@ Analog input: Read only</string>
                    <property name="maximumSize">
                     <size>
                      <width>200</width>
-                     <height>130</height>
+                     <height>150</height>
                     </size>
                    </property>
                    <property name="font">
@@ -8569,8 +9016,8 @@ Config</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>951</width>
-     <height>22</height>
+     <width>938</width>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -8610,6 +9057,7 @@ Config</string>
     <property name="title">
      <string>Help</string>
     </property>
+    <addaction name="action_document"/>
     <addaction name="separator"/>
     <addaction name="about_wiz"/>
     <addaction name="separator"/>
@@ -8798,6 +9246,11 @@ Config</string>
   <action name="action_retry_search">
    <property name="text">
     <string>Retry search devices</string>
+   </property>
+  </action>
+  <action name="action_document">
+   <property name="text">
+    <string>Documentation</string>
    </property>
   </action>
  </widget>

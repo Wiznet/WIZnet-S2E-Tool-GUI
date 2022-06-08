@@ -11,6 +11,8 @@
     - [Ubuntu](#ubuntu)
 - [CLI Configuration Tool](#cli-configuration-tool)
 - [TroubleShooting](#troubleshooting)
+  - [FAQ](#faq)
+  - [Report](#report)
 
 ---
 
@@ -27,24 +29,24 @@ Python interpreter based and it is platform independent. It works on python vers
 
 ### 1 Port Serial to Ethernet Module
 
-- [WIZ750SR](https://docs.wiznet.io/Product/S2E-Module/WIZ750SR/wiz750sr)
+- [WIZ750SR](https://docs.wiznet.io/Product/S2E-Module/WIZ750SR)
   - [WIZ750SR Github repository](https://github.com/Wiznet/WIZ750SR)
-- [WIZ750SR-100](https://docs.wiznet.io/Product/S2E-Module/WIZ750SR-1xx-Series/WIZ750SR-100/wiz750sr_100)
-- [WIZ750SR-105](https://docs.wiznet.io/Product/S2E-Module/WIZ750SR-1xx-Series/WIZ750SR-105/wiz750sr_105)
-- [WIZ750SR-110](https://docs.wiznet.io/Product/S2E-Module/WIZ750SR-1xx-Series/WIZ750SR-110/wiz750sr_110)
-- [WIZ107SR](http://www.wiznet.io/product-item/wiz107sr/) & [WIZ108SR](http://www.wiznet.io/product-item/wiz108sr/)
+- [WIZ750SR-100](https://docs.wiznet.io/Product/S2E-Module/WIZ750SR-1xx-Series/WIZ750SR-100)
+- [WIZ750SR-105](https://docs.wiznet.io/Product/S2E-Module/WIZ750SR-1xx-Series/WIZ750SR-105)
+- [WIZ750SR-110](https://docs.wiznet.io/Product/S2E-Module/WIZ750SR-1xx-Series/WIZ750SR-110)
+- [WIZ107SR](https://docs.wiznet.io/Product/S2E-Module/WIZ107SR) & [WIZ108SR](https://docs.wiznet.io/Product/S2E-Module/WIZ108SR)
 
 ### 2 Port Serial to Ethernet Module
 
-- [WIZ752SR-120](https://docs.wiznet.io/Product/S2E-Module/WIZ752SR-12x-Series/WIZ752SR-120/wiz752sr_120)
-- [WIZ752SR-125](https://docs.wiznet.io/Product/S2E-Module/WIZ752SR-12x-Series/WIZ752SR-125/wiz752sr_125)
+- [WIZ752SR-120](https://docs.wiznet.io/Product/S2E-Module/WIZ752SR-12x-Series/WIZ752SR-120)
+- [WIZ752SR-125](https://docs.wiznet.io/Product/S2E-Module/WIZ752SR-12x-Series/WIZ752SR-125)
 
 ### Pre-programmed MCU
 - [W7500(P)-S2E](https://docs.wiznet.io/Product/Pre-programmed-MCU/W7500P-S2E/w7500p-s2e-EN)
 
 ### Security Serial to Ethernet Module
 
-- [WIZ510SSL](https://docs.wiznet.io/Product/S2E-Module/WIZ510SSL/wiz510ssl)
+- [WIZ510SSL](https://docs.wiznet.io/Product/S2E-Module/WIZ510SSL)
 
 ---
 
@@ -123,9 +125,17 @@ CLI configuration tool can be refer from [WIZnet-S2E-Tool github page.](https://
 
 # TroubleShooting
 
-If you have any problems, use one of the links below and **please report the problem.**
+## FAQ
 
-- [Github Issue page](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/issues)
+Please refer to the Wiki FAQ page.
+
+- [Wiki FAQ](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki/FAQ_en)
+
+## Report
+
+If you have any other problems, use one of the links below and **please report the problem.**
+
 - [WIZnet Developer Forum](https://forum.wiznet.io/)
+- [Github Issue page](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/issues)
 
 ---
