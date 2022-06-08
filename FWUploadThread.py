@@ -181,7 +181,7 @@ class FWUploadThread(QThread):
                         # cur_state = self.client.state
                         try:
                             self.client.open()
-                            # print('1 : %r' % self.client.getsockstate())
+                            self.logger.debug('1 : %r' % self.client.getsockstate())
                             # print("%r\r\n" % self.client.state)
                             if self.client.state == SOCK_OPEN_STATE:
                                 self.logger.info('[%r] is OPEN' % (self.serverip))
@@ -195,7 +195,7 @@ class FWUploadThread(QThread):
                         # cur_state = self.client.state
                         try:
                             self.client.connect()
-                            # print('2 : %r' % self.client.getsockstate())
+                            self.logger.debug('2 : %r' % self.client.getsockstate())
                             if self.client.state == SOCK_CONNECT_STATE:
                                 self.logger.info('[%r] is CONNECTED' % (self.serverip))
                                 # print('[%r] client.working_state == %r' % (self.serverip, self.client.working_state))
@@ -203,8 +203,8 @@ class FWUploadThread(QThread):
                             print(e)
 
                     elif self.client.state == SOCK_CONNECT_STATE:
-                        # if self.client.working_state == idle_state:
-                        #    print('3 : %r' % self.client.getsockstate())
+                        if self.client.working_state == idle_state:
+                           self.logger.debug('3 : %r' % self.client.getsockstate())
                         try:
                             self.uploading_size.emit(5)
                             while self.remainbytes != 0:
@@ -233,11 +233,11 @@ class FWUploadThread(QThread):
 
                                     self.client.working_state = datasent_state
 
-                                    self.timer1 = threading.Timer(2.0, self.myTimer)
+                                    self.timer1 = threading.Timer(3.0, self.myTimer)
                                     self.timer1.start()
 
                                 elif self.client.working_state == datasent_state:
-                                    # print('4 : %r' % self.client.getsockstate())
+                                    self.logger.debug('4 : %r' % self.client.getsockstate())
                                     response = self.client.readbytes(2)
                                     if response is not None:
                                         if int(binascii.hexlify(response), 16):
@@ -251,6 +251,7 @@ class FWUploadThread(QThread):
                                             self.terminate()
 
                                     if self.istimeout == 1:
+                                        self.logger.warning('Timeout occured')
                                         self.istimeout = 0
                                         self.client.working_state = idle_state
                                         self.client.close()
