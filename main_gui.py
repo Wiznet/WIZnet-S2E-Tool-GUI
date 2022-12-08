@@ -40,7 +40,7 @@ SOCK_OPEN_STATE = 3
 SOCK_CONNECTTRY_STATE = 4
 SOCK_CONNECT_STATE = 5
 
-VERSION = 'V1.5.0'
+VERSION = 'V1.5.1'
 
 
 def resource_path(relative_path):
@@ -520,6 +520,12 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.ch1_ssl_tcpclient.setEnabled(False)
             self.ch1_mqttclient.setEnabled(False)
             self.ch1_mqtts_client.setEnabled(False)
+
+            # 20221208 Modify baud rate temperarily
+            self.ch1_baud.removeItem(14)
+        else:
+            if self.ch1_baud.count() == 14:
+                self.ch1_baud.insertItem(14, "460800")
 
         # SC: Status pin option
         if 'WIZ107' in self.curr_dev or 'WIZ108' in self.curr_dev:
