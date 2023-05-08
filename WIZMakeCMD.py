@@ -28,7 +28,7 @@ ONE_PORT_DEV = [
     "W7500-S2E",
     "W7500P-S2E",
 ]
-SECURITY_DEVICE = ["WIZ510SSL", "WIZ5XXSR-RP"]
+SECURITY_DEVICE = ["WIZ510SSL", "WIZ5XXSR-RP", "WIZ5XXSR-RP_E-SAVE"]
 TWO_PORT_DEV = ["WIZ752SR-12x", "WIZ752SR-120", "WIZ752SR-125"]
 
 """
@@ -72,6 +72,9 @@ cmd_wiz510ssl_added = ['BA']
 # 2022.05.10
 # WIZ5XXSR-RP added commands
 cmd_wiz5xxsr_added = ['SO', 'UF']
+
+# WIZ5XXSR-RP_E-SAVE commands
+cmd_wiz5xxsr_esave = ['U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9']
 
 
 """
@@ -148,6 +151,10 @@ class WIZMakeCMD:
             elif 'WIZ5XXSR' in devname:
                 for cmd in cmd_wiz5xxsr:
                     cmd_list.append([cmd, ""])
+                # Commands for E-SAVE
+                if 'E-SAVE' in devname:
+                    for cmd in cmd_wiz5xxsr_esave:
+                        cmd_list.append([cmd, ""])
         else:
             pass
         # print("search()", cmd_list)
@@ -203,6 +210,10 @@ class WIZMakeCMD:
                 elif 'WIZ5XXSR' in devname:
                     for cmd in cmd_wiz5xxsr:
                         cmd_list.append([cmd, ""])
+                    # Commands for E-SAVE
+                    if 'E-SAVE' in devname:
+                        for cmd in cmd_wiz5xxsr_esave:
+                            cmd_list.append([cmd, ""])
             cmd_list.append(["SV", ""])  # save device setting
             cmd_list.append(["RT", ""])  # Device reboot
             # print("setcommand()", cmd_list)
