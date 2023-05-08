@@ -2,7 +2,6 @@
 
 from wizsocket.TCPClient import TCPClient
 from WIZMakeCMD import WIZMakeCMD, version_compare, ONE_PORT_DEV, TWO_PORT_DEV, SECURITY_DEVICE
-from WIZ2000CMDSET import WIZ2000CMDSET
 from WIZ752CMDSET import WIZ752CMDSET
 from WIZ750CMDSET import WIZ750CMDSET
 from WIZ510SSLCMDSET import WIZ510SSLCMDSET
@@ -20,10 +19,11 @@ import subprocess
 import base64
 import webbrowser
 import logging
-# import ssl
+# import psutil
 
 # Additional package
-from PyQt5 import QtWidgets, QtCore, QtGui, uic
+from PyQt5 import QtCore, QtGui, uic
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLineEdit, QMessageBox, QTableWidgetItem, QFileDialog, QMenu, QAction, QProgressBar, QInputDialog
 import ifaddr
 
 
@@ -34,13 +34,13 @@ OP_SETFILE = 4
 OP_GETFILE = 5
 OP_FWUP = 6
 
-SOCK_CLOSE_STATE = 1
-SOCK_OPENTRY_STATE = 2
-SOCK_OPEN_STATE = 3
-SOCK_CONNECTTRY_STATE = 4
-SOCK_CONNECT_STATE = 5
+SOCK_CLOSE_STATE = 10
+SOCK_OPENTRY_STATE = 20
+SOCK_OPEN_STATE = 30
+SOCK_CONNECTTRY_STATE = 40
+SOCK_CONNECT_STATE = 50
 
-VERSION = 'V1.5.1'
+VERSION = 'V1.5.2 Dev'
 
 
 def resource_path(relative_path):
@@ -55,7 +55,7 @@ uic_logger.setLevel(logging.INFO)
 main_window = uic.loadUiType(resource_path('gui/wizconfig_gui.ui'))[0]
 
 
-class WIZWindow(QtWidgets.QMainWindow, main_window):
+class WIZWindow(QMainWindow, main_window):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
@@ -81,7 +81,6 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
         self.wiz750cmdObj = WIZ750CMDSET(1)
         self.wiz752cmdObj = WIZ752CMDSET(1)
-        self.wiz2000cmdObj = WIZ2000CMDSET(1)
         self.wiz510sslcmdObj = WIZ510SSLCMDSET(1)
         self.wizmakecmd = WIZMakeCMD()
 
@@ -152,7 +151,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         # factory reset
         # WIZ2000: setting or factory two options
         self.btn_factory.clicked.connect(self.event_factory_setting)
-        self.btn_factory.triggered[QtWidgets.QAction].connect(self.event_factory_option_clicked)
+        self.btn_factory.triggered[QAction].connect(self.event_factory_option_clicked)
 
         # configuration save/load button
         self.btn_saveconfig.clicked.connect(self.dialog_save_file)
@@ -196,7 +195,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         self.unicast_ip.clicked.connect(self.event_search_method)
         # self.unicast_mac.clicked.connect(self.event_search_method)
 
-        self.pgbar = QtWidgets.QProgressBar()
+        self.pgbar = QProgressBar()
         self.statusbar.addPermanentWidget(self.pgbar)
 
         # progress thread
@@ -217,13 +216,15 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
         # Menu event - Option
         self.net_adapter_info()
-        self.netconfig_menu.triggered[QtWidgets.QAction].connect(self.net_ifs_selected)
+        # self.list_net_interfaces()
+
+        self.netconfig_menu.triggered[QAction].connect(self.net_ifs_selected)
         # Menu event - Option - Search option
         self.action_set_wait_time.triggered.connect(self.input_search_wait_time)
         self.action_retry_search.triggered.connect(self.input_retry_search)
 
         # network interface selection
-        self.net_interface.currentIndexChanged.connect(self.net_changed)
+        self.combobox_net_interface.currentIndexChanged.connect(self.net_changed)
 
         # Tab changed
         self.generalTab.currentChanged.connect(self.tab_changed)
@@ -257,6 +258,9 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         self.textedit_privatekey.textChanged.connect(self.event_privatekey_changed)
         # self.textedit_upload_fw.textChanged.connect(self.event_uploadfw_changed)
 
+        # Init network interface
+        self.combobox_net_interface.setCurrentIndex(0)
+
         self.cert_object_config()
 
     def init_ui_object(self):
@@ -286,10 +290,17 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         self.groupbox_ch1_timeout.hide()
         # self.groupbox_ch1_timeout.setEnabled(False)
 
+        # for WIZ5XXSR custom module
+        for i in range(3, 10):
+            lineedit_subtopic = getattr(self, f'lineedit_mqtt_subtopic_{i}')
+            # lineedit_subtopic.hide()
+            lineedit_subtopic.setEnabled(False)
+
+
     def init_btn_factory(self):
         # factory_option = ['Factory default settings', 'Factory default firmware']
-        self.factory_setting_action = QtWidgets.QAction('Factory default settings', self)
-        self.factory_firmware_action = QtWidgets.QAction('Factory default firmware', self)
+        self.factory_setting_action = QAction('Factory default settings', self)
+        self.factory_firmware_action = QAction('Factory default firmware', self)
 
         self.btn_factory.addAction(self.factory_setting_action)
         self.btn_factory.addAction(self.factory_firmware_action)
@@ -336,8 +347,8 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.object_config()
 
     def net_changed(self, ifs):
-        self.logger.info(self.net_interface.currentText())
-        ifs = self.net_interface.currentText().split(':')
+        self.logger.info(self.combobox_net_interface.currentText())
+        ifs = self.combobox_net_interface.currentText().split(':')
         selected_ip = ifs[0]
         selected_name = ifs[1]
 
@@ -346,7 +357,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
     # Get network adapter & IP list
     def net_adapter_info(self):
-        self.netconfig_menu = QtWidgets.QMenu('Network Interface Config', self)
+        self.netconfig_menu = QMenu('Network Interface Config', self)
         self.netconfig_menu.setFont(self.midfont)
         self.menuOption.addMenu(self.netconfig_menu)
 
@@ -365,12 +376,35 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
                         # -- get network interface list
                         self.net_list.append(adapter.nice_name)
-                        netconfig = QtWidgets.QAction(net_ifs, self)
+                        netconfig = QAction(net_ifs, self)
                         self.netconfig_menu.addAction(netconfig)
-                        self.net_interface.addItem(net_ifs)
+                        self.combobox_net_interface.addItem(net_ifs)
                 else:
                     # ipv6_addr = ip.ip
                     pass
+
+        # Default: not selected
+        self.combobox_net_interface.setCurrentIndex(-1)
+        # 힌트 텍스트 설정
+        # self.combobox_net_interface.setPlaceholderText('<Select Network Interface>')
+
+    # def list_net_interfaces(self):
+    #     self.netconfig_menu = QMenu('Select Network Interface', self)
+    #     self.netconfig_menu.setFont(self.midfont)
+    #     self.menuOption.addMenu(self.netconfig_menu)
+
+    #     self.net_list = []
+    #     interfaces = psutil.net_if_addrs()
+    #     for interface_name, interface_addresses in interfaces.items():
+    #         for address in interface_addresses:
+    #             if str(address.family) == 'AddressFamily.AF_INET':
+    #                 self.logger.debug(f"Net Interface: {interface_name}, {address.address}, {address.netmask}, {address.broadcast}")
+    #                 net_ifs = f"{address.address}: {interface_name}"
+    #                 # -- get network interface list
+    #                 self.net_list.append(interface_name)
+    #                 netconfig = QAction(net_ifs, self)
+    #                 self.netconfig_menu.addAction(netconfig)
+    #                 self.combobox_net_interface.addItem(net_ifs)
 
     def disable_object(self):
         self.btn_reset.setEnabled(False)
@@ -453,28 +487,16 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
     # Button click events
     def event_setting_clicked(self):
-        if 'WIZ2000' in self.curr_dev:
-            self.input_setting_pw('setting')
-        else:
-            self.do_setting()
+        self.do_setting()
 
     def event_reset_clicked(self):
-        if 'WIZ2000' in self.curr_dev:
-            self.input_setting_pw('reset')
-        else:
-            self.do_reset()
+        self.do_reset()
 
     def event_factory_setting(self):
-        if 'WIZ2000' in self.curr_dev:
-            self.input_setting_pw('factory_setting')
-        else:
-            self.msg_factory_setting()
+        self.msg_factory_setting()
 
     def event_factory_firmware(self):
-        if 'WIZ2000' in self.curr_dev:
-            self.input_setting_pw('factory_firmware')
-        else:
-            self.msg_factory_firmware()
+        self.msg_factory_firmware()
 
     # factory reset options
     # option: factory button / menu 1, menu 2
@@ -491,7 +513,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         if self.localip_addr is not None:
             self.update_btn_clicked()
         else:
-            self.show_msgbox("Warning", "Local IP information could not be found. Check the Network configuration.", QtWidgets.QMessageBox.Warning)
+            self.show_msgbox("Warning", "Local IP information could not be found. Check the Network configuration.", QMessageBox.Warning)
 
     def gpio_check(self):
         if 'WIZ5XX' in self.curr_dev:
@@ -538,6 +560,17 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 if 'WIZ5XXSR' in self.curr_dev:
                     self.groupbox_ch1_timeout.show()
                     self.groupbox_ch1_timeout.setEnabled(True)
+                    # WIZ5XXSR custom module
+                    if 'E-SAVE' in self.curr_dev:
+                        for i in range(3, 10):
+                            lineedit_subtopic = getattr(self, f'lineedit_mqtt_subtopic_{i}')
+                            lineedit_subtopic.show()
+                            lineedit_subtopic.setEnabled(True)
+                    else:
+                        for i in range(3, 10):
+                            lineedit_subtopic = getattr(self, f'lineedit_mqtt_subtopic_{i}')
+                            lineedit_subtopic.hide()
+                            lineedit_subtopic.setEnabled(False)
                 else:
                     self.groupbox_ch1_timeout.hide()
                     self.groupbox_ch1_timeout.setEnabled(False)
@@ -690,27 +723,27 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
     def event_input_idcode(self):
         if self.show_idcodeinput.isChecked():
-            self.searchcode_input.setEchoMode(QtWidgets.QLineEdit.Normal)
+            self.searchcode_input.setEchoMode(QLineEdit.Normal)
         else:
-            self.searchcode_input.setEchoMode(QtWidgets.QLineEdit.Password)
+            self.searchcode_input.setEchoMode(QLineEdit.Password)
 
     def event_idcode(self):
         if self.show_idcode.isChecked():
-            self.searchcode.setEchoMode(QtWidgets.QLineEdit.Normal)
+            self.searchcode.setEchoMode(QLineEdit.Normal)
         else:
-            self.searchcode.setEchoMode(QtWidgets.QLineEdit.Password)
+            self.searchcode.setEchoMode(QLineEdit.Password)
 
     def event_passwd(self):
         if self.show_connectpw.isChecked():
-            self.connect_pw.setEchoMode(QtWidgets.QLineEdit.Normal)
+            self.connect_pw.setEchoMode(QLineEdit.Normal)
         else:
-            self.connect_pw.setEchoMode(QtWidgets.QLineEdit.Password)
+            self.connect_pw.setEchoMode(QLineEdit.Password)
 
     def event_setpw_show(self):
         if self.show_settingpw.isChecked():
-            self.lineedit_setting_pw.setEchoMode(QtWidgets.QLineEdit.Normal)
+            self.lineedit_setting_pw.setEchoMode(QLineEdit.Normal)
         else:
-            self.lineedit_setting_pw.setEchoMode(QtWidgets.QLineEdit.Password)
+            self.lineedit_setting_pw.setEchoMode(QLineEdit.Password)
 
     def event_passwd_enable(self):
         if self.enable_connect_pw.isChecked():
@@ -944,12 +977,12 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 while self.list_device.rowCount() > 0:
                     self.list_device.removeRow(0)
 
-            item_mac = QtWidgets.QTableWidgetItem()
+            item_mac = QTableWidgetItem()
             item_mac.setText("Mac address")
             item_mac.setFont(self.midfont)
             self.list_device.setHorizontalHeaderItem(0, item_mac)
 
-            item_name = QtWidgets.QTableWidgetItem()
+            item_name = QTableWidgetItem()
             item_name.setText("Name")
             item_name.setFont(self.midfont)
             self.list_device.setHorizontalHeaderItem(1, item_name)
@@ -1127,9 +1160,9 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                     for i in range(0, len(self.mac_list)):
                         # device = "%s | %s" % (self.mac_list[i].decode(), self.dev_name[i].decode())
                         self.list_device.setItem(
-                            i, 0, QtWidgets.QTableWidgetItem(self.mac_list[i].decode()))
+                            i, 0, QTableWidgetItem(self.mac_list[i].decode()))
                         self.list_device.setItem(
-                            i, 1, QtWidgets.QTableWidgetItem(self.dev_name[i].decode()))
+                            i, 1, QTableWidgetItem(self.dev_name[i].decode()))
                 except Exception as e:
                     self.logger.error(e)
 
@@ -1416,48 +1449,65 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 """
                 Security device options
                 """
-                # New options for WIZ510SSL
-                # mqtt options
-                if 'QU' in dev_data:
-                    if dev_data['QU'] == ' ':
-                        self.lineedit_mqtt_username.clear()
-                    else:
-                        self.lineedit_mqtt_username.setText(dev_data['QU'])
-                if 'QP' in dev_data:
-                    if dev_data['QP'] == ' ':
-                        self.lineedit_mqtt_password.clear()
-                    else:
-                        self.lineedit_mqtt_password.setText(dev_data['QP'])
-                if 'QC' in dev_data:
-                    if dev_data['QC'] == ' ':
-                        self.lineedit_mqtt_clientid.clear()
-                    else:
-                        self.lineedit_mqtt_clientid.setText(dev_data['QC'])
-                if 'QK' in dev_data:
-                    if dev_data['QK'] == ' ':
-                        self.lineedit_mqtt_keepalive.clear()
-                    else:
-                        self.lineedit_mqtt_keepalive.setText(dev_data['QK'])
-                if 'PU' in dev_data:
-                    if dev_data['PU'] == ' ':
-                        self.lineedit_mqtt_pubtopic.clear()
-                    else:
-                        self.lineedit_mqtt_pubtopic.setText(dev_data['PU'])
-                if 'U0' in dev_data:
-                    if dev_data['U0'] == ' ':
-                        self.lineedit_mqtt_subtopic_0.clear()
-                    else:
-                        self.lineedit_mqtt_subtopic_0.setText(dev_data['U0'])
-                if 'U1' in dev_data:
-                    if dev_data['U1'] == ' ':
-                        self.lineedit_mqtt_subtopic_1.clear()
-                    else:
-                        self.lineedit_mqtt_subtopic_1.setText(dev_data['U1'])
-                if 'U2' in dev_data:
-                    if dev_data['U2'] == ' ':
-                        self.lineedit_mqtt_subtopic_2.clear()
-                    else:
-                        self.lineedit_mqtt_subtopic_2.setText(dev_data['U2'])
+                # New options for Security devices
+                # MQTT options
+                # if 'QU' in dev_data:
+                #     if dev_data['QU'] == ' ':
+                #         self.lineedit_mqtt_username.clear()
+                #     else:
+                #         self.lineedit_mqtt_username.setText(dev_data['QU'])
+                # if 'QP' in dev_data:
+                #     if dev_data['QP'] == ' ':
+                #         self.lineedit_mqtt_password.clear()
+                #     else:
+                #         self.lineedit_mqtt_password.setText(dev_data['QP'])
+                # if 'QC' in dev_data:
+                #     if dev_data['QC'] == ' ':
+                #         self.lineedit_mqtt_clientid.clear()
+                #     else:
+                #         self.lineedit_mqtt_clientid.setText(dev_data['QC'])
+                # if 'QK' in dev_data:
+                #     if dev_data['QK'] == ' ':
+                #         self.lineedit_mqtt_keepalive.clear()
+                #     else:
+                #         self.lineedit_mqtt_keepalive.setText(dev_data['QK'])
+                # if 'PU' in dev_data:
+                #     if dev_data['PU'] == ' ':
+                #         self.lineedit_mqtt_pubtopic.clear()
+                #     else:
+                #         self.lineedit_mqtt_pubtopic.setText(dev_data['PU'])
+
+                self.lineedit_mqtt_username.setText(dev_data.get('QU', '') or '')
+                self.lineedit_mqtt_password.setText(dev_data.get('QP', '') or '')
+                self.lineedit_mqtt_clientid.setText(dev_data.get('QC', '') or '')
+                self.lineedit_mqtt_keepalive.setText(dev_data.get('QK', '') or '')
+                self.lineedit_mqtt_pubtopic.setText(dev_data.get('PU', '') or '')
+                # if 'U0' in dev_data:
+                #     if dev_data['U0'] == ' ':
+                #         self.lineedit_mqtt_subtopic_0.clear()
+                #     else:
+                #         self.lineedit_mqtt_subtopic_0.setText(dev_data['U0'])
+                # if 'U1' in dev_data:
+                #     if dev_data['U1'] == ' ':
+                #         self.lineedit_mqtt_subtopic_1.clear()
+                #     else:
+                #         self.lineedit_mqtt_subtopic_1.setText(dev_data['U1'])
+                # if 'U2' in dev_data:
+                #     if dev_data['U2'] == ' ':
+                #         self.lineedit_mqtt_subtopic_2.clear()
+                #     else:
+                #         self.lineedit_mqtt_subtopic_2.setText(dev_data['U2'])
+                # MQTT subtopic
+                self.lineedit_mqtt_subtopic_0.setText(dev_data.get('U0', '') or '')
+                self.lineedit_mqtt_subtopic_1.setText(dev_data.get('U1', '') or '')
+                self.lineedit_mqtt_subtopic_2.setText(dev_data.get('U2', '') or '')
+                self.lineedit_mqtt_subtopic_3.setText(dev_data.get('U3', '') or '')
+                self.lineedit_mqtt_subtopic_4.setText(dev_data.get('U4', '') or '')
+                self.lineedit_mqtt_subtopic_5.setText(dev_data.get('U5', '') or '')
+                self.lineedit_mqtt_subtopic_6.setText(dev_data.get('U6', '') or '')
+                self.lineedit_mqtt_subtopic_7.setText(dev_data.get('U7', '') or '')
+                self.lineedit_mqtt_subtopic_8.setText(dev_data.get('U8', '') or '')
+                self.lineedit_mqtt_subtopic_9.setText(dev_data.get('U9', '') or '')
                 if 'QO' in dev_data:
                     self.combobox_mqtt_qos.setCurrentIndex(int(dev_data['QO']))
                 # Root CA options
@@ -1467,8 +1517,6 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 if 'CE' in dev_data:
                     if dev_data['CE'] == '1':
                         self.checkbox_enable_client_cert.setChecked(True)
-                        # client cert password (will be added)
-                        # setcmd[''] = self.lineedit_client_cert_pw.text()
                     elif dev_data['CE'] == '0':
                         self.checkbox_enable_client_cert.setChecked(False)
                 # Current flash bank (RO)
@@ -1487,8 +1535,8 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.msg_error('Get device information error {}'.format(e))
 
     def msg_error(self, error):
-        msgbox = QtWidgets.QMessageBox(self)
-        msgbox.setIcon(QtWidgets.QMessageBox.Critical)
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Critical)
         msgbox.setFont(self.midfont)
         msgbox.setWindowTitle("Unexcepted error")
         text = "<div style=text-align:center>Unexcepted error occurred." \
@@ -1689,7 +1737,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 setcmd['RR'] = self.ch2_reconnection.text()
             if self.curr_dev in SECURITY_DEVICE:
                 # New options for WIZ510SSL (Security devices)
-                # mqtt options
+                # MQTT options
                 setcmd['QU'] = self.lineedit_mqtt_username.text()
                 setcmd['QP'] = self.lineedit_mqtt_password.text()
                 setcmd['QC'] = self.lineedit_mqtt_clientid.text()
@@ -1698,6 +1746,14 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 setcmd['U0'] = self.lineedit_mqtt_subtopic_0.text()
                 setcmd['U1'] = self.lineedit_mqtt_subtopic_1.text()
                 setcmd['U2'] = self.lineedit_mqtt_subtopic_2.text()
+                if 'WIZ5XXSR' in self.curr_dev and 'E-SAVE' in self.curr_dev:
+                    setcmd['U3'] = self.lineedit_mqtt_subtopic_3.text()
+                    setcmd['U4'] = self.lineedit_mqtt_subtopic_4.text()
+                    setcmd['U5'] = self.lineedit_mqtt_subtopic_5.text()
+                    setcmd['U6'] = self.lineedit_mqtt_subtopic_6.text()
+                    setcmd['U7'] = self.lineedit_mqtt_subtopic_7.text()
+                    setcmd['U8'] = self.lineedit_mqtt_subtopic_8.text()
+                    setcmd['U9'] = self.lineedit_mqtt_subtopic_9.text()
                 setcmd['QO'] = str(self.combobox_mqtt_qos.currentIndex())
                 # Root CA options
                 setcmd['RC'] = str(self.combobox_rootca_option.currentIndex())
@@ -1761,7 +1817,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
         if len(self.list_device.selectedItems()) == 0:
             # self.logger.info('Device is not selected')
-            self.show_msgbox("Warning", "Device is not selected.", QtWidgets.QMessageBox.Warning)
+            self.show_msgbox("Warning", "Device is not selected.", QMessageBox.Warning)
             # self.msg_dev_not_selected()
         else:
             self.statusbar.showMessage(' Setting device...')
@@ -1915,7 +1971,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 text += "Please check the device's status."
             elif result == -2:
                 text += "No response from device."
-            # self.show_msgbox("Error", text, QtWidgets.QMessageBox.Critical)
+            # self.show_msgbox("Error", text, QMessageBox.Critical)
         elif result > 0:
             self.statusbar.showMessage(' Firmware update complete!')
             self.logger.info('FW Update OK')
@@ -1932,7 +1988,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         if error == -1:
             text = ' Firmware update failed. No response from device.'
             self.statusbar.showMessage(text)
-            self.show_msgbox("Error", text, QtWidgets.QMessageBox.Critical)
+            self.show_msgbox("Error", text, QMessageBox.Critical)
             # self.msg_upload_failed()
         elif error == -2:
             text = ' Firmware update: Network connection failed.'
@@ -1954,7 +2010,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.show_msgbox(
                 "Error",
                 "Certificate update failed.\nPlease check the device's status.",
-                QtWidgets.QMessageBox.Critical)
+                QMessageBox.Critical)
         elif result > 0:
             self.statusbar.showMessage(' Certificate update complete!')
             self.logger.info('Certificate Update OK')
@@ -2020,7 +2076,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.update_result(-1)
 
     def firmware_file_open(self):
-        fname, _ = QtWidgets.QFileDialog.getOpenFileName(
+        fname, _ = QFileDialog.getOpenFileName(
             self, 'Firmware file open', '', 'Binary Files (*.bin);;All Files (*)')
 
         if fname:
@@ -2049,12 +2105,12 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                     doc.setHtml(str(self.combobox_current_bank.currentIndex()))
                     bankval = doc.toPlainText()
 
-                    msgbox = QtWidgets.QMessageBox(self)
+                    msgbox = QMessageBox(self)
                     msgbox.setTextFormat(QtCore.Qt.RichText)
                     text = f"- Current bank: {bankval}\n- Selected file: {self.fw_filename.split('/')[-1]}\n\nThe bank number must match with current device bank number.\nDo you want to update now?"
                     btnReply = msgbox.question(
-                        self, "Firmware upload - Check the Bank number", text, QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-                    if btnReply == QtWidgets.QMessageBox.Yes:
+                        self, "Firmware upload - Check the Bank number", text, QMessageBox.Yes | QMessageBox.No)
+                    if btnReply == QMessageBox.Yes:
                         self.firmware_update(self.fw_filename, self.fw_filesize)
                     else:
                         pass
@@ -2086,7 +2142,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         if len(self.list_device.selectedItems()) == 0:
             self.logger.info('Device is not selected')
             # self.msg_dev_not_selected()
-            self.show_msgbox("Warning", "Device is not selected.", QtWidgets.QMessageBox.Warning)
+            self.show_msgbox("Warning", "Device is not selected.", QMessageBox.Warning)
         else:
             if self.unicast_ip.isChecked() and self.isConnected:
                 self.firmware_file_open()
@@ -2119,7 +2175,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         if len(self.list_device.selectedItems()) == 0:
             self.logger.info('Device is not selected')
             # self.msg_dev_not_selected()
-            self.show_msgbox("Warning", "Device is not selected.", QtWidgets.QMessageBox.Warning)
+            self.show_msgbox("Warning", "Device is not selected.", QMessageBox.Warning)
         else:
             self.sock_close()
 
@@ -2151,7 +2207,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         if len(self.list_device.selectedItems()) == 0:
             self.logger.info('Device is not selected')
             # self.msg_dev_not_selected()
-            self.show_msgbox("Warning", "Device is not selected.", QtWidgets.QMessageBox.Warning)
+            self.show_msgbox("Warning", "Device is not selected.", QMessageBox.Warning)
         else:
             self.sock_close()
 
@@ -2163,7 +2219,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                 self.code = " "
             else:
                 self.code = self.searchcode_input.text()
-            # WIZ2000: factory reset option
+            # Factory reset option
             if mode == 'setting':
                 cmd_list = self.wizmakecmd.factory_reset(
                     mac_addr, self.code, self.encoded_setting_pw, self.curr_dev, "")
@@ -2184,10 +2240,11 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             self.wizmsghandler.set_result.connect(self.factory_result)
             self.wizmsghandler.start()
 
-    # TODO: setting pw check
+    """
+    # Setting password
     def input_setting_pw(self, mode):
-        text, okbtn = QtWidgets.QInputDialog.getText(
-            self, "Setting password", "Input setting password", QtWidgets.QLineEdit.Password, "")
+        text, okbtn = QInputDialog.getText(
+            self, "Setting password", "Input setting password", QLineEdit.Password, "")
         if okbtn:
             self.logger.info('{}, {}'.format(text, len(text)))
             if self.enable_setting_pw.isChecked():
@@ -2197,10 +2254,11 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
                     self.encode_setting_pw(text, mode)
             else:
                 self.encode_setting_pw(text, mode)
+    """
 
     # To set the wait time when no response from the device when searching
     def input_search_wait_time(self):
-        self.search_wait_time, okbtn = QtWidgets.QInputDialog.getInt(self, "Set the wating time for search",
+        self.search_wait_time, okbtn = QInputDialog.getInt(self, "Set the wating time for search",
                                                                      "Input wating time for search:\n(Default: 3 seconds)", self.search_wait_time, 2, 10, 1)
         if okbtn:
             self.logger.info(self.search_wait_time)
@@ -2209,7 +2267,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
             pass
 
     def input_retry_search(self):
-        inputdlg = QtWidgets.QInputDialog(self)
+        inputdlg = QInputDialog(self)
         name = 'Do Search'
         inputdlg.setOkButtonText(name)
         self.retry_search_num, okbtn = inputdlg.getInt(self, "Retry search devices",
@@ -2234,7 +2292,7 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         if cmd == "UP":
             ext = '*.bin'
 
-        fname, _ = QtWidgets.QFileDialog.getOpenFileName(
+        fname, _ = QFileDialog.getOpenFileName(
             self, 'Open File', '', ext + ';;All Files (*)')
         if fname:
             # Save file name to variable
@@ -2304,14 +2362,14 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
     # ============================================ messagebox
     def show_msgbox(self, title, msg, type):
-        msgbox = QtWidgets.QMessageBox(self)
+        msgbox = QMessageBox(self)
         msgbox.setIcon(type)
         msgbox.setWindowTitle(title)
         msgbox.setText(msg)
         msgbox.exec_()
 
     def show_msgbox_richtext(self, title, msg, type):
-        msgbox = QtWidgets.QMessageBox(self)
+        msgbox = QMessageBox(self)
         msgbox.setIcon(type)
         msgbox.setWindowTitle(title)
         msgbox.setTextFormat(QtCore.Qt.RichText)
@@ -2319,15 +2377,15 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         msgbox.exec_()
 
     def show_msgbox_info(self, title, msg):
-        msgbox = QtWidgets.QMessageBox(self)
-        msgbox.setIcon(QtWidgets.QMessageBox.Information)
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Information)
         msgbox.setWindowTitle(title)
         msgbox.setText(msg)
-        msgbox.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        msgbox.setStandardButtons(QMessageBox.Ok)
         msgbox.exec_()
 
     def about_info(self):
-        msgbox = QtWidgets.QMessageBox(self)
+        msgbox = QMessageBox(self)
         msgbox.setTextFormat(QtCore.Qt.RichText)
         text = "<div style=text-align:center><font size=5 color=darkblue>About WIZnet-S2E-Tool-GUI</font>" \
             + "<br><a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI'><font color=darkblue size=4>* Github repository</font></a>" \
@@ -2345,8 +2403,8 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         webbrowser.open('https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki')
 
     def msg_not_support(self):
-        msgbox = QtWidgets.QMessageBox(self)
-        msgbox.setIcon(QtWidgets.QMessageBox.Warning)
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Warning)
         msgbox.setWindowTitle("Not supported device")
         msgbox.setTextFormat(QtCore.Qt.RichText)
         text = "The device != supported.<br>Please contact us by the link below.<br><br>" \
@@ -2355,8 +2413,8 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         msgbox.exec_()
 
     def msg_invalid(self, params):
-        msgbox = QtWidgets.QMessageBox(self)
-        msgbox.setIcon(QtWidgets.QMessageBox.Warning)
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Warning)
         msgbox.setWindowTitle("Invalid parameter")
         msgbox.setText("Invalid parameter.\nPlease check the values.")
         msgbox.setInformativeText(params)
@@ -2365,129 +2423,129 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
         self.object_config()
 
     # def msg_dev_not_selected(self):
-    #     msgbox = QtWidgets.QMessageBox(self)
-    #     msgbox.setIcon(QtWidgets.QMessageBox.Warning)
+    #     msgbox = QMessageBox(self)
+    #     msgbox.setIcon(QMessageBox.Warning)
     #     msgbox.setWindowTitle("Warning")
     #     msgbox.setText("Device is not selected.")
     #     msgbox.exec_()
 
     def msg_invalid_response(self):
-        msgbox = QtWidgets.QMessageBox(self)
-        msgbox.setIcon(QtWidgets.QMessageBox.Warning)
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Warning)
         msgbox.setWindowTitle("Invalid Response")
         msgbox.setText(
             "Did not receive a valid response from the device.\nPlease check if the device is supported device or firmware is the latest version.")
         msgbox.exec_()
 
     def msg_set_warning(self):
-        msgbox = QtWidgets.QMessageBox(self)
-        msgbox.setIcon(QtWidgets.QMessageBox.Warning)
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Warning)
         msgbox.setWindowTitle("Warning: Setting")
         msgbox.setText(
             "Setting did not well.\nPlease check the device or check the firmware version.")
         msgbox.exec_()
 
     def msg_set_error(self):
-        msgbox = QtWidgets.QMessageBox(self)
-        msgbox.setIcon(QtWidgets.QMessageBox.Warning)
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Warning)
         msgbox.setWindowTitle("Setting Failed")
         msgbox.setText("Setting failed.\nNo response from device.")
         msgbox.exec_()
 
     def msg_setting_pw_error(self):
-        msgbox = QtWidgets.QMessageBox(self)
-        msgbox.setIcon(QtWidgets.QMessageBox.Warning)
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Warning)
         msgbox.setWindowTitle("Setting Failed")
         msgbox.setText("Setting failed.\nWrong password.")
         msgbox.exec_()
 
     def msg_set_success(self):
-        msgbox = QtWidgets.QMessageBox(self)
+        msgbox = QMessageBox(self)
         msgbox.question(self, "Setting success", "Device configuration complete!",
-                        QtWidgets.QMessageBox.Yes)
+                        QMessageBox.Yes)
 
     def msg_certificate_success(self, filename):
-        msgbox = QtWidgets.QMessageBox(self)
+        msgbox = QMessageBox(self)
         text = "Certificate downlaod complete!\n%s" % filename
-        msgbox.question(self, "Certificate download success", text, QtWidgets.QMessageBox.Yes)
+        msgbox.question(self, "Certificate download success", text, QMessageBox.Yes)
 
     def msg_upload_warning(self, dst_ip):
-        msgbox = QtWidgets.QMessageBox(self)
-        msgbox.setIcon(QtWidgets.QMessageBox.Warning)
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Warning)
         msgbox.setWindowTitle("Warning: upload/update")
         msgbox.setText(
             "Destination IP is unreachable: %s\nPlease check if the device is in the same subnet with the PC." % dst_ip)
         msgbox.exec_()
 
     # def msg_upload_failed(self):
-    #     msgbox = QtWidgets.QMessageBox(self)
-    #     msgbox.setIcon(QtWidgets.QMessageBox.Critical)
+    #     msgbox = QMessageBox(self)
+    #     msgbox.setIcon(QMessageBox.Critical)
     #     msgbox.setWindowTitle("Error: Firmware upload")
     #     msgbox.setText("Firmware update failed.\nPlease check the device's status.")
     #     msgbox.exec_()
 
     def msg_upload_success(self):
-        msgbox = QtWidgets.QMessageBox(self)
+        msgbox = QMessageBox(self)
         msgbox.question(self, "Firmware upload success",
-                        "Firmware update complete!", QtWidgets.QMessageBox.Yes)
+                        "Firmware update complete!", QMessageBox.Yes)
 
     def msg_connection_failed(self):
-        msgbox = QtWidgets.QMessageBox(self)
-        msgbox.setIcon(QtWidgets.QMessageBox.Critical)
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Critical)
         msgbox.setWindowTitle("Error: Connection failed")
         msgbox.setText("Network connection failed.\nConnection is refused.")
         msgbox.exec_()
 
     def msg_not_connected(self, dst_ip):
-        msgbox = QtWidgets.QMessageBox(self)
-        msgbox.setIcon(QtWidgets.QMessageBox.Warning)
+        msgbox = QMessageBox(self)
+        msgbox.setIcon(QMessageBox.Warning)
         msgbox.setWindowTitle("Warning: Network")
         msgbox.setText("Destination IP is unreachable: %s\nPlease check the network status." % dst_ip)
         msgbox.exec_()
 
     def msg_reset(self):
         self.statusbar.showMessage(' Reset device?')
-        msgbox = QtWidgets.QMessageBox(self)
+        msgbox = QMessageBox(self)
         btnReply = msgbox.question(
-            self, "Reset", "Do you really want to reset the device?", QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-        if btnReply == QtWidgets.QMessageBox.Yes:
+            self, "Reset", "Do you really want to reset the device?", QMessageBox.Yes | QMessageBox.No)
+        if btnReply == QMessageBox.Yes:
             self.do_reset()
 
     def msg_reset_success(self):
-        msgbox = QtWidgets.QMessageBox(self)
-        msgbox.question(self, "Reset", "Reset complete!", QtWidgets.QMessageBox.Yes)
+        msgbox = QMessageBox(self)
+        msgbox.question(self, "Reset", "Reset complete!", QMessageBox.Yes)
 
     def msg_factory_success(self):
-        msgbox = QtWidgets.QMessageBox(self)
-        msgbox.question(self, "Factory Reset", "Factory reset complete!", QtWidgets.QMessageBox.Yes)
+        msgbox = QMessageBox(self)
+        msgbox.question(self, "Factory Reset", "Factory reset complete!", QMessageBox.Yes)
 
     def msg_factory_setting(self):
-        msgbox = QtWidgets.QMessageBox(self)
+        msgbox = QMessageBox(self)
         btnReply = msgbox.question(self, "Factory default settings",
                                    "Do you really want to factory reset?\nAll settings will be initialized.",
-                                   QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-        if btnReply == QtWidgets.QMessageBox.Yes:
+                                   QMessageBox.Yes | QMessageBox.No)
+        if btnReply == QMessageBox.Yes:
             self.do_factory_reset('setting')
 
     def msg_factory_firmware(self):
         # factory reset firmware
-        msgbox = QtWidgets.QMessageBox(self)
+        msgbox = QMessageBox(self)
         btnReply = msgbox.question(self, "Factory default firmware",
                                    "Do you really want to factory reset the firmware?\nThe firmware and all settings will be initialized to factory default.",
-                                   QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-        if btnReply == QtWidgets.QMessageBox.Yes:
+                                   QMessageBox.Yes | QMessageBox.No)
+        if btnReply == QMessageBox.Yes:
             self.do_factory_reset('firmware')
 
     def msg_exit(self):
-        msgbox = QtWidgets.QMessageBox(self)
+        msgbox = QMessageBox(self)
         btnReply = msgbox.question(
-            self, "Exit", "Do you really close this program?", QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-        if btnReply == QtWidgets.QMessageBox.Yes:
+            self, "Exit", "Do you really close this program?", QMessageBox.Yes | QMessageBox.No)
+        if btnReply == QMessageBox.Yes:
             self.close()
 
     def dialog_save_file(self):
         mac_part = self.curr_mac.replace(':', '')[6:]
-        fname, _ = QtWidgets.QFileDialog.getSaveFileName(
+        fname, _ = QFileDialog.getSaveFileName(
             self, "Save Configuration", f"WIZCONF-{self.curr_dev}-{mac_part}.cfg", "Config File (*.cfg);;Text Files (*.txt);;All Files (*)")
 
         if fname:
@@ -2512,10 +2570,10 @@ class WIZWindow(QtWidgets.QMainWindow, main_window):
 
     def dialog_load_file(self):
         if self.saved_path is None:
-            fname, _ = QtWidgets.QFileDialog.getOpenFileName(
+            fname, _ = QFileDialog.getOpenFileName(
                 self, "Load Configuration", "WIZCONF.cfg", "Config File (*.cfg);;Text Files (*.txt);;All Files (*)")
         else:
-            fname, _ = QtWidgets.QFileDialog.getOpenFileName(
+            fname, _ = QFileDialog.getOpenFileName(
                 self, "Load Configuration", self.saved_path, "Config File (*.cfg);;Text Files (*.txt);;All Files (*)")
 
         if fname:
@@ -2643,7 +2701,7 @@ class ThreadProgress(QtCore.QThread):
 
 
 if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     wizwindow = WIZWindow()
     wizwindow.show()
     app.exec_()
