@@ -152,7 +152,7 @@
            <number>4</number>
           </property>
           <item row="0" column="0">
-           <widget class="QComboBox" name="net_interface">
+           <widget class="QComboBox" name="combobox_net_interface">
             <property name="minimumSize">
              <size>
               <width>220</width>
@@ -176,6 +176,9 @@
               <family>맑은 고딕</family>
               <pointsize>9</pointsize>
              </font>
+            </property>
+            <property name="toolTip">
+             <string>Sub topic </string>
             </property>
             <property name="currentText">
              <string/>
@@ -7340,19 +7343,19 @@ Analog input: Read only</string>
              <attribute name="title">
               <string>MQTT options</string>
              </attribute>
-             <layout class="QGridLayout" name="gridLayout_29">
+             <layout class="QGridLayout" name="gridLayout_5">
               <item row="0" column="0">
                <widget class="QGroupBox" name="groupBox_3">
                 <property name="minimumSize">
                  <size>
                   <width>240</width>
-                  <height>80</height>
+                  <height>90</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>250</width>
-                  <height>80</height>
+                  <height>90</height>
                  </size>
                 </property>
                 <property name="title">
@@ -7495,29 +7498,570 @@ Analog input: Read only</string>
                 </layout>
                </widget>
               </item>
-              <item row="0" column="2" rowspan="4">
-               <widget class="QFrame" name="frame_2">
+              <item row="0" column="1" rowspan="2">
+               <widget class="QGroupBox" name="groupBox_5">
                 <property name="minimumSize">
                  <size>
-                  <width>100</width>
+                  <width>281</width>
                   <height>150</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>200</width>
-                  <height>150</height>
+                  <width>400</width>
+                  <height>300</height>
                  </size>
                 </property>
-                <property name="frameShape">
-                 <enum>QFrame::StyledPanel</enum>
+                <property name="title">
+                 <string>MQTT topics</string>
                 </property>
-                <property name="frameShadow">
-                 <enum>QFrame::Raised</enum>
-                </property>
+                <widget class="QLabel" name="localip_label_4">
+                 <property name="geometry">
+                  <rect>
+                   <x>10</x>
+                   <y>27</y>
+                   <width>90</width>
+                   <height>22</height>
+                  </rect>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>90</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>90</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>맑은 고딕</family>
+                   <pointsize>8</pointsize>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>Publish topic</string>
+                 </property>
+                </widget>
+                <widget class="QLineEdit" name="lineedit_mqtt_pubtopic">
+                 <property name="geometry">
+                  <rect>
+                   <x>106</x>
+                   <y>27</y>
+                   <width>140</width>
+                   <height>22</height>
+                  </rect>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>140</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>160</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>맑은 고딕</family>
+                   <pointsize>8</pointsize>
+                  </font>
+                 </property>
+                 <property name="toolTip">
+                  <string/>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="maxLength">
+                  <number>128</number>
+                 </property>
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                 <property name="placeholderText">
+                  <string/>
+                 </property>
+                </widget>
+                <widget class="QLabel" name="localip_label_5">
+                 <property name="geometry">
+                  <rect>
+                   <x>10</x>
+                   <y>59</y>
+                   <width>90</width>
+                   <height>22</height>
+                  </rect>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>90</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>90</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>맑은 고딕</family>
+                   <pointsize>8</pointsize>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>Subscribe topic</string>
+                 </property>
+                </widget>
+                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_0">
+                 <property name="geometry">
+                  <rect>
+                   <x>106</x>
+                   <y>59</y>
+                   <width>140</width>
+                   <height>22</height>
+                  </rect>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>140</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>160</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>맑은 고딕</family>
+                   <pointsize>8</pointsize>
+                  </font>
+                 </property>
+                 <property name="toolTip">
+                  <string/>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="maxLength">
+                  <number>128</number>
+                 </property>
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                 <property name="placeholderText">
+                  <string/>
+                 </property>
+                </widget>
+                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_1">
+                 <property name="geometry">
+                  <rect>
+                   <x>251</x>
+                   <y>59</y>
+                   <width>140</width>
+                   <height>22</height>
+                  </rect>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>140</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>160</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>맑은 고딕</family>
+                   <pointsize>8</pointsize>
+                  </font>
+                 </property>
+                 <property name="toolTip">
+                  <string/>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="maxLength">
+                  <number>128</number>
+                 </property>
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                 <property name="placeholderText">
+                  <string/>
+                 </property>
+                </widget>
+                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_2">
+                 <property name="geometry">
+                  <rect>
+                   <x>106</x>
+                   <y>91</y>
+                   <width>140</width>
+                   <height>22</height>
+                  </rect>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>140</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>160</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>맑은 고딕</family>
+                   <pointsize>8</pointsize>
+                  </font>
+                 </property>
+                 <property name="toolTip">
+                  <string/>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="maxLength">
+                  <number>128</number>
+                 </property>
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                </widget>
+                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_3">
+                 <property name="geometry">
+                  <rect>
+                   <x>251</x>
+                   <y>91</y>
+                   <width>140</width>
+                   <height>22</height>
+                  </rect>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>140</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>160</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>맑은 고딕</family>
+                   <pointsize>8</pointsize>
+                  </font>
+                 </property>
+                 <property name="toolTip">
+                  <string/>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="maxLength">
+                  <number>128</number>
+                 </property>
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                </widget>
+                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_4">
+                 <property name="geometry">
+                  <rect>
+                   <x>106</x>
+                   <y>123</y>
+                   <width>140</width>
+                   <height>22</height>
+                  </rect>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>140</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>160</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>맑은 고딕</family>
+                   <pointsize>8</pointsize>
+                  </font>
+                 </property>
+                 <property name="toolTip">
+                  <string/>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="maxLength">
+                  <number>128</number>
+                 </property>
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                </widget>
+                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_5">
+                 <property name="geometry">
+                  <rect>
+                   <x>251</x>
+                   <y>123</y>
+                   <width>140</width>
+                   <height>22</height>
+                  </rect>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>140</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>160</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>맑은 고딕</family>
+                   <pointsize>8</pointsize>
+                  </font>
+                 </property>
+                 <property name="toolTip">
+                  <string/>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="maxLength">
+                  <number>128</number>
+                 </property>
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                </widget>
+                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_6">
+                 <property name="geometry">
+                  <rect>
+                   <x>106</x>
+                   <y>155</y>
+                   <width>140</width>
+                   <height>22</height>
+                  </rect>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>140</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>160</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>맑은 고딕</family>
+                   <pointsize>8</pointsize>
+                  </font>
+                 </property>
+                 <property name="toolTip">
+                  <string/>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="maxLength">
+                  <number>128</number>
+                 </property>
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                </widget>
+                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_7">
+                 <property name="geometry">
+                  <rect>
+                   <x>251</x>
+                   <y>155</y>
+                   <width>140</width>
+                   <height>22</height>
+                  </rect>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>140</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>160</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>맑은 고딕</family>
+                   <pointsize>8</pointsize>
+                  </font>
+                 </property>
+                 <property name="toolTip">
+                  <string/>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="maxLength">
+                  <number>128</number>
+                 </property>
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                </widget>
+                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_8">
+                 <property name="geometry">
+                  <rect>
+                   <x>106</x>
+                   <y>187</y>
+                   <width>140</width>
+                   <height>22</height>
+                  </rect>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>140</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>160</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>맑은 고딕</family>
+                   <pointsize>8</pointsize>
+                  </font>
+                 </property>
+                 <property name="toolTip">
+                  <string/>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="maxLength">
+                  <number>128</number>
+                 </property>
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                </widget>
+                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_9">
+                 <property name="geometry">
+                  <rect>
+                   <x>251</x>
+                   <y>187</y>
+                   <width>140</width>
+                   <height>22</height>
+                  </rect>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>140</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>160</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>맑은 고딕</family>
+                   <pointsize>8</pointsize>
+                  </font>
+                 </property>
+                 <property name="toolTip">
+                  <string/>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="maxLength">
+                  <number>128</number>
+                 </property>
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                </widget>
                </widget>
               </item>
-              <item row="1" column="0" rowspan="3">
+              <item row="1" column="0">
                <widget class="QGroupBox" name="groupBox_8">
                 <property name="minimumSize">
                  <size>
@@ -7534,7 +8078,7 @@ Analog input: Read only</string>
                 <property name="title">
                  <string>MQTT Options</string>
                 </property>
-                <layout class="QGridLayout" name="gridLayout_49" rowminimumheight="0,0,0">
+                <layout class="QGridLayout" name="gridLayout_49">
                  <property name="topMargin">
                   <number>2</number>
                  </property>
@@ -7544,8 +8088,51 @@ Analog input: Read only</string>
                  <property name="verticalSpacing">
                   <number>4</number>
                  </property>
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="label_mqtt_clientid">
+                 <item row="2" column="1" colspan="2">
+                  <widget class="QComboBox" name="combobox_mqtt_qos">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>100</width>
+                     <height>22</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <family>맑은 고딕</family>
+                     <pointsize>8</pointsize>
+                    </font>
+                   </property>
+                   <property name="currentText">
+                    <string>QoS 0</string>
+                   </property>
+                   <property name="sizeAdjustPolicy">
+                    <enum>QComboBox::AdjustToContents</enum>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>QoS 0</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>QoS 1</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>QoS 2</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="label_mqtt_qos">
                    <property name="minimumSize">
                     <size>
                      <width>85</width>
@@ -7565,7 +8152,7 @@ Analog input: Read only</string>
                     </font>
                    </property>
                    <property name="text">
-                    <string>Client id</string>
+                    <string>QoS</string>
                    </property>
                   </widget>
                  </item>
@@ -7690,8 +8277,8 @@ Analog input: Read only</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="2" column="0">
-                  <widget class="QLabel" name="label_mqtt_qos">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_mqtt_clientid">
                    <property name="minimumSize">
                     <size>
                      <width>85</width>
@@ -7711,295 +8298,11 @@ Analog input: Read only</string>
                     </font>
                    </property>
                    <property name="text">
-                    <string>QoS</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="1" colspan="2">
-                  <widget class="QComboBox" name="combobox_mqtt_qos">
-                   <property name="minimumSize">
-                    <size>
-                     <width>100</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>100</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <family>맑은 고딕</family>
-                     <pointsize>8</pointsize>
-                    </font>
-                   </property>
-                   <property name="currentText">
-                    <string>QoS 0</string>
-                   </property>
-                   <property name="sizeAdjustPolicy">
-                    <enum>QComboBox::AdjustToContents</enum>
-                   </property>
-                   <item>
-                    <property name="text">
-                     <string>QoS 0</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>QoS 1</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>QoS 2</string>
-                    </property>
-                   </item>
-                  </widget>
-                 </item>
-                </layout>
-               </widget>
-              </item>
-              <item row="0" column="1" rowspan="2">
-               <widget class="QGroupBox" name="groupBox_5">
-                <property name="minimumSize">
-                 <size>
-                  <width>281</width>
-                  <height>150</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>281</width>
-                  <height>160</height>
-                 </size>
-                </property>
-                <property name="title">
-                 <string>MQTT topics</string>
-                </property>
-                <layout class="QGridLayout" name="gridLayout_5">
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="localip_label_4">
-                   <property name="minimumSize">
-                    <size>
-                     <width>90</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>90</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <family>맑은 고딕</family>
-                     <pointsize>8</pointsize>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>Publish topic</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QLineEdit" name="lineedit_mqtt_pubtopic">
-                   <property name="minimumSize">
-                    <size>
-                     <width>140</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>160</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <family>맑은 고딕</family>
-                     <pointsize>8</pointsize>
-                    </font>
-                   </property>
-                   <property name="toolTip">
-                    <string/>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="maxLength">
-                    <number>128</number>
-                   </property>
-                   <property name="frame">
-                    <bool>true</bool>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="localip_label_5">
-                   <property name="minimumSize">
-                    <size>
-                     <width>90</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>90</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <family>맑은 고딕</family>
-                     <pointsize>8</pointsize>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string>Subscribe topic</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QLineEdit" name="lineedit_mqtt_subtopic_0">
-                   <property name="minimumSize">
-                    <size>
-                     <width>140</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>160</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <family>맑은 고딕</family>
-                     <pointsize>8</pointsize>
-                    </font>
-                   </property>
-                   <property name="toolTip">
-                    <string/>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="maxLength">
-                    <number>128</number>
-                   </property>
-                   <property name="frame">
-                    <bool>true</bool>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="1">
-                  <widget class="QLineEdit" name="lineedit_mqtt_subtopic_1">
-                   <property name="minimumSize">
-                    <size>
-                     <width>140</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>160</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <family>맑은 고딕</family>
-                     <pointsize>8</pointsize>
-                    </font>
-                   </property>
-                   <property name="toolTip">
-                    <string/>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="maxLength">
-                    <number>128</number>
-                   </property>
-                   <property name="frame">
-                    <bool>true</bool>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="3" column="1">
-                  <widget class="QLineEdit" name="lineedit_mqtt_subtopic_2">
-                   <property name="minimumSize">
-                    <size>
-                     <width>140</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>160</width>
-                     <height>22</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <family>맑은 고딕</family>
-                     <pointsize>8</pointsize>
-                    </font>
-                   </property>
-                   <property name="toolTip">
-                    <string/>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="maxLength">
-                    <number>128</number>
-                   </property>
-                   <property name="frame">
-                    <bool>true</bool>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignCenter</set>
+                    <string>Client id</string>
                    </property>
                   </widget>
                  </item>
                 </layout>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QFrame" name="frame_3">
-                <property name="minimumSize">
-                 <size>
-                  <width>200</width>
-                  <height>30</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>200</width>
-                  <height>100</height>
-                 </size>
-                </property>
-                <property name="frameShape">
-                 <enum>QFrame::StyledPanel</enum>
-                </property>
-                <property name="frameShadow">
-                 <enum>QFrame::Raised</enum>
-                </property>
                </widget>
               </item>
              </layout>
@@ -8367,6 +8670,9 @@ Analog input: Read only</string>
                  <string>Private key</string>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_27">
+                 <property name="verticalSpacing">
+                  <number>3</number>
+                 </property>
                  <item row="0" column="0">
                   <layout class="QGridLayout" name="gridLayout_111">
                    <property name="horizontalSpacing">
@@ -9041,7 +9347,7 @@ Config</string>
     </property>
     <widget class="QMenu" name="menu_search_option">
      <property name="title">
-      <string>Search Option</string>
+      <string>Search options</string>
      </property>
      <addaction name="action_set_wait_time"/>
      <addaction name="action_retry_search"/>
@@ -9207,12 +9513,12 @@ Config</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Save Current Config</string>
+    <string>Save current settings</string>
    </property>
   </action>
   <action name="actionLoad">
    <property name="text">
-    <string>Load Config</string>
+    <string>Load settings</string>
    </property>
   </action>
   <action name="actionSaveconfig">
@@ -9240,12 +9546,12 @@ Config</string>
   </action>
   <action name="action_set_wait_time">
    <property name="text">
-    <string>Set the search wait time</string>
+    <string>Set search wait time</string>
    </property>
   </action>
   <action name="action_retry_search">
    <property name="text">
-    <string>Retry search devices</string>
+    <string>Set search retry count</string>
    </property>
   </action>
   <action name="action_document">

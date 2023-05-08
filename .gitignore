@@ -113,3 +113,4 @@ gui/wizconfig_gui-bak.ui
 *.crt
 *.patch
 *pem
+*.sh
