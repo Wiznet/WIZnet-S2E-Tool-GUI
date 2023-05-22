@@ -40,7 +40,7 @@ SOCK_OPEN_STATE = 30
 SOCK_CONNECTTRY_STATE = 40
 SOCK_CONNECT_STATE = 50
 
-VERSION = 'V1.5.2 Dev'
+VERSION = 'V1.5.2.1 Dev'
 
 
 def resource_path(relative_path):
@@ -1451,63 +1451,84 @@ class WIZWindow(QMainWindow, main_window):
                 """
                 # New options for Security devices
                 # MQTT options
-                # if 'QU' in dev_data:
-                #     if dev_data['QU'] == ' ':
-                #         self.lineedit_mqtt_username.clear()
-                #     else:
-                #         self.lineedit_mqtt_username.setText(dev_data['QU'])
-                # if 'QP' in dev_data:
-                #     if dev_data['QP'] == ' ':
-                #         self.lineedit_mqtt_password.clear()
-                #     else:
-                #         self.lineedit_mqtt_password.setText(dev_data['QP'])
-                # if 'QC' in dev_data:
-                #     if dev_data['QC'] == ' ':
-                #         self.lineedit_mqtt_clientid.clear()
-                #     else:
-                #         self.lineedit_mqtt_clientid.setText(dev_data['QC'])
-                # if 'QK' in dev_data:
-                #     if dev_data['QK'] == ' ':
-                #         self.lineedit_mqtt_keepalive.clear()
-                #     else:
-                #         self.lineedit_mqtt_keepalive.setText(dev_data['QK'])
-                # if 'PU' in dev_data:
-                #     if dev_data['PU'] == ' ':
-                #         self.lineedit_mqtt_pubtopic.clear()
-                #     else:
-                #         self.lineedit_mqtt_pubtopic.setText(dev_data['PU'])
+                if 'QU' in dev_data:
+                    if dev_data['QU'] == ' ':
+                        self.lineedit_mqtt_username.clear()
+                    else:
+                        self.lineedit_mqtt_username.setText(dev_data['QU'])
+                if 'QP' in dev_data:
+                    if dev_data['QP'] == ' ':
+                        self.lineedit_mqtt_password.clear()
+                    else:
+                        self.lineedit_mqtt_password.setText(dev_data['QP'])
+                if 'QC' in dev_data:
+                    if dev_data['QC'] == ' ':
+                        self.lineedit_mqtt_clientid.clear()
+                    else:
+                        self.lineedit_mqtt_clientid.setText(dev_data['QC'])
+                if 'QK' in dev_data:
+                    if dev_data['QK'] == ' ':
+                        self.lineedit_mqtt_keepalive.clear()
+                    else:
+                        self.lineedit_mqtt_keepalive.setText(dev_data['QK'])
+                if 'PU' in dev_data:
+                    if dev_data['PU'] == ' ':
+                        self.lineedit_mqtt_pubtopic.clear()
+                    else:
+                        self.lineedit_mqtt_pubtopic.setText(dev_data['PU'])
 
-                self.lineedit_mqtt_username.setText(dev_data.get('QU', '') or '')
-                self.lineedit_mqtt_password.setText(dev_data.get('QP', '') or '')
-                self.lineedit_mqtt_clientid.setText(dev_data.get('QC', '') or '')
-                self.lineedit_mqtt_keepalive.setText(dev_data.get('QK', '') or '')
-                self.lineedit_mqtt_pubtopic.setText(dev_data.get('PU', '') or '')
-                # if 'U0' in dev_data:
-                #     if dev_data['U0'] == ' ':
-                #         self.lineedit_mqtt_subtopic_0.clear()
-                #     else:
-                #         self.lineedit_mqtt_subtopic_0.setText(dev_data['U0'])
-                # if 'U1' in dev_data:
-                #     if dev_data['U1'] == ' ':
-                #         self.lineedit_mqtt_subtopic_1.clear()
-                #     else:
-                #         self.lineedit_mqtt_subtopic_1.setText(dev_data['U1'])
-                # if 'U2' in dev_data:
-                #     if dev_data['U2'] == ' ':
-                #         self.lineedit_mqtt_subtopic_2.clear()
-                #     else:
-                #         self.lineedit_mqtt_subtopic_2.setText(dev_data['U2'])
-                # MQTT subtopic
-                self.lineedit_mqtt_subtopic_0.setText(dev_data.get('U0', '') or '')
-                self.lineedit_mqtt_subtopic_1.setText(dev_data.get('U1', '') or '')
-                self.lineedit_mqtt_subtopic_2.setText(dev_data.get('U2', '') or '')
-                self.lineedit_mqtt_subtopic_3.setText(dev_data.get('U3', '') or '')
-                self.lineedit_mqtt_subtopic_4.setText(dev_data.get('U4', '') or '')
-                self.lineedit_mqtt_subtopic_5.setText(dev_data.get('U5', '') or '')
-                self.lineedit_mqtt_subtopic_6.setText(dev_data.get('U6', '') or '')
-                self.lineedit_mqtt_subtopic_7.setText(dev_data.get('U7', '') or '')
-                self.lineedit_mqtt_subtopic_8.setText(dev_data.get('U8', '') or '')
-                self.lineedit_mqtt_subtopic_9.setText(dev_data.get('U9', '') or '')
+                # MQTT subtopics
+                if 'U0' in dev_data:
+                    if dev_data['U0'] == ' ':
+                        self.lineedit_mqtt_subtopic_0.clear()
+                    else:
+                        self.lineedit_mqtt_subtopic_0.setText(dev_data['U0'])
+                if 'U1' in dev_data:
+                    if dev_data['U1'] == ' ':
+                        self.lineedit_mqtt_subtopic_1.clear()
+                    else:
+                        self.lineedit_mqtt_subtopic_1.setText(dev_data['U1'])
+                if 'U2' in dev_data:
+                    if dev_data['U2'] == ' ':
+                        self.lineedit_mqtt_subtopic_2.clear()
+                    else:
+                        self.lineedit_mqtt_subtopic_2.setText(dev_data['U2'])
+                if 'E-SAVE' in self.curr_dev:
+                    if 'U3' in dev_data:
+                        if dev_data['U3'] == ' ':
+                            self.lineedit_mqtt_subtopic_3.clear()
+                        else:
+                            self.lineedit_mqtt_subtopic_3.setText(dev_data['U3'])
+                    if 'U4' in dev_data:
+                        if dev_data['U4'] == ' ':
+                            self.lineedit_mqtt_subtopic_4.clear()
+                        else:
+                            self.lineedit_mqtt_subtopic_4.setText(dev_data['U4'])
+                    if 'U5' in dev_data:
+                        if dev_data['U5'] == ' ':
+                            self.lineedit_mqtt_subtopic_5.clear()
+                        else:
+                            self.lineedit_mqtt_subtopic_5.setText(dev_data['U5'])
+                    if 'U6' in dev_data:
+                        if dev_data['U6'] == ' ':
+                            self.lineedit_mqtt_subtopic_6.clear()
+                        else:
+                            self.lineedit_mqtt_subtopic_6.setText(dev_data['U6'])
+                    if 'U7' in dev_data:
+                        if dev_data['U7'] == ' ':
+                            self.lineedit_mqtt_subtopic_7.clear()
+                        else:
+                            self.lineedit_mqtt_subtopic_7.setText(dev_data['U7'])
+                    if 'U8' in dev_data:
+                        if dev_data['U8'] == ' ':
+                            self.lineedit_mqtt_subtopic_8.clear()
+                        else:
+                            self.lineedit_mqtt_subtopic_8.setText(dev_data['U8'])
+                    if 'U9' in dev_data:
+                        if dev_data['U9'] == ' ':
+                            self.lineedit_mqtt_subtopic_9.clear()
+                        else:
+                            self.lineedit_mqtt_subtopic_9.setText(dev_data['U9'])
                 if 'QO' in dev_data:
                     self.combobox_mqtt_qos.setCurrentIndex(int(dev_data['QO']))
                 # Root CA options
@@ -1738,22 +1759,22 @@ class WIZWindow(QMainWindow, main_window):
             if self.curr_dev in SECURITY_DEVICE:
                 # New options for WIZ510SSL (Security devices)
                 # MQTT options
-                setcmd['QU'] = self.lineedit_mqtt_username.text()
-                setcmd['QP'] = self.lineedit_mqtt_password.text()
-                setcmd['QC'] = self.lineedit_mqtt_clientid.text()
-                setcmd['QK'] = self.lineedit_mqtt_keepalive.text()
-                setcmd['PU'] = self.lineedit_mqtt_pubtopic.text()
-                setcmd['U0'] = self.lineedit_mqtt_subtopic_0.text()
-                setcmd['U1'] = self.lineedit_mqtt_subtopic_1.text()
-                setcmd['U2'] = self.lineedit_mqtt_subtopic_2.text()
-                if 'WIZ5XXSR' in self.curr_dev and 'E-SAVE' in self.curr_dev:
-                    setcmd['U3'] = self.lineedit_mqtt_subtopic_3.text()
-                    setcmd['U4'] = self.lineedit_mqtt_subtopic_4.text()
-                    setcmd['U5'] = self.lineedit_mqtt_subtopic_5.text()
-                    setcmd['U6'] = self.lineedit_mqtt_subtopic_6.text()
-                    setcmd['U7'] = self.lineedit_mqtt_subtopic_7.text()
-                    setcmd['U8'] = self.lineedit_mqtt_subtopic_8.text()
-                    setcmd['U9'] = self.lineedit_mqtt_subtopic_9.text()
+                setcmd['QU'] = self.lineedit_mqtt_username.text() if self.lineedit_mqtt_username.text() else ' '
+                setcmd['QP'] = self.lineedit_mqtt_password.text() if self.lineedit_mqtt_password.text() else ' '
+                setcmd['QC'] = self.lineedit_mqtt_clientid.text() if self.lineedit_mqtt_clientid.text() else ' '
+                setcmd['QK'] = self.lineedit_mqtt_keepalive.text() if self.lineedit_mqtt_keepalive.text() else ' '
+                setcmd['PU'] = self.lineedit_mqtt_pubtopic.text() if self.lineedit_mqtt_pubtopic.text() else ' '
+                setcmd['U0'] = self.lineedit_mqtt_subtopic_0.text() if self.lineedit_mqtt_subtopic_0.text() else ' '
+                setcmd['U1'] = self.lineedit_mqtt_subtopic_1.text() if self.lineedit_mqtt_subtopic_1.text() else ' '
+                setcmd['U2'] = self.lineedit_mqtt_subtopic_2.text() if self.lineedit_mqtt_subtopic_2.text() else ' '
+                if 'E-SAVE' in self.curr_dev:
+                    setcmd['U3'] = self.lineedit_mqtt_subtopic_3.text() if self.lineedit_mqtt_subtopic_3.text() else ' '
+                    setcmd['U4'] = self.lineedit_mqtt_subtopic_4.text() if self.lineedit_mqtt_subtopic_4.text() else ' '
+                    setcmd['U5'] = self.lineedit_mqtt_subtopic_5.text() if self.lineedit_mqtt_subtopic_5.text() else ' '
+                    setcmd['U6'] = self.lineedit_mqtt_subtopic_6.text() if self.lineedit_mqtt_subtopic_6.text() else ' '
+                    setcmd['U7'] = self.lineedit_mqtt_subtopic_7.text() if self.lineedit_mqtt_subtopic_7.text() else ' '
+                    setcmd['U8'] = self.lineedit_mqtt_subtopic_8.text() if self.lineedit_mqtt_subtopic_8.text() else ' '
+                    setcmd['U9'] = self.lineedit_mqtt_subtopic_9.text() if self.lineedit_mqtt_subtopic_9.text() else ' '
                 setcmd['QO'] = str(self.combobox_mqtt_qos.currentIndex())
                 # Root CA options
                 setcmd['RC'] = str(self.combobox_rootca_option.currentIndex())
@@ -1774,7 +1795,7 @@ class WIZWindow(QMainWindow, main_window):
         except Exception as e:
             self.logger.error(e)
 
-        # print('setcmd:', setcmd)
+        print('setcmd:', setcmd)
         return setcmd
 
     # ? encode setting password
