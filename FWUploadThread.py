@@ -5,7 +5,7 @@ from wizsocket.TCPClient import TCPClient
 from WIZUDPSock import WIZUDPSock
 from WIZMSGHandler import WIZMSGHandler
 from WIZMakeCMD import SECURITY_DEVICE
-from utils import get_logger
+from utils import logger
 
 import binascii
 import time
@@ -20,11 +20,11 @@ OP_FACTORYRESET = 4
 OP_GETDETAIL = 5
 OP_FWUP = 6
 
-SOCK_CLOSE_STATE = 1
-SOCK_OPENTRY_STATE = 2
-SOCK_OPEN_STATE = 3
-SOCK_CONNECTTRY_STATE = 4
-SOCK_CONNECT_STATE = 5
+SOCK_CLOSE_STATE = 10
+SOCK_OPENTRY_STATE = 11
+SOCK_OPEN_STATE = 12
+SOCK_CONNECTTRY_STATE = 13
+SOCK_CONNECT_STATE = 14
 
 idle_state = 1
 datasent_state = 2
@@ -41,7 +41,7 @@ class FWUploadThread(QThread):
     def __init__(self, conf_sock, dest_mac, idcode, set_pw, filename, filesize, ipaddr, port, dev_name):
         QThread.__init__(self)
 
-        self.logger = get_logger(self.__class__.__name__, os.path.expanduser('~'), 'wizconfig')
+        self.logger = logger
 
         self.bin_filename = filename
         self.fd = None

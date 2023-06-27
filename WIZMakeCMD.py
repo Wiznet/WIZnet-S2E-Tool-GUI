@@ -3,7 +3,7 @@
 """
 Make Serial command
 """
-from utils import get_logger
+from utils import logger
 
 import sys
 import re
@@ -102,7 +102,7 @@ def version_compare(version1, version2):
 
 class WIZMakeCMD:
     def __init__(self):
-        self.logger = get_logger(self.__class__.__name__, os.path.expanduser('~'), 'wizconfig')
+        self.logger = logger
 
     def make_header(self, mac_addr, idcode, devname="", set_pw=""):
         """
