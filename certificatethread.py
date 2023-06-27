@@ -6,18 +6,11 @@ import select
 import os
 
 from PyQt5 import QtCore
-from utils import get_logger
+from utils import logger
 
 # from wizsocket.TCPClient import TCPClient
 # from WIZUDPSock import WIZUDPSock
 # from WIZMSGHandler import WIZMSGHandler
-
-OP_SEARCHALL = 1
-OP_SETIP = 2
-OP_CHECKIP = 3
-OP_FACTORYRESET = 4
-OP_GETDETAIL = 5
-OP_CERTUP = 6
 
 SOCK_CLOSE_STATE = 11
 SOCK_OPENTRY_STATE = 12
@@ -43,7 +36,7 @@ class certificatethread(QtCore.QThread):
     def __init__(self, sock, dest_mac, idcode, set_pw, filename, ipaddr, port, dev_name, cmd):
         QtCore.QThread.__init__(self)
 
-        self.logger = get_logger(self.__class__.__name__, os.path.expanduser('~'), 'wizconfig')
+        self.logger = logger
 
         self.dest_mac = None
         self.bin_cert_name = filename

@@ -9,7 +9,8 @@ from WIZUDPSock import WIZUDPSock
 from FWUploadThread import FWUploadThread
 from WIZMSGHandler import WIZMSGHandler, DataRefresh
 from certificatethread import certificatethread
-from utils import get_logger
+# from utils import get_logger
+from utils import logger, funclog
 
 import sys
 import time
@@ -35,12 +36,12 @@ OP_GETFILE = 5
 OP_FWUP = 6
 
 SOCK_CLOSE_STATE = 10
-SOCK_OPENTRY_STATE = 20
-SOCK_OPEN_STATE = 30
-SOCK_CONNECTTRY_STATE = 40
-SOCK_CONNECT_STATE = 50
+SOCK_OPENTRY_STATE = 11
+SOCK_OPEN_STATE = 12
+SOCK_CONNECTTRY_STATE = 13
+SOCK_CONNECT_STATE = 14
 
-VERSION = 'V1.5.2.1 Dev'
+VERSION = 'V1.5.2.2 Dev'
 
 
 def resource_path(relative_path):
@@ -51,7 +52,7 @@ def resource_path(relative_path):
 
 # Load ui files
 uic_logger = logging.getLogger('PyQt5.uic')
-uic_logger.setLevel(logging.INFO)
+uic_logger.setLevel(logging.WARNING)
 main_window = uic.loadUiType(resource_path('gui/wizconfig_gui.ui'))[0]
 
 
@@ -62,7 +63,7 @@ class WIZWindow(QMainWindow, main_window):
 
         self.setWindowTitle(f'WIZnet S2E Configuration Tool {VERSION}')
 
-        self.logger = get_logger(self.__class__.__name__, os.path.expanduser('~'), 'wizconfig')
+        self.logger = logger
         if 'Dev' in VERSION:
             self.logger.setLevel(logging.DEBUG)
 
@@ -112,7 +113,7 @@ class WIZWindow(QMainWindow, main_window):
         self.curr_st = None
 
         self.search_pre_wait_time = 3
-        self.search_wait_time_each = 1
+        self.search_wait_time_each = 1.5
         self.search_retry_flag = False
         self.search_retrynum = 0
 
@@ -199,8 +200,8 @@ class WIZWindow(QMainWindow, main_window):
         self.statusbar.addPermanentWidget(self.pgbar)
 
         # progress thread
-        self.th_search = ThreadProgress()
-        self.th_search.change_value.connect(self.value_changed)
+        self.search_progress_thread = ThreadProgress()
+        self.search_progress_thread.change_value.connect(self.value_changed)
 
         # check if device selected
         self.list_device.itemSelectionChanged.connect(self.dev_selected)
@@ -263,6 +264,7 @@ class WIZWindow(QMainWindow, main_window):
 
         self.cert_object_config()
 
+    @funclog(logger)
     def init_ui_object(self):
         """
         Initial config based WIZ750SR series
@@ -305,6 +307,7 @@ class WIZWindow(QMainWindow, main_window):
         self.btn_factory.addAction(self.factory_setting_action)
         self.btn_factory.addAction(self.factory_firmware_action)
 
+    @funclog(logger)
     def tab_changed(self):
         """
         When tab changed
@@ -326,6 +329,7 @@ class WIZWindow(QMainWindow, main_window):
                 except Exception as e:
                     self.logger.error(e)
 
+    @funclog(logger)
     def net_ifs_selected(self, netifs):
         ifs = netifs.text().split(':')
         selected_ip = ifs[0]
@@ -637,7 +641,7 @@ class WIZWindow(QMainWindow, main_window):
         # if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
         if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev:
             # ! Check current tab length
-            self.logger.debug(f'totalTab: {len(self.generalTab)}, currentTab: {self.generalTab.currentIndex()}')
+            # self.logger.debug(f'totalTab: {len(self.generalTab)}, currentTab: {self.generalTab.currentIndex()}')
             # self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
             # self.generalTab.setTabEnabled(2, True)
             if 'WIZ5XXSR' in self.curr_dev:
@@ -654,6 +658,14 @@ class WIZWindow(QMainWindow, main_window):
                     # Basic settings / User I/O / Options
                     self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
                     self.generalTab.setTabEnabled(2, True)
+                elif len(self.generalTab) == 3:
+                    if self.generalTab.tabText(2) == self.userio_tab_text:
+                        pass
+                    else:
+                        # Exception case: Basic settings / Options / MQTT Options
+                        self.generalTab.removeTab(2)
+                        self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
+                        self.generalTab.setTabEnabled(2, True)
                 self.frame_gpioc.setEnabled(True)
                 self.frame_gpiod.setEnabled(True)
         else:
@@ -963,10 +975,10 @@ class WIZWindow(QMainWindow, main_window):
             # default search id code
             self.code = " "
             self.all_response = []
-            self.pgbar.setFormat('Searching..')
+            self.pgbar.setFormat('Search all devices...')
             self.pgbar.setRange(0, 100)
-            self.th_search.start()
-            self.processing()
+            self.search_progress_thread.start()
+            self.processing(self.search_pre_wait_time * 1000)
 
             if self.search_retry_flag:
                 self.logger.info('keep searched list')
@@ -1011,10 +1023,12 @@ class WIZWindow(QMainWindow, main_window):
                 self.wizmsghandler.search_result.connect(self.get_search_result)
                 self.wizmsghandler.start()
 
-    def processing(self):
+    def processing(self, time):
+        # print('---------- processing ----------', int(time))
         self.btn_search.setEnabled(False)
         # QtCore.QTimer.singleShot(1500, lambda: self.btn_search.setEnabled(True))
-        QtCore.QTimer.singleShot(4500, lambda: self.pgbar.hide())
+        # QtCore.QTimer.singleShot(4500, lambda: self.btn_search.setEnabled(True))
+        QtCore.QTimer.singleShot(int(time), lambda: self.pgbar.hide())
 
     def search_each_dev(self, dev_info_list):
         cmd_list = []
@@ -1022,6 +1036,7 @@ class WIZWindow(QMainWindow, main_window):
 
         self.code = " "
         # self.all_response = []
+        self.logger.info(f'search_each_dev() dev_info_list: {dev_info_list}')
         self.pgbar.setFormat('Search for each device...')
 
         if self.broadcast.isChecked():
@@ -1057,13 +1072,13 @@ class WIZWindow(QMainWindow, main_window):
                 self.statusbar.showMessage(' Done.')
 
     def getsearch_each_dev(self, dev_data):
-        # self.logger.info(dev_data)
+        # self.logger.debug(f'getsearch_each_dev: {dev_data}')
         profile = {}
 
         try:
             if dev_data is not None:
                 self.eachdev_info.append(dev_data)
-                # print('eachdev_info', len(self.eachdev_info), self.eachdev_info)
+                self.logger.debug(f'eachdev_info: ({len(self.eachdev_info)}), {self.eachdev_info}')
                 for i in range(len(self.eachdev_info)):
                     # cmdsets = self.eachdev_info[i].splitlines()
                     cmdsets = self.eachdev_info[i].split(b"\r\n")
@@ -1559,8 +1574,8 @@ class WIZWindow(QMainWindow, main_window):
         msgbox = QMessageBox(self)
         msgbox.setIcon(QMessageBox.Critical)
         msgbox.setFont(self.midfont)
-        msgbox.setWindowTitle("Unexcepted error")
-        text = "<div style=text-align:center>Unexcepted error occurred." \
+        msgbox.setWindowTitle("An error has occured")
+        text = "<div style=text-align:center>Unexcepted error has occurred." \
             + "<br>Please report the issue with detail message." \
             + "<br><a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/issues'>Github Issue page</a></div>"
         msgbox.setText(text)
@@ -1798,6 +1813,7 @@ class WIZWindow(QMainWindow, main_window):
         print('setcmd:', setcmd)
         return setcmd
 
+    """
     # ? encode setting password
     def encode_setting_pw(self, setpw, mode):
         self.logger.info(setpw, mode)
@@ -1828,6 +1844,7 @@ class WIZWindow(QMainWindow, main_window):
                 # self.update_device_cert()
         except Exception as e:
             self.logger.error(e)
+    """
 
     def do_setting(self):
         self.disable_object()
@@ -2284,6 +2301,8 @@ class WIZWindow(QMainWindow, main_window):
         if okbtn:
             self.logger.info(self.search_wait_time)
             self.search_pre_wait_time = self.search_wait_time
+            # Update each search wait time
+            # self.search_wait_time_each += 1
         else:
             pass
 
