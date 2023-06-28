@@ -2,14 +2,14 @@
 
 from wizsocket.TCPClient import TCPClient
 from WIZMakeCMD import WIZMakeCMD, version_compare, ONE_PORT_DEV, TWO_PORT_DEV, SECURITY_DEVICE
-from WIZ752CMDSET import WIZ752CMDSET
-from WIZ750CMDSET import WIZ750CMDSET
-from WIZ510SSLCMDSET import WIZ510SSLCMDSET
+
 from WIZUDPSock import WIZUDPSock
 from FWUploadThread import FWUploadThread
 from WIZMSGHandler import WIZMSGHandler, DataRefresh
 from certificatethread import certificatethread
-# from utils import get_logger
+
+from wizcmdset import Wizcmdset
+from constants import Opcode, SockState
 from utils import logger, funclog
 
 import sys
@@ -17,31 +17,15 @@ import time
 import re
 import os
 import subprocess
-import base64
 import webbrowser
 import logging
-# import psutil
 
 # Additional package
 from PyQt5 import QtCore, QtGui, uic
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLineEdit, QMessageBox, QTableWidgetItem, QFileDialog, QMenu, QAction, QProgressBar, QInputDialog
 import ifaddr
 
-
-OP_SEARCHALL = 1
-OP_GETCOMMAND = 2
-OP_SETCOMMAND = 3
-OP_SETFILE = 4
-OP_GETFILE = 5
-OP_FWUP = 6
-
-SOCK_CLOSE_STATE = 10
-SOCK_OPENTRY_STATE = 11
-SOCK_OPEN_STATE = 12
-SOCK_CONNECTTRY_STATE = 13
-SOCK_CONNECT_STATE = 14
-
-VERSION = 'V1.5.2.2 Dev'
+VERSION = 'V1.5.2.3 Dev'
 
 
 def resource_path(relative_path):
@@ -80,9 +64,8 @@ class WIZWindow(QMainWindow, main_window):
         self.setWindowIcon(QtGui.QIcon(resource_path('gui/icon.ico')))
         self.set_btn_icon()
 
-        self.wiz750cmdObj = WIZ750CMDSET(1)
-        self.wiz752cmdObj = WIZ752CMDSET(1)
-        self.wiz510sslcmdObj = WIZ510SSLCMDSET(1)
+        # load default cmdset
+        self.cmdset = Wizcmdset('WIZ750SR')
         self.wizmakecmd = WIZMakeCMD()
 
         self.dev_profile = {}
@@ -799,7 +782,7 @@ class WIZWindow(QMainWindow, main_window):
     def sock_close(self):
         # 기존 연결 fin
         if self.cli_sock is not None:
-            if self.cli_sock.state != SOCK_CLOSE_STATE:
+            if self.cli_sock.state != SockState.SOCK_CLOSE:
                 self.cli_sock.shutdown()
 
     def connect_over_tcp(self, serverip, port):
@@ -812,23 +795,23 @@ class WIZWindow(QMainWindow, main_window):
                 break
             retrynum += 1
 
-            if self.cli_sock.state == SOCK_CLOSE_STATE:
+            if self.cli_sock.state == SockState.SOCK_CLOSE:
                 self.cli_sock.shutdown()
                 try:
                     self.cli_sock.open()
-                    if self.cli_sock.state == SOCK_OPEN_STATE:
+                    if self.cli_sock.state == SockState.SOCK_OPEN:
                         self.logger.info('[%r] is OPEN' % (serverip))
                     time.sleep(0.2)
                 except Exception as e:
                     self.logger.error(e)
-            elif self.cli_sock.state == SOCK_OPEN_STATE:
+            elif self.cli_sock.state == SockState.SOCK_OPEN:
                 try:
                     self.cli_sock.connect()
-                    if self.cli_sock.state == SOCK_CONNECT_STATE:
+                    if self.cli_sock.state == SockState.SOCK_CONNECT:
                         self.logger.info('[%r] is CONNECTED' % (serverip))
                 except Exception as e:
                     self.logger.error(e)
-            elif self.cli_sock.state == SOCK_CONNECT_STATE:
+            elif self.cli_sock.state == SockState.SOCK_CONNECT:
                 break
         if retrynum > 6:
             self.logger.info('Device [%s] TCP connection failed.\r\n' % (serverip))
@@ -1016,10 +999,10 @@ class WIZWindow(QMainWindow, main_window):
 
                 if self.unicast_ip.isChecked():
                     self.wizmsghandler = WIZMSGHandler(
-                        self.conf_sock, cmd_list, 'tcp', OP_SEARCHALL, self.search_pre_wait_time)
+                        self.conf_sock, cmd_list, 'tcp', Opcode.OP_SEARCHALL, self.search_pre_wait_time)
                 else:
                     self.wizmsghandler = WIZMSGHandler(
-                        self.conf_sock, cmd_list, 'udp', OP_SEARCHALL, self.search_pre_wait_time)
+                        self.conf_sock, cmd_list, 'udp', Opcode.OP_SEARCHALL, self.search_pre_wait_time)
                 self.wizmsghandler.search_result.connect(self.get_search_result)
                 self.wizmsghandler.start()
 
@@ -1062,10 +1045,10 @@ class WIZWindow(QMainWindow, main_window):
                 th_name = "dev_%s" % dev_info[0]
                 if self.unicast_ip.isChecked():
                     th_name = WIZMSGHandler(self.conf_sock, cmd_list, 'tcp',
-                                            OP_SEARCHALL, self.search_wait_time_each)
+                                            Opcode.OP_SEARCHALL, self.search_wait_time_each)
                 else:
                     th_name = WIZMSGHandler(self.conf_sock, cmd_list, 'udp',
-                                            OP_SEARCHALL, self.search_wait_time_each)
+                                            Opcode.OP_SEARCHALL, self.search_wait_time_each)
                 th_name.searched_data.connect(self.getsearch_each_dev)
                 th_name.start()
                 th_name.wait()
@@ -1813,39 +1796,6 @@ class WIZWindow(QMainWindow, main_window):
         print('setcmd:', setcmd)
         return setcmd
 
-    """
-    # ? encode setting password
-    def encode_setting_pw(self, setpw, mode):
-        self.logger.info(setpw, mode)
-        try:
-            if not setpw:
-                self.use_setting_pw = False
-                self.encoded_setting_pw = ''
-            else:
-                self.use_setting_pw = True
-                self.encoded_setting_pw = base64.b64encode(setpw.encode('utf-8'))
-                self.logger.info(self.encoded_setting_pw)
-
-            # TODO: mode 판별 기준
-            if mode == 'setting':
-                self.do_setting()
-            elif mode == 'reset':
-                self.do_reset()
-            elif mode == 'upload':
-                # do firmware update
-                self.firmware_update(self.fw_filename, self.fw_filesize)
-            elif mode == 'factory_setting':
-                self.msg_factory_setting()
-            elif mode == 'factory_firmware':
-                self.msg_factory_firmware()
-            # certificate update
-            elif mode == 'update_cert':
-                pass
-                # self.update_device_cert()
-        except Exception as e:
-            self.logger.error(e)
-    """
-
     def do_setting(self):
         self.disable_object()
 
@@ -1863,13 +1813,15 @@ class WIZWindow(QMainWindow, main_window):
             setcmd = self.get_object_value()
             # self.selected_devinfo()
 
+            # Update cmdset
+            self.cmdset.get_cmdset(self.dev_name)
             if self.curr_dev in ONE_PORT_DEV or 'WIZ750' in self.curr_dev:
                 self.logger.info('One port dev setting')
                 # Parameter validity check
                 invalid_flag = 0
                 setcmd_cmd = list(setcmd.keys())
                 for i in range(len(setcmd)):
-                    if self.wiz750cmdObj.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
+                    if self.cmdset.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
                         self.logger.warning(
                             'Invalid parameter: %s %s' % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
                         self.msg_invalid(setcmd.get(setcmd_cmd[i]))
@@ -1880,7 +1832,7 @@ class WIZWindow(QMainWindow, main_window):
                 invalid_flag = 0
                 setcmd_cmd = list(setcmd.keys())
                 for i in range(len(setcmd)):
-                    if self.wiz752cmdObj.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
+                    if self.cmdset.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
                         self.logger.warning(
                             'Invalid parameter: %s %s' % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
                         self.msg_invalid(setcmd.get(setcmd_cmd[i]))
@@ -1891,28 +1843,17 @@ class WIZWindow(QMainWindow, main_window):
                 # ! temp comment to develop
                 # setcmd_cmd = list(setcmd.keys())
                 # for i in range(len(setcmd)):
-                #     if self.wiz510sslcmdObj.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
+                #     if self.cmdset.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
                 #         self.logger.info('WIZ510SSL: Invalid parameter: %s %s' %
                 #                           (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
                 #         self.msg_invalid(setcmd.get(setcmd_cmd[i]))
                 #         invalid_flag += 1
-            elif 'W7500_S2E' in self.curr_dev or 'W7500P_S2E':
-                self.logger.info('W7500(P)-S2E setting...')
-                invalid_flag = 0
-                setcmd_cmd = list(setcmd.keys())
-                for i in range(len(setcmd)):
-                    if self.wiz750cmdObj.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
-                        self.logger.warning(
-                            'Invalid parameter: %s %s' % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
-                        self.msg_invalid(setcmd.get(setcmd_cmd[i]))
-                        invalid_flag += 1
             else:
                 invalid_flag = -1
                 self.logger.info('The device not supported')
 
-            # self.logger.info('invalid flag: %d' % invalid_flag)
             if invalid_flag > 0:
-                pass
+                self.logger.info(f'Setting: invalid flag: {invalid_flag}')
             elif invalid_flag == 0:
                 if len(self.searchcode_input.text()) == 0:
                     self.code = " "
@@ -1921,17 +1862,17 @@ class WIZWindow(QMainWindow, main_window):
 
                 cmd_list = self.wizmakecmd.setcommand(self.curr_mac, self.code, self.encoded_setting_pw,
                                                       list(setcmd.keys()), list(setcmd.values()), self.curr_dev, self.curr_ver)
-                # self.logger.info(cmd_list)
+                # self.logger.debug(cmd_list)
 
                 # socket config
                 self.socket_config()
 
                 if self.unicast_ip.isChecked():
                     self.wizmsghandler = WIZMSGHandler(
-                        self.conf_sock, cmd_list, 'tcp', OP_SETCOMMAND, 2)
+                        self.conf_sock, cmd_list, 'tcp', Opcode.OP_SETCOMMAND, 2)
                 else:
                     self.wizmsghandler = WIZMSGHandler(
-                        self.conf_sock, cmd_list, 'udp', OP_SETCOMMAND, 2)
+                        self.conf_sock, cmd_list, 'udp', Opcode.OP_SETCOMMAND, 2)
                 self.wizmsghandler.set_result.connect(self.get_setting_result)
                 self.wizmsghandler.start()
 
@@ -2233,10 +2174,10 @@ class WIZWindow(QMainWindow, main_window):
 
             if self.unicast_ip.isChecked():
                 self.wizmsghandler = WIZMSGHandler(
-                    self.conf_sock, cmd_list, 'tcp', OP_SETCOMMAND, 2)
+                    self.conf_sock, cmd_list, 'tcp', Opcode.OP_SETCOMMAND, 2)
             else:
                 self.wizmsghandler = WIZMSGHandler(
-                    self.conf_sock, cmd_list, 'udp', OP_SETCOMMAND, 2)
+                    self.conf_sock, cmd_list, 'udp', Opcode.OP_SETCOMMAND, 2)
             self.wizmsghandler.set_result.connect(self.reset_result)
             self.wizmsghandler.start()
 
@@ -2271,28 +2212,12 @@ class WIZWindow(QMainWindow, main_window):
 
             if self.unicast_ip.isChecked():
                 self.wizmsghandler = WIZMSGHandler(
-                    self.conf_sock, cmd_list, 'tcp', OP_SETCOMMAND, 2)
+                    self.conf_sock, cmd_list, 'tcp', Opcode.OP_SETCOMMAND, 2)
             else:
                 self.wizmsghandler = WIZMSGHandler(
-                    self.conf_sock, cmd_list, 'udp', OP_SETCOMMAND, 2)
+                    self.conf_sock, cmd_list, 'udp', Opcode.OP_SETCOMMAND, 2)
             self.wizmsghandler.set_result.connect(self.factory_result)
             self.wizmsghandler.start()
-
-    """
-    # Setting password
-    def input_setting_pw(self, mode):
-        text, okbtn = QInputDialog.getText(
-            self, "Setting password", "Input setting password", QLineEdit.Password, "")
-        if okbtn:
-            self.logger.info('{}, {}'.format(text, len(text)))
-            if self.enable_setting_pw.isChecked():
-                if not text:
-                    self.logger.warning('need password to setting')
-                else:
-                    self.encode_setting_pw(text, mode)
-            else:
-                self.encode_setting_pw(text, mode)
-    """
 
     # To set the wait time when no response from the device when searching
     def input_search_wait_time(self):

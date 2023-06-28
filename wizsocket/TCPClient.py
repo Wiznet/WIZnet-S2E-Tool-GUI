@@ -7,6 +7,7 @@ import select
 import sys
 sys.path.append('..')
 
+from constants import SockState
 from utils import logger, socket_exception_handler
 
 TIMEOUT = 10
@@ -14,12 +15,6 @@ TIMEOUT = 10
 MAXBUFLEN = 2048
 
 idle_state = 1
-
-CLOSE_STATE = 10
-OPENTRY_STATE = 11
-OPEN_STATE = 12
-CONNECTTRY_STATE = 13
-CONNECT_STATE = 14
 
 
 class TCPClient:
@@ -33,7 +28,7 @@ class TCPClient:
         self.rcvbuf = bytearray(MAXBUFLEN)
         self.buflen = 0
         self.rcvd = ""
-        self.state = CLOSE_STATE
+        self.state = SockState.SOCK_CLOSE
         self.timeout = timeout
         self.time = time.time()
         self.retrycount = 0
@@ -47,22 +42,22 @@ class TCPClient:
     def open(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setblocking(0)
-        self.state = OPEN_STATE
-        return OPEN_STATE
+        self.state = SockState.SOCK_OPEN
+        return SockState.SOCK_OPEN
 
     @socket_exception_handler(logger)
     def connect(self):
         self.sock.settimeout(10)
         try:
             self.sock.connect((self.dst_ip, self.dst_port))
-            self.state = CONNECT_STATE
-            return CONNECT_STATE
+            self.state = SockState.SOCK_CONNECT
+            return SockState.SOCK_CONNECT
         except socket.error as err:
             self.logger.error(err)
             self.sock.close()
             self.sock = 0
-            self.state = CLOSE_STATE
-            return CLOSE_STATE
+            self.state = SockState.SOCK_CLOSE
+            return SockState.SOCK_CLOSE
 
     @socket_exception_handler(logger)
     def readline(self):
@@ -87,7 +82,7 @@ class TCPClient:
                     tmpbuf = self.sock.recv(MAXBUFLEN - self.buflen)
                 except socket.error:
                     self.sock = None
-                    self.state = CLOSE_STATE
+                    self.state = SockState.SOCK_CLOSE
                     self.working_state = idle_state
                     self.buflen = 0
                     return ""
@@ -136,7 +131,7 @@ class TCPClient:
                         tmpbuf = self.sock.recv(MAXBUFLEN - self.buflen)
                     except socket.error:
                         self.sock = None
-                        self.state = CLOSE_STATE
+                        self.state = SockState.SOCK_CLOSE
                         self.working_state = idle_state
                         self.buflen = 0
                         return None
@@ -163,7 +158,7 @@ class TCPClient:
                         tmpbuf = self.sock.recv(MAXBUFLEN - self.buflen)
                     except socket.error:
                         self.sock = None
-                        self.state = CLOSE_STATE
+                        self.state = SockState.SOCK_CLOSE
                         self.working_state = idle_state
                         self.buflen = 0
                         return ""
@@ -191,7 +186,7 @@ class TCPClient:
     def close(self):
         if self.sock != 0:
             self.sock.close()
-        self.state = CLOSE_STATE
+        self.state = SockState.SOCK_CLOSE
 
     def shutdown(self):
         if self.sock != 0:
