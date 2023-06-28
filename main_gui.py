@@ -126,25 +126,27 @@ class WIZWindow(QMainWindow, main_window):
         # device select event
         self.list_device.itemClicked.connect(self.dev_clicked)
 
-        # Button event
-        self.btn_search.clicked.connect(self.do_search_normal)
+        """ Button event """
+        try:
+            self.btn_search.clicked.connect(self.do_search_normal)
 
-        # WIZ2000: need setting password (setting, reset, upload, factory)
-        self.btn_setting.clicked.connect(self.event_setting_clicked)
-        self.btn_reset.clicked.connect(self.event_reset_clicked)
+            # WIZ2000: need setting password (setting, reset, upload, factory)
+            self.btn_setting.clicked.connect(self.event_setting_clicked)
+            self.btn_reset.clicked.connect(self.event_reset_clicked)
 
-        # factory reset
-        # WIZ2000: setting or factory two options
-        self.btn_factory.clicked.connect(self.event_factory_setting)
-        self.btn_factory.triggered[QAction].connect(self.event_factory_option_clicked)
+            # factory reset
+            self.btn_factory.clicked.connect(self.event_factory_setting)
+            self.btn_factory.triggered[QAction].connect(self.event_factory_option_clicked)
 
-        # configuration save/load button
-        self.btn_saveconfig.clicked.connect(self.dialog_save_file)
-        self.btn_loadconfig.clicked.connect(self.dialog_load_file)
+            # configuration save/load button
+            self.btn_saveconfig.clicked.connect(self.dialog_save_file)
+            self.btn_loadconfig.clicked.connect(self.dialog_load_file)
 
-        # self.btn_upload.clicked.connect(self.update_btn_clicked)
-        self.btn_upload.clicked.connect(self.event_upload_clicked)
-        self.btn_exit.clicked.connect(self.msg_exit)
+            # self.btn_upload.clicked.connect(self.update_btn_clicked)
+            self.btn_upload.clicked.connect(self.event_upload_clicked)
+            self.btn_exit.clicked.connect(self.msg_exit)
+        except Exception as e:
+            self.logger.error(f'button event register error: {e}')
 
         # State Changed Event
         self.show_idcode.stateChanged.connect(self.event_idcode)
@@ -276,7 +278,6 @@ class WIZWindow(QMainWindow, main_window):
             lineedit_subtopic = getattr(self, f'lineedit_mqtt_subtopic_{i}')
             # lineedit_subtopic.hide()
             lineedit_subtopic.setEnabled(False)
-
 
     def init_btn_factory(self):
         # factory_option = ['Factory default settings', 'Factory default firmware']
@@ -792,40 +793,43 @@ class WIZWindow(QMainWindow, main_window):
             return self.cli_sock
 
     def socket_config(self):
-        # Broadcast
-        if self.broadcast.isChecked():
-            if self.selected_eth is None:
-                self.conf_sock = WIZUDPSock(5000, 50001, "")
-            else:
-                self.conf_sock = WIZUDPSock(5000, 50001, self.selected_eth)
-                self.logger.info(self.selected_eth)
-
-            self.conf_sock.open()
-
-        # TCP unicast
-        elif self.unicast_ip.isChecked():
-            ip_addr = self.search_ipaddr.text()
-            port = int(self.search_port.text())
-            self.logger.info('unicast: ip: %r, port: %r' % (ip_addr, port))
-
-            # network check
-            net_response = self.net_check_ping(ip_addr)
-
-            if net_response == 0:
-                self.conf_sock = self.connect_over_tcp(ip_addr, port)
-
-                if self.conf_sock is None:
-                    self.isConnected = False
-                    self.logger.info('TCP connection failed!: %s' % self.conf_sock)
-                    self.statusbar.showMessage(' TCP connection failed: %s' % ip_addr)
-                    self.msg_connection_failed()
+        try:
+            # Broadcast
+            if self.broadcast.isChecked():
+                if self.selected_eth is None:
+                    self.conf_sock = WIZUDPSock(5000, 50001, "")
                 else:
-                    self.isConnected = True
-                self.btn_search.setEnabled(True)
-            else:
-                self.statusbar.showMessage(' Network unreachable: %s' % ip_addr)
-                self.btn_search.setEnabled(True)
-                self.msg_not_connected(ip_addr)
+                    self.conf_sock = WIZUDPSock(5000, 50001, self.selected_eth)
+                    self.logger.info(self.selected_eth)
+
+                self.conf_sock.open()
+
+            # TCP unicast
+            elif self.unicast_ip.isChecked():
+                ip_addr = self.search_ipaddr.text()
+                port = int(self.search_port.text())
+                self.logger.info('unicast: ip: %r, port: %r' % (ip_addr, port))
+
+                # network check
+                net_response = self.net_check_ping(ip_addr)
+
+                if net_response == 0:
+                    self.conf_sock = self.connect_over_tcp(ip_addr, port)
+
+                    if self.conf_sock is None:
+                        self.isConnected = False
+                        self.logger.info('TCP connection failed!: %s' % self.conf_sock)
+                        self.statusbar.showMessage(' TCP connection failed: %s' % ip_addr)
+                        self.msg_connection_failed()
+                    else:
+                        self.isConnected = True
+                    self.btn_search.setEnabled(True)
+                else:
+                    self.statusbar.showMessage(' Network unreachable: %s' % ip_addr)
+                    self.btn_search.setEnabled(True)
+                    self.msg_not_connected(ip_addr)
+        except Exception as e:
+            self.logger.error(f'socket_config error: {e}')
 
     # expansion GPIO config
     def refresh_gpio(self, mac_addr):
@@ -906,16 +910,31 @@ class WIZWindow(QMainWindow, main_window):
                     self.logger.error(e)
 
     def do_search_retry(self, num):
-        self.search_retry_flag = True
-        # search retry number
-        self.search_retrynum = num
-        self.logger.info(self.mac_list)
+        try:
+            self.search_retry_flag = True
+            # search retry number
+            self.search_retrynum = num
+            self.logger.info(self.mac_list)
 
-        self.search_pre()
+            self.search_pre()
+        except Exception as e:
+            self.logger.error(f'do_search_normal error: {e}')
+            self.search_error_msgbox()
 
     def do_search_normal(self):
-        self.search_retry_flag = False
-        self.search_pre()
+        try:
+            self.search_retry_flag = False
+            self.search_pre()
+        except Exception as e:
+            self.logger.error(f'do_search_normal error: {e}')
+            self.search_error_msgbox()
+
+    def search_error_msgbox(self):
+        self.show_msgbox(
+            "Device search failed",
+            "There was a problem searching the device.\nCheck and set the network adapter.",
+            QMessageBox.Warning
+        )
 
     def search_pre(self):
         if self.wizmsghandler is not None and self.wizmsghandler.isRunning():
@@ -953,6 +972,7 @@ class WIZWindow(QMainWindow, main_window):
             item_name.setFont(self.midfont)
             self.list_device.setHorizontalHeaderItem(1, item_name)
 
+            # Set socket for search
             self.socket_config()
             self.logger.debug('search: conf_sock: %s' % self.conf_sock)
 
