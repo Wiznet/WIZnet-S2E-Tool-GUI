@@ -19,6 +19,7 @@ import os
 import subprocess
 import webbrowser
 import logging
+import datetime
 
 # Additional package
 from PyQt5 import QtCore, QtGui, uic
@@ -156,10 +157,6 @@ class WIZWindow(QMainWindow, main_window):
         self.ip_dhcp.clicked.connect(self.event_ip_alloc)
         self.ip_static.clicked.connect(self.event_ip_alloc)
 
-        # Event: setting password
-        # self.enable_setting_pw.stateChanged.connect(self.event_setting_pw)
-        # self.show_settingpw.stateChanged.connect(self.event_setpw_show)
-
         # Event: OP mode
         self.ch1_tcpclient.clicked.connect(self.event_opmode)
         self.ch1_tcpserver.clicked.connect(self.event_opmode)
@@ -200,7 +197,6 @@ class WIZWindow(QMainWindow, main_window):
 
         # Menu event - Option
         self.net_adapter_info()
-        # self.list_net_interfaces()
 
         self.netconfig_menu.triggered[QAction].connect(self.net_ifs_selected)
         # Menu event - Option - Search option
@@ -296,7 +292,6 @@ class WIZWindow(QMainWindow, main_window):
         When tab changed
         - check user IO tab
         """
-        # if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
         if 'WIZ750' in self.curr_dev:
             if self.generalTab.currentIndex() == 2:
                 self.logger.debug(f'Start DataRefresh: {self.curr_dev}, currentTab: {self.generalTab.currentIndex()}')
@@ -374,24 +369,6 @@ class WIZWindow(QMainWindow, main_window):
         self.combobox_net_interface.setCurrentIndex(-1)
         # 힌트 텍스트 설정
         # self.combobox_net_interface.setPlaceholderText('<Select Network Interface>')
-
-    # def list_net_interfaces(self):
-    #     self.netconfig_menu = QMenu('Select Network Interface', self)
-    #     self.netconfig_menu.setFont(self.midfont)
-    #     self.menuOption.addMenu(self.netconfig_menu)
-
-    #     self.net_list = []
-    #     interfaces = psutil.net_if_addrs()
-    #     for interface_name, interface_addresses in interfaces.items():
-    #         for address in interface_addresses:
-    #             if str(address.family) == 'AddressFamily.AF_INET':
-    #                 self.logger.debug(f"Net Interface: {interface_name}, {address.address}, {address.netmask}, {address.broadcast}")
-    #                 net_ifs = f"{address.address}: {interface_name}"
-    #                 # -- get network interface list
-    #                 self.net_list.append(interface_name)
-    #                 netconfig = QAction(net_ifs, self)
-    #                 self.netconfig_menu.addAction(netconfig)
-    #                 self.combobox_net_interface.addItem(net_ifs)
 
     def disable_object(self):
         self.btn_reset.setEnabled(False)
@@ -733,12 +710,6 @@ class WIZWindow(QMainWindow, main_window):
             self.connect_pw.setEchoMode(QLineEdit.Normal)
         else:
             self.connect_pw.setEchoMode(QLineEdit.Password)
-
-    def event_setpw_show(self):
-        if self.show_settingpw.isChecked():
-            self.lineedit_setting_pw.setEchoMode(QLineEdit.Normal)
-        else:
-            self.lineedit_setting_pw.setEchoMode(QLineEdit.Password)
 
     def event_passwd_enable(self):
         if self.enable_connect_pw.isChecked():
@@ -2352,14 +2323,37 @@ class WIZWindow(QMainWindow, main_window):
     def about_info(self):
         msgbox = QMessageBox(self)
         msgbox.setTextFormat(QtCore.Qt.RichText)
-        text = "<div style=text-align:center><font size=5 color=darkblue>About WIZnet-S2E-Tool-GUI</font>" \
-            + "<br><a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI'><font color=darkblue size=4>* Github repository</font></a>" \
-            + "<br><br><font size=4 color=black>Version " + VERSION \
-            + "<br><br><font size=5 color=black>WIZnet website</font><br>" \
-            + "<a href='http://www.wiznet.io/'><font color=black>WIZnet Official homepage</font></a>"  \
-            + "<br><a href='https://forum.wiznet.io/'><font color=black>WIZnet Forum</font></a>" \
-            + "<br><a href='https://docs.wiznet.io/'><font color=black>WIZnet Documents</font></a>" \
-            + "<br><br>2022 WIZnet Co.</font><br></div>"
+        text = f'''
+        <html>
+        <head>
+        <style>
+            body {{
+                'font-family': 'Arial, sans-serif';
+                'font-size': '14px';
+            }}
+            p {{
+                "font-size": "16px";
+                "font-size": "black";
+            }}
+            {{
+                "margin-bottom": "4px";
+            }}
+        </style>
+        </head>
+        <body>
+            <h2>About WIZnet-S2E-Tool-GUI</h2>
+            <p>This is Configuration Tool for WIZnet serial to ethernet devices.</p>
+            <p>Version: <b>{VERSION}</b></p>
+            <p>Author: WIZnet</p>
+            <p>Github: <a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI'>Github repository</a></p>
+            <h3>Web site</h3>
+            <p><a href='http://www.wiznet.io/'>WIZnet Official homepage</a></p>
+            <p><a href='https://forum.wiznet.io/'>WIZnet Forum</a></p>
+            <p><a href='https://docs.wiznet.io/'>WIZnet Document</a></p>
+            <br><br>{datetime.datetime.now().year} WIZnet Co., Ltd.</font><br>
+        </body>
+        </html>
+        '''
         msgbox.about(self, "About WIZnet-S2E-Tool-GUI", text)
 
     def menu_document(self):
@@ -2394,14 +2388,6 @@ class WIZWindow(QMainWindow, main_window):
     #     msgbox.setText("Device is not selected.")
     #     msgbox.exec_()
 
-    def msg_invalid_response(self):
-        msgbox = QMessageBox(self)
-        msgbox.setIcon(QMessageBox.Warning)
-        msgbox.setWindowTitle("Invalid Response")
-        msgbox.setText(
-            "Did not receive a valid response from the device.\nPlease check if the device is supported device or firmware is the latest version.")
-        msgbox.exec_()
-
     def msg_set_warning(self):
         msgbox = QMessageBox(self)
         msgbox.setIcon(QMessageBox.Warning)
@@ -2429,11 +2415,6 @@ class WIZWindow(QMainWindow, main_window):
         msgbox.question(self, "Setting success", "Device configuration complete!",
                         QMessageBox.Yes)
 
-    def msg_certificate_success(self, filename):
-        msgbox = QMessageBox(self)
-        text = "Certificate downlaod complete!\n%s" % filename
-        msgbox.question(self, "Certificate download success", text, QMessageBox.Yes)
-
     def msg_upload_warning(self, dst_ip):
         msgbox = QMessageBox(self)
         msgbox.setIcon(QMessageBox.Warning)
@@ -2441,13 +2422,6 @@ class WIZWindow(QMainWindow, main_window):
         msgbox.setText(
             "Destination IP is unreachable: %s\nPlease check if the device is in the same subnet with the PC." % dst_ip)
         msgbox.exec_()
-
-    # def msg_upload_failed(self):
-    #     msgbox = QMessageBox(self)
-    #     msgbox.setIcon(QMessageBox.Critical)
-    #     msgbox.setWindowTitle("Error: Firmware upload")
-    #     msgbox.setText("Firmware update failed.\nPlease check the device's status.")
-    #     msgbox.exec_()
 
     def msg_upload_success(self):
         msgbox = QMessageBox(self)
