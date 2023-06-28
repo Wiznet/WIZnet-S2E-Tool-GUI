@@ -94,7 +94,7 @@ def get_latest_release_version(owner, repo):
 
 
 if __name__ == "__main__":
-    # 예시: "openai" 리포지토리의 최신 릴리즈 버전 가져오기
+    # 최신 버전 확인
     owner = "Wiznet"
     repo = "WIZnet-S2E-Tool-GUI"
     latest_release = get_latest_release_version(owner, repo)

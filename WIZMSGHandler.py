@@ -5,17 +5,12 @@ import select
 import codecs
 import os
 from utils import logger
-from WIZ750CMDSET import WIZ750CMDSET
+
 from PyQt5.QtCore import QThread, pyqtSignal
+from constants import Opcode
+from wizcmdset import Wizcmdset
 
 exitflag = 0
-
-OP_SEARCHALL = 1
-OP_GETCOMMAND = 2
-OP_SETCOMMAND = 3
-OP_SETFILE = 4
-OP_GETFILE = 5
-OP_FWUP = 6
 
 # PACKET_SIZE = 1024
 # PACKET_SIZE = 2048
@@ -74,7 +69,7 @@ class WIZMSGHandler(QThread):
 
         self.timeout = timeout
 
-        self.wiz750cmdObj = WIZ750CMDSET(1)
+        self.cmdset = Wizcmdset('WIZ750SR')
 
     def timeout_func(self):
         self.istimeout = True
@@ -132,7 +127,7 @@ class WIZMSGHandler(QThread):
         try:
             if b'MA' not in cmdset:
                 # print('check_parameter() OK', cmdset, cmdset[:2], cmdset[2:])
-                if self.wiz750cmdObj.isvalidparameter(cmdset[:2].decode(), cmdset[2:].decode()):
+                if self.cmdset.isvalidparameter(cmdset[:2].decode(), cmdset[2:].decode()):
                     return True
                 else:
                     return False
@@ -199,7 +194,7 @@ class WIZMSGHandler(QThread):
                                 # print('replylists', replylists)
                                 self.getreply = replylists
 
-                            if self.opcode == OP_SEARCHALL:
+                            if self.opcode == Opcode.OP_SEARCHALL:
                                 try:
                                     for i in range(0, len(replylists)):
                                         if b'MC' in replylists[i]:
@@ -219,7 +214,7 @@ class WIZMSGHandler(QThread):
                                                 self.st_list.append(replylists[i][2:])
                                 except Exception as e:
                                     self.logger.error('[ERROR] WIZMSGHandler makecommands(): %r' % e)
-                            elif self.opcode == OP_FWUP:
+                            elif self.opcode == Opcode.OP_FWUP:
                                 for i in range(0, len(replylists)):
                                     if b'MA' in replylists[i][:2]:
                                         pass
@@ -231,7 +226,7 @@ class WIZMSGHandler(QThread):
                                         # sys.stdout.write('self.isvalid == True\r\n')
                                         # param = replylists[i][2:].split(b':')
                                         self.reply = replylists[i][2:]
-                            elif self.opcode == OP_SETCOMMAND:
+                            elif self.opcode == Opcode.OP_SETCOMMAND:
                                 for i in range(0, len(replylists)):
                                     if b'AP' in replylists[i][:2]:
                                         if replylists[i][2:] == b' ':
@@ -245,23 +240,23 @@ class WIZMSGHandler(QThread):
                     if not readready or not replylists:
                         break
 
-                if self.opcode == OP_SEARCHALL:
+                if self.opcode == Opcode.OP_SEARCHALL:
                     self.msleep(500)
                     # print('Search device:', self.mac_list)
                     self.search_result.emit(len(self.mac_list))
                     # return len(self.mac_list)
-                if self.opcode == OP_SETCOMMAND:
+                if self.opcode == Opcode.OP_SETCOMMAND:
                     self.msleep(500)
                     # print(self.rcv_list)
                     if len(self.rcv_list) > 0:
-                        # print('OP_SETCOMMAND: rcv_list:', len(self.rcv_list[0]), self.rcv_list[0])
+                        # print('Opcode.OP_SETCOMMAND: rcv_list:', len(self.rcv_list[0]), self.rcv_list[0])
                         if self.setting_pw_wrong:
                             self.set_result.emit(-3)
                         else:
                             self.set_result.emit(len(self.rcv_list[0]))
                     else:
                         self.set_result.emit(-1)
-                elif self.opcode == OP_FWUP:
+                elif self.opcode == Opcode.OP_FWUP:
                     return self.reply
                 # sys.stdout.write("%s\r\n" % self.mac_list)
         except Exception as e:
