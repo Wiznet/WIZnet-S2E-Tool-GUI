@@ -104,7 +104,7 @@ ENV/
 .idea/
 version_2.txt
 version_1.txt
-WIZCONF.cfg
+*.cfg
 gui/_wizconfig_gui.ui
 gui/wizconfig_gui-bak.ui
 .vscode/settings.json
@@ -113,3 +113,4 @@ gui/wizconfig_gui-bak.ui
 *.crt
 *.patch
 *pem
+*.sh
