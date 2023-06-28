@@ -5,26 +5,12 @@ from wizsocket.TCPClient import TCPClient
 from WIZUDPSock import WIZUDPSock
 from WIZMSGHandler import WIZMSGHandler
 from WIZMakeCMD import SECURITY_DEVICE
+from constants import Opcode, SockState
 from utils import logger
 
 import binascii
 import time
 import threading
-import os
-
-
-OP_SEARCHALL = 1
-OP_SETIP = 2
-OP_CHECKIP = 3
-OP_FACTORYRESET = 4
-OP_GETDETAIL = 5
-OP_FWUP = 6
-
-SOCK_CLOSE_STATE = 10
-SOCK_OPENTRY_STATE = 11
-SOCK_OPEN_STATE = 12
-SOCK_CONNECTTRY_STATE = 13
-SOCK_CONNECT_STATE = 14
 
 idle_state = 1
 datasent_state = 2
@@ -91,10 +77,10 @@ class FWUploadThread(QThread):
 
         if 'TCP' in self.sock_type:
             self.wizmsghangler = WIZMSGHandler(
-                self.conf_sock, cmd_list, 'tcp', OP_FWUP, 2)
+                self.conf_sock, cmd_list, 'tcp', Opcode.OP_FWUP, 2)
         elif 'UDP' in self.sock_type:
             self.wizmsghangler = WIZMSGHandler(
-                self.conf_sock, cmd_list, 'udp', OP_FWUP, 2)
+                self.conf_sock, cmd_list, 'udp', Opcode.OP_FWUP, 2)
 
         self.resp = self.wizmsghangler.run()
 
@@ -110,15 +96,14 @@ class FWUploadThread(QThread):
         cmd_list.append(["PW", self.idcode])
         cmd_list.append([command, str(self.filesize)])
 
-        self.logger.debug('sendCmd() cmd_list => ', cmd_list)
+        self.logger.debug(f'sendCmd() cmd_list => {cmd_list}')
 
         if 'TCP' in self.sock_type:
             self.wizmsghangler = WIZMSGHandler(
-                self.conf_sock, cmd_list, 'tcp', OP_FWUP, 2)
+                self.conf_sock, cmd_list, 'tcp', Opcode.OP_FWUP, 2)
         elif 'UDP' in self.sock_type:
             self.wizmsghangler = WIZMSGHandler(
-                self.conf_sock, cmd_list, 'udp', OP_FWUP, 2)
-        self.logger.debug("sendCmd(): %s\r\n" % cmd_list)
+                self.conf_sock, cmd_list, 'udp', Opcode.OP_FWUP, 2)
 
         # if no reponse from device, retry for several times.
         for i in range(4):
@@ -175,36 +160,36 @@ class FWUploadThread(QThread):
                         break
 
                     self.retrycheck += 1
-                    if self.client.state == SOCK_CLOSE_STATE:
+                    if self.client.state == SockState.SOCK_CLOSE:
                         if self.timer1 is not None:
                             self.timer1.cancel()
                         # cur_state = self.client.state
                         try:
                             self.client.open()
-                            self.logger.debug('1 : %r' % self.client.getsockstate())
+                            # self.logger.debug('1 : %r' % self.client.getsockstate())
                             # print("%r\r\n" % self.client.state)
-                            if self.client.state == SOCK_OPEN_STATE:
+                            if self.client.state == SockState.SOCK_OPEN:
                                 self.logger.info('[%r] is OPEN' % (self.serverip))
                                 # print('[%r] client.working_state == %r' % (self.serverip, self.client.working_state))
                                 self.msleep(500)
                         except Exception as e:
                             self.logger.error(str(e))
 
-                    elif self.client.state == SOCK_OPEN_STATE:
+                    elif self.client.state == SockState.SOCK_OPEN:
                         self.uploading_size.emit(4)
                         # cur_state = self.client.state
                         try:
                             self.client.connect()
-                            self.logger.debug('2 : %r' % self.client.getsockstate())
-                            if self.client.state == SOCK_CONNECT_STATE:
+                            # self.logger.debug('2 : %r' % self.client.getsockstate())
+                            if self.client.state == SockState.SOCK_CONNECT:
                                 self.logger.info('[%r] is CONNECTED' % (self.serverip))
                                 # print('[%r] client.working_state == %r' % (self.serverip, self.client.working_state))
                         except Exception as e:
                             print(e)
 
-                    elif self.client.state == SOCK_CONNECT_STATE:
-                        if self.client.working_state == idle_state:
-                           self.logger.debug('3 : %r' % self.client.getsockstate())
+                    elif self.client.state == SockState.SOCK_CONNECT:
+                        # if self.client.working_state == idle_state:
+                        #    self.logger.debug('3 : %r' % self.client.getsockstate())
                         try:
                             self.uploading_size.emit(5)
                             while self.remainbytes != 0:
@@ -237,7 +222,7 @@ class FWUploadThread(QThread):
                                     self.timer1.start()
 
                                 elif self.client.working_state == datasent_state:
-                                    self.logger.debug('4 : %r' % self.client.getsockstate())
+                                    # self.logger.debug('4 : %r' % self.client.getsockstate())
                                     response = self.client.readbytes(2)
                                     if response is not None:
                                         if int(binascii.hexlify(response), 16):
@@ -287,7 +272,7 @@ class FWUploadThread(QThread):
     def sock_close(self):
         # 기존 연결 fin
         if self.tcp_sock is not None:
-            if self.tcp_sock.state != SOCK_CLOSE_STATE:
+            if self.tcp_sock.state != SockState.SOCK_CLOSE:
                 self.tcp_sock.shutdown()
         if self.conf_sock is not None:
             self.conf_sock.shutdown()
@@ -302,25 +287,25 @@ class FWUploadThread(QThread):
                 break
             retrynum += 1
 
-            if self.tcp_sock.state == SOCK_CLOSE_STATE:
+            if self.tcp_sock.state == SockState.SOCK_CLOSE:
                 self.tcp_sock.shutdown()
                 # cur_state = self.tcp_sock.state
                 try:
                     self.tcp_sock.open()
-                    if self.tcp_sock.state == SOCK_OPEN_STATE:
+                    if self.tcp_sock.state == SockState.SOCK_OPEN:
                         self.logger.info('[%r] is OPEN' % (serverip))
                     time.sleep(0.5)
                 except Exception as e:
                     self.logger.error(str(e))
-            elif self.tcp_sock.state == SOCK_OPEN_STATE:
+            elif self.tcp_sock.state == SockState.SOCK_OPEN:
                 # cur_state = self.tcp_sock.state
                 try:
                     self.tcp_sock.connect()
-                    if self.tcp_sock.state == SOCK_CONNECT_STATE:
+                    if self.tcp_sock.state == SockState.SOCK_CONNECT:
                         self.logger.info('[%r] is CONNECTED' % (serverip))
                 except Exception as e:
                     self.logger.error(str(e))
-            elif self.tcp_sock.state == SOCK_CONNECT_STATE:
+            elif self.tcp_sock.state == SockState.SOCK_CONNECT:
                 break
         if retrynum > 6:
             self.logger.info('Device [%s] TCP connection failed.' % (serverip))

@@ -5,16 +5,7 @@ Make Serial command
 """
 from utils import logger
 
-import sys
 import re
-import os
-
-OP_SEARCHALL = 1
-OP_GETCOMMAND = 2
-OP_SETCOMMAND = 3
-OP_SETFILE = 4
-OP_GETFILE = 5
-OP_FWUP = 6
 
 # Supported devices
 ONE_PORT_DEV = [

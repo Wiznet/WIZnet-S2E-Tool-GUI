@@ -8,16 +8,6 @@ import os
 from PyQt5 import QtCore
 from utils import logger
 
-# from wizsocket.TCPClient import TCPClient
-# from WIZUDPSock import WIZUDPSock
-# from WIZMSGHandler import WIZMSGHandler
-
-SOCK_CLOSE_STATE = 11
-SOCK_OPENTRY_STATE = 12
-SOCK_OPEN_STATE = 13
-SOCK_CONNECTTRY_STATE = 14
-SOCK_CONNECT_STATE = 15
-
 idle_state = 1
 datasent_state = 2
 

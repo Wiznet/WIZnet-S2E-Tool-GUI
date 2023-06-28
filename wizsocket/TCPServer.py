@@ -7,6 +7,7 @@ import select
 import sys
 sys.path.append('..')
 
+from constants import SockState
 from utils import logger, socket_exception_handler
 
 TIMEOUT = 10
@@ -14,11 +15,11 @@ MAXBUFLEN = 1024
 
 idle_state = 1
 
-CLOSE_STATE = 10
-OPENTRY_STATE = 11
-OPEN_STATE = 12
-CONNECTTRY_STATE = 13
-CONNECT_STATE = 14
+SockState.SOCK_CLOSE = 10
+SockState.SOCK_OPENTRY = 11
+SockState.SOCK_OPEN = 12
+SockState.SOCK_CONNECTTRY = 13
+SockState.SOCK_CONNECT = 14
 
 
 class TCPServer:
@@ -31,7 +32,7 @@ class TCPServer:
         self.rcvbuf = bytearray(MAXBUFLEN)
         self.buflen = 0
         self.rcvd = ""
-        self.state = CLOSE_STATE
+        self.state = SockState.SOCK_CLOSE
         self.timeout = timeout
         self.time = time.time()
         self.retrycount = 0
@@ -57,8 +58,8 @@ class TCPServer:
         print("<TCP Server> Listen")
 
         self.connection_list.append(self.sock)
-        self.state = OPEN_STATE
-        return OPEN_STATE
+        self.state = SockState.SOCK_OPEN
+        return SockState.SOCK_OPEN
 
     # block method, 수신대기 => send / recv
     @socket_exception_handler(logger)
@@ -68,16 +69,16 @@ class TCPServer:
         self.connection_list.append(self.cli_sock)
         print("<TCP Server> Accept client:", self.cli_addr)
 
-        self.state = CONNECT_STATE
-        return CONNECT_STATE
+        self.state = SockState.SOCK_CONNECT
+        return SockState.SOCK_CONNECT
 
     @socket_exception_handler(logger)
     def readline(self):
         if self.buflen > 0:
             index = self.rcvbuf.find("\r", 0, self.buflen)
-            for i in range(0, self.buflen):
-                self.logger.debug("[%d]" % i)
-                self.logger.debug("%d" % self.rcvbuf[0])
+            # for i in range(0, self.buflen):
+                # self.logger.debug("[%d]" % i)
+                # self.logger.debug("%d" % self.rcvbuf[0])
 
             if index != -1:
                 retval = self.rcvbuf[0: index + 1]
@@ -95,7 +96,7 @@ class TCPServer:
                     tmpbuf = self.cli_sock.recv(MAXBUFLEN - self.buflen)
                 except socket.error:
                     self.cli_sock = None
-                    self.state = CLOSE_STATE
+                    self.state = SockState.SOCK_CLOSE
                     self.working_state = idle_state
                     self.buflen = 0
                     return ""
@@ -131,4 +132,4 @@ class TCPServer:
     def close(self):
         if self.sock != 0:
             self.sock.close()
-        self.state = CLOSE_STATE
+        self.state = SockState.SOCK_CLOSE
