@@ -26,7 +26,7 @@ from PyQt5 import QtCore, QtGui, uic
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLineEdit, QMessageBox, QTableWidgetItem, QFileDialog, QMenu, QAction, QProgressBar, QInputDialog
 import ifaddr
 
-VERSION = 'V1.5.2.3 Dev'
+VERSION = 'V1.5.2'
 
 
 def resource_path(relative_path):
