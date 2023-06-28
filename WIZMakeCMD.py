@@ -3,18 +3,9 @@
 """
 Make Serial command
 """
-from utils import get_logger
+from utils import logger
 
-import sys
 import re
-import os
-
-OP_SEARCHALL = 1
-OP_GETCOMMAND = 2
-OP_SETCOMMAND = 3
-OP_SETFILE = 4
-OP_GETFILE = 5
-OP_FWUP = 6
 
 # Supported devices
 ONE_PORT_DEV = [
@@ -28,7 +19,7 @@ ONE_PORT_DEV = [
     "W7500-S2E",
     "W7500P-S2E",
 ]
-SECURITY_DEVICE = ["WIZ510SSL", "WIZ5XXSR-RP"]
+SECURITY_DEVICE = ["WIZ510SSL", "WIZ5XXSR-RP", "WIZ5XXSR-RP_E-SAVE"]
 TWO_PORT_DEV = ["WIZ752SR-12x", "WIZ752SR-120", "WIZ752SR-125"]
 
 """
@@ -73,6 +64,9 @@ cmd_wiz510ssl_added = ['BA']
 # WIZ5XXSR-RP added commands
 cmd_wiz5xxsr_added = ['SO', 'UF']
 
+# WIZ5XXSR-RP_E-SAVE commands
+cmd_wiz5xxsr_esave = ['U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9']
+
 
 """
 Command Set
@@ -99,7 +93,7 @@ def version_compare(version1, version2):
 
 class WIZMakeCMD:
     def __init__(self):
-        self.logger = get_logger(self.__class__.__name__, os.path.expanduser('~'), 'wizconfig')
+        self.logger = logger
 
     def make_header(self, mac_addr, idcode, devname="", set_pw=""):
         """
@@ -148,6 +142,10 @@ class WIZMakeCMD:
             elif 'WIZ5XXSR' in devname:
                 for cmd in cmd_wiz5xxsr:
                     cmd_list.append([cmd, ""])
+                # Commands for E-SAVE
+                if 'E-SAVE' in devname:
+                    for cmd in cmd_wiz5xxsr_esave:
+                        cmd_list.append([cmd, ""])
         else:
             pass
         # print("search()", cmd_list)
@@ -203,6 +201,10 @@ class WIZMakeCMD:
                 elif 'WIZ5XXSR' in devname:
                     for cmd in cmd_wiz5xxsr:
                         cmd_list.append([cmd, ""])
+                    # Commands for E-SAVE
+                    if 'E-SAVE' in devname:
+                        for cmd in cmd_wiz5xxsr_esave:
+                            cmd_list.append([cmd, ""])
             cmd_list.append(["SV", ""])  # save device setting
             cmd_list.append(["RT", ""])  # Device reboot
             # print("setcommand()", cmd_list)
