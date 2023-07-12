@@ -131,11 +131,11 @@ WIZ5XX_RP_CMDSET = {
         {**opmode_option, "4": "SSL TCP Client mode", "5": "MQTT Client", "6": "MQTTS Client"},
         "RW",
     ],
-    "SO": ["SSL receive timeout", "^[0-1]$", {}, "RW"],
+    "SO": ["SSL receive timeout", "", {}, "RW"],
     "QU": ["MQTT Options - User name", "", {}, "RW"],
     "QP": ["MQTT options - Password", "", {}, "RW"],
     "QC": ["MQTT options - Client ID", "", {}, "RW"],
-    "QK": ["MQTT Keep-Alive", port_pattern, {}, "RW"],
+    "QK": ["MQTT Keep-Alive", "", {}, "RW"],
     "PU": ["MQTT Publish topic", "", {}, "RW"],
     "U0": ["MQTT Subscribe topic 1", "", {}, "RW"],
     "U1": ["MQTT Subscribe topic 2", "", {}, "RW"],
@@ -209,23 +209,27 @@ class Wizcmdset():
 
     def get_cmdset(self, name):
         if name in ONE_PORT_DEV:
+            logger.debug('One port device')
             self.cmdset = WIZ75X_CMDSET
         elif name in SECURITY_DEVICE:
+            logger.debug('Security device')
             self.cmdset = WIZ5XX_RP_CMDSET
         elif name in TWO_PORT_DEV:
+            logger.debug('Two port device')
             self.cmdset = WIZ752_CMDSET
-        else: 
+        else:
+            logger.debug('Default device')
             self.cmdset = WIZ75X_CMDSET
 
     def isvalidcommand(self, cmdstr):
         if cmdstr in self.cmdset.keys():
-            return 1
-        return 0
+            return True
+        return False
 
     def isvalidparameter(self, cmdstr, param):
         logger.debug(f'command: {cmdstr}, param: {param}')
 
-        if self.isvalidcommand(cmdstr) == 1:
+        if self.isvalidcommand(cmdstr):
             prog = re.compile(self.cmdset[cmdstr][1])
             # for domain name
             if cmdstr == "RH":
@@ -235,14 +239,16 @@ class Wizcmdset():
                 # logger.debug("Valid %s" % self.cmdset[cmdstr][0])
                 return True
             else:
-                # logger.debug("Invalid %s" % self.cmdset[cmdstr][0])
+                logger.debug("Invalid %s" % self.cmdset[cmdstr][0])
                 return False
+        else:
+            logger.debug(f"## Invalid command: {cmdstr}")
 
-        logger.debug(f"## Invalid command: {cmdstr}, {param}")
+        logger.debug(f"## Invalid parameter: {cmdstr}, {param}")
         return False
 
     def getparamdescription(self, cmdstr, param):
-        if self.isvalidparameter(cmdstr, param):
+        if self.isvalidparameter(cmdstr, param): 
             if len(self.cmdset[cmdstr][2]) > 0:
                 return self.cmdset[cmdstr][2][param]
             else:
@@ -261,13 +267,17 @@ class Wizcmdset():
 
 
 if __name__ == "__main__":
-    wizcmdset = Wizcmdset("WIZ750SR")
+    # wizcmdset = Wizcmdset("WIZ750SR")
+    wizcmdset = Wizcmdset("WIZ752SR-12x")
     cmdlist = wizcmdset.cmdset.items()
 
     # 각 command에 대한 정보 출력 => log 기록 시 활용
-    cmd = "SS"
+    # cmd = "SS"
+    cmd = "QH"
     print('"%s": %s\n %s\n' % (cmd, wizcmdset.cmdset[cmd][0], wizcmdset.cmdset[cmd][2]))
 
     # 함수 활용
     print(wizcmdset.getcmddescription(cmd))
     print(wizcmdset.getparamdescription(cmd, "2B2C2D"))
+
+    print(wizcmdset.isvalidparameter(cmd, "192.168.11.3"))
