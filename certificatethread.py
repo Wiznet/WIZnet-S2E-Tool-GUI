@@ -23,7 +23,7 @@ class certificatethread(QtCore.QThread):
     upload_result = QtCore.pyqtSignal(int)
     error_flag = QtCore.pyqtSignal(int)
 
-    def __init__(self, sock, dest_mac, idcode, set_pw, filename, ipaddr, port, dev_name, cmd):
+    def __init__(self, sock, dest_mac, idcode, set_pw, filename, ipaddr, port, mn_list, cmd):
         QtCore.QThread.__init__(self)
 
         self.logger = logger
@@ -62,7 +62,7 @@ class certificatethread(QtCore.QThread):
         self.errors = []
 
         # device name
-        self.dev_name = dev_name
+        self.mn_list = mn_list
         self.set_pw = set_pw
         # self.cert = cert
         self.cmd = cmd
@@ -147,7 +147,7 @@ class certificatethread(QtCore.QThread):
 
     def run(self):
         self.setparam()
-        self.logger.info(f'Certificate upload start: {self.dev_name}')
+        self.logger.info(f'Certificate upload start: {self.mn_list}')
 
         self.make_header_commands()
 

@@ -24,7 +24,7 @@ class FWUploadThread(QThread):
     upload_result = pyqtSignal(int)
     error_flag = pyqtSignal(int)
 
-    def __init__(self, conf_sock, dest_mac, idcode, set_pw, filename, filesize, ipaddr, port, dev_name):
+    def __init__(self, conf_sock, dest_mac, idcode, set_pw, filename, filesize, ipaddr, port, mn_list):
         QThread.__init__(self)
 
         self.logger = logger
@@ -43,7 +43,7 @@ class FWUploadThread(QThread):
         self.error_noresponse = 0
         self.retrycheck = 0
 
-        self.dev_name = dev_name
+        self.mn_list = mn_list
         self.set_pw = set_pw
 
         self.filesize = filesize
@@ -118,8 +118,8 @@ class FWUploadThread(QThread):
     def run(self):
         self.setparam()
         # wiz2000/wiz510ssl: not use 'AB' command
-        if self.dev_name in SECURITY_DEVICE:
-            self.logger.info(f'Security device firmware upload: {self.dev_name}')
+        if self.mn_list in SECURITY_DEVICE:
+            self.logger.info(f'Security device firmware upload: {self.mn_list}')
         else:
             self.jumpToApp()
 

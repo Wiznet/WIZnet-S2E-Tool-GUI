@@ -26,7 +26,7 @@ from PyQt5 import QtCore, QtGui, uic
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLineEdit, QMessageBox, QTableWidgetItem, QFileDialog, QMenu, QAction, QProgressBar, QInputDialog
 import ifaddr
 
-VERSION = 'V1.5.2'
+VERSION = 'V1.5.3'
 
 
 def resource_path(relative_path):
@@ -87,7 +87,7 @@ class WIZWindow(QMainWindow, main_window):
         self.privatekey_filename = None
 
         self.mac_list = []
-        self.dev_name = []
+        self.mn_list = []
         self.vr_list = []
         self.st_list = []
         self.threads = []
@@ -800,7 +800,7 @@ class WIZWindow(QMainWindow, main_window):
                     self.conf_sock = WIZUDPSock(5000, 50001, "")
                 else:
                     self.conf_sock = WIZUDPSock(5000, 50001, self.selected_eth)
-                    self.logger.info(self.selected_eth)
+                    self.logger.debug(self.selected_eth)
 
                 self.conf_sock.open()
 
@@ -1094,7 +1094,7 @@ class WIZWindow(QMainWindow, main_window):
         else:
             # init old info
             self.mac_list = []
-            self.dev_name = []
+            self.mn_list = []
             self.vr_list = []
             self.st_list = []
 
@@ -1123,35 +1123,35 @@ class WIZWindow(QMainWindow, main_window):
                             pass
                         else:
                             self.mac_list.append(new_mac_list[i])
-                            self.dev_name.append(new_mn_list[i])
+                            self.mn_list.append(new_mn_list[i])
                             self.vr_list.append(new_vr_list[i])
                             self.st_list.append(new_st_list[i])
                             self.all_response.append(new_resp_list[i])
 
-                    # print('keep list len >>', len(self.mac_list), len(self.dev_name), len(self.vr_list), len(self.st_list))
-                    # print('keep list >>', self.mac_list, self.dev_name, self.vr_list, self.st_list)
+                    # print('keep list len >>', len(self.mac_list), len(self.mn_list), len(self.vr_list), len(self.st_list))
+                    # print('keep list >>', self.mac_list, self.mn_list, self.vr_list, self.st_list)
 
                 else:
                     self.mac_list = self.wizmsghandler.mac_list
-                    self.dev_name = self.wizmsghandler.mn_list
+                    self.mn_list = self.wizmsghandler.mn_list
                     self.vr_list = self.wizmsghandler.vr_list
                     self.st_list = self.wizmsghandler.st_list
                     # all response
                     self.all_response = self.wizmsghandler.rcv_list
 
                 # print('all_response', len(self.all_response), self.all_response)
-                # print('get_search_result():', self.mac_list, self.dev_name, self.vr_list, self.st_list)
+                # print('get_search_result():', self.mac_list, self.mn_list, self.vr_list, self.st_list)
 
                 # row length = the number of searched devices
                 self.list_device.setRowCount(len(self.mac_list))
 
                 try:
                     for i in range(0, len(self.mac_list)):
-                        # device = "%s | %s" % (self.mac_list[i].decode(), self.dev_name[i].decode())
+                        # device = "%s | %s" % (self.mac_list[i].decode(), self.mn_list[i].decode())
                         self.list_device.setItem(
                             i, 0, QTableWidgetItem(self.mac_list[i].decode()))
                         self.list_device.setItem(
-                            i, 1, QTableWidgetItem(self.dev_name[i].decode()))
+                            i, 1, QTableWidgetItem(self.mn_list[i].decode()))
                 except Exception as e:
                     self.logger.error(e)
 
@@ -1173,15 +1173,15 @@ class WIZWindow(QMainWindow, main_window):
         self.searched_dev = []
         self.dev_data = {}
 
-        # print(self.mac_list, self.dev_name, self.vr_list)
+        # print(self.mac_list, self.mn_list, self.vr_list)
         if self.mac_list is not None:
             try:
                 for i in range(len(self.mac_list)):
-                    # self.searched_dev.append([self.mac_list[i].decode(), self.dev_name[i].decode(), self.vr_list[i].decode()])
-                    # self.dev_data[self.mac_list[i].decode()] = [self.dev_name[i].decode(), self.vr_list[i].decode()]
-                    self.searched_dev.append([self.mac_list[i].decode(), self.dev_name[i].decode(
+                    # self.searched_dev.append([self.mac_list[i].decode(), self.mn_list[i].decode(), self.vr_list[i].decode()])
+                    # self.dev_data[self.mac_list[i].decode()] = [self.mn_list[i].decode(), self.vr_list[i].decode()]
+                    self.searched_dev.append([self.mac_list[i].decode(), self.mn_list[i].decode(
                     ), self.vr_list[i].decode(), self.st_list[i].decode()])
-                    self.dev_data[self.mac_list[i].decode()] = [self.dev_name[i].decode(
+                    self.dev_data[self.mac_list[i].decode()] = [self.mn_list[i].decode(
                     ), self.vr_list[i].decode(), self.st_list[i].decode()]
             except Exception as e:
                 self.logger.error(e)
@@ -1587,7 +1587,7 @@ class WIZWindow(QMainWindow, main_window):
             if self.at_enable.isChecked():
                 setcmd['TE'] = '1'
                 setcmd['SS'] = self.at_hex1.text() + self.at_hex2.text() + self.at_hex3.text()
-            elif self.at_enable.isChecked() is False:
+            elif not self.at_enable.isChecked():
                 setcmd['TE'] = '0'
 
             # search id code: max 8 bytes
@@ -1784,7 +1784,7 @@ class WIZWindow(QMainWindow, main_window):
         except Exception as e:
             self.logger.error(e)
 
-        print('setcmd:', setcmd)
+        logger.debug(f'setcmd: {setcmd}')
         return setcmd
 
     def do_setting(self):
@@ -1805,43 +1805,17 @@ class WIZWindow(QMainWindow, main_window):
             # self.selected_devinfo()
 
             # Update cmdset
-            self.cmdset.get_cmdset(self.dev_name)
-            if self.curr_dev in ONE_PORT_DEV or 'WIZ750' in self.curr_dev:
-                self.logger.info('One port dev setting')
-                # Parameter validity check
-                invalid_flag = 0
-                setcmd_cmd = list(setcmd.keys())
-                for i in range(len(setcmd)):
-                    if self.cmdset.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
-                        self.logger.warning(
-                            'Invalid parameter: %s %s' % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
-                        self.msg_invalid(setcmd.get(setcmd_cmd[i]))
-                        invalid_flag += 1
-            elif self.curr_dev in TWO_PORT_DEV or 'WIZ752' in self.curr_dev:
-                self.logger.info('Two port dev setting')
-                # Parameter validity check
-                invalid_flag = 0
-                setcmd_cmd = list(setcmd.keys())
-                for i in range(len(setcmd)):
-                    if self.cmdset.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
-                        self.logger.warning(
-                            'Invalid parameter: %s %s' % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
-                        self.msg_invalid(setcmd.get(setcmd_cmd[i]))
-                        invalid_flag += 1
-            elif self.curr_dev in SECURITY_DEVICE:
-                self.logger.info('Security device setting...')
-                invalid_flag = 0
-                # ! temp comment to develop
-                # setcmd_cmd = list(setcmd.keys())
-                # for i in range(len(setcmd)):
-                #     if self.cmdset.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
-                #         self.logger.info('WIZ510SSL: Invalid parameter: %s %s' %
-                #                           (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
-                #         self.msg_invalid(setcmd.get(setcmd_cmd[i]))
-                #         invalid_flag += 1
-            else:
-                invalid_flag = -1
-                self.logger.info('The device not supported')
+            self.cmdset.get_cmdset(self.curr_dev)
+            self.logger.info(f'Device setting: {self.curr_dev}')
+            # Parameter validity check
+            invalid_flag = 0
+            setcmd_cmd = list(setcmd.keys())
+            for i in range(len(setcmd)):
+                if self.cmdset.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
+                    self.logger.warning(
+                        'Invalid parameter: %s %s' % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
+                    self.msg_invalid(setcmd.get(setcmd_cmd[i]))
+                    invalid_flag += 1
 
             if invalid_flag > 0:
                 self.logger.info(f'Setting: invalid flag: {invalid_flag}')
