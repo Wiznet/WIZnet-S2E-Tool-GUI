@@ -10,7 +10,7 @@ from certificatethread import certificatethread
 
 from wizcmdset import Wizcmdset
 from constants import Opcode, SockState
-from utils import logger, funclog
+from utils import logger, funclog, get_latest_release_version
 
 import sys
 import time
@@ -26,7 +26,7 @@ from PyQt5 import QtCore, QtGui, uic
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLineEdit, QMessageBox, QTableWidgetItem, QFileDialog, QMenu, QAction, QProgressBar, QInputDialog
 import ifaddr
 
-VERSION = 'V1.5.3'
+VERSION = 'V1.5.4'
 
 
 def resource_path(relative_path):
@@ -2212,13 +2212,14 @@ class WIZWindow(QMainWindow, main_window):
 
     def append_textedit(self, variable, text):
         # self.logger.info(text)
+        variable.clear()
         variable.append(text)
         variable.moveCursor(QtGui.QTextCursor.End)
 
     def load_cert_btn_clicked(self, cmd):
         print("load_cert_btn_clicked()", cmd)
 
-        ext = '(*.crt)||(*.pem)'
+        ext = 'Certificate (*.crt *.pem *.key)'
         if cmd == "UP":
             ext = '*.bin'
 
@@ -2313,6 +2314,15 @@ class WIZWindow(QMainWindow, main_window):
         msgbox.setText(msg)
         msgbox.setStandardButtons(QMessageBox.Ok)
         msgbox.exec_()
+
+    def check_latest_version(self):
+        try:
+            latest_release = get_latest_release_version("Wiznet", "WIZnet-S2E-Tool-GUI")
+            print(f"The latest release version is: {latest_release}")
+            if VERSION.lower() != str(latest_release).lower():
+                self.show_msgbox_info('Update Available', f'Version {latest_release} is available.\nPlease download the latest version from the Github.')
+        except Exception as e:
+            self.logger.error(e)
 
     def about_info(self):
         msgbox = QMessageBox(self)

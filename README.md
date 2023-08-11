@@ -4,7 +4,6 @@
     - [1 Port Serial to Ethernet Module](#1-port-serial-to-ethernet-module)
     - [2 Port Serial to Ethernet Module](#2-port-serial-to-ethernet-module)
     - [Pre-programmed MCU](#pre-programmed-mcu)
-    - [Security Serial to Ethernet Module](#security-serial-to-ethernet-module)
 - [CLI Configuration Tool](#cli-configuration-tool)
 - [TroubleShooting](#troubleshooting)
   - [Report](#report)
@@ -51,10 +50,6 @@ Python interpreter based and it is platform independent. It works on python vers
 
 ### Pre-programmed MCU
 - [W7500(P)-S2E](https://docs.wiznet.io/Product/Pre-programmed-MCU/W7500P-S2E/w7500p-s2e-EN)
-
-### Security Serial to Ethernet Module
-
-- [WIZ510SSL](https://docs.wiznet.io/Product/S2E-Module/WIZ510SSL)
 
 
 
