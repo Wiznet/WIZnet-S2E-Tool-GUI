@@ -70,7 +70,7 @@ The existing 3-space subscription topic has been expanded to 10 spaces.
 # TroubleShooting
 Updated 23/12/01 : When re-selecting a module after apply setting, some field values ​​may be lost.
 This error occurs when receiving UDP packets multiple times.
-There is no problem with the module, but we will resolve the issue of updating the GUI screen correctly as soon as possible.
+**There is no problem with the module** , but we will resolve the issue of updating the GUI screen correctly as soon as possible.
 
 ## Report
 
