@@ -4,6 +4,7 @@
 import select
 import codecs
 import os
+import re
 from utils import logger
 
 from PyQt5.QtCore import QThread, pyqtSignal
@@ -15,7 +16,7 @@ exitflag = 0
 # PACKET_SIZE = 1024
 # PACKET_SIZE = 2048
 PACKET_SIZE = 4096
-
+UDP_PACKET_SIZE = 1460
 
 def timeout_func():
     # print('timeout')
@@ -62,7 +63,7 @@ class WIZMSGHandler(QThread):
         self.getreply = []
         self.rcv_list = []
         self.st_list = []
-
+        self.rcv_all_list = []
         self.what_sock = what_sock
         self.cmd_list = cmd_list
         self.opcode = op_code
@@ -117,7 +118,24 @@ class WIZMSGHandler(QThread):
             self.logger.error('[ERROR] WIZMSGHandler makecommands(): %r' % e)
 
     def sendcommands(self):
-        self.sock.sendto(self.msg)
+        total_size = len(self.msg)
+        # Update the sz field in the msg
+        curr_ptr = 0  # Current position in the data
+
+        while total_size > curr_ptr:
+            if total_size - curr_ptr > UDP_PACKET_SIZE:
+                # Split the data into PACKET_SIZE chunks
+                packet = self.msg[curr_ptr:curr_ptr + UDP_PACKET_SIZE]
+                self.sock.sendto(packet)
+                curr_ptr += UDP_PACKET_SIZE
+            else:
+                # Send the remaining data
+                packet = self.msg[curr_ptr:]
+                self.sock.sendto(packet)
+                break  # No more data to send
+
+        #self.logger.info(f"Total {total_size} bytes sent in multiple packets.")
+
 
     def sendcommandsTCP(self):
         self.sock.write(self.msg)
@@ -135,8 +153,21 @@ class WIZMSGHandler(QThread):
                 return False
         except Exception as e:
             self.logger.error('[ERROR] WIZMSGHandler check_parameter(): %r' % e)
-
     
+
+    def get_list_to_dict(self, list):
+        converted_dict = {}
+        for item in list:
+            try:
+                decoded_item = item.decode('utf-8', 'ignore')
+                key = decoded_item[:2]
+                value = decoded_item[2:]
+                converted_dict[key] = value
+            except UnicodeDecodeError as e:
+                self.logger.error(f"decode error: {e} - ignore key.")
+        return converted_dict
+    
+
     def run(self):
         try:
             self.makecommands()
@@ -151,8 +182,8 @@ class WIZMSGHandler(QThread):
             readready, writeready, errorready = select.select(
                 self.inputs, self.outputs, self.errors, self.timeout)
         
-            replylists = None
-
+            replylists = []
+            replyAlllist = []
             self.getreply = []
             self.mac_list = []
             self.mn_list = []
@@ -160,7 +191,6 @@ class WIZMSGHandler(QThread):
             self.st_list = []
             self.rcv_list = []
             # print('readready value: ', len(readready), readready)
-
             if self.timeout < 2:
                 # Search each device
                 for sock in readready:
@@ -172,11 +202,12 @@ class WIZMSGHandler(QThread):
                         replylists = data.split(b"\r\n")
                         # print('replylists', replylists)
                         self.getreply = replylists
+
             else:
                 # Pre search
                 while True:
                     self.iter += 1
-                    # sys.stdout.write("iter count: %r " % self.iter)
+                    #print(f"iter count: {self.iter}")
                     for sock in readready:
                         if sock == self.sock.sock:
                             data = self.sock.recvfrom()
@@ -189,56 +220,76 @@ class WIZMSGHandler(QThread):
                             else:
                                 self.rcv_list.append(data)  # received data backup
                                 # replylists = data.splitlines()
-                                replylists = data.split(b"\r\n")
+                                replylists = re.split(b'\r\n|\x00\n', data)
+                                replyAlllist.append(replylists)
+                                
+                        readready, writeready, errorready = select.select(self.inputs, self.outputs, self.errors, 1)
+                    if not readready or not replylists:
+                        break       
+                pattern_x00 = re.compile(b'\x00{10,}')  # 10개 이상의 연속된 0 바이트
+                replyAlllist = [sublist for sublist in replyAlllist if not any(pattern_x00.search(item) for item in sublist)]
+                # 모든 리스트를 순회
+                for i in range(len(replyAlllist)):
+                    current_list = replyAlllist[i]
+                    if i < len(replyAlllist) - 1:
+                        # 현재 리스트의 마지막 값과 다음 리스트의 첫 번째 값을 합침
+                        last_item_current = current_list[-1]
+                        first_item_next = replyAlllist[i + 1][0].decode('utf-8', 'ignore')  # bytes를 문자열로 변환
+                        combined_item = last_item_current + first_item_next.encode('utf-8')  # 다시 bytes로 변환
 
-                                # print('replylists', replylists)
-                                self.getreply = replylists
+                        # 현재 리스트의 나머지 요소와 결합된 요소를 추가
+                        self.rcv_all_list.extend(current_list[:-1] + [combined_item])
+                    else:
+                        # 마지막 리스트는 그대로 추가 (마지막 리스트의 첫 번째 요소는 이미 합쳐졌으므로 제외)
+                        self.rcv_all_list.extend(current_list[1:])
+                replylists = self.rcv_all_list
+                self.getreply = replylists
 
-                            if self.opcode == Opcode.OP_SEARCHALL:
-                                try:
-                                    for i in range(0, len(replylists)):
-                                        if b'MC' in replylists[i]:
-                                            if self.check_parameter(replylists[i]):
-                                                self.mac_list.append(replylists[i][2:])
-                                        if b'MN' in replylists[i]:
-                                            if self.check_parameter(replylists[i]):
-                                                self.mn_list.append(replylists[i][2:])
-                                        if b'VR' in replylists[i]:
-                                            if self.check_parameter(replylists[i]):
-                                                self.vr_list.append(replylists[i][2:])
-                                        if b'OP' in replylists[i]:
-                                            if self.check_parameter(replylists[i]):
-                                                self.mode_list.append(replylists[i][2:])
-                                        if b'ST' in replylists[i]:
-                                            if self.check_parameter(replylists[i]):
-                                                self.st_list.append(replylists[i][2:])
-                                except Exception as e:
-                                    self.logger.error('[ERROR] WIZMSGHandler makecommands(): %r' % e)
-                            elif self.opcode == Opcode.OP_FWUP:
-                                for i in range(0, len(replylists)):
-                                    if b'MA' in replylists[i][:2]:
-                                        pass
-                                        # self.isvalid = True
-                                    else:
-                                        self.isvalid = False
-                                    # sys.stdout.write("%r\r\n" % replylists[i][:2])
-                                    if b'FW' in replylists[i][:2]:
-                                        # sys.stdout.write('self.isvalid == True\r\n')
-                                        # param = replylists[i][2:].split(b':')
-                                        self.reply = replylists[i][2:]
-                            elif self.opcode == Opcode.OP_SETCOMMAND:
-                                for i in range(0, len(replylists)):
-                                    if b'AP' in replylists[i][:2]:
-                                        if replylists[i][2:] == b' ':
-                                            self.setting_pw_wrong = True
-                                        else:
-                                            self.setting_pw_wrong = False
+                if self.opcode == Opcode.OP_SEARCHALL:
+                    try:
+                        for i in range(0, len(replylists)):
+                            if b'MC' in replylists[i]:
+                                if self.check_parameter(replylists[i]):
+                                    self.mac_list.append(replylists[i][2:])
+                            if b'MN' in replylists[i]:
+                                if self.check_parameter(replylists[i]):
+                                    self.mn_list.append(replylists[i][2:])
+                            if b'VR' in replylists[i]:
+                                if self.check_parameter(replylists[i]):
+                                    self.vr_list.append(replylists[i][2:])
+                            if b'OP' in replylists[i]:
+                                if self.check_parameter(replylists[i]):
+                                    self.mode_list.append(replylists[i][2:])
+                            if b'ST' in replylists[i]:
+                                if self.check_parameter(replylists[i]):
+                                    self.st_list.append(replylists[i][2:])
+                    except Exception as e:
+                        self.logger.error('[ERROR] WIZMSGHandler makecommands(): %r' % e)
+
+                elif self.opcode == Opcode.OP_FWUP:
+                    for i in range(0, len(replylists)):
+                        if b'MA' in replylists[i][:2]:
+                            pass
+                            # self.isvalid = True
+                        else:
+                            self.isvalid = False
+                        # sys.stdout.write("%r\r\n" % replylists[i][:2])
+                        if b'FW' in replylists[i][:2]:
+                            # sys.stdout.write('self.isvalid == True\r\n')
+                            # param = replylists[i][2:].split(b':')
+                            self.reply = replylists[i][2:]
+
+                elif self.opcode == Opcode.OP_SETCOMMAND:
+                    for i in range(0, len(replylists)):
+                        if b'AP' in replylists[i][:2]:
+                            if replylists[i][2:] == b' ':
+                                self.setting_pw_wrong = True
+                            else:
+                                self.setting_pw_wrong = False
 
                     readready, writeready, errorready = select.select(
                         self.inputs, self.outputs, self.errors, 1)
 
-                    if not readready or not replylists:
-                        break
 
                 if self.opcode == Opcode.OP_SEARCHALL:
                     self.msleep(500)
@@ -247,7 +298,6 @@ class WIZMSGHandler(QThread):
                     # return len(self.mac_list)
                 if self.opcode == Opcode.OP_SETCOMMAND:
                     self.msleep(500)
-                    # print(self.rcv_list)
                     if len(self.rcv_list) > 0:
                         # print('Opcode.OP_SETCOMMAND: rcv_list:', len(self.rcv_list[0]), self.rcv_list[0])
                         if self.setting_pw_wrong:
@@ -268,7 +318,6 @@ class DataRefresh(QThread):
 
     def __init__(self, sock, cmd_list, what_sock, interval):
         QThread.__init__(self)
-
         self.logger = logger
 
         self.sock = sock
@@ -311,7 +360,7 @@ class DataRefresh(QThread):
                 self.size += 2
 
     def sendcommands(self):
-        self.sock.sendto(self.msg)
+        self.sock.sendto(self.msg[:self.size])
 
     def sendcommandsTCP(self):
         self.sock.write(self.msg)
