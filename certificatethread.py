@@ -146,6 +146,7 @@ class certificatethread(QtCore.QThread):
             self.logger.error(str(e))
 
     def run(self):
+        #file데이터를 self.data에 저장.
         self.setparam()
         self.logger.info(f'Certificate upload start: {self.mn_list}')
 

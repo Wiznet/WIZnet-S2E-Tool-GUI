@@ -193,6 +193,8 @@ oneport_cmdset = {
         {"0": "PHY Link Up / The device != ready", "1": "PHY Link Down / The device ready for communication",},
         "RO",
     ],
+
+
 }
 
 wiz2000_added_cmdset = {
