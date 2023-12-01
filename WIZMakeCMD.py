@@ -26,7 +26,7 @@ TWO_PORT_DEV = ["WIZ752SR-12x", "WIZ752SR-120", "WIZ752SR-125"]
 Command List
 """
 # for pre-search
-cmd_presearch = ["MC", "VR", "MN", "ST", "IM", "OP", "LI", "SM", "GW"]
+cmd_presearch = ["SZ","MC", "VR", "MN", "ST", "IM", "OP", "LI", "SM", "GW"]
 
 # Command for each device
 cmd_ch1 = [
@@ -50,11 +50,11 @@ cmd_gpio_2pin = ["CA", "CB", "GA", "GB"]
 
 # Security device base commands
 cmd_security_base = [
-    "MC", "VR", "MN", "IM", "OP", "CP", "DG", "KA", "KI", "KE",
+    "SZ", "MC", "VR", "MN", "IM", "OP", "CP", "DG", "KA", "KI", "KE",
     "RI", "LI", "SM", "GW", "DS", "DH", "LP", "RP", "RH", "BR",
     "DB", "PR", "SB", "FL", "IT", "PT", "PS", "PD", "TE", "SS",
     "NP", "SP", "UN", "ST", "EC", "SC", "TR", "QU", "QP", "QC",
-    "QK", "PU", "U0", "U1", "U2", "QO", "RC", "CE"
+    "QK", "PU", "U0", "U1", "U2", "QO", "RC", "CE",
 ]
 
 # WIZ510SSL commands
@@ -65,7 +65,7 @@ cmd_wiz510ssl_added = ['BA']
 cmd_wiz5xxsr_added = ['SO', 'UF']
 
 # WIZ5XXSR-RP_E-SAVE commands
-cmd_wiz5xxsr_esave = ['U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9']
+cmd_wiz5xxsr_esave = ["U3", "U4", "U5", "U6", "U7", "U8", "U9"]
 
 
 """
@@ -95,6 +95,7 @@ class WIZMakeCMD:
     def __init__(self):
         self.logger = logger
 
+    #장치의 MAC 주소와 ID 코드로 명령어 헤더를 생성합니다.
     def make_header(self, mac_addr, idcode, devname="", set_pw=""):
         """
         Common command set
@@ -105,6 +106,7 @@ class WIZMakeCMD:
         # print('reset', mac_addr, idcode, set_pw, devname)
         return cmd_header
 
+    #네트워크 상의 모든 장치를 찾기 위한 명령어 리스트를 생성합니다.
     def presearch(self, mac_addr, idcode):
         cmd_list = self.make_header(mac_addr, idcode)
         # Search All Devices on the network
@@ -113,6 +115,8 @@ class WIZMakeCMD:
             cmd_list.append([cmd, ""])
         return cmd_list
 
+
+    #특정 장치를 검색하고, 해당하는 명령어 리스트를 생성합니다.
     def search(self, mac_addr, idcode, devname, version):
         # Search All Devices on the network
         # print('search()', mac_addr, idcode, devname, version)
@@ -151,6 +155,8 @@ class WIZMakeCMD:
         # print("search()", cmd_list)
         return cmd_list
 
+
+    #장치의 GPIO 핀 값을 읽기 위한 명령어 리스트를 생성합니다.
     def get_gpiovalue(self, mac_addr, idcode, devname):
         cmd_list = self.make_header(mac_addr, idcode)
         if 'WIZ5XX' in devname:
@@ -212,6 +218,8 @@ class WIZMakeCMD:
         except Exception as e:
             self.logger.error("[ERROR] setcommand(): %r\r\n" % e)
 
+
+    # 장치를 재시작하는 명령어 리스트를 생성합니다.
     def reset(self, mac_addr, idcode, set_pw, devname):
         self.logger.info(f'Reset: {mac_addr}')
         try:
@@ -222,7 +230,7 @@ class WIZMakeCMD:
             self.logger.error(e)
         return cmd_list
 
-
+    # 공장 초기화를 위한 명령어 리스트를 생성합니다.
     def factory_reset(self, mac_addr, idcode, set_pw, devname, param):
         self.logger.info(f'Factory: {mac_addr}')
         try:

@@ -4650,7 +4650,7 @@ interval</string>
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="currentIndex">
-             <number>0</number>
+             <number>3</number>
             </property>
             <property name="tabBarAutoHide">
              <bool>false</bool>
@@ -7657,7 +7657,7 @@ Analog input: Read only</string>
                   <string/>
                  </property>
                  <property name="maxLength">
-                  <number>128</number>
+                  <number>126</number>
                  </property>
                  <property name="frame">
                   <bool>true</bool>
@@ -7703,7 +7703,7 @@ Analog input: Read only</string>
                   <string/>
                  </property>
                  <property name="maxLength">
-                  <number>128</number>
+                  <number>126</number>
                  </property>
                  <property name="frame">
                   <bool>true</bool>
@@ -7749,7 +7749,7 @@ Analog input: Read only</string>
                   <string/>
                  </property>
                  <property name="maxLength">
-                  <number>128</number>
+                  <number>126</number>
                  </property>
                  <property name="frame">
                   <bool>true</bool>
@@ -7792,7 +7792,7 @@ Analog input: Read only</string>
                   <string/>
                  </property>
                  <property name="maxLength">
-                  <number>128</number>
+                  <number>126</number>
                  </property>
                  <property name="frame">
                   <bool>true</bool>
@@ -7835,7 +7835,7 @@ Analog input: Read only</string>
                   <string/>
                  </property>
                  <property name="maxLength">
-                  <number>128</number>
+                  <number>126</number>
                  </property>
                  <property name="frame">
                   <bool>true</bool>
@@ -7878,7 +7878,7 @@ Analog input: Read only</string>
                   <string/>
                  </property>
                  <property name="maxLength">
-                  <number>128</number>
+                  <number>126</number>
                  </property>
                  <property name="frame">
                   <bool>true</bool>
@@ -7921,7 +7921,7 @@ Analog input: Read only</string>
                   <string/>
                  </property>
                  <property name="maxLength">
-                  <number>128</number>
+                  <number>126</number>
                  </property>
                  <property name="frame">
                   <bool>true</bool>
@@ -7964,7 +7964,7 @@ Analog input: Read only</string>
                   <string/>
                  </property>
                  <property name="maxLength">
-                  <number>128</number>
+                  <number>126</number>
                  </property>
                  <property name="frame">
                   <bool>true</bool>
@@ -8007,7 +8007,7 @@ Analog input: Read only</string>
                   <string/>
                  </property>
                  <property name="maxLength">
-                  <number>128</number>
+                  <number>126</number>
                  </property>
                  <property name="frame">
                   <bool>true</bool>
@@ -8050,7 +8050,7 @@ Analog input: Read only</string>
                   <string/>
                  </property>
                  <property name="maxLength">
-                  <number>128</number>
+                  <number>126</number>
                  </property>
                  <property name="frame">
                   <bool>true</bool>
@@ -8817,7 +8817,7 @@ Search</string>
             </property>
             <property name="icon">
              <iconset>
-              <normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/search_48.png</normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/search_48.png</iconset>
+              <normaloff>../../../../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/search_48.png</normaloff>../../../../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/search_48.png</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -8871,7 +8871,7 @@ Settings</string>
             </property>
             <property name="icon">
              <iconset>
-              <normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/setting_48.png</normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/setting_48.png</iconset>
+              <normaloff>../../../../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/setting_48.png</normaloff>../../../../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/setting_48.png</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -8922,7 +8922,7 @@ Upload</string>
             </property>
             <property name="icon">
              <iconset>
-              <normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/upload_48.png</normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/upload_48.png</iconset>
+              <normaloff>../../../../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/upload_48.png</normaloff>../../../../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/upload_48.png</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -8973,7 +8973,7 @@ Device</string>
             </property>
             <property name="icon">
              <iconset>
-              <normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/reset_48.png</normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/reset_48.png</iconset>
+              <normaloff>../../../../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/reset_48.png</normaloff>../../../../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/reset_48.png</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -9036,7 +9036,7 @@ Reset</string>
             </property>
             <property name="icon">
              <iconset>
-              <normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/factory_48.png</normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/factory_48.png</iconset>
+              <normaloff>../../../../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/factory_48.png</normaloff>../../../../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/factory_48.png</iconset>
             </property>
             <property name="iconSize">
              <size>

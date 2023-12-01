@@ -74,7 +74,7 @@ class WIZWindow(QMainWindow, main_window):
         # init search option
         self.retry_search_num = 1
         self.search_wait_time = 3
-
+        self.hiddenMAC = 48
         # check if use setting password
         self.use_setting_pw = False
         # self.entered_set_pw = ''  # setting pw bak
@@ -480,6 +480,23 @@ class WIZWindow(QMainWindow, main_window):
         else:
             self.show_msgbox("Warning", "Local IP information could not be found. Check the Network configuration.", QMessageBox.Warning)
 
+    #UDP 통신을 2번 보낼지 판단하는 함수.
+    def think_udp_send_twice(self, length):
+        #If there is any text in fields U0~U9 or the length exceeds 1400
+        if ((self.lineedit_mqtt_subtopic_0.text() != '' or
+            self.lineedit_mqtt_subtopic_1.text() != '' or
+            self.lineedit_mqtt_subtopic_2.text() != '' or
+            self.lineedit_mqtt_subtopic_3.text() != '' or
+            self.lineedit_mqtt_subtopic_4.text() != '' or
+            self.lineedit_mqtt_subtopic_5.text() != '' or
+            self.lineedit_mqtt_subtopic_6.text() != '' or
+            self.lineedit_mqtt_subtopic_7.text() != '' or
+            self.lineedit_mqtt_subtopic_8.text() != '' or
+            self.lineedit_mqtt_subtopic_9.text() != '') and
+            length > 1460):
+            return True
+        return False
+
     def gpio_check(self):
         if 'WIZ5XX' in self.curr_dev:
             gpio_list = ['a', 'b']
@@ -795,13 +812,13 @@ class WIZWindow(QMainWindow, main_window):
     def socket_config(self):
         try:
             # Broadcast
+            # selected_eth = 내 컴퓨터 ip주소
             if self.broadcast.isChecked():
                 if self.selected_eth is None:
                     self.conf_sock = WIZUDPSock(5000, 50001, "")
                 else:
                     self.conf_sock = WIZUDPSock(5000, 50001, self.selected_eth)
                     self.logger.debug(self.selected_eth)
-
                 self.conf_sock.open()
 
             # TCP unicast
@@ -830,6 +847,7 @@ class WIZWindow(QMainWindow, main_window):
                     self.msg_not_connected(ip_addr)
         except Exception as e:
             self.logger.error(f'socket_config error: {e}')
+
 
     # expansion GPIO config
     def refresh_gpio(self, mac_addr):
@@ -986,7 +1004,8 @@ class WIZWindow(QMainWindow, main_window):
                     self.code = self.searchcode_input.text()
 
                 cmd_list = self.wizmakecmd.presearch("FF:FF:FF:FF:FF:FF", self.code)
-                self.logger.debug(cmd_list)
+                self.logger.info(cmd_list)
+
 
                 if self.unicast_ip.isChecked():
                     self.wizmsghandler = WIZMSGHandler(
@@ -1065,8 +1084,7 @@ class WIZWindow(QMainWindow, main_window):
                             cmd = cmdsets[i][:2].decode()
                             param = cmdsets[i][2:].decode()
                             profile[cmd] = param
-
-                    # self.logger.info(profile)
+                    
                     self.dev_profile[profile['MC']] = profile
                     profile = {}
 
@@ -1085,7 +1103,7 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.error(e)
             self.msg_error('[ERROR] getsearch_each_dev(): {}'.format(e))
 
-        # print('self.dev_profile', self.dev_profile)
+        
 
     def get_search_result(self, devnum):
 
@@ -1165,6 +1183,7 @@ class WIZWindow(QMainWindow, main_window):
 
             self.statusbar.showMessage(' Find %d devices' % devnum)
             self.get_dev_list()
+
         else:
             self.logger.error('search error')
 
@@ -1186,10 +1205,11 @@ class WIZWindow(QMainWindow, main_window):
             except Exception as e:
                 self.logger.error(e)
 
-            # print('get_dev_list()', self.searched_dev, self.dev_data)
+            #self.logger.info('get_dev_list()', self.searched_dev, self.dev_data)
             self.search_each_dev(self.searched_dev)
         else:
             self.logger.info('There is no device.')
+
 
     def dev_clicked(self):
         # dev_info = []
@@ -1204,16 +1224,16 @@ class WIZWindow(QMainWindow, main_window):
             # print('clicked', self.list_device.selectedItems()[0].text())
             # self.getdevinfo(currentItem.row())
         clicked_mac = self.list_device.selectedItems()[0].text()
-
         self.get_clicked_devinfo(clicked_mac)
 
     def get_clicked_devinfo(self, macaddr):
         self.object_config()
 
         # device profile(json format)
+        self.logger.info(f"민윤홍<apply setting이후 SZ와 MC를 확인하면 됩니다!> :self.Dev_profile:{self.dev_profile}")
         if macaddr in self.dev_profile:
             dev_data = self.dev_profile[macaddr]
-            # print('clicked device information:', dev_data)
+            #print('clicked device information:', dev_data)
 
             self.fill_devinfo(dev_data)
         else:
@@ -1229,7 +1249,6 @@ class WIZWindow(QMainWindow, main_window):
 
     # Check: decode exception handling
     def fill_devinfo(self, dev_data):
-        # print('fill_devinfo', dev_data)
         try:
             # device info (RO)
             if 'MN' in dev_data:
@@ -1444,6 +1463,7 @@ class WIZWindow(QMainWindow, main_window):
                     if dev_data['QU'] == ' ':
                         self.lineedit_mqtt_username.clear()
                     else:
+
                         self.lineedit_mqtt_username.setText(dev_data['QU'])
                 if 'QP' in dev_data:
                     if dev_data['QP'] == ' ':
@@ -1569,15 +1589,18 @@ class WIZWindow(QMainWindow, main_window):
 
         try:
             # Network - general
+            setcmd['SZ'] = '000000'
             setcmd['LI'] = self.localip.text()
             setcmd['SM'] = self.subnet.text()
-            setcmd['GW'] = self.gateway.text()
+            setcmd['GW'] = self.gateway.text()          
+            ### !!!SIZE 추가. 디폴트값은 문자로 '0'
             if self.ip_static.isChecked():
                 setcmd['IM'] = '0'
             elif self.ip_dhcp.isChecked():
                 setcmd['IM'] = '1'
             setcmd['DS'] = self.dns_addr.text()
             # etc - general
+
             if self.enable_connect_pw.isChecked():
                 setcmd['CP'] = '1'
                 setcmd['NP'] = self.connect_pw.text()
@@ -1596,11 +1619,13 @@ class WIZWindow(QMainWindow, main_window):
             else:
                 setcmd['SP'] = self.searchcode.text()
 
+
             # Debug msg
             if self.serial_debug.currentIndex() == 2:
                 setcmd['DG'] = '4'
             else:
                 setcmd['DG'] = str(self.serial_debug.currentIndex())
+
 
             # Network - channel 1
             if self.curr_dev in SECURITY_DEVICE:
@@ -1787,6 +1812,8 @@ class WIZWindow(QMainWindow, main_window):
         logger.debug(f'setcmd: {setcmd}')
         return setcmd
 
+
+    
     def do_setting(self):
         self.disable_object()
 
@@ -1799,53 +1826,61 @@ class WIZWindow(QMainWindow, main_window):
             self.show_msgbox("Warning", "Device is not selected.", QMessageBox.Warning)
             # self.msg_dev_not_selected()
         else:
-            self.statusbar.showMessage(' Setting device...')
+            self.statusbar.showMessage('Setting device...')
             # matching set command
             setcmd = self.get_object_value()
             # self.selected_devinfo()
 
             # Update cmdset
             self.cmdset.get_cmdset(self.curr_dev)
-            self.logger.info(f'Device setting: {self.curr_dev}')
+            #@self.logger.info(f'Device setting: {self.curr_dev}')
             # Parameter validity check
             invalid_flag = 0
             setcmd_cmd = list(setcmd.keys())
+
             for i in range(len(setcmd)):
                 if self.cmdset.isvalidparameter(setcmd_cmd[i], setcmd.get(setcmd_cmd[i])) is False:
                     self.logger.warning(
                         'Invalid parameter: %s %s' % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i])))
                     self.msg_invalid(setcmd.get(setcmd_cmd[i]))
                     invalid_flag += 1
-
+            
             if invalid_flag > 0:
                 self.logger.info(f'Setting: invalid flag: {invalid_flag}')
+
             elif invalid_flag == 0:
                 if len(self.searchcode_input.text()) == 0:
                     self.code = " "
                 else:
-                    self.code = self.searchcode_input.text()
+                    self.code = self.searchcode_input.text()              
 
-                cmd_list = self.wizmakecmd.setcommand(self.curr_mac, self.code, self.encoded_setting_pw,
-                                                      list(setcmd.keys()), list(setcmd.values()), self.curr_dev, self.curr_ver)
-                # self.logger.debug(cmd_list)
+            cmd_list = self.wizmakecmd.setcommand(
+                self.curr_mac, self.code, self.encoded_setting_pw,
+                list(setcmd.keys()), list(setcmd.values()), self.curr_dev, self.curr_ver)
+            
+            cmd_sz = sum(len(element) + 1 for sublist in cmd_list for element in sublist if element) + self.hiddenMAC
+            for item in cmd_list:
+                if item[0] == 'SZ':
+                    item[1] = f"{cmd_sz:06}"
+                    break
 
-                # socket config
-                self.socket_config()
-
-                if self.unicast_ip.isChecked():
-                    self.wizmsghandler = WIZMSGHandler(
-                        self.conf_sock, cmd_list, 'tcp', Opcode.OP_SETCOMMAND, 2)
-                else:
-                    self.wizmsghandler = WIZMSGHandler(
-                        self.conf_sock, cmd_list, 'udp', Opcode.OP_SETCOMMAND, 2)
+            if self.unicast_ip.isChecked():
+                self.wizmsghandler = WIZMSGHandler(
+                    self.conf_sock, cmd_list, 'tcp', Opcode.OP_SETCOMMAND, 2)
+                
+            else:
+                self.wizmsghandler = WIZMSGHandler(
+                    self.conf_sock, cmd_list, 'udp', Opcode.OP_SETCOMMAND, 2)
+                self.wizmsghandler.makecommands
                 self.wizmsghandler.set_result.connect(self.get_setting_result)
                 self.wizmsghandler.start()
 
+        
     def get_setting_result(self, resp_len):
         set_result = {}
 
         if resp_len > 100:
-            self.statusbar.showMessage(' Set device complete!')
+            self.statusbar.showMessage('Set device complete!')
 
             # complete pop-up
             self.msg_set_success()
@@ -1877,8 +1912,11 @@ class WIZWindow(QMainWindow, main_window):
                 self.dev_profile[clicked_mac] = set_result
             except Exception as e:
                 self.logger.error(e)
-
+            
+            converted_dict = self.wizmsghandler.get_list_to_dict(self.wizmsghandler.rcv_all_list) 
             self.dev_clicked()
+            self.fill_devinfo(converted_dict)
+
         elif resp_len == -1:
             self.logger.warning('Setting: no response from device.')
             self.statusbar.showMessage(' Setting: no response from device.')
@@ -2247,6 +2285,7 @@ class WIZWindow(QMainWindow, main_window):
 
     def save_cert_btn_clicked(self, cmd):
         self.logger.debug(cmd)
+        self.logger.info(f"cmd: {cmd}")
         self.selected_devinfo()
         mac_addr = self.curr_mac
 
@@ -2290,6 +2329,7 @@ class WIZWindow(QMainWindow, main_window):
                 self.update_result(-1)
         except Exception as e:
             self.logger.error(e)
+
 
     # ============================================ messagebox
     def show_msgbox(self, title, msg, type):
@@ -2521,7 +2561,6 @@ class WIZWindow(QMainWindow, main_window):
 
         if fname:
             fileName = fname
-            self.logger.info(fileName)
             self.load_configuration(fileName)
 
     def load_configuration(self, data_file):
