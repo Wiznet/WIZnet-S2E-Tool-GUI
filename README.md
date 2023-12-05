@@ -12,17 +12,17 @@
 
 # [Configuration Tool Wiki](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki)
 
+New to the WIZnet Configuration Tool? Visit the Wiki page. The wiki page contains getting started guides, how to use tool, and troubleshooting guides.
+
+You can check the contents of configuration tool wiki on the [Wiki tab.](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki)
+
 # Trouble Shooting
 Updated 23/12/01 : When re-selecting a module after apply setting, some field values ​​may be lost.
 This error occurs when receiving UDP packets multiple times.
 **There is no problem with the module** , but we will resolve the issue of updating the GUI screen correctly as soon as possible.[Bug](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/issues/35)
 
 
-New to the WIZnet Configuration Tool? Visit the Wiki page.
 
-The wiki page contains getting started guides, how to use tool, and troubleshooting guides.
-
-You can check the contents of configuration tool wiki on the [Wiki tab.](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki)
 
 
 # Overview
