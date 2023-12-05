@@ -12,6 +12,12 @@
 
 # [Configuration Tool Wiki](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki)
 
+# Trouble Shooting
+Updated 23/12/01 : When re-selecting a module after apply setting, some field values ​​may be lost.
+This error occurs when receiving UDP packets multiple times.
+**There is no problem with the module** , but we will resolve the issue of updating the GUI screen correctly as soon as possible.[Bug](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/issues/35)
+
+
 New to the WIZnet Configuration Tool? Visit the Wiki page.
 
 The wiki page contains getting started guides, how to use tool, and troubleshooting guides.
@@ -67,10 +73,6 @@ CLI configuration tool can be refer from [WIZnet-S2E-Tool github page.](https://
 # Updated
 ![스크린샷 2023-12-01 103220](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/assets/77008882/6648c5cc-1dd2-4aad-ba3c-293563a63aa5)
 The existing 3-space subscription topic has been expanded to 10 spaces. From now on, you don't have to worry about UDP maximum packet limits.
-# Trouble Shooting
-Updated 23/12/01 : When re-selecting a module after apply setting, some field values ​​may be lost.
-This error occurs when receiving UDP packets multiple times.
-**There is no problem with the module** , but we will resolve the issue of updating the GUI screen correctly as soon as possible.[Bug](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/issues/35)
 
 
 ## Report
