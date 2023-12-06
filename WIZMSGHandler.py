@@ -247,9 +247,7 @@ class WIZMSGHandler(QThread):
                     # return len(self.mac_list)
                 if self.opcode == Opcode.OP_SETCOMMAND:
                     self.msleep(500)
-                    # print(self.rcv_list)
                     if len(self.rcv_list) > 0:
-                        # print('Opcode.OP_SETCOMMAND: rcv_list:', len(self.rcv_list[0]), self.rcv_list[0])
                         if self.setting_pw_wrong:
                             self.set_result.emit(-3)
                         else:

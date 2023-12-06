@@ -65,7 +65,7 @@ cmd_wiz510ssl_added = ['BA']
 cmd_wiz5xxsr_added = ['SO', 'UF']
 
 # WIZ5XXSR-RP_E-SAVE commands
-cmd_wiz5xxsr_esave = ['U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9']
+#cmd_wiz5xxsr_esave = ['U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9']
 
 
 """
@@ -143,9 +143,9 @@ class WIZMakeCMD:
                 for cmd in cmd_wiz5xxsr:
                     cmd_list.append([cmd, ""])
                 # Commands for E-SAVE
-                if 'E-SAVE' in devname:
-                    for cmd in cmd_wiz5xxsr_esave:
-                        cmd_list.append([cmd, ""])
+                #if 'E-SAVE' in devname:
+                #    for cmd in cmd_wiz5xxsr_esave:
+                #        cmd_list.append([cmd, ""])
         else:
             pass
         # print("search()", cmd_list)
@@ -202,9 +202,9 @@ class WIZMakeCMD:
                     for cmd in cmd_wiz5xxsr:
                         cmd_list.append([cmd, ""])
                     # Commands for E-SAVE
-                    if 'E-SAVE' in devname:
-                        for cmd in cmd_wiz5xxsr_esave:
-                            cmd_list.append([cmd, ""])
+                    #if 'E-SAVE' in devname:
+                    #    for cmd in cmd_wiz5xxsr_esave:
+                    #        cmd_list.append([cmd, ""])
             cmd_list.append(["SV", ""])  # save device setting
             cmd_list.append(["RT", ""])  # Device reboot
             # print("setcommand()", cmd_list)

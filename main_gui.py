@@ -287,7 +287,7 @@ class WIZWindow(QMainWindow, main_window):
         self.btn_factory.addAction(self.factory_setting_action)
         self.btn_factory.addAction(self.factory_firmware_action)
 
-    @funclog(logger)
+    #@funclog(logger)
     def tab_changed(self):
         """
         When tab changed
@@ -525,17 +525,6 @@ class WIZWindow(QMainWindow, main_window):
                 if 'WIZ5XXSR' in self.curr_dev:
                     self.groupbox_ch1_timeout.show()
                     self.groupbox_ch1_timeout.setEnabled(True)
-                    # WIZ5XXSR custom module
-                    if 'E-SAVE' in self.curr_dev:
-                        for i in range(3, 10):
-                            lineedit_subtopic = getattr(self, f'lineedit_mqtt_subtopic_{i}')
-                            lineedit_subtopic.show()
-                            lineedit_subtopic.setEnabled(True)
-                    else:
-                        for i in range(3, 10):
-                            lineedit_subtopic = getattr(self, f'lineedit_mqtt_subtopic_{i}')
-                            lineedit_subtopic.hide()
-                            lineedit_subtopic.setEnabled(False)
                 else:
                     self.groupbox_ch1_timeout.hide()
                     self.groupbox_ch1_timeout.setEnabled(False)
@@ -1482,42 +1471,6 @@ class WIZWindow(QMainWindow, main_window):
                         self.lineedit_mqtt_subtopic_2.clear()
                     else:
                         self.lineedit_mqtt_subtopic_2.setText(dev_data['U2'])
-                if 'E-SAVE' in self.curr_dev:
-                    if 'U3' in dev_data:
-                        if dev_data['U3'] == ' ':
-                            self.lineedit_mqtt_subtopic_3.clear()
-                        else:
-                            self.lineedit_mqtt_subtopic_3.setText(dev_data['U3'])
-                    if 'U4' in dev_data:
-                        if dev_data['U4'] == ' ':
-                            self.lineedit_mqtt_subtopic_4.clear()
-                        else:
-                            self.lineedit_mqtt_subtopic_4.setText(dev_data['U4'])
-                    if 'U5' in dev_data:
-                        if dev_data['U5'] == ' ':
-                            self.lineedit_mqtt_subtopic_5.clear()
-                        else:
-                            self.lineedit_mqtt_subtopic_5.setText(dev_data['U5'])
-                    if 'U6' in dev_data:
-                        if dev_data['U6'] == ' ':
-                            self.lineedit_mqtt_subtopic_6.clear()
-                        else:
-                            self.lineedit_mqtt_subtopic_6.setText(dev_data['U6'])
-                    if 'U7' in dev_data:
-                        if dev_data['U7'] == ' ':
-                            self.lineedit_mqtt_subtopic_7.clear()
-                        else:
-                            self.lineedit_mqtt_subtopic_7.setText(dev_data['U7'])
-                    if 'U8' in dev_data:
-                        if dev_data['U8'] == ' ':
-                            self.lineedit_mqtt_subtopic_8.clear()
-                        else:
-                            self.lineedit_mqtt_subtopic_8.setText(dev_data['U8'])
-                    if 'U9' in dev_data:
-                        if dev_data['U9'] == ' ':
-                            self.lineedit_mqtt_subtopic_9.clear()
-                        else:
-                            self.lineedit_mqtt_subtopic_9.setText(dev_data['U9'])
                 if 'QO' in dev_data:
                     self.combobox_mqtt_qos.setCurrentIndex(int(dev_data['QO']))
                 # Root CA options
@@ -1756,14 +1709,6 @@ class WIZWindow(QMainWindow, main_window):
                 setcmd['U0'] = self.lineedit_mqtt_subtopic_0.text() if self.lineedit_mqtt_subtopic_0.text() else ' '
                 setcmd['U1'] = self.lineedit_mqtt_subtopic_1.text() if self.lineedit_mqtt_subtopic_1.text() else ' '
                 setcmd['U2'] = self.lineedit_mqtt_subtopic_2.text() if self.lineedit_mqtt_subtopic_2.text() else ' '
-                if 'E-SAVE' in self.curr_dev:
-                    setcmd['U3'] = self.lineedit_mqtt_subtopic_3.text() if self.lineedit_mqtt_subtopic_3.text() else ' '
-                    setcmd['U4'] = self.lineedit_mqtt_subtopic_4.text() if self.lineedit_mqtt_subtopic_4.text() else ' '
-                    setcmd['U5'] = self.lineedit_mqtt_subtopic_5.text() if self.lineedit_mqtt_subtopic_5.text() else ' '
-                    setcmd['U6'] = self.lineedit_mqtt_subtopic_6.text() if self.lineedit_mqtt_subtopic_6.text() else ' '
-                    setcmd['U7'] = self.lineedit_mqtt_subtopic_7.text() if self.lineedit_mqtt_subtopic_7.text() else ' '
-                    setcmd['U8'] = self.lineedit_mqtt_subtopic_8.text() if self.lineedit_mqtt_subtopic_8.text() else ' '
-                    setcmd['U9'] = self.lineedit_mqtt_subtopic_9.text() if self.lineedit_mqtt_subtopic_9.text() else ' '
                 setcmd['QO'] = str(self.combobox_mqtt_qos.currentIndex())
                 # Root CA options
                 setcmd['RC'] = str(self.combobox_rootca_option.currentIndex())
