@@ -4650,7 +4650,7 @@ interval</string>
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="currentIndex">
-             <number>0</number>
+             <number>3</number>
             </property>
             <property name="tabBarAutoHide">
              <bool>false</bool>
@@ -7758,307 +7758,6 @@ Analog input: Read only</string>
                   <set>Qt::AlignCenter</set>
                  </property>
                 </widget>
-                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_3">
-                 <property name="geometry">
-                  <rect>
-                   <x>251</x>
-                   <y>91</y>
-                   <width>140</width>
-                   <height>22</height>
-                  </rect>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>140</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>160</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>8</pointsize>
-                  </font>
-                 </property>
-                 <property name="toolTip">
-                  <string/>
-                 </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                 <property name="maxLength">
-                  <number>128</number>
-                 </property>
-                 <property name="frame">
-                  <bool>true</bool>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_4">
-                 <property name="geometry">
-                  <rect>
-                   <x>106</x>
-                   <y>123</y>
-                   <width>140</width>
-                   <height>22</height>
-                  </rect>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>140</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>160</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>8</pointsize>
-                  </font>
-                 </property>
-                 <property name="toolTip">
-                  <string/>
-                 </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                 <property name="maxLength">
-                  <number>128</number>
-                 </property>
-                 <property name="frame">
-                  <bool>true</bool>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_5">
-                 <property name="geometry">
-                  <rect>
-                   <x>251</x>
-                   <y>123</y>
-                   <width>140</width>
-                   <height>22</height>
-                  </rect>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>140</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>160</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>8</pointsize>
-                  </font>
-                 </property>
-                 <property name="toolTip">
-                  <string/>
-                 </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                 <property name="maxLength">
-                  <number>128</number>
-                 </property>
-                 <property name="frame">
-                  <bool>true</bool>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_6">
-                 <property name="geometry">
-                  <rect>
-                   <x>106</x>
-                   <y>155</y>
-                   <width>140</width>
-                   <height>22</height>
-                  </rect>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>140</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>160</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>8</pointsize>
-                  </font>
-                 </property>
-                 <property name="toolTip">
-                  <string/>
-                 </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                 <property name="maxLength">
-                  <number>128</number>
-                 </property>
-                 <property name="frame">
-                  <bool>true</bool>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_7">
-                 <property name="geometry">
-                  <rect>
-                   <x>251</x>
-                   <y>155</y>
-                   <width>140</width>
-                   <height>22</height>
-                  </rect>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>140</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>160</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>8</pointsize>
-                  </font>
-                 </property>
-                 <property name="toolTip">
-                  <string/>
-                 </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                 <property name="maxLength">
-                  <number>128</number>
-                 </property>
-                 <property name="frame">
-                  <bool>true</bool>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_8">
-                 <property name="geometry">
-                  <rect>
-                   <x>106</x>
-                   <y>187</y>
-                   <width>140</width>
-                   <height>22</height>
-                  </rect>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>140</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>160</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>8</pointsize>
-                  </font>
-                 </property>
-                 <property name="toolTip">
-                  <string/>
-                 </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                 <property name="maxLength">
-                  <number>128</number>
-                 </property>
-                 <property name="frame">
-                  <bool>true</bool>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-                <widget class="QLineEdit" name="lineedit_mqtt_subtopic_9">
-                 <property name="geometry">
-                  <rect>
-                   <x>251</x>
-                   <y>187</y>
-                   <width>140</width>
-                   <height>22</height>
-                  </rect>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>140</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>160</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>8</pointsize>
-                  </font>
-                 </property>
-                 <property name="toolTip">
-                  <string/>
-                 </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                 <property name="maxLength">
-                  <number>128</number>
-                 </property>
-                 <property name="frame">
-                  <bool>true</bool>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
                </widget>
               </item>
               <item row="1" column="0">
@@ -8817,7 +8516,7 @@ Search</string>
             </property>
             <property name="icon">
              <iconset>
-              <normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/search_48.png</normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/search_48.png</iconset>
+              <normaloff>../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/search_48.png</normaloff>../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/search_48.png</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -8871,7 +8570,7 @@ Settings</string>
             </property>
             <property name="icon">
              <iconset>
-              <normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/setting_48.png</normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/setting_48.png</iconset>
+              <normaloff>../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/setting_48.png</normaloff>../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/setting_48.png</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -8922,7 +8621,7 @@ Upload</string>
             </property>
             <property name="icon">
              <iconset>
-              <normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/upload_48.png</normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/upload_48.png</iconset>
+              <normaloff>../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/upload_48.png</normaloff>../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/upload_48.png</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -8973,7 +8672,7 @@ Device</string>
             </property>
             <property name="icon">
              <iconset>
-              <normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/reset_48.png</normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/reset_48.png</iconset>
+              <normaloff>../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/reset_48.png</normaloff>../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/reset_48.png</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -9036,7 +8735,7 @@ Reset</string>
             </property>
             <property name="icon">
              <iconset>
-              <normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/factory_48.png</normaloff>C:/Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/factory_48.png</iconset>
+              <normaloff>../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/factory_48.png</normaloff>../../../Users/Administrator/00.Wiznet Work/wizconfig_gui-20180220/images/icons/factory_48.png</iconset>
             </property>
             <property name="iconSize">
              <size>
