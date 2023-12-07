@@ -1,14 +1,3 @@
-- [Configuration Tool Wiki](#configuration-tool-wiki)
-- [Overview](#overview)
-  - [Support Devices](#support-devices)
-    - [1 Port Serial to Ethernet Module](#1-port-serial-to-ethernet-module)
-    - [2 Port Serial to Ethernet Module](#2-port-serial-to-ethernet-module)
-    - [Pre-programmed MCU](#pre-programmed-mcu)
-- [CLI Configuration Tool](#cli-configuration-tool)
-- [TroubleShooting](#troubleshooting)
-  - [Report](#report)
-
----
 
 # [Configuration Tool Wiki](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki)
 
@@ -25,16 +14,8 @@ This error occurs when receiving UDP packets multiple times.
 
 
 
-# Overview
 
-WIZnet-S2E-Tool-GUI is Configuration Tool for WIZnet serial to ethernet devices.
-
-Python interpreter based and it is platform independent. It works on python version 3.6 or later.
-
-<img src="https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/blob/master/doc/images/wizconfig_main_V1.0.0.png" width="85%"></img>
-
-
-## Support Devices
+# Support Devices
 
 ### 1 Port Serial to Ethernet Module
 
@@ -59,19 +40,11 @@ Python interpreter based and it is platform independent. It works on python vers
 
 
 
-# CLI Configuration Tool
-
-In addition to this GUI configuration tool, we provides a command line based configuration tool.
-
-With just a few options, you can easily set up your device.
-
-One of the features of the CLI tool is that **it supports multi device configuration**. If you have multiple devices, try it.
-
-CLI configuration tool can be refer from [WIZnet-S2E-Tool github page.](https://github.com/Wiznet/WIZnet-S2E-Tool)
-
 ---
 # Updated
 ![스크린샷 2023-12-01 103220](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/assets/77008882/6648c5cc-1dd2-4aad-ba3c-293563a63aa5)
+To download e-save exclusive firmware, go to the link: [download E-Save firmware](https://github.com/Wiznet/WIZ5XXSR-RP-C/tree/E-SAVE)
+
 The existing 3-space subscription topic has been expanded to 10 spaces. From now on, you don't have to worry about UDP maximum packet limits.
 
 
