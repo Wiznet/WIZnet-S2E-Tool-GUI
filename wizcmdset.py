@@ -147,6 +147,7 @@ WIZ5XX_RP_CMDSET = {
     "LC": ["Client Certificate", "", {}, "WO"],
     "PK": ["Private Key", "", {}, "WO"],
     "UF": ["Copy firmware from firmware binary bank to application bank", "", {}, "RW"],
+    "PO": ["Status of Modbus protocol", "^[0-2]$", {}, "RO"],
 }
 
 # Two port devices

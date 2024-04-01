@@ -26,7 +26,7 @@ from PyQt5 import QtCore, QtGui, uic
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLineEdit, QMessageBox, QTableWidgetItem, QFileDialog, QMenu, QAction, QProgressBar, QInputDialog
 import ifaddr
 
-VERSION = 'V1.5.4'
+VERSION = 'V1.5.5'
 
 
 def resource_path(relative_path):
@@ -176,6 +176,9 @@ class WIZWindow(QMainWindow, main_window):
         # Event: Search method
         self.broadcast.clicked.connect(self.event_search_method)
         self.unicast_ip.clicked.connect(self.event_search_method)
+        # self.unicast_mac.clicked.connect(self.event_search_method)
+        
+        # Event: modbus
         # self.unicast_mac.clicked.connect(self.event_search_method)
 
         self.pgbar = QProgressBar()
@@ -710,27 +713,55 @@ class WIZWindow(QMainWindow, main_window):
     def event_opmode(self):
         if self.ch1_tcpclient.isChecked():
             self.ch1_remote.setEnabled(True)
+            self.group_packing_12.setEnabled(False)
+            self.modbus_protocol.setCurrentIndex(0)
+            
         elif self.ch1_tcpserver.isChecked():
             self.ch1_remote.setEnabled(False)
+            self.group_packing_12.setEnabled(True)
+
         elif self.ch1_tcpmixed.isChecked():
             self.ch1_remote.setEnabled(True)
+            self.group_packing_12.setEnabled(False)
+            self.modbus_protocol.setCurrentIndex(0)
+
         elif self.ch1_udp.isChecked():
             self.ch1_remote.setEnabled(True)
+            self.group_packing_12.setEnabled(True)
+
         elif self.ch1_ssl_tcpclient.isChecked():
             self.ch1_remote.setEnabled(True)
+            self.group_packing_12.setEnabled(False)
+            self.modbus_protocol.setCurrentIndex(0)
+
         elif self.ch1_mqttclient.isChecked():
             self.ch1_remote.setEnabled(True)
+            self.group_packing_12.setEnabled(False)
+            self.modbus_protocol.setCurrentIndex(0)
+
         elif self.ch1_mqtts_client.isChecked():
             self.ch1_remote.setEnabled(True)
+            self.group_packing_12.setEnabled(False)
+            self.modbus_protocol.setCurrentIndex(0)
 
-        if self.ch2_tcpclient.isChecked():
+        elif self.ch2_tcpclient.isChecked():
             self.ch2_remote.setEnabled(True)
+            self.group_packing_12.setEnabled(False)
+            self.modbus_protocol.setCurrentIndex(0)
+
         elif self.ch2_tcpserver.isChecked():
             self.ch2_remote.setEnabled(False)
+            self.group_packing_12.setEnabled(True)
+
         elif self.ch2_tcpmixed.isChecked():
             self.ch2_remote.setEnabled(True)
+            self.group_packing_12.setEnabled(False)
+            self.modbus_protocol.setCurrentIndex(0)
+
         elif self.ch2_udp.isChecked():
             self.ch2_remote.setEnabled(True)
+            self.group_packing_12.setEnabled(True)
+
 
     def event_search_method(self):
         if self.broadcast.isChecked():
@@ -740,6 +771,7 @@ class WIZWindow(QMainWindow, main_window):
             self.search_ipaddr.setEnabled(True)
             self.search_port.setEnabled(True)
 
+    
     def sock_close(self):
         # 기존 연결 fin
         if self.cli_sock is not None:
@@ -1218,7 +1250,7 @@ class WIZWindow(QMainWindow, main_window):
 
     # Check: decode exception handling
     def fill_devinfo(self, dev_data):
-        # print('fill_devinfo', dev_data)
+        #print('fill_devinfo', dev_data)
         try:
             # device info (RO)
             if 'MN' in dev_data:
@@ -1487,10 +1519,10 @@ class WIZWindow(QMainWindow, main_window):
                     self.combobox_current_bank.setCurrentIndex(int(dev_data['BA']))
                 # SSL Timeout
                 if 'WIZ5XXSR' in self.curr_dev:
+                    pass
                     # if 'UF' in dev_data:
                     #     self.combobox_current_bank.setCurrentIndex(int(dev_data['UF']))
-                    if 'SO' in dev_data:
-                        self.lineedit_ch1_ssl_recv_timeout.setText(dev_data['SO'])
+
 
             self.object_config()
         except Exception as e:
@@ -1517,7 +1549,6 @@ class WIZWindow(QMainWindow, main_window):
     # get each object's value for setting
     def get_object_value(self):
         self.selected_devinfo()
-
         setcmd = {}
 
         try:
@@ -1589,6 +1620,8 @@ class WIZWindow(QMainWindow, main_window):
             setcmd['PR'] = str(self.ch1_parity.currentIndex())
             setcmd['SB'] = str(self.ch1_stopbit.currentIndex())
             setcmd['FL'] = str(self.ch1_flow.currentIndex())
+            if 'WIZ5XXSR' in self.curr_dev:
+                setcmd['PO'] = str(self.modbus_protocol.currentIndex())
             setcmd['PT'] = self.ch1_pack_time.text()
             setcmd['PS'] = self.ch1_pack_size.text()
             setcmd['PD'] = self.ch1_pack_char.text()
@@ -1725,6 +1758,7 @@ class WIZWindow(QMainWindow, main_window):
                     # setcmd['UF'] = str(self.combobox_current_bank.currentIndex())
                     # Add ssl timeout option
                     setcmd['SO'] = self.lineedit_ch1_ssl_recv_timeout.text()
+
 
         except Exception as e:
             self.logger.error(e)

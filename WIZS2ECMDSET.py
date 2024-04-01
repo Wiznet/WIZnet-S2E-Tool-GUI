@@ -193,10 +193,11 @@ oneport_cmdset = {
         {"0": "PHY Link Up / The device != ready", "1": "PHY Link Down / The device ready for communication",},
         "RO",
     ],
+
 }
 
 wiz2000_added_cmdset = {
-    # WIZ2000
+    #WIZ2000
     "MB": [
         "Modbus options for channel 0",
         "^[0-2]$",
