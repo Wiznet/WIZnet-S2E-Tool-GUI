@@ -62,10 +62,11 @@ cmd_wiz510ssl_added = ['BA']
 
 # 2022.05.10
 # WIZ5XXSR-RP added commands
-cmd_wiz5xxsr_added = ['SO', 'UF']
+cmd_wiz5xxsr_added = ['SO', 'UF','PO']
 
 # WIZ5XXSR-RP_E-SAVE commands
 #cmd_wiz5xxsr_esave = ['U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9']
+
 
 
 """
