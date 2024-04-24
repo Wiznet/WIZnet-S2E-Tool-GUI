@@ -52,6 +52,10 @@ Python interpreter based and it is platform independent. It works on python vers
 - [W7500(P)-S2E](https://docs.wiznet.io/Product/Pre-programmed-MCU/W7500P-S2E/w7500p-s2e-EN)
 
 
+## Supported Firmware Versions
+
+**Important Compatibility Note**: The CLI Configuration Tool version 1.5.5 requires firmware version 1.0.8 or higher to function correctly.
+
 
 # CLI Configuration Tool
 
@@ -63,7 +67,6 @@ One of the features of the CLI tool is that **it supports multi device configura
 
 CLI configuration tool can be refer from [WIZnet-S2E-Tool github page.](https://github.com/Wiznet/WIZnet-S2E-Tool)
 
----
 
 # TroubleShooting
 
@@ -75,4 +78,4 @@ If you have any problems, use one of the links below and **please report the pro
 - [Github Issue page](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/issues)
 - [Discusstion](https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/discussions)
 
----
+
