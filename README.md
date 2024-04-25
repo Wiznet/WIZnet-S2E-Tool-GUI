@@ -54,7 +54,7 @@ Python interpreter based and it is platform independent. It works on python vers
 
 ## Supported Firmware Versions
 
-**Important Compatibility Note**: S2E Configuration Tool version 1.5.5 requires firmware version 1.0.8 or higher to function correctly.
+**Important Compatibility Note**: WIZnet-S2E-Tool-GUI version 1.5.5 requires firmware version 1.0.8 or higher to function correctly.
 
 
 # CLI Configuration Tool
