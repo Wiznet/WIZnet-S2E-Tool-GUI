@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from packaging.version import Version
 
 """
 Make Serial command
@@ -62,7 +63,8 @@ cmd_wiz510ssl_added = ['BA']
 
 # 2022.05.10
 # WIZ5XXSR-RP added commands
-cmd_wiz5xxsr_added = ['SO', 'UF','PO']
+# 전역에서 "PO" 삭제 #36
+cmd_wiz5xxsr_added = ['SO', 'UF']
 
 # WIZ5XXSR-RP_E-SAVE commands
 #cmd_wiz5xxsr_esave = ['U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9']
@@ -80,16 +82,33 @@ cmd_2p_default = cmd_ch1 + cmd_ch2
 cmd_wiz510ssl = cmd_security_base + cmd_wiz510ssl_added
 cmd_wiz5xxsr = cmd_security_base + cmd_wiz5xxsr_added
 
-
-def version_compare(version1, version2):
+# @TODO:@BUG 아래 경우 1을 반환해야 하는데 -1을 반환함
+# >>> version_compare("1.10.8.1.9", "1.2.8")
+# version_compare: obj1 = ['1', '10', '8', '1', '9'] , obj2 = ['1', '2', '8'] , obj1 > obj2 = 0 obj1 < obj2 = 1
+# -1
+def version_compare_old(version1: str, version2: str):
+    """버전을 비교해서 앞이 크면 1 뒤가 크면 -1 같으면 0을 반환
+    Args:
+        version1 (str): 첫번째 버전
+        version2 (str): 두번째 버전
+    """
     def normalize(v):
         # return [x for x in re.sub(r'(\.0+)*$','',v).split('.')]
         return [x for x in re.sub(r"(\.0+\.[dev])*$", "", v).split(".")]
-
     obj1 = normalize(version1)
     obj2 = normalize(version2)
+    print("version_compare: obj1 =", obj1, ", obj2 =", obj2, ", obj1 > obj2 =", int(obj1 > obj2), "obj1 < obj2 =", int(obj1 < obj2))
     return (obj1 > obj2) - (obj1 < obj2)
     # if return value < 0: version2 upper than version1
+
+# 이슈 수정 중 함수 버그 발견해서 수정함 #36
+def version_compare(version1: str, version2: str):
+    """버전을 비교해서 앞이 크면 1 뒤가 크면 -1 같으면 0을 반환
+    Args:
+        version1 (str): 첫번째 버전
+        version2 (str): 두번째 버전
+    """
+    return 0 if version1 == version2 else -1 if Version(version1) < Version(version2) else 1
 
 
 class WIZMakeCMD:
@@ -141,7 +160,9 @@ class WIZMakeCMD:
                 for cmd in cmd_wiz510ssl:
                     cmd_list.append([cmd, ""])
             elif 'WIZ5XXSR' in devname:
-                for cmd in cmd_wiz5xxsr:
+                # 버전이 1.0.8 이상인 경우에만 "PO" 추가 #36
+                temp_cmd_wiz5xxsr = (cmd_wiz5xxsr + ["PO"]) if version_compare("1.0.8", version) <= 0  else cmd_wiz5xxsr
+                for cmd in temp_cmd_wiz5xxsr:
                     cmd_list.append([cmd, ""])
                 # Commands for E-SAVE
                 #if 'E-SAVE' in devname:

@@ -26,7 +26,7 @@ from PyQt5 import QtCore, QtGui, uic
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLineEdit, QMessageBox, QTableWidgetItem, QFileDialog, QMenu, QAction, QProgressBar, QInputDialog
 import ifaddr
 
-VERSION = 'V1.5.5'
+VERSION = 'V1.5.5.1'  # github 이슈 #36 수정
 
 
 def resource_path(relative_path):
@@ -499,6 +499,16 @@ class WIZWindow(QMainWindow, main_window):
 
     # Object config for some Devices or F/W version
     def object_config_for_device(self):
+        # WIZ5XX 가 아니면 modbus 는 사용 불가 #36
+        print(f"model={self.curr_dev},ver={self.curr_ver},version compare={version_compare(self.curr_ver, '1.0.8')}")
+        if 'WIZ5XX' not in self.curr_dev:
+            self.modbus_protocol.setEnabled(False)
+        # WIZ5XX 도 v1.0.8 미만은 사용 불가 #36
+        elif version_compare(self.curr_ver, '1.0.8') < 0:
+            self.modbus_protocol.setEnabled(False)
+        # WIZ5XX v1.0.8 이상은 modbus 사용 가능 #36
+        else:
+            self.modbus_protocol.setEnabled(True)
         if 'WIZ750' in self.curr_dev:
             if version_compare('1.2.0', self.curr_ver) <= 0:
                 # setcmd['TR'] = self.tcp_timeout.text()
@@ -1620,7 +1630,9 @@ class WIZWindow(QMainWindow, main_window):
             setcmd['PR'] = str(self.ch1_parity.currentIndex())
             setcmd['SB'] = str(self.ch1_stopbit.currentIndex())
             setcmd['FL'] = str(self.ch1_flow.currentIndex())
-            if 'WIZ5XXSR' in self.curr_dev:
+            # 문맥으로 보면 modbus_protocol.isEnabled() 로 처리하는게 맞지만 항상 False 가 나와서 모델&버전 비교로 대체 #36
+            if 'WIZ5XXSR' in self.curr_dev and version_compare("1.0.8", self.curr_ver) <= 0:
+                print(f"set PO valid, self.curr_dev={self.curr_dev}, self.curr_ver={self.curr_ver}")
                 setcmd['PO'] = str(self.modbus_protocol.currentIndex())
             setcmd['PT'] = self.ch1_pack_time.text()
             setcmd['PS'] = self.ch1_pack_size.text()
@@ -1876,6 +1888,9 @@ class WIZWindow(QMainWindow, main_window):
     def selected_devinfo(self):
         # 선택된 장치 정보 get
         for currentItem in self.list_device.selectedItems():
+            _dev_name = currentItem.text()
+            # currentItem = <class 'PyQt5.QtWidgets.QTableWidgetItem'>
+            # 현재 0번 열은 맥주소이고 1번 열은 장치명
             if currentItem.column() == 0:
                 self.curr_mac = currentItem.text()
                 self.curr_ver = self.dev_data[self.curr_mac][1]
