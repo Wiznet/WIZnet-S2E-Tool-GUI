@@ -20,19 +20,23 @@ import subprocess
 import webbrowser
 import logging
 import datetime
+from pathlib import Path
 
 # Additional package
 from PyQt5 import QtCore, QtGui, uic
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLineEdit, QMessageBox, QTableWidgetItem, QFileDialog, QMenu, QAction, QProgressBar, QInputDialog
 import ifaddr
 
-VERSION = 'V1.5.5.1'  # github 이슈 #36 수정
-
 
 def resource_path(relative_path):
     # Get absolute path to resource, works for dev and for PyInstaller
     base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
+
+
+# VERSION = 'V1.5.5.1'  # github 이슈 #36 수정
+VERSION = f'V{Path(resource_path("version")).read_text().strip()}'
+print(f"VERSION={VERSION}")
 
 
 # Load ui files
