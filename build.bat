@@ -8,4 +8,8 @@ set target_bin_name=wizconfig_s2e_tool_%_version%
 echo %target_bin_name%
 
 REM Run PyInstaller with the specified parameters
-pyinstaller.exe -w -F -n %target_bin_name% --add-data=".\\gui\\*;.\\gui" .\main_gui.py
+@REM pyinstaller -w -F -n wizconfig_s2e_tool_1.5.5.1 --add-data=".\\gui\\*":".\\gui" --add-data=".\\version":".\\" .\main_gui.py
+@REM poetry run pyinstaller  -w -F --clean --log-level DEBUG -n %target_bin_name% --add-data=".\\gui\\*":".\\gui" --add-data=".\\version":".\\" --paths="D:\\user\\util\\installed\\python3.9\\Lib\\site-packages" .\main_gui.py
+@REM poetry run pyinstaller  -w -F --clean -n %target_bin_name% --add-data=".\\gui\\*":".\\gui" --add-data=".\\version":".\\" .\main_gui.py
+@REM auto-py-to-exe
+poetry run pyinstaller --noconfirm --onefile --windowed --icon "D:/user/src/github/WIZnet-S2E-Tool-GUI/gui/icon.ico" --name "wizconfig_s2e_tool_1.5.5.3" --clean --add-data "D:/user/src/github/WIZnet-S2E-Tool-GUI/gui;gui/" --add-data "D:/user/src/github/WIZnet-S2E-Tool-GUI/version;."  "D:/user/src/github/WIZnet-S2E-Tool-GUI/main_gui.py"
