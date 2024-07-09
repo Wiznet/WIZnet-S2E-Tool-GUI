@@ -1463,7 +1463,7 @@ interval</string>
                  </widget>
                 </item>
                 <item row="4" column="0">
-                 <widget class="QGroupBox" name="group_packing_12">
+                 <widget class="QGroupBox" name="group_modubs_option">
                   <property name="enabled">
                    <bool>false</bool>
                   </property>

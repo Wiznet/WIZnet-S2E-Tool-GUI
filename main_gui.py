@@ -727,55 +727,54 @@ class WIZWindow(QMainWindow, main_window):
     def event_opmode(self):
         if self.ch1_tcpclient.isChecked():
             self.ch1_remote.setEnabled(True)
-            self.group_packing_12.setEnabled(False)
+            self.group_modubs_option.setEnabled(False)
             self.modbus_protocol.setCurrentIndex(0)
-            
+
         elif self.ch1_tcpserver.isChecked():
             self.ch1_remote.setEnabled(False)
-            self.group_packing_12.setEnabled(True)
+            self.group_modubs_option.setEnabled(True)
 
         elif self.ch1_tcpmixed.isChecked():
             self.ch1_remote.setEnabled(True)
-            self.group_packing_12.setEnabled(False)
+            self.group_modubs_option.setEnabled(False)
             self.modbus_protocol.setCurrentIndex(0)
 
         elif self.ch1_udp.isChecked():
             self.ch1_remote.setEnabled(True)
-            self.group_packing_12.setEnabled(True)
+            self.group_modubs_option.setEnabled(True)
 
         elif self.ch1_ssl_tcpclient.isChecked():
             self.ch1_remote.setEnabled(True)
-            self.group_packing_12.setEnabled(False)
+            self.group_modubs_option.setEnabled(False)
             self.modbus_protocol.setCurrentIndex(0)
 
         elif self.ch1_mqttclient.isChecked():
             self.ch1_remote.setEnabled(True)
-            self.group_packing_12.setEnabled(False)
+            self.group_modubs_option.setEnabled(False)
             self.modbus_protocol.setCurrentIndex(0)
 
         elif self.ch1_mqtts_client.isChecked():
             self.ch1_remote.setEnabled(True)
-            self.group_packing_12.setEnabled(False)
+            self.group_modubs_option.setEnabled(False)
             self.modbus_protocol.setCurrentIndex(0)
 
         elif self.ch2_tcpclient.isChecked():
             self.ch2_remote.setEnabled(True)
-            self.group_packing_12.setEnabled(False)
+            self.group_modubs_option.setEnabled(False)
             self.modbus_protocol.setCurrentIndex(0)
 
         elif self.ch2_tcpserver.isChecked():
             self.ch2_remote.setEnabled(False)
-            self.group_packing_12.setEnabled(True)
+            self.group_modubs_option.setEnabled(True)
 
         elif self.ch2_tcpmixed.isChecked():
             self.ch2_remote.setEnabled(True)
-            self.group_packing_12.setEnabled(False)
+            self.group_modubs_option.setEnabled(False)
             self.modbus_protocol.setCurrentIndex(0)
 
         elif self.ch2_udp.isChecked():
             self.ch2_remote.setEnabled(True)
-            self.group_packing_12.setEnabled(True)
-
+            self.group_modubs_option.setEnabled(True)
 
     def event_search_method(self):
         if self.broadcast.isChecked():
@@ -785,7 +784,6 @@ class WIZWindow(QMainWindow, main_window):
             self.search_ipaddr.setEnabled(True)
             self.search_port.setEnabled(True)
 
-    
     def sock_close(self):
         # 기존 연결 fin
         if self.cli_sock is not None:
