@@ -29,6 +29,10 @@ Command List
 # for pre-search
 cmd_presearch = ["MC", "VR", "MN", "ST", "IM", "OP", "LI", "SM", "GW"]
 
+# Command for bootloader
+cmd_boot = ["MC", "VR", "MN", "ST", "IM", "OP", "LI", "SM", "GW", "SP", "DS"]  # cmd_presearch
+# cmd_boot = ["MC", "VR", "MN", "ST", "IM", "OP", "LI", "SM", "GW"]  # cmd_presearch
+
 # Command for each device
 cmd_ch1 = [
     "MC", "VR", "MN", "UN", "ST", "IM", "OP", "CP", "PO", "DG", 
@@ -73,6 +77,7 @@ cmd_wiz5xxsr_added = ['SO', 'UF']
 """
 Command Set
 """
+cmd_1p_boot = cmd_boot
 cmd_1p_default = cmd_ch1
 cmd_1p_advanced = cmd_ch1 + cmd_wiz75xsr + cmd_added
 cmd_2p_default = cmd_ch1 + cmd_ch2
@@ -134,7 +139,7 @@ class WIZMakeCMD:
             cmd_list.append([cmd, ""])
         return cmd_list
 
-    def search(self, mac_addr, idcode, devname, version):
+    def search(self, mac_addr, idcode, devname, version, devstatus=None):
         # Search All Devices on the network
         # print('search()', mac_addr, idcode, devname, version)
         cmd_list = self.make_header(mac_addr, idcode)
@@ -161,10 +166,17 @@ class WIZMakeCMD:
                 for cmd in cmd_wiz510ssl:
                     cmd_list.append([cmd, ""])
             elif 'WIZ5XXSR' in devname:
+                print(f"search::devstatus={devstatus}")
+                if devstatus == 'BOOT':
+                    for cmd in cmd_1p_boot:
+                        cmd_list.append([cmd, ""])
+                    print(f"search::cmd_list={cmd_list}")
+                    return cmd_list
                 # 버전이 1.0.8 이상인 경우에만 "PO" 추가 #36
                 temp_cmd_wiz5xxsr = (cmd_wiz5xxsr + ["PO"]) if version_compare("1.0.8", version) <= 0  else cmd_wiz5xxsr
                 for cmd in temp_cmd_wiz5xxsr:
                     cmd_list.append([cmd, ""])
+                print(f"search::cmd_list2={cmd_list}")
                 # Commands for E-SAVE
                 #if 'E-SAVE' in devname:
                 #    for cmd in cmd_wiz5xxsr_esave:
@@ -182,12 +194,12 @@ class WIZMakeCMD:
         else:
             for cmd in cmd_gpio_4pin:
                 cmd_list.append([cmd, ""])
-
+        print(f"devname={devname}, cmds={cmd_list}")
         return cmd_list
 
     # Set device
     # TODO: device profile 적용
-    def setcommand(self, mac_addr, idcode, set_pw, command_list, param_list, devname, version):
+    def setcommand(self, mac_addr, idcode, set_pw, command_list, param_list, devname, version, status=None):
         """
         Make device setting command set
         - set commands + get commands
@@ -222,12 +234,18 @@ class WIZMakeCMD:
                     for cmd in cmd_wiz510ssl:
                         cmd_list.append([cmd, ""])
                 elif 'WIZ5XXSR' in devname:
-                    for cmd in cmd_wiz5xxsr:
-                        cmd_list.append([cmd, ""])
+                    if status != "BOOT":
+                        for cmd in cmd_wiz5xxsr:
+                            cmd_list.append([cmd, ""])
+                    else:
+                        for cmd in cmd_1p_boot:
+                            cmd_list.append([cmd, ""])
                     # Commands for E-SAVE
                     #if 'E-SAVE' in devname:
                     #    for cmd in cmd_wiz5xxsr_esave:
                     #        cmd_list.append([cmd, ""])
+            # if status == "BOOT":
+            #     return cmd_list
             cmd_list.append(["SV", ""])  # save device setting
             cmd_list.append(["RT", ""])  # Device reboot
             # print("setcommand()", cmd_list)

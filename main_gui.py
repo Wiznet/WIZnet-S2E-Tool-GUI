@@ -304,8 +304,26 @@ class WIZWindow(QMainWindow, main_window):
         self.userio_tab_text = self.generalTab.tabText(2)
         self.mqtt_tab_text = self.generalTab.tabText(3)
         self.certificate_tab_text = self.generalTab.tabText(4)
-
         self.ch1_tab_text = self.channel_tab.tabText(1)
+        inital_tab_count = self.generalTab.count()
+        for _i in range(inital_tab_count):
+            self.logger.debug(f"({_i}:{self.generalTab.tabText(_i)})")
+        try:
+            self.tab_structure = {
+                "basic_tab": SysTabObjectText(
+                    self.basic_tab, self.generalTab.tabText(0)
+                ),
+                "advance_tab": SysTabObjectText(
+                    self.advance_tab, self.generalTab.tabText(1)
+                ),
+                "userio_tab": SysTabObjectText(self.userio_tab, self.userio_tab_text),
+                "mqtt_tab": SysTabObjectText(self.mqtt_tab, self.mqtt_tab_text),
+                "certificate_tab": SysTabObjectText(
+                    self.certificate_tab, self.certificate_tab_text
+                ),
+            }
+        except Exception as e:
+            print(f"ERROR:init_ui_object:{e}")
 
         # Initial tab
         self.generalTab.removeTab(5)
@@ -324,10 +342,11 @@ class WIZWindow(QMainWindow, main_window):
         # self.groupbox_ch1_timeout.setEnabled(False)
 
         # for WIZ5XXSR custom module
-        for i in range(3, 10):
-            lineedit_subtopic = getattr(self, f'lineedit_mqtt_subtopic_{i}')
-            # lineedit_subtopic.hide()
-            lineedit_subtopic.setEnabled(False)
+        # @TODO: a6e5282d1e 에서 U3~U9 가 삭제되어 아래 코드도 삭제되어야 함
+        # for i in range(3, 10):
+        #     lineedit_subtopic = getattr(self, f'lineedit_mqtt_subtopic_{i}')
+        #     # lineedit_subtopic.hide()
+        #     lineedit_subtopic.setEnabled(False)
 
     def init_btn_factory(self):
         # factory_option = ['Factory default settings', 'Factory default firmware']
@@ -436,6 +455,7 @@ class WIZWindow(QMainWindow, main_window):
         self.btn_loadconfig.setEnabled(False)
 
         self.generalTab.setEnabled(False)
+        print("disable_object::channel_tab set tab disabled")
         self.channel_tab.setEnabled(False)
 
     def object_config(self):
@@ -463,7 +483,12 @@ class WIZWindow(QMainWindow, main_window):
         self.refresh_grp.setEnabled(True)
         self.exp_gpio.setEnabled(True)
 
-        self.channel_tab.setEnabled(True)
+        if self.curr_st not in DeviceStatusMinimum:
+            print("object_config::channel_tab set tab enabled")
+            self.channel_tab.setEnabled(True)
+        else:
+            print("object_config::channel_tab set tab disabled")
+            self.channel_tab.setEnabled(False)
         self.event_passwd_enable()
 
         # enable menu
@@ -557,8 +582,12 @@ class WIZWindow(QMainWindow, main_window):
     # Object config for some Devices or F/W version
     def object_config_for_device(self):
         # WIZ5XX 가 아니면 modbus 는 사용 불가 #36
-        print(f"model={self.curr_dev},ver={self.curr_ver},version compare={version_compare(self.curr_ver, '1.0.8')}")
-        if 'WIZ5XX' not in self.curr_dev:
+        print(
+            f"model={self.curr_dev},ver={self.curr_ver},version compare={version_compare(self.curr_ver, '1.0.8')},status={self.curr_st}"
+        )
+        if self.curr_st in DeviceStatusMinimum:
+            return
+        if "WIZ5XX" not in self.curr_dev:
             self.modbus_protocol.setEnabled(False)
         # WIZ5XX 도 v1.0.8 미만은 사용 불가 #36
         elif version_compare(self.curr_ver, "1.0.8") < 0:
@@ -635,22 +664,70 @@ class WIZWindow(QMainWindow, main_window):
         self.ch2_mqtts_client.setEnabled(False)
 
     def general_tab_config(self):
+        """버튼 아래 일반 탭을 장비 종류와 상태에 따라 다르게 설정합니다.
+        SECURITY_DEVICE 이면 BOOT/UPGRADE 모드가 아닌 경우 mqtt, 인증서 탭을 추가합니다.
+        @mason 이사가 BOOT/UPGRADE 모드일 때 advance_tab 도 뺐으면 좋겠다고 해서 기존 코드에 advance_tab 추가 코드도 작성
+        그 외 장비는 basic_tab, advance_tab 만 보여줌
+        """
         # General tab ui setup by device
+        n_tabs: int = self.generalTab.count()
+        print(f"n_tabs={n_tabs}")
+        # 탭 인덱스(순서)와 이름을 구해 역순으로 정렬
+        list_tabs: list = []
+        for _i, _t in enumerate(range(n_tabs)):
+            list_tabs.append(SysTabIndex(_i, self.generalTab.widget(_t).objectName()))
+        list_tabs.sort(reverse=True)
+        print("list_tabs=", list_tabs)
         if self.curr_dev in SECURITY_DEVICE:
-            # self.logger.debug(f'general_tab_config() length: {len(self.generalTab)}')
-            if len(self.generalTab) < 4:
-                # self.generalTab.insertTab(3, self.wiz510ssl_tab, self.wiz510ssl_tab_text)
-                self.generalTab.insertTab(3, self.mqtt_tab, self.mqtt_tab_text)
-                self.generalTab.insertTab(4, self.certificate_tab, self.certificate_tab_text)
-
-                self.generalTab.setTabEnabled(3, True)
-                self.generalTab.setTabEnabled(4, True)
-                # self.generalTab.setTabEnabled(5, True)
-                # self.group_setting_pw.setEnabled(False)
+            # print(f"tabs in generalTab({self.generalTab}) has {self.generalTab.count()} tabs")
+            # self.generalTab.count() 가 탭 추가/삭제하는 과정에서 신뢰불가.
+            # insertTab에 첫번째 인수로 인덱스를 줘도 실제로는 마지막 인덱스가 할당됨. 인덱스 보장 안됨.
+            # 최초 한번 정확히 계산 후 자신의 작업을 계획에 맞게 진행해야 함.
+            # BOOT/UPGRADE 상태라면 mqtt, certificate, advance 탭 삭제
+            # 디바이스 상태가 DeviceStatusMinimum 이면 ExcludeTabInMinimum 에 속한 탭 삭제
+            # 디바이스 상태가 DeviceStatusMinimum 이 아니면 ExcludeTabInMinimum 탭이 없으면 탭 추가
+            if self.curr_st in DeviceStatusMinimum:
+                _tab: tuple[int, QTabWidget]
+                for _tab in list_tabs:
+                    if _tab.name in ExcludeTabInMinimum:
+                        self.generalTab.removeTab(_tab.idx)
+                        list_tabs.remove(_tab)
+            else:
+                next_tab_idx: int = n_tabs
+                _new_tab: str
+                for _new_tab in ExcludeTabInMinimum:
+                    if _new_tab not in repr(list_tabs):
+                        _new_tab_object = self.tab_structure.get(_new_tab)
+                        print(f"_new_tab={_new_tab},_new_tab_object={_new_tab_object}")
+                        self.generalTab.insertTab(
+                            next_tab_idx,
+                            _new_tab_object.object,
+                            _new_tab_object.ui_text,
+                        )
+                        self.generalTab.setTabEnabled(next_tab_idx, True)
+                        next_tab_idx += 1
+            #     # # self.generalTab.setTabEnabled(5, True)
+            #     # # self.group_setting_pw.setEnabled(False)
+            # for _t in range(self.generalTab.count()):
+            #     print(f"tab({_t}): name={self.generalTab.widget(_t).objectName()},obj={self.generalTab.widget(_t)}")
         else:
-            # self.generalTab.removeTab(5)
-            self.generalTab.removeTab(4)
-            self.generalTab.removeTab(3)
+            # 빼야할 탭 빼기
+            print("list_tabs=", list_tabs)
+            for _tab in list_tabs:
+                print("tab=", _tab)
+                if _tab.name in ExcludeTabInCommon:
+                    self.generalTab.removeTab(_tab.idx)
+                    list_tabs.remove(_tab)
+            next_tab_idx: int = len(list_tabs)
+            # 넣어야할 탭 넣기
+            for _new_tab in IncludeTabInCommon:
+                if _new_tab not in repr(list_tabs):
+                    _new_tab_object = self.tab_structure.get(_new_tab)
+                    self.generalTab.insertTab(
+                        next_tab_idx, _new_tab_object.object, _new_tab_object.ui_text
+                    )
+                    self.generalTab.setTabEnabled(next_tab_idx, True)
+                    next_tab_idx += 1
 
         # User I/O tab
         """
@@ -704,11 +781,23 @@ class WIZWindow(QMainWindow, main_window):
 
     def channel_tab_config(self):
         # channel tab config
-        if self.curr_dev in ONE_PORT_DEV or 'WIZ750' in self.curr_dev or self.curr_dev in SECURITY_DEVICE:
+        print("channel_tab_config::curr_st=", self.curr_st)
+        if self.curr_st in DeviceStatusMinimum:
+            n_tabs = self.channel_tab.count()
+            for i in reversed(range(1, n_tabs + 1)):
+                self.channel_tab.removeTab(i)
+            self.channel_tab.setTabEnabled(0, False)
+        elif (
+            self.curr_dev in ONE_PORT_DEV
+            or "WIZ750" in self.curr_dev
+            or self.curr_dev in SECURITY_DEVICE
+        ):
             self.channel_tab.removeTab(1)
+            print("channel_tab_config::channel_tab set tab enabled 1port")
             self.channel_tab.setTabEnabled(0, True)
         elif self.curr_dev in TWO_PORT_DEV or "WIZ752" in self.curr_dev:
             self.channel_tab.insertTab(1, self.tab_ch1, self.ch1_tab_text)
+            print("channel_tab_config::channel_tab set tab enabled 2port")
             self.channel_tab.setTabEnabled(0, True)
             self.channel_tab.setTabEnabled(1, True)
 
@@ -832,6 +921,9 @@ class WIZWindow(QMainWindow, main_window):
             self.group_modubs_option.setEnabled(True)
 
     def event_search_method(self):
+        self.logger.info(f"localip.text()={self.localip.text()}")
+        if self.localip.text():
+            self.search_ipaddr.setText(self.localip.text())
         if self.broadcast.isChecked():
             self.search_ipaddr.setEnabled(False)
             self.search_port.setEnabled(False)
@@ -847,15 +939,17 @@ class WIZWindow(QMainWindow, main_window):
 
     def connect_over_tcp(self, serverip, port):
         retrynum = 0
-        self.cli_sock = TCPClient(2, serverip, port)
+        self.cli_sock = TCPClient(5, serverip, port)
         # print('sock state: %r' % (self.cli_sock.state))
-
+        _outer_begin = time.time()
+        max_fail_count = 4
         while True:
-            if retrynum > 6:
+            if retrynum > max_fail_count:
                 break
             retrynum += 1
 
             if self.cli_sock.state == SockState.SOCK_CLOSE:
+                begin = time.time()
                 self.cli_sock.shutdown()
                 try:
                     self.cli_sock.open()
@@ -863,22 +957,28 @@ class WIZWindow(QMainWindow, main_window):
                         self.logger.info("[%r] is OPEN" % (serverip))
                     time.sleep(0.2)
                 except Exception as e:
-                    self.logger.error(e)
+                    self.logger.error(f"opening {serverip}:{e}")
+                finally:
+                    self.logger.info(f"{time.time() - begin} seconds elapsed")
             elif self.cli_sock.state == SockState.SOCK_OPEN:
                 try:
                     self.cli_sock.connect()
                     if self.cli_sock.state == SockState.SOCK_CONNECT:
                         self.logger.info("[%r] is CONNECTED" % (serverip))
                 except Exception as e:
-                    self.logger.error(e)
+                    self.logger.error(f"opening {serverip}:{e}")
             elif self.cli_sock.state == SockState.SOCK_CONNECT:
                 break
-        if retrynum > 6:
-            self.logger.info('Device [%s] TCP connection failed.\r\n' % (serverip))
+        self.logger.info(f"Totaly {time.time() - _outer_begin:.3f} seconds elapsed")
+        if retrynum > max_fail_count:
+            self.logger.info("Device [%s] TCP connection failed.\r\n" % (serverip))
+            # 다음 소켓을 초기화하지 않으면 이미 종료된 이전 접속 정보가 남아서 다음 오류가 발생함
+            # WinError 10057 소켓이 연결되어 있지 않거나 Sendto 호출을 사용하여 데이터그램 소켓에 보내는 경우에 주소가 제공되지 않아서 데이터를 보내거나 받도록 요청할 수 없습니다
+            self.cli_sock = None
             return None
         else:
             self.logger.info("Device [%s] TCP connected\r\n" % (serverip))
-            return self.cli_sock
+        return self.cli_sock
 
     def socket_config(self):
         try:
@@ -1078,7 +1178,8 @@ class WIZWindow(QMainWindow, main_window):
 
             # Set socket for search
             self.socket_config()
-            self.logger.debug('search: conf_sock: %s' % self.conf_sock)
+            _conf_sock = "None" if not hasattr(self, "conf_sock") else self.conf_sock
+            self.logger.info(f"search: conf_sock: {_conf_sock}")
 
             # Search devices
             if self.isConnected or self.broadcast.isChecked():
@@ -1145,7 +1246,10 @@ class WIZWindow(QMainWindow, main_window):
             # dev_info => [mac_addr, name, version]
             for dev_info in dev_info_list:
                 self.logger.debug(dev_info)
-                cmd_list = self.wizmakecmd.search(dev_info[0], self.code, dev_info[1], dev_info[2])
+                print(f"dev_info={dev_info}")
+                cmd_list = self.wizmakecmd.search(
+                    dev_info[0], self.code, dev_info[1], dev_info[2], dev_info[3]
+                )
                 # print(cmd_list)
                 th_name = "dev_%s" % dev_info[0]
                 if self.unicast_ip.isChecked():
@@ -1328,7 +1432,7 @@ class WIZWindow(QMainWindow, main_window):
         else:
             self.logger.info("There is no device.")
 
-    def dev_clicked(self):
+    def dev_clicked(self, param=None, call_from=None):
         # dev_info = []
         # clicked_mac = ""
         # if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
@@ -1342,21 +1446,46 @@ class WIZWindow(QMainWindow, main_window):
         # self.getdevinfo(currentItem.row())
         clicked_mac = self.list_device.selectedItems()[0].text()
 
-        self.get_clicked_devinfo(clicked_mac)
+        # print(f"1st caller={call_from},param={param}")
+        self.get_clicked_devinfo(clicked_mac, call_from)
 
-    def get_clicked_devinfo(self, macaddr):
-        self.object_config()
+    def get_clicked_devinfo(self, macaddr, call_from=None):
+        try:
+            self.object_config()
+        except Exception as e:
+            print(f"ERROR:::get_clicked_devinfo:object_config:{e}")
 
+        # print(f"2nd caller={call_from}")
+        if self.curr_st == DeviceStatus.upgrade and call_from is None:
+            self.show_msgbox(
+                "Info",
+                "DHCP has not completed. Retry after DHCP done or set a static IP",
+                QMessageBox.Information,
+            )
         # device profile(json format)
         if macaddr in self.dev_profile:
             dev_data = self.dev_profile[macaddr]
-            # print('clicked device information:', dev_data)
+            print("clicked device information:", dev_data)
+            if "ST" in dev_data and dev_data["ST"] in DeviceStatusMinimum:
+                print("get_clicked_devinfo::I'm in!!")
+                print(f"ch1_status={self.ch1_status}")
+                print("get_clicked_devinfo::channel_tab set tab disabled")
+                self.channel_tab.setEnabled(False)
 
-            self.fill_devinfo(dev_data)
+            else:
+                print("get_clicked_devinfo::NOT IN!! channel_tab set tab enabled")
+                self.channel_tab.setEnabled(True)
+
+            try:
+                self.fill_devinfo(dev_data)
+            except Exception as e:
+                print(f"ERROR:::get_clicked_devinfo:fill_devinfo:{e}")
         else:
-            if (len(self.dev_profile) != self.searched_devnum):
-                self.logger.info('[Warning] 검색된 장치의 수와 프로파일된 장치의 수가 다릅니다.')
-            self.logger.info('[Warning] retry search')
+            if len(self.dev_profile) != self.searched_devnum:
+                self.logger.info(
+                    "[Warning] 검색된 장치의 수와 프로파일된 장치의 수가 다릅니다."
+                )
+            self.logger.info("[Warning] retry search")
 
     def remove_empty_value(self, data):
         # remove empty value
@@ -1364,9 +1493,27 @@ class WIZWindow(QMainWindow, main_window):
             if not any([k, v]):
                 del data[k]
 
+    def set_localip_addr(self, ip):
+        self.localip_addr = ip
+
+    def set_text_command_mode_switch(self, data):
+        if not data or len(data) < 6:
+            self.logger.error(f"data for command SS = {data}, len={len(data)}")
+            return
+        self.at_hex1.setText(data[0:2])
+        self.at_hex2.setText(data[2:4])
+        self.at_hex3.setText(data[4:6])
+
+    def set_debug_message_enable(self, data):
+        # serial debug (dropbox)
+        if int(data) < 2:
+            self.serial_debug.setCurrentIndex(int(data))
+        elif data == "4":
+            self.serial_debug.setCurrentIndex(2)
+
     # Check: decode exception handling
     def fill_devinfo(self, dev_data):
-        #print('fill_devinfo', dev_data)
+        print("fill_devinfo", type(dev_data), dev_data)
         try:
             # device info (RO)
             if "MN" in dev_data:
@@ -1570,10 +1717,14 @@ class WIZWindow(QMainWindow, main_window):
                 if "RE" in dev_data:
                     self.ch2_keepalive_retry.setText(dev_data["RE"])
                 # reconnection - channel 2
-                if 'RR' in dev_data:
-                    self.ch2_reconnection.setText(dev_data['RR'])
+                if "RR" in dev_data:
+                    self.ch2_reconnection.setText(dev_data["RR"])
 
-            elif self.curr_dev in SECURITY_DEVICE:
+            elif (
+                self.curr_dev in SECURITY_DEVICE
+                and "ST" in dev_data
+                and dev_data["ST"] not in DeviceStatusMinimum
+            ):
                 """
                 Security device options
                 """
@@ -1947,11 +2098,12 @@ class WIZWindow(QMainWindow, main_window):
             # self.selected_devinfo()
 
             # Update cmdset
-            self.cmdset.get_cmdset(self.curr_dev)
-            self.logger.info(f'Device setting: {self.curr_dev}')
+            self.cmdset.get_cmdset(self.curr_dev, self.curr_st)
+            self.logger.info(f"Device setting: {self.curr_dev}")
             # Parameter validity check
             invalid_flag = 0
             setcmd_cmd = list(setcmd.keys())
+            print(f"do_setting::setcmd={setcmd}")
             for i in range(len(setcmd)):
                 if (
                     self.cmdset.isvalidparameter(
@@ -1974,8 +2126,16 @@ class WIZWindow(QMainWindow, main_window):
                 else:
                     self.code = self.searchcode_input.text()
 
-                cmd_list = self.wizmakecmd.setcommand(self.curr_mac, self.code, self.encoded_setting_pw,
-                                                      list(setcmd.keys()), list(setcmd.values()), self.curr_dev, self.curr_ver)
+                cmd_list = self.wizmakecmd.setcommand(
+                    self.curr_mac,
+                    self.code,
+                    self.encoded_setting_pw,
+                    list(setcmd.keys()),
+                    list(setcmd.values()),
+                    self.curr_dev,
+                    self.curr_ver,
+                    self.curr_st,
+                )
                 # self.logger.debug(cmd_list)
 
                 # socket config
@@ -2029,7 +2189,8 @@ class WIZWindow(QMainWindow, main_window):
             except Exception as e:
                 self.logger.error(e)
 
-            self.dev_clicked()
+            # 장비 정보 갱신용으로 부르는 것 같은 데 이 때문에 dev_clicked 에 넣은 메시지 창이 2번 뜸
+            self.dev_clicked(call_from=sys._getframe().f_code.co_name)
         elif resp_len == -1:
             self.logger.warning("Setting: no response from device.")
             self.statusbar.showMessage(" Setting: no response from device.")
@@ -2048,7 +2209,7 @@ class WIZWindow(QMainWindow, main_window):
     def selected_devinfo(self):
         # 선택된 장치 정보 get
         for currentItem in self.list_device.selectedItems():
-            _dev_name = currentItem.text()
+            # _dev_name = currentItem.text()
             # currentItem = <class 'PyQt5.QtWidgets.QTableWidgetItem'>
             # 현재 0번 열은 맥주소이고 1번 열은 장치명
             if currentItem.column() == 0:
