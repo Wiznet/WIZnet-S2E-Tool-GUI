@@ -5,7 +5,8 @@ import time
 import select
 
 import sys
-sys.path.append('..')
+
+sys.path.append("..")
 
 from constants import SockState
 from utils import logger, socket_exception_handler
@@ -67,13 +68,15 @@ class TCPClient:
             index = self.rcvbuf.find("\r", 0, self.buflen)
 
             if index != -1:
-                retval = self.rcvbuf[0: index + 1]
-                self.rcvbuf[0:] = self.rcvbuf[index + 1:]
+                retval = self.rcvbuf[0 : index + 1]
+                self.rcvbuf[0:] = self.rcvbuf[index + 1 :]
                 self.buflen -= index + 1
                 self.time = time.time()
                 return retval
 
-        inputready, outputready, exceptready = select.select([self.sock], [], [], self.timeout)
+        inputready, outputready, exceptready = select.select(
+            [self.sock], [], [], self.timeout
+        )
 
         for i in inputready:
             if i == self.sock:
@@ -87,12 +90,12 @@ class TCPClient:
                     self.buflen = 0
                     return ""
 
-                self.rcvbuf[self.buflen:] = tmpbuf
+                self.rcvbuf[self.buflen :] = tmpbuf
                 self.buflen += len(tmpbuf)
                 index = self.rcvbuf.find(b"\r", 0, self.buflen)
                 if index != -1:
-                    retval = self.rcvbuf[0: index + 1]
-                    self.rcvbuf[0:] = self.rcvbuf[index + 1:]
+                    retval = self.rcvbuf[0 : index + 1]
+                    self.rcvbuf[0:] = self.rcvbuf[index + 1 :]
                     self.buflen -= index + 1
                     self.time = time.time()
                     return retval
@@ -101,7 +104,7 @@ class TCPClient:
 
         if (cur_time - self.time) > 2.0:
             if self.buflen > 0:
-                retval = self.rcvbuf[0: self.buflen]
+                retval = self.rcvbuf[0 : self.buflen]
                 self.buflen = 0
                 self.time = time.time()
                 return retval
@@ -136,7 +139,7 @@ class TCPClient:
                         self.buflen = 0
                         return None
 
-                    self.rcvbuf[self.buflen:] = tmpbuf
+                    self.rcvbuf[self.buflen :] = tmpbuf
                     self.buflen += len(tmpbuf)
 
             # return retval
@@ -163,7 +166,7 @@ class TCPClient:
                         self.buflen = 0
                         return ""
 
-                    self.rcvbuf[self.buflen:] = tmpbuf
+                    self.rcvbuf[self.buflen :] = tmpbuf
                     self.buflen += len(tmpbuf)
 
                     if len(self.rcvbuf) > 0:

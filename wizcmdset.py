@@ -264,7 +264,7 @@ class Wizcmdset():
         return False
 
     def getparamdescription(self, cmdstr, param):
-        if self.isvalidparameter(cmdstr, param): 
+        if self.isvalidparameter(cmdstr, param):
             if len(self.cmdset[cmdstr][2]) > 0:
                 return self.cmdset[cmdstr][2][param]
             else:
