@@ -150,6 +150,21 @@ WIZ5XX_RP_CMDSET = {
     "PO": ["Status of Modbus protocol", "^[0-2]$", {}, "RO"],
 }
 
+# boot mode
+BOOT_CMDSET = {
+    "MC": common_cmdset["MC"],
+    "VR": common_cmdset["VR"],
+    "MN": common_cmdset["MN"],
+    "ST": common_cmdset["ST"],
+    "IM": common_cmdset["IM"],
+    "OP": common_cmdset["OP"],
+    "LI": common_cmdset["LI"],
+    "SM": common_cmdset["SM"],
+    "GW": common_cmdset["GW"],
+    "SP": common_cmdset["SP"],
+    "DS": common_cmdset["DS"],
+}
+
 # Two port devices
 WIZ752_CMDSET = {
     **common_cmdset,
