@@ -70,7 +70,6 @@ cmd_wiz5xxsr_added = ['SO', 'UF']
 #cmd_wiz5xxsr_esave = ['U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9']
 
 
-
 """
 Command Set
 """
@@ -81,6 +80,7 @@ cmd_2p_default = cmd_ch1 + cmd_ch2
 # Security devices
 cmd_wiz510ssl = cmd_security_base + cmd_wiz510ssl_added
 cmd_wiz5xxsr = cmd_security_base + cmd_wiz5xxsr_added
+
 
 # @TODO:@BUG 아래 경우 1을 반환해야 하는데 -1을 반환함
 # >>> version_compare("1.10.8.1.9", "1.2.8")
@@ -100,6 +100,7 @@ def version_compare_old(version1: str, version2: str):
     print("version_compare: obj1 =", obj1, ", obj2 =", obj2, ", obj1 > obj2 =", int(obj1 > obj2), "obj1 < obj2 =", int(obj1 < obj2))
     return (obj1 > obj2) - (obj1 < obj2)
     # if return value < 0: version2 upper than version1
+
 
 # 이슈 수정 중 함수 버그 발견해서 수정함 #36
 def version_compare(version1: str, version2: str):
@@ -243,7 +244,6 @@ class WIZMakeCMD:
         except Exception as e:
             self.logger.error(e)
         return cmd_list
-
 
     def factory_reset(self, mac_addr, idcode, set_pw, devname, param):
         self.logger.info(f'Factory: {mac_addr}')
