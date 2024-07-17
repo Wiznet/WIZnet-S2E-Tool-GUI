@@ -1,6 +1,7 @@
 import re
 from utils import logger
 from WIZMakeCMD import ONE_PORT_DEV, TWO_PORT_DEV, SECURITY_DEVICE
+from collections import namedtuple
 
 
 ip_pattern = r"^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
@@ -223,13 +224,17 @@ class Wizcmdset():
 
         self.get_cmdset(self.name)
 
-    def get_cmdset(self, name):
+    def get_cmdset(self, name, mode=None):
         if name in ONE_PORT_DEV:
             logger.debug('One port device')
             self.cmdset = WIZ75X_CMDSET
         elif name in SECURITY_DEVICE:
-            logger.debug('Security device')
-            self.cmdset = WIZ5XX_RP_CMDSET
+            if mode != DeviceStatus.boot:
+                logger.debug("Security device")
+                self.cmdset = WIZ5XX_RP_CMDSET
+            else:
+                logger.debug("Security device in BOOT mode")
+                self.cmdset = BOOT_CMDSET
         elif name in TWO_PORT_DEV:
             logger.debug('Two port device')
             self.cmdset = WIZ752_CMDSET
@@ -281,6 +286,16 @@ class Wizcmdset():
             return True
         return False
 
+
+__devst = namedtuple("__devst", ["boot", "upgrade", "app"])
+SysTabIndex = namedtuple("SysTabIndex", ["idx", "name"])
+SysTabObjectText = namedtuple("SysTabObjectText", ["object", "ui_text"])
+ExcludeTabInMinimum = ("advance_tab", "mqtt_tab", "certificate_tab",)
+ExcludeTabInCommon = ("mqtt_tab", "certificate_tab",)
+IncludeTabInCommon = ("basic_tab", "advance_tab",)
+IncludeTabIn7xx = ("basic_tab", "advance_tab", "userio_tab",)
+DeviceStatus = __devst("BOOT", "UPGRADE", "APP")
+DeviceStatusMinimum = (DeviceStatus.boot, DeviceStatus.upgrade)
 
 if __name__ == "__main__":
     # wizcmdset = Wizcmdset("WIZ750SR")

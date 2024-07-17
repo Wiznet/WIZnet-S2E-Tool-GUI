@@ -48,7 +48,7 @@ class TCPClient:
 
     @socket_exception_handler(logger)
     def connect(self):
-        self.sock.settimeout(10)
+        self.sock.settimeout(3)
         try:
             self.sock.connect((self.dst_ip, self.dst_port))
             self.state = SockState.SOCK_CONNECT
