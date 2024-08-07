@@ -32,6 +32,7 @@ Python interpreter based and it is platform independent. It works on python vers
 
 ### 1 Port Serial to Ethernet Module
 
+- [W232N](https://docs.wiznet.io/Product/S2E-Module/Industrial/W232N-datasheet-kr)
 - [WIZ750SR](https://docs.wiznet.io/Product/S2E-Module/WIZ750SR)
   - [WIZ750SR Github repository](https://github.com/Wiznet/WIZ750SR)
 - [WIZ750SR-100](https://docs.wiznet.io/Product/S2E-Module/WIZ750SR-1xx-Series/WIZ750SR-100)
