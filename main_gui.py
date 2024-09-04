@@ -276,11 +276,13 @@ class WIZWindow(QMainWindow, main_window):
         self.groupbox_ch1_timeout.hide()
         # self.groupbox_ch1_timeout.setEnabled(False)
 
-        # for WIZ5XXSR custom module
-        for i in range(3, 10):
-            lineedit_subtopic = getattr(self, f'lineedit_mqtt_subtopic_{i}')
-            # lineedit_subtopic.hide()
-            lineedit_subtopic.setEnabled(False)
+        # for WIZ5XXSR-RP and similar models like W55RP20-S2E, W232N
+        if self.curr_dev in ["WIZ5XXSR-RP", "W55RP20-S2E", "W232N"]:
+            self.groupbox_ch1_timeout.hide()
+            # Disable additional subtopics for MQTT
+            for i in range(3, 10):
+                lineedit_subtopic = getattr(self, f'lineedit_mqtt_subtopic_{i}')
+                lineedit_subtopic.setEnabled(False)
 
     def init_btn_factory(self):
         # factory_option = ['Factory default settings', 'Factory default firmware']
@@ -525,7 +527,7 @@ class WIZWindow(QMainWindow, main_window):
                 self.radiobtn_group_s0.hide()
                 self.radiobtn_group_s1.hide()
                 self.group_dtrdsr.show()
-                if 'WIZ5XXSR' in self.curr_dev:
+                if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev:
                     self.groupbox_ch1_timeout.show()
                     self.groupbox_ch1_timeout.setEnabled(True)
                 else:
@@ -547,7 +549,7 @@ class WIZWindow(QMainWindow, main_window):
             self.ch1_mqtts_client.setEnabled(True)
             # Current bank (RO)
             self.group_current_bank.show()
-            if 'WIZ5XXSR' in self.curr_dev:
+            if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev:
                 self.group_current_bank.hide()
                 # self.combobox_current_bank.setEnabled(True)
             else:
@@ -597,7 +599,7 @@ class WIZWindow(QMainWindow, main_window):
             # self.logger.debug(f'totalTab: {len(self.generalTab)}, currentTab: {self.generalTab.currentIndex()}')
             # self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
             # self.generalTab.setTabEnabled(2, True)
-            if 'WIZ5XXSR' in self.curr_dev:
+            if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in ['W55RP20-S2E', 'W232N']:
                 # if len(self.generalTab) == 4:
                 #     # Basic settings / User I/O / Options / MQTT Options / Certificate manager
                 #     self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
@@ -605,7 +607,7 @@ class WIZWindow(QMainWindow, main_window):
                 # # Use IO A, B only
                 # self.frame_gpioc.setEnabled(False)
                 # self.frame_gpiod.setEnabled(False)
-                pass
+                pass # Assuming 'WIZ5XXSR' includes 'W55RP20-S2E', 'W232N'
             else:
                 if len(self.generalTab) == 2:
                     # Basic settings / User I/O / Options
@@ -622,7 +624,6 @@ class WIZWindow(QMainWindow, main_window):
                 self.frame_gpioc.setEnabled(True)
                 self.frame_gpiod.setEnabled(True)
         else:
-            # if 'WIZ510SSL' in self.curr_dev:
             if self.curr_dev in SECURITY_DEVICE:
                 if len(self.generalTab) == 5:
                     # Remove userio tab
@@ -1518,7 +1519,7 @@ class WIZWindow(QMainWindow, main_window):
                 if 'BA' in dev_data:
                     self.combobox_current_bank.setCurrentIndex(int(dev_data['BA']))
                 # SSL Timeout
-                if 'WIZ5XXSR' in self.curr_dev:
+                if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev:
                     pass
                     # if 'UF' in dev_data:
                     #     self.combobox_current_bank.setCurrentIndex(int(dev_data['UF']))
@@ -1620,7 +1621,7 @@ class WIZWindow(QMainWindow, main_window):
             setcmd['PR'] = str(self.ch1_parity.currentIndex())
             setcmd['SB'] = str(self.ch1_stopbit.currentIndex())
             setcmd['FL'] = str(self.ch1_flow.currentIndex())
-            if 'WIZ5XXSR' in self.curr_dev:
+            if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev:
                 setcmd['PO'] = str(self.modbus_protocol.currentIndex())
             setcmd['PT'] = self.ch1_pack_time.text()
             setcmd['PS'] = self.ch1_pack_size.text()
@@ -1753,7 +1754,7 @@ class WIZWindow(QMainWindow, main_window):
                 else:
                     setcmd['CE'] = '0'
                 # 2022.05.10 add option
-                if 'WIZ5XXSR' in self.curr_dev:
+                if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev:
                     # Bank setting
                     # setcmd['UF'] = str(self.combobox_current_bank.currentIndex())
                     # Add ssl timeout option
@@ -2019,8 +2020,8 @@ class WIZWindow(QMainWindow, main_window):
 
             if self.curr_dev in SECURITY_DEVICE:
                 self.logger.info('SECURITY_DEVICE update')
-                if 'WIZ5XXSR' in self.curr_dev:
-                    self.logger.info('WIZ5XXSR update')
+                if 'WIZ5XXSR-RP' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev:
+                    self.logger.info(f'{self.curr_dev} update')
                     self.firmware_update(self.fw_filename, self.fw_filesize)
                 else:
                     # Get current bank number
