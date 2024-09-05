@@ -20,7 +20,7 @@ ONE_PORT_DEV = [
     "W7500-S2E",
     "W7500P-S2E",
 ]
-SECURITY_DEVICE = ["WIZ510SSL", "WIZ5XXSR-RP", "WIZ5XXSR-RP_E-SAVE"]
+SECURITY_DEVICE = ["WIZ510SSL", "WIZ5XXSR-RP", "WIZ5XXSR-RP_E-SAVE", "W55RP20-S2E", "W232N"]
 TWO_PORT_DEV = ["WIZ752SR-12x", "WIZ752SR-120", "WIZ752SR-125"]
 
 """
@@ -165,7 +165,7 @@ class WIZMakeCMD:
             if 'WIZ510SSL' in devname:
                 for cmd in cmd_wiz510ssl:
                     cmd_list.append([cmd, ""])
-            elif 'WIZ5XXSR' in devname:
+            elif 'WIZ5XXSR' in devname or 'W55RP20-S2E' in devname or 'W232N' in devname:
                 print(f"search::devstatus={devstatus}")
                 if devstatus == 'BOOT':
                     for cmd in cmd_1p_boot:
@@ -233,7 +233,7 @@ class WIZMakeCMD:
                 if 'WIZ510SSL' in devname:
                     for cmd in cmd_wiz510ssl:
                         cmd_list.append([cmd, ""])
-                elif 'WIZ5XXSR' in devname:
+                elif 'WIZ5XXSR' in devname or 'W55RP20-S2E' in devname or 'W232N' in devname:
                     if status != "BOOT":
                         for cmd in cmd_wiz5xxsr:
                             cmd_list.append([cmd, ""])
