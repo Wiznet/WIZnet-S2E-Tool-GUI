@@ -595,7 +595,7 @@ class WIZWindow(QMainWindow, main_window):
         # WIZ5XX v1.0.8 이상은 modbus 사용 가능 #36
         else:
             self.modbus_protocol.setEnabled(True)
-        if "WIZ750" in self.curr_dev:
+        if "WIZ750" in self.curr_dev or "W232N" in self.curr_dev:
             if version_compare("1.2.0", self.curr_ver) <= 0:
                 # setcmd['TR'] = self.tcp_timeout.text()
                 self.tcp_timeout.setEnabled(True)
@@ -609,9 +609,16 @@ class WIZWindow(QMainWindow, main_window):
 
             # 20221208 Modify baud rate temperarily
             self.ch1_baud.removeItem(14)
+            self.ch1_baud.removeItem(15)
+        elif "W55RP20-S2E" in self.curr_dev:
+            # W55RP20-S2E의 경우 921600 baud rate 옵션 추가
+            if self.ch1_baud.count() == 15:
+                self.ch1_baud.insertItem(15, "921600")
         else:
             if self.ch1_baud.count() == 14:
                 self.ch1_baud.insertItem(14, "460800")
+                self.ch1_baud.removeItem(15)
+
 
         # SC: Status pin option
         if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
@@ -3082,3 +3089,4 @@ if __name__ == "__main__":
     wizwindow = WIZWindow()
     wizwindow.show()
     app.exec_()
+

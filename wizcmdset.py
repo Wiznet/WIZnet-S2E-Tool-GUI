@@ -27,7 +27,7 @@ common_cmdset = {
     "LP": ["Local port number", port_pattern, {}, "RW"],
     "RH": ["Remote Host IP address", ip_pattern, {}, "RW"],
     "RP": ["Remote Host Port number", port_pattern, {}, "RW"],
-    "BR": ["UART Baud rate", "^([0-9]|1[0-4])$", baudrate_option, "RW"],
+    "BR": ["UART Baud rate", "^([0-9]|1[0-5])$", baudrate_option, "RW"],
     "DB": ["UART Data bit length", "^[0-1]$", {"0": "7-bit", "1": "8-bit"}, "RW"],
     "PR": ["UART Parity bit", "^[0-2]$", {"0": "NONE", "1": "ODD", "2": "EVEN"}, "RW"],
     "SB": ["UART Stop bit length", "^[0-1]$", {"0": "1-bit", "1": "2-bit"}, "RW"],
@@ -312,3 +312,4 @@ if __name__ == "__main__":
     print(wizcmdset.getparamdescription(cmd, "2B2C2D"))
 
     print(wizcmdset.isvalidparameter(cmd, "192.168.11.3"))
+
