@@ -12,6 +12,7 @@ import re
 ONE_PORT_DEV = [
     "WIZ750SR",
     "WIZ750SR-1xx",
+    "WIZ750SR-1xx_BANF", #BANF version
     # "WIZ750SR-100",
     # "WIZ750SR-105",
     # "WIZ750SR-110",

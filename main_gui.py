@@ -607,9 +607,17 @@ class WIZWindow(QMainWindow, main_window):
             self.ch1_mqttclient.setEnabled(False)
             self.ch1_mqtts_client.setEnabled(False)
 
-            # 20221208 Modify baud rate temperarily
-            self.ch1_baud.removeItem(14)
-            self.ch1_baud.removeItem(15)
+            # Baud Rate 설정
+            if "BANF" in self.curr_dev:
+                # 'WIZ750'과 'BANF'가 모두 포함된 경우
+                if self.ch1_baud.count() == 14:
+                    self.ch1_baud.insertItem(14, "460800")
+                self.ch1_baud.removeItem(15)
+            else:
+                # 'WIZ750' 또는 'W232N'만 포함된 경우
+                self.ch1_baud.removeItem(14)
+                self.ch1_baud.removeItem(15)
+
         elif "W55RP20-S2E" in self.curr_dev:
             # W55RP20-S2E의 경우 921600 baud rate 옵션 추가
             if self.ch1_baud.count() == 15:
@@ -618,7 +626,6 @@ class WIZWindow(QMainWindow, main_window):
             if self.ch1_baud.count() == 14:
                 self.ch1_baud.insertItem(14, "460800")
                 self.ch1_baud.removeItem(15)
-
 
         # SC: Status pin option
         if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
