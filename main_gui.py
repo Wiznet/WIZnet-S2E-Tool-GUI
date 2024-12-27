@@ -402,22 +402,34 @@ class WIZWindow(QMainWindow, main_window):
         else:
             self.object_config()
 
-    def net_changed(self, ifs):
-        self.logger.info(self.combobox_net_interface.currentText())
-        ifs = self.combobox_net_interface.currentText().split(":")
+    def net_changed(self, index):
+        net_text = self.combobox_net_interface.currentText()
+        self.logger.info(f"net_changed() called - currentText={net_text!r}")
+
+        # 1) placeholder 혹은 잘못된 값일 경우
+        if not net_text or ":" not in net_text:
+            self.statusbar.showMessage("No valid network interface selected.")
+            self.selected_eth = None
+            return
+
+        # 2) ':'로 split
+        ifs = net_text.split(":", 1)  # 최대 1회만 나누기
         selected_ip = ifs[0]
         selected_name = ifs[1]
 
-        self.statusbar.showMessage(
-            " Selected eth: %s: %s" % (selected_ip, selected_name)
-        )
+        self.statusbar.showMessage(f"Selected eth: {selected_ip} - {selected_name}")
         self.selected_eth = selected_ip
+
 
     # Get network adapter & IP list
     def net_adapter_info(self):
         self.netconfig_menu = QMenu("Network Interface Config", self)
         self.netconfig_menu.setFont(self.midfont)
         self.menuOption.addMenu(self.netconfig_menu)
+
+        # combobox init
+        self.combobox_net_interface.clear()
+        self.combobox_net_interface.addItem("<Select Network Interface>")
 
         adapters = ifaddr.get_adapters()
         self.net_list = []
@@ -441,10 +453,34 @@ class WIZWindow(QMainWindow, main_window):
                     # ipv6_addr = ip.ip
                     pass
 
+        # add refresh action 
+        refresh_action = QAction("Refresh", self)
+        refresh_action.setFont(self.midfont)
+        refresh_action.triggered.connect(self.on_refresh_network_adapter)
+        self.netconfig_menu.addSeparator()
+        self.netconfig_menu.addAction(refresh_action)
         # Default: not selected
-        self.combobox_net_interface.setCurrentIndex(-1)
+        self.combobox_net_interface.setCurrentIndex(0)
         # 힌트 텍스트 설정
         # self.combobox_net_interface.setPlaceholderText('<Select Network Interface>')
+        
+    def on_refresh_network_adapter(self):
+        # 1) "Network Interface Config" 메뉴 제거
+        for action in self.menuOption.actions():
+            # menuBar에서 addMenu(...)는 결국 QAction을 반환
+            if action.text() == "Network Interface Config":
+                # self.menuOption에서 해당 QAction(=서브메뉴)을 제거
+                self.menuOption.removeAction(action)
+                break
+
+        # 2) net_adapter_info() 다시 호출
+        self.net_adapter_info()
+
+        # 3) 로그 남기기
+        self.logger.info("Network interface config menu re-created.")
+        self.statusbar.showMessage("Network interface config menu re-created.")
+
+    
 
     def disable_object(self):
         self.btn_reset.setEnabled(False)
@@ -3085,6 +3121,12 @@ class ThreadProgress(QtCore.QThread):
 
 
 if __name__ == "__main__":
+    
+    # High DPI mode
+    from PyQt5.QtCore import Qt
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
     app = QApplication(sys.argv)
     wizwindow = WIZWindow()
     wizwindow.show()
