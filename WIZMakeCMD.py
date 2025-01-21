@@ -165,7 +165,7 @@ class WIZMakeCMD:
             if 'WIZ510SSL' in devname:
                 for cmd in cmd_wiz510ssl:
                     cmd_list.append([cmd, ""])
-            elif 'WIZ5XXSR' in devname or 'W55RP20-S2E' in devname or 'W232N' in devname:
+            elif 'WIZ5XXSR' in devname:
                 print(f"search::devstatus={devstatus}")
                 if devstatus == 'BOOT':
                     for cmd in cmd_1p_boot:
@@ -174,6 +174,22 @@ class WIZMakeCMD:
                     return cmd_list
                 # 버전이 1.0.8 이상인 경우에만 "PO" 추가 #36
                 temp_cmd_wiz5xxsr = (cmd_wiz5xxsr + ["PO"]) if version_compare("1.0.8", version) <= 0  else cmd_wiz5xxsr
+                for cmd in temp_cmd_wiz5xxsr:
+                    cmd_list.append([cmd, ""])
+                print(f"search::cmd_list2={cmd_list}")
+                # Commands for E-SAVE
+                #if 'E-SAVE' in devname:
+                #    for cmd in cmd_wiz5xxsr_esave:
+                #        cmd_list.append([cmd, ""])
+            elif 'W55RP20-S2E' in devname or 'W232N' in devname:
+                print(f"search::devstatus={devstatus}")
+                if devstatus == 'BOOT':
+                    for cmd in cmd_1p_boot:
+                        cmd_list.append([cmd, ""])
+                    print(f"search::cmd_list={cmd_list}")
+                    return cmd_list
+                # 버전이 1.0.8 이상인 경우에만 "PO" 추가 #36
+                temp_cmd_wiz5xxsr = cmd_wiz5xxsr + ["PO"]
                 for cmd in temp_cmd_wiz5xxsr:
                     cmd_list.append([cmd, ""])
                 print(f"search::cmd_list2={cmd_list}")
