@@ -623,14 +623,14 @@ class WIZWindow(QMainWindow, main_window):
         )
         if self.curr_st in DeviceStatusMinimum:
             return
-        if "WIZ5XX" not in self.curr_dev:
-            self.modbus_protocol.setEnabled(False)
-        # WIZ5XX 도 v1.0.8 미만은 사용 불가 #36
-        elif version_compare(self.curr_ver, "1.0.8") < 0:
-            self.modbus_protocol.setEnabled(False)
-        # WIZ5XX v1.0.8 이상은 modbus 사용 가능 #36
-        else:
+        if (
+            ("WIZ5XXSR" in self.curr_dev and version_compare("1.0.8", self.curr_ver) <= 0)
+            or ("W55RP20-S2E" in self.curr_dev)
+            or ("W232N" in self.curr_dev)
+            ):
             self.modbus_protocol.setEnabled(True)
+        else:
+            self.modbus_protocol.setEnabled(False)
         if "WIZ750" in self.curr_dev or "W232N" in self.curr_dev:
             if version_compare("1.2.0", self.curr_ver) <= 0:
                 # setcmd['TR'] = self.tcp_timeout.text()
@@ -1693,6 +1693,16 @@ class WIZWindow(QMainWindow, main_window):
                     self.status_dsr.setChecked(True)
                     self.checkbox_enable_dsr.setChecked(True)
 
+            # Modbus(PO)
+            if "PO" in dev_data:
+                try:
+                    # dev_data["PO"]가 "0","1","2" 같은 문자열일 경우
+                    po_val = int(dev_data["PO"])
+                    self.modbus_protocol.setCurrentIndex(po_val)
+                    self.logger.debug(f"Modbus protocol option (PO) set to {po_val}")
+                except Exception as ex:
+                    self.logger.error(f"Error parsing PO: {dev_data['PO']} -> {ex}")
+
             # # Channel 2 config (For two Port device)
             if self.curr_dev in TWO_PORT_DEV:
                 # device info - channel 2
@@ -1941,13 +1951,13 @@ class WIZWindow(QMainWindow, main_window):
             setcmd["FL"] = str(self.ch1_flow.currentIndex())
             # 문맥으로 보면 modbus_protocol.isEnabled() 로 처리하는게 맞지만 항상 False 가 나와서 모델&버전 비교로 대체 #36
             if (
-                "WIZ5XXSR" in self.curr_dev
-                and version_compare("1.0.8", self.curr_ver) <= 0
+                ("WIZ5XXSR" in self.curr_dev and version_compare("1.0.8", self.curr_ver) <= 0)
+                or ("W55RP20-S2E" in self.curr_dev)
+                or ("W232N" in self.curr_dev)
             ):
-                print(
-                    f"set PO valid, self.curr_dev={self.curr_dev}, self.curr_ver={self.curr_ver}"
-                )
+                print(f"set PO valid, self.curr_dev={self.curr_dev}, self.curr_ver={self.curr_ver}")
                 setcmd["PO"] = str(self.modbus_protocol.currentIndex())
+
             setcmd["PT"] = self.ch1_pack_time.text()
             setcmd["PS"] = self.ch1_pack_size.text()
             setcmd["PD"] = self.ch1_pack_char.text()
