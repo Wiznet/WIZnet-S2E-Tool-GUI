@@ -617,6 +617,15 @@ class WIZWindow(QMainWindow, main_window):
 
     # Object config for some Devices or F/W version
     def object_config_for_device(self):
+        # IP20 장비는 Certificate manager 탭 숨김
+        if self.curr_dev == "IP20":
+            # certificate_tab_text는 init_ui_object에서 저장됨
+            n_tabs = self.generalTab.count()
+            for idx in range(n_tabs):
+                if self.generalTab.tabText(idx) == self.certificate_tab_text:
+                    self.generalTab.removeTab(idx)
+                    break
+        # ...existing code...
         # WIZ5XX 가 아니면 modbus 는 사용 불가 #36
         print(
             f"model={self.curr_dev},ver={self.curr_ver},version compare={version_compare(self.curr_ver, '1.0.8')},status={self.curr_st}"
@@ -627,6 +636,7 @@ class WIZWindow(QMainWindow, main_window):
             ("WIZ5XXSR" in self.curr_dev and version_compare("1.0.8", self.curr_ver) <= 0)
             or ("W55RP20-S2E" in self.curr_dev)
             or ("W232N" in self.curr_dev)
+            or ("IP20" in self.curr_dev)
             ):
             self.modbus_protocol.setEnabled(True)
         else:
@@ -646,7 +656,7 @@ class WIZWindow(QMainWindow, main_window):
             # 20221208 Modify baud rate temperarily
             self.ch1_baud.removeItem(14)
             self.ch1_baud.removeItem(15)
-        elif "W55RP20-S2E" in self.curr_dev:
+        elif (("W55RP20-S2E" in self.curr_dev) or ("IP20" in self.curr_dev)):
             # W55RP20-S2E의 경우 921600 baud rate 옵션 추가
             if self.ch1_baud.count() == 15:
                 self.ch1_baud.insertItem(15, "921600")
@@ -664,7 +674,7 @@ class WIZWindow(QMainWindow, main_window):
                 self.radiobtn_group_s0.hide()
                 self.radiobtn_group_s1.hide()
                 self.group_dtrdsr.show()
-                if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev:
+                if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev or 'IP20' in self.curr_dev:
                     self.groupbox_ch1_timeout.show()
                     self.groupbox_ch1_timeout.setEnabled(True)
                 else:
@@ -681,12 +691,17 @@ class WIZWindow(QMainWindow, main_window):
             self.factory_setting_action.setEnabled(True)
             self.factory_firmware_action.setEnabled(True)
             # 'OP' option
-            self.ch1_ssl_tcpclient.setEnabled(True)
+            # IP20은 SSL, MQTTs 비활성화
+            if self.curr_dev == "IP20":
+                self.ch1_ssl_tcpclient.setEnabled(False)
+                self.ch1_mqtts_client.setEnabled(False)
+            else:
+                self.ch1_ssl_tcpclient.setEnabled(True)
+                self.ch1_mqtts_client.setEnabled(True)
             self.ch1_mqttclient.setEnabled(True)
-            self.ch1_mqtts_client.setEnabled(True)
             # Current bank (RO)
             self.group_current_bank.show()
-            if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev:
+            if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev or 'IP20' in self.curr_dev:
                 self.group_current_bank.hide()
                 # self.combobox_current_bank.setEnabled(True)
             else:
@@ -784,7 +799,7 @@ class WIZWindow(QMainWindow, main_window):
             # self.logger.debug(f'totalTab: {len(self.generalTab)}, currentTab: {self.generalTab.currentIndex()}')
             # self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
             # self.generalTab.setTabEnabled(2, True)
-            if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev:
+            if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev or 'IP20' in self.curr_dev:
                 # if len(self.generalTab) == 4:
                 #     # Basic settings / User I/O / Options / MQTT Options / Certificate manager
                 #     self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
@@ -1840,7 +1855,7 @@ class WIZWindow(QMainWindow, main_window):
                 if "BA" in dev_data and dev_data["BA"].isdigit():
                     self.combobox_current_bank.setCurrentIndex(int(dev_data["BA"]))
                 # SSL Timeout
-                if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev:
+                if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev or 'IP20' in self.curr_dev:
                     pass
                     # if 'UF' in dev_data:
                     #     self.combobox_current_bank.setCurrentIndex(int(dev_data['UF']))
@@ -1954,6 +1969,7 @@ class WIZWindow(QMainWindow, main_window):
                 ("WIZ5XXSR" in self.curr_dev and version_compare("1.0.8", self.curr_ver) <= 0)
                 or ("W55RP20-S2E" in self.curr_dev)
                 or ("W232N" in self.curr_dev)
+                or ("IP20" in self.curr_dev)
             ):
                 print(f"set PO valid, self.curr_dev={self.curr_dev}, self.curr_ver={self.curr_ver}")
                 setcmd["PO"] = str(self.modbus_protocol.currentIndex())
@@ -2121,7 +2137,7 @@ class WIZWindow(QMainWindow, main_window):
                 else:
                     setcmd["CE"] = "0"
                 # 2022.05.10 add option
-                if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev:
+                if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev or 'IP20' in self.curr_dev:
                     # Bank setting
                     # setcmd['UF'] = str(self.combobox_current_bank.currentIndex())
                     # Add ssl timeout option
@@ -2432,7 +2448,7 @@ class WIZWindow(QMainWindow, main_window):
 
             if self.curr_dev in SECURITY_DEVICE:
                 self.logger.info("SECURITY_DEVICE update")
-                if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev:
+                if 'WIZ5XXSR' in self.curr_dev or 'W55RP20-S2E' in self.curr_dev or 'W232N' in self.curr_dev or 'IP20' in self.curr_dev:
                     self.logger.info(f'{self.curr_dev} update')
                     self.firmware_update(self.fw_filename, self.fw_filesize)
                 else:
