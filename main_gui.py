@@ -344,10 +344,15 @@ class WIZWindow(QMainWindow, main_window):
         # group_packing_12는 기본적으로 숨김 (W55RP20-S2E일 때만 표시)
         self.group_packing_12.hide()
         
-        # ch1_pack_char_3 최대 30글자로 제한 (W55RP20-S2E SD 명령어용)
+        # group_packing_13은 기본적으로 숨김 (W55RP20-S2E, W232N, IP20일 때만 표시)
+        self.group_packing_13.hide()
+        
+        # ch1_pack_char_3 최대 30글자로 제한 (W55RP20-S2E, W232N, IP20 SD 명령어용)
         self.ch1_pack_char_3.setMaxLength(30)
-        # ch1_pack_char_4 최대 30글자로 제한 (W55RP20-S2E DD 명령어용)
+        # ch1_pack_char_4 최대 30글자로 제한 (W55RP20-S2E, W232N, IP20 DD 명령어용)
         self.ch1_pack_char_4.setMaxLength(30)
+        # ch1_pack_char_5 최대 30글자로 제한 (W55RP20-S2E, W232N, IP20 SE 명령어용)
+        self.ch1_pack_char_5.setMaxLength(30)
 
         # for WIZ5XXSR custom module
         # @TODO: a6e5282d1e 에서 U3~U9 가 삭제되어 아래 코드도 삭제되어야 함
@@ -635,10 +640,13 @@ class WIZWindow(QMainWindow, main_window):
                     break
         
         # W55RP20-S2E, W232N, IP20인 경우에만 group_packing_12 표시 (SD/DD 기능)
-        if self.curr_dev in ["W55RP20-S2E", "W232N", "IP20"]:
+        # 버전이 1.1.8 이상인 경우에만 표시
+        if self.curr_dev in ["W55RP20-S2E", "W232N", "IP20"] and version_compare(self.curr_ver, "1.1.8") >= 0:
             self.group_packing_12.show()
+            self.group_packing_13.show()
         else:
             self.group_packing_12.hide()
+            self.group_packing_13.hide()
         
         # ...existing code...
         # WIZ5XX 가 아니면 modbus 는 사용 불가 #36
@@ -1696,22 +1704,30 @@ class WIZWindow(QMainWindow, main_window):
                 self.ch1_pack_size.setText(dev_data["PS"])
             if "PD" in dev_data:
                 self.ch1_pack_char.setText(dev_data["PD"])
-            # Send Data at Connection - W55RP20-S2E only
-            if "SD" in dev_data:
+            # Send Data at Connection - W55RP20-S2E only (버전 1.1.8 이상)
+            if "SD" in dev_data and self.curr_dev in ["W55RP20-S2E", "W232N", "IP20"] and version_compare(self.curr_ver, "1.1.8") >= 0:
                 print(f"[DEBUG] Loading SD data: '{dev_data['SD']}'")
                 # 공백(" ")인 경우 빈 문자열로 표시
                 if dev_data["SD"] == " ":
                     self.ch1_pack_char_3.clear()
                 else:
                     self.ch1_pack_char_3.setText(dev_data["SD"])
-            # Send Data at Disconnection - W55RP20-S2E only
-            if "DD" in dev_data:
+            # Send Data at Disconnection - W55RP20-S2E only (버전 1.1.8 이상)
+            if "DD" in dev_data and self.curr_dev in ["W55RP20-S2E", "W232N", "IP20"] and version_compare(self.curr_ver, "1.1.8") >= 0:
                 print(f"[DEBUG] Loading DD data: '{dev_data['DD']}'")
                 # 공백(" ")인 경우 빈 문자열로 표시
                 if dev_data["DD"] == " ":
                     self.ch1_pack_char_4.clear()
                 else:
                     self.ch1_pack_char_4.setText(dev_data["DD"])
+            # Ethernet Data Connection Condition - W55RP20-S2E, W232N, IP20 (버전 1.1.8 이상)
+            if "SE" in dev_data and self.curr_dev in ["W55RP20-S2E", "W232N", "IP20"] and version_compare(self.curr_ver, "1.1.8") >= 0:
+                print(f"[DEBUG] Loading SE data: '{dev_data['SE']}'")
+                # 공백(" ")인 경우 빈 문자열로 표시
+                if dev_data["SE"] == " ":
+                    self.ch1_pack_char_5.clear()
+                else:
+                    self.ch1_pack_char_5.setText(dev_data["SE"])
             # Inactive timer - channel 1
             if "IT" in dev_data:
                 self.ch1_inact_timer.setText(dev_data["IT"])
@@ -2013,8 +2029,8 @@ class WIZWindow(QMainWindow, main_window):
             setcmd["PT"] = self.ch1_pack_time.text()
             setcmd["PS"] = self.ch1_pack_size.text()
             setcmd["PD"] = self.ch1_pack_char.text()
-            # Send Data at Connection - W55RP20-S2E, W232N, IP20
-            if self.curr_dev in ["W55RP20-S2E", "W232N", "IP20"]:
+            # Send Data at Connection - W55RP20-S2E, W232N, IP20 (버전 1.1.8 이상)
+            if self.curr_dev in ["W55RP20-S2E", "W232N", "IP20"] and version_compare(self.curr_ver, "1.1.8") >= 0:
                 sd_data = self.ch1_pack_char_3.text()
                 # 최대 30글자로 제한
                 if len(sd_data) > 30:
@@ -2024,7 +2040,7 @@ class WIZWindow(QMainWindow, main_window):
                 print(f"[DEBUG] Saving SD data: '{sd_data}'")
                 setcmd["SD"] = sd_data if sd_data else " "
                 
-                # Send Data at Disconnection - W55RP20-S2E only
+                # Send Data at Disconnection - W55RP20-S2E, W232N, IP20
                 dd_data = self.ch1_pack_char_4.text()
                 # 최대 30글자로 제한
                 if len(dd_data) > 30:
@@ -2033,6 +2049,16 @@ class WIZWindow(QMainWindow, main_window):
                 # 빈 문자열인 경우 공백 전송 (MQTT와 동일한 방식)
                 print(f"[DEBUG] Saving DD data: '{dd_data}'")
                 setcmd["DD"] = dd_data if dd_data else " "
+                
+                # Ethernet Data Connection Condition - W55RP20-S2E, W232N, IP20
+                se_data = self.ch1_pack_char_5.text()
+                # 최대 30글자로 제한
+                if len(se_data) > 30:
+                    se_data = se_data[:30]
+                    self.ch1_pack_char_5.setText(se_data)  # UI도 업데이트
+                # 빈 문자열인 경우 공백 전송 (MQTT와 동일한 방식)
+                print(f"[DEBUG] Saving SE data: '{se_data}'")
+                setcmd["SE"] = se_data if se_data else " "
             # Inactive timer - channel 1
             setcmd["IT"] = self.ch1_inact_timer.text()
             # TCP keep alive - channel 1
