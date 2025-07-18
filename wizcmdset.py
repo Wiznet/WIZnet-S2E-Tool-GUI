@@ -149,8 +149,9 @@ WIZ5XX_RP_CMDSET = {
     "PK": ["Private Key", "", {}, "WO"],
     "UF": ["Copy firmware from firmware binary bank to application bank", "", {}, "RW"],
     "PO": ["Status of Modbus protocol", "^[0-2]$", {}, "RW"],
-    "SD": ["Send Data at Connection", "^.{0,30}$", {}, "RW"],  # W55RP20-S2E only, 최대 30글자
-    "DD": ["Send Data at Disconnection", "^.{0,30}$", {}, "RW"],  # W55RP20-S2E only, 최대 30글자
+    "SD": ["Send Data at Connection", "^.{0,30}$", {}, "RW"],  # W55RP20-S2E, W232N, IP20, 최대 30글자
+    "DD": ["Send Data at Disconnection", "^.{0,30}$", {}, "RW"],  # W55RP20-S2E, W232N, IP20, 최대 30글자
+    "SE": ["Ethernet Data Connection Condition", "^.{0,30}$", {}, "RW"],  # W55RP20-S2E, W232N, IP20, 최대 30글자
 }
 
 # boot mode
