@@ -70,6 +70,9 @@ cmd_wiz510ssl_added = ['BA']
 # 전역에서 "PO" 삭제 #36
 cmd_wiz5xxsr_added = ['SO', 'UF']
 
+# W55RP20-S2E specific commands
+cmd_w55rp20_added = ['SD', 'DD']  # Send Data at Connection, Send Data at Disconnection
+
 # WIZ5XXSR-RP_E-SAVE commands
 #cmd_wiz5xxsr_esave = ['U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9']
 
@@ -85,6 +88,7 @@ cmd_2p_default = cmd_ch1 + cmd_ch2
 # Security devices
 cmd_wiz510ssl = cmd_security_base + cmd_wiz510ssl_added
 cmd_wiz5xxsr = cmd_security_base + cmd_wiz5xxsr_added
+cmd_w55rp20 = cmd_security_base + cmd_wiz5xxsr_added + cmd_w55rp20_added
 
 
 # @TODO:@BUG 아래 경우 1을 반환해야 하는데 -1을 반환함
@@ -181,7 +185,19 @@ class WIZMakeCMD:
                 #if 'E-SAVE' in devname:
                 #    for cmd in cmd_wiz5xxsr_esave:
                 #        cmd_list.append([cmd, ""])
-            elif 'W55RP20-S2E' in devname or 'W232N' in devname or 'IP20' in devname:
+            elif 'W55RP20-S2E' in devname:
+                print(f"search::devstatus={devstatus}")
+                if devstatus == 'BOOT':
+                    for cmd in cmd_1p_boot:
+                        cmd_list.append([cmd, ""])
+                    print(f"search::cmd_list={cmd_list}")
+                    return cmd_list
+                # W55RP20-S2E는 SD 명령어 포함
+                temp_cmd_w55rp20 = cmd_w55rp20 + ["PO"]
+                for cmd in temp_cmd_w55rp20:
+                    cmd_list.append([cmd, ""])
+                print(f"search::cmd_list2={cmd_list}")
+            elif 'W232N' in devname or 'IP20' in devname:
                 print(f"search::devstatus={devstatus}")
                 if devstatus == 'BOOT':
                     for cmd in cmd_1p_boot:
@@ -249,7 +265,14 @@ class WIZMakeCMD:
                 if 'WIZ510SSL' in devname:
                     for cmd in cmd_wiz510ssl:
                         cmd_list.append([cmd, ""])
-                elif 'WIZ5XXSR' in devname or 'W55RP20-S2E' in devname or 'W232N' in devname or 'IP20' in devname:
+                elif 'W55RP20-S2E' in devname:
+                    if status != "BOOT":
+                        for cmd in cmd_w55rp20:
+                            cmd_list.append([cmd, ""])
+                    else:
+                        for cmd in cmd_1p_boot:
+                            cmd_list.append([cmd, ""])
+                elif 'WIZ5XXSR' in devname or 'W232N' in devname or 'IP20' in devname:
                     if status != "BOOT":
                         for cmd in cmd_wiz5xxsr:
                             cmd_list.append([cmd, ""])

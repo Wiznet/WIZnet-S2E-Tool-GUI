@@ -340,6 +340,14 @@ class WIZWindow(QMainWindow, main_window):
         # for WIZ5XXSR-RP
         self.groupbox_ch1_timeout.hide()
         # self.groupbox_ch1_timeout.setEnabled(False)
+        
+        # group_packing_12는 기본적으로 숨김 (W55RP20-S2E일 때만 표시)
+        self.group_packing_12.hide()
+        
+        # ch1_pack_char_3 최대 30글자로 제한 (W55RP20-S2E SD 명령어용)
+        self.ch1_pack_char_3.setMaxLength(30)
+        # ch1_pack_char_4 최대 30글자로 제한 (W55RP20-S2E DD 명령어용)
+        self.ch1_pack_char_4.setMaxLength(30)
 
         # for WIZ5XXSR custom module
         # @TODO: a6e5282d1e 에서 U3~U9 가 삭제되어 아래 코드도 삭제되어야 함
@@ -625,6 +633,13 @@ class WIZWindow(QMainWindow, main_window):
                 if self.generalTab.tabText(idx) == self.certificate_tab_text:
                     self.generalTab.removeTab(idx)
                     break
+        
+        # W55RP20-S2E, W232N, IP20인 경우에만 group_packing_12 표시 (SD/DD 기능)
+        if self.curr_dev in ["W55RP20-S2E", "W232N", "IP20"]:
+            self.group_packing_12.show()
+        else:
+            self.group_packing_12.hide()
+        
         # ...existing code...
         # WIZ5XX 가 아니면 modbus 는 사용 불가 #36
         print(
@@ -1524,6 +1539,11 @@ class WIZWindow(QMainWindow, main_window):
         if macaddr in self.dev_profile:
             dev_data = self.dev_profile[macaddr]
             print("clicked device information:", dev_data)
+            print(f"[DEBUG] SD in dev_data: {'SD' in dev_data}")
+            if 'SD' in dev_data:
+                print(f"[DEBUG] SD value: '{dev_data['SD']}'")
+            else:
+                print("[DEBUG] SD not found in dev_data")
             if "ST" in dev_data and dev_data["ST"] in DeviceStatusMinimum:
                 print("get_clicked_devinfo::I'm in!!")
                 print(f"ch1_status={self.ch1_status}")
@@ -1676,6 +1696,22 @@ class WIZWindow(QMainWindow, main_window):
                 self.ch1_pack_size.setText(dev_data["PS"])
             if "PD" in dev_data:
                 self.ch1_pack_char.setText(dev_data["PD"])
+            # Send Data at Connection - W55RP20-S2E only
+            if "SD" in dev_data:
+                print(f"[DEBUG] Loading SD data: '{dev_data['SD']}'")
+                # 공백(" ")인 경우 빈 문자열로 표시
+                if dev_data["SD"] == " ":
+                    self.ch1_pack_char_3.clear()
+                else:
+                    self.ch1_pack_char_3.setText(dev_data["SD"])
+            # Send Data at Disconnection - W55RP20-S2E only
+            if "DD" in dev_data:
+                print(f"[DEBUG] Loading DD data: '{dev_data['DD']}'")
+                # 공백(" ")인 경우 빈 문자열로 표시
+                if dev_data["DD"] == " ":
+                    self.ch1_pack_char_4.clear()
+                else:
+                    self.ch1_pack_char_4.setText(dev_data["DD"])
             # Inactive timer - channel 1
             if "IT" in dev_data:
                 self.ch1_inact_timer.setText(dev_data["IT"])
@@ -1977,6 +2013,26 @@ class WIZWindow(QMainWindow, main_window):
             setcmd["PT"] = self.ch1_pack_time.text()
             setcmd["PS"] = self.ch1_pack_size.text()
             setcmd["PD"] = self.ch1_pack_char.text()
+            # Send Data at Connection - W55RP20-S2E, W232N, IP20
+            if self.curr_dev in ["W55RP20-S2E", "W232N", "IP20"]:
+                sd_data = self.ch1_pack_char_3.text()
+                # 최대 30글자로 제한
+                if len(sd_data) > 30:
+                    sd_data = sd_data[:30]
+                    self.ch1_pack_char_3.setText(sd_data)  # UI도 업데이트
+                # 빈 문자열인 경우 공백 전송 (MQTT와 동일한 방식)
+                print(f"[DEBUG] Saving SD data: '{sd_data}'")
+                setcmd["SD"] = sd_data if sd_data else " "
+                
+                # Send Data at Disconnection - W55RP20-S2E only
+                dd_data = self.ch1_pack_char_4.text()
+                # 최대 30글자로 제한
+                if len(dd_data) > 30:
+                    dd_data = dd_data[:30]
+                    self.ch1_pack_char_4.setText(dd_data)  # UI도 업데이트
+                # 빈 문자열인 경우 공백 전송 (MQTT와 동일한 방식)
+                print(f"[DEBUG] Saving DD data: '{dd_data}'")
+                setcmd["DD"] = dd_data if dd_data else " "
             # Inactive timer - channel 1
             setcmd["IT"] = self.ch1_inact_timer.text()
             # TCP keep alive - channel 1
@@ -2277,6 +2333,7 @@ class WIZWindow(QMainWindow, main_window):
 
     def selected_devinfo(self):
         # 선택된 장치 정보 get
+        selected_row = -1
         for currentItem in self.list_device.selectedItems():
             # _dev_name = currentItem.text()
             # currentItem = <class 'PyQt5.QtWidgets.QTableWidgetItem'>
@@ -2285,14 +2342,23 @@ class WIZWindow(QMainWindow, main_window):
                 self.curr_mac = currentItem.text()
                 self.curr_ver = self.dev_data[self.curr_mac][1]
                 self.curr_st = self.dev_data[self.curr_mac][2]
+                selected_row = currentItem.row()
                 # print('current device:', self.curr_mac, self.curr_ver, self.curr_st)
             elif currentItem.column() == 1:
                 self.curr_dev = currentItem.text()
+                selected_row = currentItem.row()
                 # print('current dev name:', self.curr_dev)
-            self.statusbar.showMessage(
-                " Current device [%s : %s], %s"
-                % (self.curr_mac, self.curr_dev, self.curr_ver)
-            )
+        
+        # 행이 선택되었는데 curr_dev가 설정되지 않은 경우, 해당 행의 1번 열에서 장치명 가져오기
+        if selected_row >= 0 and self.curr_dev is None:
+            dev_name_item = self.list_device.item(selected_row, 1)
+            if dev_name_item:
+                self.curr_dev = dev_name_item.text()
+        
+        self.statusbar.showMessage(
+            " Current device [%s : %s], %s"
+            % (self.curr_mac, self.curr_dev, self.curr_ver)
+        )
 
     def update_result(self, result):
         if result < 0:
