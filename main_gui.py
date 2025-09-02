@@ -375,7 +375,7 @@ class WIZWindow(QMainWindow, main_window):
         When tab changed
         - check user IO tab
         """
-        if "WIZ750" in self.curr_dev:
+        if "WIZ750" in self.curr_dev or "WIZSPE-T1L" in self.curr_dev:
             if self.generalTab.currentIndex() == 2:
                 self.logger.debug(
                     f"Start DataRefresh: {self.curr_dev}, currentTab: {self.generalTab.currentIndex()}"
@@ -664,7 +664,7 @@ class WIZWindow(QMainWindow, main_window):
             self.modbus_protocol.setEnabled(True)
         else:
             self.modbus_protocol.setEnabled(False)
-        if "WIZ750" in self.curr_dev or "W232N" in self.curr_dev:
+        if "WIZ750" in self.curr_dev or "WIZSPE-T1L" in self.curr_dev or "W232N" in self.curr_dev:
             if version_compare("1.2.0", self.curr_ver) <= 0:
                 # setcmd['TR'] = self.tcp_timeout.text()
                 self.tcp_timeout.setEnabled(True)
@@ -817,7 +817,7 @@ class WIZWindow(QMainWindow, main_window):
         - WIZ5XXSR-RP (only use A,B)
         """
         # if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
-        if "WIZ750" in self.curr_dev or "W7500" in self.curr_dev:
+        if "WIZ750" in self.curr_dev or "WIZSPE-T1L" in self.curr_dev or "W7500" in self.curr_dev:
             # ! Check current tab length
             # self.logger.debug(f'totalTab: {len(self.generalTab)}, currentTab: {self.generalTab.currentIndex()}')
             # self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
@@ -871,6 +871,7 @@ class WIZWindow(QMainWindow, main_window):
         elif (
             self.curr_dev in ONE_PORT_DEV
             or "WIZ750" in self.curr_dev
+            or "WIZSPE-T1L" in self.curr_dev
             or self.curr_dev in SECURITY_DEVICE
         ):
             self.channel_tab.removeTab(1)
@@ -1517,7 +1518,7 @@ class WIZWindow(QMainWindow, main_window):
         # dev_info = []
         # clicked_mac = ""
         # if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
-        if "WIZ750" in self.curr_dev:
+        if "WIZ750" in self.curr_dev or "WIZSPE-T1L" in self.curr_dev:
             if self.generalTab.currentIndex() == 2:
                 self.gpio_check()
                 self.get_refresh_time()
@@ -2102,7 +2103,7 @@ class WIZWindow(QMainWindow, main_window):
             if "WIZ752" in self.curr_dev:
                 pass
             else:
-                if "WIZ750" in self.curr_dev:
+                if "WIZ750" in self.curr_dev or "WIZSPE-T1L" in self.curr_dev:
                     # Check version
                     if version_compare("1.2.0", self.curr_ver) <= 0:
                         setcmd["TR"] = self.tcp_timeout.text()
@@ -2115,7 +2116,7 @@ class WIZWindow(QMainWindow, main_window):
             if self.curr_st in DeviceStatusMinimum:
                 pass
             else:
-                if "WIZ750" in self.curr_dev:
+                if "WIZ750" in self.curr_dev or "WIZSPE-T1L" in self.curr_dev:
                     setcmd["CA"] = str(self.gpioa_config.currentIndex())
                     setcmd["CB"] = str(self.gpiob_config.currentIndex())
                     setcmd["CC"] = str(self.gpioc_config.currentIndex())
