@@ -15,6 +15,7 @@ ONE_PORT_DEV = [
     # "WIZ750SR-100",
     # "WIZ750SR-105",
     # "WIZ750SR-110",
+    "WIZSPE-T1L",
     "WIZ107SR",
     "WIZ108SR",
     "W7500-S2E",
