@@ -155,13 +155,23 @@ class WIZMakeCMD:
                 for cmd in cmd_1p_default:
                     cmd_list.append([cmd, ""])
             else:
-                # WIZ750SR series / W7500(P)-S2E
-                if version_compare("1.2.0", version) <= 0:
-                    for cmd in cmd_1p_advanced:
-                        cmd_list.append([cmd, ""])
+                # WIZ750SR series / W7500(P)-S2E / WIZSPE-T1L
+                # Add PO command for WIZSPE-T1L and WIZ750SR-1xx
+                if "WIZSPE-T1L" in devname or "WIZ750SR-1" in devname:
+                    if version_compare("1.2.0", version) <= 0:
+                        for cmd in cmd_1p_advanced + ["PO"]:
+                            cmd_list.append([cmd, ""])
+                    else:
+                        for cmd in cmd_1p_default + ["PO"]:
+                            cmd_list.append([cmd, ""])
                 else:
-                    for cmd in cmd_1p_default:
-                        cmd_list.append([cmd, ""])
+                    # Other devices (WIZ750SR, W7500-S2E, etc.)
+                    if version_compare("1.2.0", version) <= 0:
+                        for cmd in cmd_1p_advanced:
+                            cmd_list.append([cmd, ""])
+                    else:
+                        for cmd in cmd_1p_default:
+                            cmd_list.append([cmd, ""])
         elif devname in TWO_PORT_DEV or "752" in devname:
             for cmd in cmd_2p_default:
                 cmd_list.append([cmd, ""])

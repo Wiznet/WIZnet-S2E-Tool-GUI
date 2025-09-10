@@ -116,6 +116,7 @@ common_cmdset = {
 WIZ75X_CMDSET = {
     **common_cmdset,
     "TR": ["TCP Retransmission Retry count", "^([1-9]|[1-9][0-9]|1[0-9][0-9]|2[0-5][0-5])$", {}, "RW"],
+    "PO": ["Status of Modbus protocol", "^[0-2]$", {}, "RW"],
 }
 
 WIZ510SSL_CMDSET = {
