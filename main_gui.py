@@ -660,8 +660,30 @@ class WIZWindow(QMainWindow, main_window):
             or ("W55RP20-S2E" in self.curr_dev)
             or ("W232N" in self.curr_dev)
             or ("IP20" in self.curr_dev)
+            or ("WIZSPE-T1L" in self.curr_dev)
+            or ("WIZ750SR-1" in self.curr_dev)
             ):
             self.modbus_protocol.setEnabled(True)
+            # Remove ASCII option for WIZSPE-T1L and WIZ750SR-1xx
+            if ("WIZSPE-T1L" in self.curr_dev) or ("WIZ750SR-1" in self.curr_dev):
+                # Save current selection
+                current_index = self.modbus_protocol.currentIndex()
+                # Clear and add only NONE and RTU options
+                self.modbus_protocol.clear()
+                self.modbus_protocol.addItem("NONE")
+                self.modbus_protocol.addItem("RTU")
+                # Restore selection (limit to 0 or 1)
+                if current_index <= 1:
+                    self.modbus_protocol.setCurrentIndex(current_index)
+                else:
+                    self.modbus_protocol.setCurrentIndex(0)
+            else:
+                # For other devices, ensure all three options are available
+                if self.modbus_protocol.count() != 3:
+                    self.modbus_protocol.clear()
+                    self.modbus_protocol.addItem("NONE")
+                    self.modbus_protocol.addItem("RTU")
+                    self.modbus_protocol.addItem("ASCII")
         else:
             self.modbus_protocol.setEnabled(False)
         if "WIZ750" in self.curr_dev or "WIZSPE-T1L" in self.curr_dev or "W232N" in self.curr_dev:
@@ -1766,6 +1788,10 @@ class WIZWindow(QMainWindow, main_window):
                 try:
                     # dev_data["PO"]가 "0","1","2" 같은 문자열일 경우
                     po_val = int(dev_data["PO"])
+                    # For WIZSPE-T1L and WIZ750SR-1xx, limit to NONE(0) or RTU(1)
+                    if ("WIZSPE-T1L" in self.curr_dev) or ("WIZ750SR-1" in self.curr_dev):
+                        if po_val > 1:  # If ASCII(2) was set, default to NONE(0)
+                            po_val = 0
                     self.modbus_protocol.setCurrentIndex(po_val)
                     self.logger.debug(f"Modbus protocol option (PO) set to {po_val}")
                 except Exception as ex:
@@ -2023,6 +2049,8 @@ class WIZWindow(QMainWindow, main_window):
                 or ("W55RP20-S2E" in self.curr_dev)
                 or ("W232N" in self.curr_dev)
                 or ("IP20" in self.curr_dev)
+                or ("WIZSPE-T1L" in self.curr_dev)
+                or ("WIZ750SR-1" in self.curr_dev)
             ):
                 print(f"set PO valid, self.curr_dev={self.curr_dev}, self.curr_ver={self.curr_ver}")
                 setcmd["PO"] = str(self.modbus_protocol.currentIndex())
