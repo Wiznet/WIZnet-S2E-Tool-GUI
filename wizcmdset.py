@@ -6,7 +6,24 @@ from collections import namedtuple
 
 ip_pattern = r"^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
 port_pattern = r"^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])$"
-baudrate_option = {"0": "300", "1": "600", "2": "1200", "3": "1800", "4": "2400", "5": "4800", "6": "9600", "7": "14400", "8": "19200", "9": "28800", "10": "38400", "11": "57600", "12": "115200", "13": "230400"}
+baudrate_option = {
+    "0": "300",
+    "1": "600",
+    "2": "1200",
+    "3": "1800",
+    "4": "2400",
+    "5": "4800",
+    "6": "9600",
+    "7": "14400",
+    "8": "19200",
+    "9": "28800",
+    "10": "38400",
+    "11": "57600",
+    "12": "115200",
+    "13": "230400",
+    "14": "460800",
+    "15": "921600",
+}
 opmode_option = {"0": "TCP Client mode", "1": "TCP Server mode", "2": "TCP Mixed mode", "3": "UDP mode"}
 
 common_cmdset = {
@@ -154,6 +171,39 @@ WIZ5XX_RP_CMDSET = {
     "SE": ["Ethernet Data Connection Condition", "^.{0,30}$", {}, "RW"],  # W55RP20-S2E, W232N, IP20, 최대 30글자
 }
 
+W55RP20_2CH_CMDSET = {
+    **WIZ5XX_RP_CMDSET,
+    "QS": ["Operation status for channel 1", "", {}, "RO"],
+    "EN": ["UART Interface(Str) for channel 1", "", {}, "RO"],
+    "AO": [
+        "Network Operation Mode for channel 1 - Extended",
+        "^[0-6]$",
+        {**opmode_option, "4": "SSL TCP Client mode", "5": "MQTT Client", "6": "MQTTS Client"},
+        "RW",
+    ],
+    "QL": ["Local port number for channel 1", port_pattern, {}, "RW"],
+    "QH": ["Remote Host IP address for channel 1", ip_pattern, {}, "RW"],
+    "AP": ["Remote Host Port number for channel 1", port_pattern, {}, "RW"],
+    "EB": ["UART channel 1 Baud rate", "^([0-9]|1[0-5])$", baudrate_option, "RW"],
+    "ED": ["UART channel 1 Data bit length", "^[0-1]$", {"0": "7-bit", "1": "8-bit"}, "RW"],
+    "EP": ["UART channel 1 Parity bit", "^[0-2]$", {"0": "NONE", "1": "ODD", "2": "EVEN"}, "RW"],
+    "ES": ["UART channel 1 Stop bit length", "^[0-1]$", {"0": "1-bit", "1": "2-bit"}, "RW"],
+    "EF": ["UART channel 1 Flow Control", "^[0-2]$", {"0": "NONE", "1": "XON/XOFF", "2": "RTS/CTS"}, "RW"],
+    "ND": ["Char Delimiter for channel 1", "^([0-9a-fA-F][0-9a-fA-F])$", {}, "RW"],
+    "NS": ["Size Delimiter for channel 1", "^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$", {}, "RW"],
+    "AT": ["Time Delimiter for channel 1", port_pattern, {}, "RW"],
+    "RV": ["Inactivity Timer Value for channel 1", port_pattern, {}, "RW"],
+    "RA": ["TCP Keep-alive Enable for channel 1", "^[0-1]$", {}, "RW"],
+    "RS": ["TCP Keep-alive Initial Interval for channel 1", port_pattern, {}, "RW"],
+    "RE": ["TCP Keep-alive Retry Interval for channel 1", port_pattern, {}, "RW"],
+    "RR": ["TCP Reconnection Interval for channel 1", port_pattern, {}, "RW"],
+    "RO": ["Channel 1 SSL receive timeout", "", {}, "RW"],
+    "EO": ["Channel 1 Modbus protocol", "^[0-2]$", {}, "RW"],
+    "RD": ["Channel 1 Serial Connected Data", "^.{0,30}$", {}, "RW"],
+    "RF": ["Channel 1 Serial Disconnected Data", "^.{0,30}$", {}, "RW"],
+    "EE": ["Channel 1 Ethernet Connected Data", "^.{0,30}$", {}, "RW"],
+}
+
 # boot mode
 BOOT_CMDSET = {
     "MC": common_cmdset["MC"],
@@ -233,8 +283,12 @@ class Wizcmdset():
             self.cmdset = WIZ75X_CMDSET
         elif name in SECURITY_DEVICE:
             if mode != DeviceStatus.boot:
-                logger.debug("Security device")
-                self.cmdset = WIZ5XX_RP_CMDSET
+                if name == "W55RP20-S2E-2CH":
+                    logger.debug("Security device (2CH)")
+                    self.cmdset = W55RP20_2CH_CMDSET
+                else:
+                    logger.debug("Security device")
+                    self.cmdset = WIZ5XX_RP_CMDSET
             else:
                 logger.debug("Security device in BOOT mode")
                 self.cmdset = BOOT_CMDSET
