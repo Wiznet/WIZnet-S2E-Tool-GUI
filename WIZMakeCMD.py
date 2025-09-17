@@ -21,7 +21,15 @@ ONE_PORT_DEV = [
     "W7500-S2E",
     "W7500P-S2E",
 ]
-SECURITY_DEVICE = ["WIZ510SSL", "WIZ5XXSR-RP", "WIZ5XXSR-RP_E-SAVE", "W55RP20-S2E", "W232N", "IP20"]
+SECURITY_DEVICE = [
+    "WIZ510SSL",
+    "WIZ5XXSR-RP",
+    "WIZ5XXSR-RP_E-SAVE",
+    "W55RP20-S2E",
+    "W55RP20-S2E-2CH",
+    "W232N",
+    "IP20",
+]
 TWO_PORT_DEV = ["WIZ752SR-12x", "WIZ752SR-120", "WIZ752SR-125"]
 
 """
@@ -74,6 +82,34 @@ cmd_wiz5xxsr_added = ['SO', 'UF']
 # W55RP20-S2E specific commands
 cmd_w55rp20_added = ['SD', 'DD', 'SE']  # Send Data at Connection, Send Data at Disconnection, Ethernet Data Connection Condition
 
+# W55RP20-S2E-2CH channel 1 specific commands
+cmd_w55rp20_2ch_ch1 = [
+    'QS',  # Channel 1 status
+    'EN',  # Channel 1 UART interface
+    'AO',  # Channel 1 operation mode (extended)
+    'QL',  # Channel 1 local port
+    'QH',  # Channel 1 remote host
+    'AP',  # Channel 1 remote port
+    'EB',  # Channel 1 baud rate
+    'ED',  # Channel 1 data bit
+    'EP',  # Channel 1 parity
+    'ES',  # Channel 1 stop bit
+    'EF',  # Channel 1 flow control
+    'ND',  # Channel 1 packing delimiter
+    'NS',  # Channel 1 packing size
+    'AT',  # Channel 1 packing time
+    'RV',  # Channel 1 inactivity timer
+    'RA',  # Channel 1 keep-alive enable
+    'RS',  # Channel 1 keep-alive initial interval
+    'RE',  # Channel 1 keep-alive retry interval
+    'RR',  # Channel 1 reconnection interval
+    'RO',  # Channel 1 SSL timeout
+    'EO',  # Channel 1 Modbus option
+    'RD',  # Channel 1 serial connected data
+    'RF',  # Channel 1 serial disconnected data
+    'EE',  # Channel 1 ethernet connected data
+]
+
 # WIZ5XXSR-RP_E-SAVE commands
 #cmd_wiz5xxsr_esave = ['U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9']
 
@@ -90,6 +126,7 @@ cmd_2p_default = cmd_ch1 + cmd_ch2
 cmd_wiz510ssl = cmd_security_base + cmd_wiz510ssl_added
 cmd_wiz5xxsr = cmd_security_base + cmd_wiz5xxsr_added
 cmd_w55rp20 = cmd_security_base + cmd_wiz5xxsr_added + cmd_w55rp20_added
+cmd_w55rp20_2ch = cmd_w55rp20 + cmd_w55rp20_2ch_ch1
 
 
 # @TODO:@BUG 아래 경우 1을 반환해야 하는데 -1을 반환함
@@ -186,6 +223,23 @@ class WIZMakeCMD:
                 #if 'E-SAVE' in devname:
                 #    for cmd in cmd_wiz5xxsr_esave:
                 #        cmd_list.append([cmd, ""])
+            elif 'W55RP20-S2E-2CH' in devname:
+                print(f"search::devstatus={devstatus}")
+                if devstatus == 'BOOT':
+                    for cmd in cmd_1p_boot:
+                        cmd_list.append([cmd, ""])
+                    print(f"search::cmd_list={cmd_list}")
+                    return cmd_list
+
+                if version_compare(version, "1.1.8") >= 0:
+                    temp_cmd_w55rp20_2ch = cmd_w55rp20_2ch + ["PO"]
+                else:
+                    # 하위 버전은 채널1 확장 명령 대신 기본 명령으로 구성
+                    temp_cmd_w55rp20_2ch = cmd_security_base + cmd_wiz5xxsr_added + ["PO"]
+                for cmd in temp_cmd_w55rp20_2ch:
+                    cmd_list.append([cmd, ""])
+                print(f"search::cmd_list2={cmd_list}")
+
             elif 'W55RP20-S2E' in devname:
                 print(f"search::devstatus={devstatus}")
                 if devstatus == 'BOOT':
@@ -272,6 +326,17 @@ class WIZMakeCMD:
                 if 'WIZ510SSL' in devname:
                     for cmd in cmd_wiz510ssl:
                         cmd_list.append([cmd, ""])
+                elif 'W55RP20-S2E-2CH' in devname:
+                    if status != "BOOT":
+                        if version_compare(version, "1.1.8") >= 0:
+                            for cmd in cmd_w55rp20_2ch:
+                                cmd_list.append([cmd, ""])
+                        else:
+                            for cmd in cmd_security_base + cmd_wiz5xxsr_added:
+                                cmd_list.append([cmd, ""])
+                    else:
+                        for cmd in cmd_1p_boot:
+                            cmd_list.append([cmd, ""])
                 elif 'W55RP20-S2E' in devname:
                     if status != "BOOT":
                         # 버전 1.1.8 이상인 경우에만 SD, DD, SE 명령어 포함
