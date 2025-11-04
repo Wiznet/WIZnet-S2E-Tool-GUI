@@ -394,7 +394,7 @@ class WIZWindow(QMainWindow, main_window):
         When tab changed
         - check user IO tab
         """
-        if "WIZ750" in self.curr_dev or "WIZSPE-T1L" in self.curr_dev:
+        if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev:
             if self.generalTab.currentIndex() == 2:
                 self.logger.debug(
                     f"Start DataRefresh: {self.curr_dev}, currentTab: {self.generalTab.currentIndex()}"
@@ -647,6 +647,53 @@ class WIZWindow(QMainWindow, main_window):
             else:
                 gpio_set.setEnabled(False)
 
+    def _is_wiz750sr_series(self) -> bool:
+        return bool(self.curr_dev and "WIZ750SR" in self.curr_dev)
+
+    def _current_ch1_opmode_index(self):
+        if self.ch1_tcpclient.isChecked():
+            return 0
+        if self.ch1_tcpserver.isChecked():
+            return 1
+        if self.ch1_tcpmixed.isChecked():
+            return 2
+        if self.ch1_udp.isChecked():
+            return 3
+        if self.ch1_ssl_tcpclient.isChecked():
+            return 4
+        if self.ch1_mqttclient.isChecked():
+            return 5
+        if self.ch1_mqtts_client.isChecked():
+            return 6
+        return None
+
+    def _uses_mb_modbus(self) -> bool:
+        if not self.curr_dev or not self.curr_ver:
+            return False
+        return ("WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev) and version_compare(self.curr_ver, "1.4.4") >= 0
+
+    def _modbus_param_key(self) -> str:
+        return "MB" if self._uses_mb_modbus() else "PO"
+
+    def _modbus_supported(self) -> bool:
+        if not self.curr_dev or not self.curr_ver:
+            return False
+        if self.curr_st in DeviceStatusMinimum:
+            return False
+        if self._uses_mb_modbus():
+            if self._is_wiz750sr_series():
+                current_mode = self._current_ch1_opmode_index()
+                if current_mode not in (1, 3):
+                    return False
+            return True
+        if "WIZ5XXSR" in self.curr_dev and version_compare("1.0.8", self.curr_ver) <= 0:
+            return True
+        if self.curr_dev in W55RP20_FAMILY:
+            return True
+        if "W232N" in self.curr_dev or "IP20" in self.curr_dev:
+            return True
+        return False
+
     # Object config for some Devices or F/W version
     def object_config_for_device(self):
         # IP20 장비는 Certificate manager 탭 숨김
@@ -696,19 +743,14 @@ class WIZWindow(QMainWindow, main_window):
         if self.curr_st in DeviceStatusMinimum:
             # Ensure Modbus option is not left enabled when device is in BOOT/UPGRADE
             self.modbus_protocol.setEnabled(False)
+            self.modbus_protocol.setCurrentIndex(0)
             self.group_modubs_option_2.hide()
             return
-        if is_legacy_two_port:
-            self.modbus_protocol.setEnabled(False)
-        elif (
-            ("WIZ5XXSR" in self.curr_dev and version_compare("1.0.8", self.curr_ver) <= 0)
-            or (self.curr_dev in W55RP20_FAMILY)
-            or ("W232N" in self.curr_dev)
-            or ("IP20" in self.curr_dev)
-        ):
-            self.modbus_protocol.setEnabled(True)
-        else:
-            self.modbus_protocol.setEnabled(False)
+
+        supports_modbus = not is_legacy_two_port and self._modbus_supported()
+        self.modbus_protocol.setEnabled(supports_modbus)
+        if not supports_modbus:
+            self.modbus_protocol.setCurrentIndex(0)
 
         if is_security_two_port:
             self.group_modubs_option_2.show()
@@ -720,7 +762,7 @@ class WIZWindow(QMainWindow, main_window):
             self.modbus_protocol_2.setCurrentIndex(0)
             self.group_packing_14.hide()
             self.group_packing_15.hide()
-        if "WIZ750" in self.curr_dev or "WIZSPE-T1L" in self.curr_dev or "W232N" in self.curr_dev:
+        if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev or "W232N" in self.curr_dev:
             if version_compare("1.2.0", self.curr_ver) <= 0:
                 # setcmd['TR'] = self.tcp_timeout.text()
                 self.tcp_timeout.setEnabled(True)
@@ -879,7 +921,7 @@ class WIZWindow(QMainWindow, main_window):
         - WIZ5XXSR-RP (only use A,B)
         """
         # if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
-        if "WIZ750" in self.curr_dev or "WIZSPE-T1L" in self.curr_dev or "W7500" in self.curr_dev:
+        if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev or "W7500" in self.curr_dev:
             # ! Check current tab length
             # self.logger.debug(f'totalTab: {len(self.generalTab)}, currentTab: {self.generalTab.currentIndex()}')
             # self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
@@ -933,7 +975,7 @@ class WIZWindow(QMainWindow, main_window):
         elif (
             self.curr_dev in ONE_PORT_DEV
             or "WIZ750" in self.curr_dev
-            or "WIZSPE-T1L" in self.curr_dev
+            or "WIZ750SR-T1L" in self.curr_dev
             or self.curr_dev in SECURITY_DEVICE
         ):
             if self.curr_dev in SECURITY_TWO_PORT_DEV:
@@ -1050,6 +1092,11 @@ class WIZWindow(QMainWindow, main_window):
         elif self.ch1_mqtts_client.isChecked():
             self.ch1_remote.setEnabled(True)
             self.group_modubs_option.setEnabled(False)
+            self.modbus_protocol.setCurrentIndex(0)
+
+        ch1_modbus_available = self._modbus_supported()
+        self.modbus_protocol.setEnabled(ch1_modbus_available)
+        if not ch1_modbus_available:
             self.modbus_protocol.setCurrentIndex(0)
 
         supports_ch2_modbus = self.curr_dev in SECURITY_TWO_PORT_DEV
@@ -1629,7 +1676,7 @@ class WIZWindow(QMainWindow, main_window):
         # dev_info = []
         # clicked_mac = ""
         # if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
-        if "WIZ750" in self.curr_dev or "WIZSPE-T1L" in self.curr_dev:
+        if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev:
             if self.generalTab.currentIndex() == 2:
                 self.gpio_check()
                 self.get_refresh_time()
@@ -1872,15 +1919,22 @@ class WIZWindow(QMainWindow, main_window):
                     self.status_dsr.setChecked(True)
                     self.checkbox_enable_dsr.setChecked(True)
 
-            # Modbus(PO)
-            if "PO" in dev_data:
-                try:
-                    # dev_data["PO"]가 "0","1","2" 같은 문자열일 경우
-                    po_val = int(dev_data["PO"])
-                    self.modbus_protocol.setCurrentIndex(po_val)
-                    self.logger.debug(f"Modbus protocol option (PO) set to {po_val}")
-                except Exception as ex:
-                    self.logger.error(f"Error parsing PO: {dev_data['PO']} -> {ex}")
+            # Modbus (PO/MB depending on device)
+            desired_key = self._modbus_param_key()
+            fallback_key = "MB" if desired_key == "PO" else "PO"
+            for modbus_key in (desired_key, fallback_key):
+                if modbus_key in dev_data and dev_data[modbus_key] != "":
+                    try:
+                        modbus_val = int(dev_data[modbus_key])
+                        self.modbus_protocol.setCurrentIndex(modbus_val)
+                        self.logger.debug(
+                            f"Modbus protocol option ({modbus_key}) set to {modbus_val}"
+                        )
+                        break
+                    except Exception as ex:
+                        self.logger.error(
+                            f"Error parsing {modbus_key}: {dev_data[modbus_key]} -> {ex}"
+                        )
 
             # # Channel 2 config (For two Port device)
             if self.curr_dev in TWO_PORT_DEV:
@@ -2222,14 +2276,12 @@ class WIZWindow(QMainWindow, main_window):
             setcmd["SB"] = str(self.ch1_stopbit.currentIndex())
             setcmd["FL"] = str(self.ch1_flow.currentIndex())
             # 문맥으로 보면 modbus_protocol.isEnabled() 로 처리하는게 맞지만 항상 False 가 나와서 모델&버전 비교로 대체 #36
-            if (
-                ("WIZ5XXSR" in self.curr_dev and version_compare("1.0.8", self.curr_ver) <= 0)
-                or (self.curr_dev in W55RP20_FAMILY)
-                or ("W232N" in self.curr_dev)
-                or ("IP20" in self.curr_dev)
-            ):
-                print(f"set PO valid, self.curr_dev={self.curr_dev}, self.curr_ver={self.curr_ver}")
-                setcmd["PO"] = str(self.modbus_protocol.currentIndex())
+            if self._modbus_supported():
+                modbus_key = self._modbus_param_key()
+                print(
+                    f"set {modbus_key} valid, self.curr_dev={self.curr_dev}, self.curr_ver={self.curr_ver}"
+                )
+                setcmd[modbus_key] = str(self.modbus_protocol.currentIndex())
 
             setcmd["PT"] = self.ch1_pack_time.text()
             setcmd["PS"] = self.ch1_pack_size.text()
@@ -2307,7 +2359,7 @@ class WIZWindow(QMainWindow, main_window):
             if "WIZ752" in self.curr_dev:
                 pass
             else:
-                if "WIZ750" in self.curr_dev or "WIZSPE-T1L" in self.curr_dev:
+                if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev:
                     # Check version
                     if version_compare("1.2.0", self.curr_ver) <= 0:
                         setcmd["TR"] = self.tcp_timeout.text()
@@ -2320,7 +2372,7 @@ class WIZWindow(QMainWindow, main_window):
             if self.curr_st in DeviceStatusMinimum:
                 pass
             else:
-                if "WIZ750" in self.curr_dev or "WIZSPE-T1L" in self.curr_dev:
+                if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev:
                     setcmd["CA"] = str(self.gpioa_config.currentIndex())
                     setcmd["CB"] = str(self.gpiob_config.currentIndex())
                     setcmd["CC"] = str(self.gpioc_config.currentIndex())
@@ -2516,7 +2568,7 @@ class WIZWindow(QMainWindow, main_window):
             # self.selected_devinfo()
 
             # Update cmdset
-            self.cmdset.get_cmdset(self.curr_dev, self.curr_st)
+            self.cmdset.get_cmdset(self.curr_dev, self.curr_st, self.curr_ver)
             self.logger.info(f"Device setting: {self.curr_dev}")
             # Parameter validity check
             invalid_flag = 0
@@ -3520,4 +3572,3 @@ if __name__ == "__main__":
     wizwindow = WIZWindow()
     wizwindow.show()
     app.exec_()
-

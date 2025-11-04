@@ -1,6 +1,11 @@
 import re
 from utils import logger
-from WIZMakeCMD import ONE_PORT_DEV, TWO_PORT_DEV, SECURITY_DEVICE
+from WIZMakeCMD import (
+    ONE_PORT_DEV,
+    TWO_PORT_DEV,
+    SECURITY_DEVICE,
+    version_compare,
+)
 from collections import namedtuple
 
 
@@ -166,6 +171,7 @@ WIZ5XX_RP_CMDSET = {
     "PK": ["Private Key", "", {}, "WO"],
     "UF": ["Copy firmware from firmware binary bank to application bank", "", {}, "RW"],
     "PO": ["Status of Modbus protocol", "^[0-2]$", {}, "RW"],
+    "MB": ["Status of Modbus protocol", "^[0-2]$", {}, "RW"],
     "SD": ["Send Data at Connection", "^.{0,30}$", {}, "RW"],  # W55RP20-S2E, W232N, IP20, 최대 30글자
     "DD": ["Send Data at Disconnection", "^.{0,30}$", {}, "RW"],  # W55RP20-S2E, W232N, IP20, 최대 30글자
     "SE": ["Ethernet Data Connection Condition", "^.{0,30}$", {}, "RW"],  # W55RP20-S2E, W232N, IP20, 최대 30글자
@@ -277,27 +283,33 @@ class Wizcmdset():
 
         self.get_cmdset(self.name)
 
-    def get_cmdset(self, name, mode=None):
+    def get_cmdset(self, name, mode=None, version=None):
+        mode_str = ""
+        if mode is not None:
+            mode_str = mode.upper() if isinstance(mode, str) else str(mode).upper()
+
         if name in ONE_PORT_DEV:
             logger.debug('One port device')
-            self.cmdset = WIZ75X_CMDSET
+            self.cmdset = WIZ75X_CMDSET.copy()
         elif name in SECURITY_DEVICE:
-            if mode != DeviceStatus.boot:
+            if mode_str != "BOOT":
                 if name == "W55RP20-S2E-2CH":
                     logger.debug("Security device (2CH)")
-                    self.cmdset = W55RP20_2CH_CMDSET
+                    self.cmdset = W55RP20_2CH_CMDSET.copy()
                 else:
                     logger.debug("Security device")
-                    self.cmdset = WIZ5XX_RP_CMDSET
+                    self.cmdset = WIZ5XX_RP_CMDSET.copy()
             else:
                 logger.debug("Security device in BOOT mode")
-                self.cmdset = BOOT_CMDSET
+                self.cmdset = BOOT_CMDSET.copy()
         elif name in TWO_PORT_DEV:
             logger.debug('Two port device')
-            self.cmdset = WIZ752_CMDSET
+            self.cmdset = WIZ752_CMDSET.copy()
         else:
             logger.debug('Default device')
-            self.cmdset = WIZ75X_CMDSET
+            self.cmdset = WIZ75X_CMDSET.copy()
+
+        self._apply_version_specific_overrides(name, version, mode)
 
     def isvalidcommand(self, cmdstr):
         if cmdstr in self.cmdset.keys():
@@ -324,6 +336,27 @@ class Wizcmdset():
 
         logger.debug(f"## Invalid parameter: {cmdstr}, {param}")
         return False
+
+    def _apply_version_specific_overrides(self, name, version, mode):
+        mode_str = ""
+        if mode is not None:
+            mode_str = mode.upper() if isinstance(mode, str) else str(mode).upper()
+
+        if not name or not version:
+            return
+        if mode_str == "BOOT":
+            return
+
+        if ("WIZ750" in name or "WIZ750SR-T1L" in name) and version_compare(version, "1.4.4") >= 0:
+            if "MB" not in self.cmdset:
+                updated_cmdset = self.cmdset.copy()
+                updated_cmdset["MB"] = [
+                    "Status of Modbus protocol",
+                    "^[0-2]$",
+                    {},
+                    "RW",
+                ]
+                self.cmdset = updated_cmdset
 
     def getparamdescription(self, cmdstr, param):
         if self.isvalidparameter(cmdstr, param):

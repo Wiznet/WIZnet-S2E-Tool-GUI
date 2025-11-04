@@ -15,7 +15,7 @@ ONE_PORT_DEV = [
     # "WIZ750SR-100",
     # "WIZ750SR-105",
     # "WIZ750SR-110",
-    "WIZSPE-T1L",
+    "WIZ750SR-T1L",
     "WIZ107SR",
     "WIZ108SR",
     "W7500-S2E",
@@ -44,7 +44,7 @@ cmd_boot = ["MC", "VR", "MN", "ST", "IM", "OP", "LI", "SM", "GW", "SP", "DS"]  #
 
 # Command for each device
 cmd_ch1 = [
-    "MC", "VR", "MN", "UN", "ST", "IM", "OP", "CP", "PO", "DG", 
+    "MC", "VR", "MN", "UN", "ST", "IM", "OP", "CP", "DG", 
     "KA", "KI", "KE", "RI", "LI", "SM", "GW", "DS", "PI", "PP",
     "DX", "DP", "DI", "DW", "DH", "LP", "RP", "RH", "BR", "DB",
     "PR", "SB", "FL", "IT", "PT", "PS", "PD", "TE", "SS", "NP",
@@ -163,6 +163,35 @@ class WIZMakeCMD:
     def __init__(self):
         self.logger = logger
 
+    def _modbus_command(self, devname: str, version: str):
+        """Return the Modbus command keyword supported by the device, if any."""
+        if not devname or not version:
+            return None
+
+        # New firmware for WIZ750SR family and WIZ750SR-T1L uses the MB parameter
+        if ("WIZ750" in devname or "WIZ750SR-T1L" in devname) and version_compare(version, "1.4.4") >= 0:
+            return "MB"
+
+        # Existing security product families continue to rely on PO
+        if "WIZ5XXSR" in devname and version_compare("1.0.8", version) <= 0:
+            return "PO"
+        if "W55RP20" in devname or "W232N" in devname or "IP20" in devname:
+            return "PO"
+
+        return None
+
+    def _append_modbus_command(self, cmd_list, devname: str, version: str):
+        """Append the appropriate Modbus command if the target device supports it."""
+        modbus_cmd = self._modbus_command(devname, version)
+        if not modbus_cmd:
+            return
+
+        # Avoid duplicates if the command was already injected elsewhere
+        if any(entry[0] == modbus_cmd for entry in cmd_list):
+            return
+
+        cmd_list.append([modbus_cmd, ""])
+
     def make_header(self, mac_addr, idcode, devname="", set_pw=""):
         """
         Common command set
@@ -214,9 +243,7 @@ class WIZMakeCMD:
                         cmd_list.append([cmd, ""])
                     print(f"search::cmd_list={cmd_list}")
                     return cmd_list
-                # 버전이 1.0.8 이상인 경우에만 "PO" 추가 #36
-                temp_cmd_wiz5xxsr = (cmd_wiz5xxsr + ["PO"]) if version_compare("1.0.8", version) <= 0  else cmd_wiz5xxsr
-                for cmd in temp_cmd_wiz5xxsr:
+                for cmd in cmd_wiz5xxsr:
                     cmd_list.append([cmd, ""])
                 print(f"search::cmd_list2={cmd_list}")
                 # Commands for E-SAVE
@@ -232,10 +259,10 @@ class WIZMakeCMD:
                     return cmd_list
 
                 if version_compare(version, "1.1.8") >= 0:
-                    temp_cmd_w55rp20_2ch = cmd_w55rp20_2ch + ["PO"]
+                    temp_cmd_w55rp20_2ch = cmd_w55rp20_2ch
                 else:
                     # 하위 버전은 채널1 확장 명령 대신 기본 명령으로 구성
-                    temp_cmd_w55rp20_2ch = cmd_security_base + cmd_wiz5xxsr_added + ["PO"]
+                    temp_cmd_w55rp20_2ch = cmd_security_base + cmd_wiz5xxsr_added
                 for cmd in temp_cmd_w55rp20_2ch:
                     cmd_list.append([cmd, ""])
                 print(f"search::cmd_list2={cmd_list}")
@@ -249,9 +276,9 @@ class WIZMakeCMD:
                     return cmd_list
                 # W55RP20-S2E는 SD 명령어 포함 (버전 1.1.8 이상인 경우에만)
                 if version_compare(version, "1.1.8") >= 0:
-                    temp_cmd_w55rp20 = cmd_w55rp20 + ["PO"]
+                    temp_cmd_w55rp20 = cmd_w55rp20
                 else:
-                    temp_cmd_w55rp20 = cmd_security_base + cmd_wiz5xxsr_added + ["PO"]
+                    temp_cmd_w55rp20 = cmd_security_base + cmd_wiz5xxsr_added
                 for cmd in temp_cmd_w55rp20:
                     cmd_list.append([cmd, ""])
                 print(f"search::cmd_list2={cmd_list}")
@@ -264,9 +291,9 @@ class WIZMakeCMD:
                     return cmd_list
                 # W232N과 IP20도 SD, DD, SE 명령어 지원 (버전 1.1.8 이상인 경우에만)
                 if version_compare(version, "1.1.8") >= 0:
-                    temp_cmd_wiz5xxsr = cmd_wiz5xxsr + ["PO"] + cmd_w55rp20_added
+                    temp_cmd_wiz5xxsr = cmd_wiz5xxsr + cmd_w55rp20_added
                 else:
-                    temp_cmd_wiz5xxsr = cmd_wiz5xxsr + ["PO"]
+                    temp_cmd_wiz5xxsr = cmd_wiz5xxsr
                 for cmd in temp_cmd_wiz5xxsr:
                     cmd_list.append([cmd, ""])
                 print(f"search::cmd_list2={cmd_list}")
@@ -276,6 +303,7 @@ class WIZMakeCMD:
                 #        cmd_list.append([cmd, ""])
         else:
             pass
+        self._append_modbus_command(cmd_list, devname, version)
         # print("search()", cmd_list)
         return cmd_list
 
@@ -374,6 +402,8 @@ class WIZMakeCMD:
                     #        cmd_list.append([cmd, ""])
             # if status == "BOOT":
             #     return cmd_list
+            if status != "BOOT":
+                self._append_modbus_command(cmd_list, devname, version)
             cmd_list.append(["SV", ""])  # save device setting
             cmd_list.append(["RT", ""])  # Device reboot
             # print("setcommand()", cmd_list)
