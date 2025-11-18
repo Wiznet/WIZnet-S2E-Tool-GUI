@@ -696,15 +696,15 @@ class WIZWindow(QMainWindow, main_window):
 
     # Object config for some Devices or F/W version
     def object_config_for_device(self):
-        # IP20 장비는 Certificate manager 탭 숨김
-        if self.curr_dev == "IP20":
-            # certificate_tab_text는 init_ui_object에서 저장됨
-            n_tabs = self.generalTab.count()
-            for idx in range(n_tabs):
-                if self.generalTab.tabText(idx) == self.certificate_tab_text:
-                    self.generalTab.removeTab(idx)
-                    break
-        
+        # IP20도 Certificate manager 탭 표시 (SSL/MQTTS 지원)
+        # if self.curr_dev == "IP20":
+        #     # certificate_tab_text는 init_ui_object에서 저장됨
+        #     n_tabs = self.generalTab.count()
+        #     for idx in range(n_tabs):
+        #         if self.generalTab.tabText(idx) == self.certificate_tab_text:
+        #             self.generalTab.removeTab(idx)
+        #             break
+
         # W55RP20-S2E, W232N, IP20인 경우에만 group_packing_12 표시 (SD/DD 기능)
         # 버전이 1.1.8 이상인 경우에만 표시
         if self.curr_dev in (W55RP20_FAMILY + ("W232N", "IP20")) and version_compare(self.curr_ver, "1.1.8") >= 0:
@@ -818,13 +818,9 @@ class WIZWindow(QMainWindow, main_window):
             self.factory_setting_action.setEnabled(True)
             self.factory_firmware_action.setEnabled(True)
             # 'OP' option
-            # IP20은 SSL, MQTTs 비활성화
-            if self.curr_dev == "IP20":
-                self.ch1_ssl_tcpclient.setEnabled(False)
-                self.ch1_mqtts_client.setEnabled(False)
-            else:
-                self.ch1_ssl_tcpclient.setEnabled(True)
-                self.ch1_mqtts_client.setEnabled(True)
+            # IP20도 SSL, MQTTs 지원
+            self.ch1_ssl_tcpclient.setEnabled(True)
+            self.ch1_mqtts_client.setEnabled(True)
             self.ch1_mqttclient.setEnabled(True)
             # Current bank (RO)
             self.group_current_bank.show()
