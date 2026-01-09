@@ -299,6 +299,11 @@ class WIZWindow(QMainWindow, main_window):
 
         self.cert_object_config()
 
+        # ====================================================================
+        # Phase 1-B: Initialize new architecture (Core + Adapter + Service)
+        # ====================================================================
+        self._init_new_architecture()
+
     @funclog(logger)
     def init_ui_object(self):
         """
@@ -580,6 +585,74 @@ class WIZWindow(QMainWindow, main_window):
         self.event_client_cert_changed()
         self.event_privatekey_changed()
         # self.event_uploadfw_changed()
+
+    def _init_new_architecture(self):
+        """Initialize new architecture (Phase 1-B).
+
+        This method initializes:
+        - Core DeviceRegistry
+        - DeviceService (business logic)
+        - QtAdapter (UI bridge)
+
+        The new architecture coexists with existing code for gradual migration.
+        """
+        try:
+            # Initialize Core registry
+            from pathlib import Path
+            from core.device_registry import DeviceRegistry, set_global_registry
+
+            config_path = Path(__file__).parent / 'config' / 'devices' / 'devices_sample.json'
+
+            if config_path.exists():
+                registry = DeviceRegistry(str(config_path))
+                set_global_registry(registry)
+                self.logger.info(
+                    f"[New Architecture] Loaded device registry: "
+                    f"{len(registry.list_models())} models"
+                )
+            else:
+                self.logger.warning(
+                    f"[New Architecture] Config not found: {config_path}"
+                )
+                self.use_new_architecture = False
+                return
+
+            # Initialize Service layer
+            from core.services.device_service import DeviceService
+
+            self.device_service = DeviceService(registry)
+
+            # Connect service to existing network components
+            self.device_service.wizmakecmd = self.wizmakecmd
+            # conf_sock will be set later in socket_config()
+
+            # Initialize Adapter layer
+            from adapters.qt_adapter import QtAdapter
+
+            self.qt_adapter = QtAdapter(self)
+            self.qt_adapter.initialize()
+
+            self.logger.info("[New Architecture] QtAdapter initialized")
+            self.use_new_architecture = True
+
+            # Log available device models
+            models = self.device_service.list_device_models()
+            self.logger.info(
+                f"[New Architecture] Available models: {', '.join(models)}"
+            )
+
+        except ImportError as e:
+            self.logger.warning(
+                f"[New Architecture] Import failed: {e}. "
+                f"Running in legacy mode."
+            )
+            self.use_new_architecture = False
+        except Exception as e:
+            self.logger.error(
+                f"[New Architecture] Initialization failed: {e}",
+                exc_info=True
+            )
+            self.use_new_architecture = False
 
     def event_rootca_changed(self):
         if len(self.textedit_rootca.toPlainText()) > 0:

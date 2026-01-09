@@ -1,0 +1,79 @@
+[project]
+name = "wiznet-s2e-tool-gui"
+version = "1.5.8.1"
+description = "WIZnet Serial-to-Ethernet Configuration Tool"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    {name = "WIZnet", email = "noreply@wiznet.io"}
+]
+keywords = ["wiznet", "serial", "ethernet", "s2e", "configuration", "tool"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Embedded Systems",
+    "Topic :: System :: Networking",
+    "Topic :: Utilities",
+]
+
+dependencies = [
+    "PyQt5==5.15.11",
+    "PyQt5-Qt5==5.15.2",
+    "PyQt5-sip==12.17.2",
+    "ifaddr>=0.1.7",
+    "requests>=2.25.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pyinstaller>=5.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Wiznet/WIZnet-S2E-Tool-GUI"
+Documentation = "https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/blob/master/README.md"
+Repository = "https://github.com/Wiznet/WIZnet-S2E-Tool-GUI"
+"Bug Reports" = "https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/issues"
+
+[project.scripts]
+wizconfig = "main_gui:main"
+
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# 패키지 자동 검색 설정
+packages = ["core", "adapters", "wizsocket", "common"]
+py-modules = [
+    "main_gui",
+    "WIZMakeCMD",
+    "WIZUDPSock",
+    "FWUploadThread",
+    "WIZMSGHandler",
+    "certificatethread",
+    "wizcmdset",
+    "constants",
+    "utils"
+]
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.ui", "*.ico", "*.png", "*.jpg"]
+core = ["**/*.json"]
+gui = ["**/*.ui", "**/*.ico", "**/*.png"]
+
+[tool.uv]
+dev-dependencies = [
+    "pyinstaller>=5.0.0",
+]
+
+# uv가 .venv를 사용하도록 설정
+[tool.uv.pip]
+python-version = "3.12"
