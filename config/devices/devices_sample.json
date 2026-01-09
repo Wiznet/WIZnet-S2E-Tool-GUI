@@ -1,0 +1,983 @@
+{
+  "schema_version": "2.0.0",
+  "metadata": {
+    "generated_at": "2026-01-07",
+    "description": "WIZnet S2E Device Configuration Database",
+    "encryption": "fernet",
+    "encryption_note": "This is the PLAINTEXT version for development. Production uses devices.enc"
+  },
+
+  "command_sets": {
+    "common": {
+      "description": "Common commands shared by all devices",
+      "commands": {
+        "MC": {
+          "name": "MAC address",
+          "pattern": "^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$",
+          "access": "RO",
+          "options": {},
+          "ui_widget": "mac",
+          "ui_group": "device_info",
+          "ui_order": 1,
+          "description": "Device MAC address (Read-Only)"
+        },
+        "VR": {
+          "name": "Firmware Version",
+          "pattern": "",
+          "access": "RO",
+          "options": {},
+          "ui_widget": "text",
+          "ui_group": "device_info",
+          "ui_order": 2,
+          "description": "Current firmware version"
+        },
+        "MN": {
+          "name": "Product Name",
+          "pattern": "",
+          "access": "RO",
+          "options": {},
+          "ui_widget": "text",
+          "ui_group": "device_info",
+          "ui_order": 3,
+          "description": "Device model name"
+        },
+        "ST": {
+          "name": "Operation status",
+          "pattern": "",
+          "access": "RO",
+          "options": {},
+          "ui_widget": "text",
+          "ui_group": "device_info",
+          "ui_order": 4,
+          "description": "Current operational status"
+        },
+        "OP": {
+          "name": "Network Operation Mode",
+          "pattern": "^[0-3]$",
+          "access": "RW",
+          "options": {
+            "0": "TCP Client mode",
+            "1": "TCP Server mode",
+            "2": "TCP Mixed mode",
+            "3": "UDP mode"
+          },
+          "default": "0",
+          "ui_widget": "combo",
+          "ui_group": "network",
+          "ui_order": 10,
+          "description": "Network operation mode selection"
+        },
+        "IM": {
+          "name": "IP address Allocation Mode",
+          "pattern": "^[0-1]$",
+          "access": "RW",
+          "options": {
+            "0": "Static IP",
+            "1": "DHCP"
+          },
+          "default": "0",
+          "ui_widget": "combo",
+          "ui_group": "network",
+          "ui_order": 11,
+          "description": "IP allocation method"
+        },
+        "LI": {
+          "name": "Local IP address",
+          "pattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$",
+          "access": "RW",
+          "options": {},
+          "default": "192.168.11.2",
+          "ui_widget": "ip",
+          "ui_group": "network",
+          "ui_order": 12,
+          "description": "Device IP address"
+        },
+        "SM": {
+          "name": "Subnet mask",
+          "pattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$",
+          "access": "RW",
+          "options": {},
+          "default": "255.255.255.0",
+          "ui_widget": "ip",
+          "ui_group": "network",
+          "ui_order": 13,
+          "description": "Subnet mask"
+        },
+        "GW": {
+          "name": "Gateway address",
+          "pattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$",
+          "access": "RW",
+          "options": {},
+          "default": "192.168.11.1",
+          "ui_widget": "ip",
+          "ui_group": "network",
+          "ui_order": 14,
+          "description": "Default gateway"
+        },
+        "DS": {
+          "name": "DNS Server address",
+          "pattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$",
+          "access": "RW",
+          "options": {},
+          "default": "8.8.8.8",
+          "ui_widget": "ip",
+          "ui_group": "network",
+          "ui_order": 15,
+          "description": "DNS server address"
+        },
+        "LP": {
+          "name": "Local port number",
+          "pattern": "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])$",
+          "access": "RW",
+          "options": {},
+          "default": "5000",
+          "ui_widget": "number",
+          "ui_group": "network",
+          "ui_order": 16,
+          "description": "Local listening port"
+        },
+        "RH": {
+          "name": "Remote Host IP address",
+          "pattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$",
+          "access": "RW",
+          "options": {},
+          "ui_widget": "ip",
+          "ui_group": "network",
+          "ui_order": 17,
+          "description": "Remote host IP (or domain name)"
+        },
+        "RP": {
+          "name": "Remote Host Port number",
+          "pattern": "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])$",
+          "access": "RW",
+          "options": {},
+          "default": "5000",
+          "ui_widget": "number",
+          "ui_group": "network",
+          "ui_order": 18,
+          "description": "Remote host port"
+        },
+        "BR": {
+          "name": "UART Baud rate",
+          "pattern": "^([0-9]|1[0-5])$",
+          "access": "RW",
+          "options": {
+            "0": "300",
+            "1": "600",
+            "2": "1200",
+            "3": "1800",
+            "4": "2400",
+            "5": "4800",
+            "6": "9600",
+            "7": "14400",
+            "8": "19200",
+            "9": "28800",
+            "10": "38400",
+            "11": "57600",
+            "12": "115200",
+            "13": "230400",
+            "14": "460800",
+            "15": "921600"
+          },
+          "default": "12",
+          "ui_widget": "combo",
+          "ui_group": "serial",
+          "ui_order": 20,
+          "description": "Serial baud rate"
+        },
+        "DB": {
+          "name": "UART Data bit length",
+          "pattern": "^[0-1]$",
+          "access": "RW",
+          "options": {
+            "0": "7-bit",
+            "1": "8-bit"
+          },
+          "default": "1",
+          "ui_widget": "combo",
+          "ui_group": "serial",
+          "ui_order": 21,
+          "description": "Data bit length"
+        },
+        "PR": {
+          "name": "UART Parity bit",
+          "pattern": "^[0-2]$",
+          "access": "RW",
+          "options": {
+            "0": "NONE",
+            "1": "ODD",
+            "2": "EVEN"
+          },
+          "default": "0",
+          "ui_widget": "combo",
+          "ui_group": "serial",
+          "ui_order": 22,
+          "description": "Parity bit setting"
+        },
+        "SB": {
+          "name": "UART Stop bit length",
+          "pattern": "^[0-1]$",
+          "access": "RW",
+          "options": {
+            "0": "1-bit",
+            "1": "2-bit"
+          },
+          "default": "0",
+          "ui_widget": "combo",
+          "ui_group": "serial",
+          "ui_order": 23,
+          "description": "Stop bit length"
+        },
+        "FL": {
+          "name": "UART Flow Control",
+          "pattern": "^[0-4]$",
+          "access": "RW",
+          "options": {
+            "0": "NONE",
+            "1": "XON/XOFF",
+            "2": "RTS/CTS",
+            "3": "RTS on TX",
+            "4": "RTS on TX (invert)"
+          },
+          "default": "0",
+          "ui_widget": "combo",
+          "ui_group": "serial",
+          "ui_order": 24,
+          "description": "Flow control method"
+        },
+        "PT": {
+          "name": "Time Delimiter",
+          "pattern": "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])$",
+          "access": "RW",
+          "options": {},
+          "default": "0",
+          "ui_widget": "number",
+          "ui_group": "data_packing",
+          "ui_order": 30,
+          "description": "Time-based packet delimiter (ms)"
+        },
+        "PS": {
+          "name": "Size Delimiter",
+          "pattern": "^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$",
+          "access": "RW",
+          "options": {},
+          "default": "0",
+          "ui_widget": "number",
+          "ui_group": "data_packing",
+          "ui_order": 31,
+          "description": "Size-based packet delimiter (bytes)"
+        },
+        "PD": {
+          "name": "Char Delimiter",
+          "pattern": "^([0-9a-fA-F][0-9a-fA-F])$",
+          "access": "RW",
+          "options": {},
+          "default": "00",
+          "ui_widget": "text",
+          "ui_group": "data_packing",
+          "ui_order": 32,
+          "description": "Character delimiter (hex)"
+        },
+        "IT": {
+          "name": "Inactivity Timer Value",
+          "pattern": "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])$",
+          "access": "RW",
+          "options": {},
+          "default": "0",
+          "ui_widget": "number",
+          "ui_group": "advanced",
+          "ui_order": 40,
+          "description": "Inactivity timeout (seconds)"
+        },
+        "KA": {
+          "name": "TCP Keep-alive Enable",
+          "pattern": "^[0-1]$",
+          "access": "RW",
+          "options": {
+            "0": "Disable",
+            "1": "Enable"
+          },
+          "default": "0",
+          "ui_widget": "checkbox",
+          "ui_group": "advanced",
+          "ui_order": 41,
+          "description": "Enable TCP keep-alive packets"
+        },
+        "KI": {
+          "name": "TCP Keep-alive Initial Interval",
+          "pattern": "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])$",
+          "access": "RW",
+          "options": {},
+          "default": "7200",
+          "ui_widget": "number",
+          "ui_group": "advanced",
+          "ui_order": 42,
+          "description": "Keep-alive initial interval (seconds)"
+        },
+        "KE": {
+          "name": "TCP Keep-alive Retry Interval",
+          "pattern": "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])$",
+          "access": "RW",
+          "options": {},
+          "default": "75",
+          "ui_widget": "number",
+          "ui_group": "advanced",
+          "ui_order": 43,
+          "description": "Keep-alive retry interval (seconds)"
+        },
+        "RI": {
+          "name": "TCP Reconnection Interval",
+          "pattern": "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])$",
+          "access": "RW",
+          "options": {},
+          "default": "3000",
+          "ui_widget": "number",
+          "ui_group": "advanced",
+          "ui_order": 44,
+          "description": "Reconnection attempt interval (ms)"
+        },
+        "SP": {
+          "name": "Search ID Code",
+          "pattern": "",
+          "access": "RW",
+          "options": {},
+          "ui_widget": "text",
+          "ui_group": "security",
+          "ui_order": 50,
+          "description": "Device search identification code"
+        },
+        "CP": {
+          "name": "Connection Password Enable",
+          "pattern": "^[0-1]$",
+          "access": "RW",
+          "options": {
+            "0": "Disable",
+            "1": "Enable"
+          },
+          "default": "0",
+          "ui_widget": "checkbox",
+          "ui_group": "security",
+          "ui_order": 51,
+          "description": "Enable connection password"
+        },
+        "NP": {
+          "name": "Connection Password",
+          "pattern": "",
+          "access": "RW",
+          "options": {},
+          "ui_widget": "text",
+          "ui_group": "security",
+          "ui_order": 52,
+          "description": "Connection password (max 8 chars)"
+        },
+        "SV": {
+          "name": "Save Device Setting",
+          "pattern": "",
+          "access": "WO",
+          "options": {},
+          "ui_widget": "text",
+          "description": "Save current settings to flash"
+        },
+        "RT": {
+          "name": "Device Reboot",
+          "pattern": "",
+          "access": "WO",
+          "options": {},
+          "ui_widget": "text",
+          "description": "Reboot the device"
+        },
+        "FR": {
+          "name": "Device Factory Reset",
+          "pattern": "",
+          "access": "WO",
+          "options": {},
+          "ui_widget": "text",
+          "description": "Reset to factory defaults"
+        }
+      }
+    },
+
+    "wiz75x_extended": {
+      "description": "Extensions for WIZ750SR series",
+      "inherits_from": "common",
+      "commands": {
+        "TR": {
+          "name": "TCP Retransmission Retry count",
+          "pattern": "^([1-9]|[1-9][0-9]|1[0-9][0-9]|2[0-5][0-5])$",
+          "access": "RW",
+          "options": {},
+          "default": "7",
+          "ui_widget": "number",
+          "ui_group": "advanced",
+          "ui_order": 45,
+          "description": "TCP retransmission retry count"
+        },
+        "SC": {
+          "name": "Status pin S0 and S1 Operation Mode Setting",
+          "pattern": "^([0-1]{2})$",
+          "access": "RW",
+          "options": {
+            "00": "PHY Link Status or TCP Connection Status",
+            "11": "DTR/DSR"
+          },
+          "default": "00",
+          "ui_widget": "combo",
+          "ui_group": "gpio",
+          "ui_order": 60,
+          "description": "Status pin operation mode"
+        },
+        "S0": {
+          "name": "Status of pin S0 (PHY Link or DTR)",
+          "pattern": "^[0-1]$",
+          "access": "RO",
+          "options": {
+            "0": "PHY Link Up or Device not ready",
+            "1": "PHY Link Down or Device ready"
+          },
+          "ui_widget": "text",
+          "ui_group": "gpio",
+          "ui_order": 61,
+          "description": "Current status of S0 pin"
+        },
+        "S1": {
+          "name": "Status of pin S1 (TCP Connection or DST)",
+          "pattern": "^[0-1]$",
+          "access": "RO",
+          "options": {
+            "0": "Not connected",
+            "1": "Connected"
+          },
+          "ui_widget": "text",
+          "ui_group": "gpio",
+          "ui_order": 62,
+          "description": "Current status of S1 pin"
+        }
+      }
+    },
+
+    "security_base": {
+      "description": "Base command set for security devices (WIZ5XXSR-RP, W55RP20, etc.)",
+      "inherits_from": "common",
+      "commands": {
+        "OP": {
+          "name": "Network Operation Mode - Extended",
+          "pattern": "^[0-6]$",
+          "access": "RW",
+          "options": {
+            "0": "TCP Client mode",
+            "1": "TCP Server mode",
+            "2": "TCP Mixed mode",
+            "3": "UDP mode",
+            "4": "SSL TCP Client mode",
+            "5": "MQTT Client",
+            "6": "MQTTS Client"
+          },
+          "default": "0",
+          "ui_widget": "combo",
+          "ui_group": "network",
+          "ui_order": 10,
+          "description": "Network operation mode (with SSL/MQTT)"
+        },
+        "SO": {
+          "name": "SSL receive timeout",
+          "pattern": "",
+          "access": "RW",
+          "options": {},
+          "default": "3000",
+          "ui_widget": "number",
+          "ui_group": "ssl",
+          "ui_order": 70,
+          "description": "SSL socket receive timeout (ms)"
+        },
+        "QU": {
+          "name": "MQTT Options - User name",
+          "pattern": "",
+          "access": "RW",
+          "options": {},
+          "ui_widget": "text",
+          "ui_group": "mqtt",
+          "ui_order": 80,
+          "description": "MQTT broker username"
+        },
+        "QP": {
+          "name": "MQTT options - Password",
+          "pattern": "",
+          "access": "RW",
+          "options": {},
+          "ui_widget": "text",
+          "ui_group": "mqtt",
+          "ui_order": 81,
+          "description": "MQTT broker password"
+        },
+        "QC": {
+          "name": "MQTT options - Client ID",
+          "pattern": "",
+          "access": "RW",
+          "options": {},
+          "ui_widget": "text",
+          "ui_group": "mqtt",
+          "ui_order": 82,
+          "description": "MQTT client identifier"
+        },
+        "QK": {
+          "name": "MQTT Keep-Alive",
+          "pattern": "",
+          "access": "RW",
+          "options": {},
+          "default": "60",
+          "ui_widget": "number",
+          "ui_group": "mqtt",
+          "ui_order": 83,
+          "description": "MQTT keep-alive interval (seconds)"
+        },
+        "PU": {
+          "name": "MQTT Publish topic",
+          "pattern": "",
+          "access": "RW",
+          "options": {},
+          "ui_widget": "text",
+          "ui_group": "mqtt",
+          "ui_order": 84,
+          "description": "MQTT publish topic"
+        },
+        "U0": {
+          "name": "MQTT Subscribe topic 1",
+          "pattern": "",
+          "access": "RW",
+          "options": {},
+          "ui_widget": "text",
+          "ui_group": "mqtt",
+          "ui_order": 85,
+          "description": "First MQTT subscribe topic"
+        },
+        "U1": {
+          "name": "MQTT Subscribe topic 2",
+          "pattern": "",
+          "access": "RW",
+          "options": {},
+          "ui_widget": "text",
+          "ui_group": "mqtt",
+          "ui_order": 86,
+          "description": "Second MQTT subscribe topic"
+        },
+        "U2": {
+          "name": "MQTT Subscribe topic 3",
+          "pattern": "",
+          "access": "RW",
+          "options": {},
+          "ui_widget": "text",
+          "ui_group": "mqtt",
+          "ui_order": 87,
+          "description": "Third MQTT subscribe topic"
+        },
+        "QO": {
+          "name": "MQTT QoS level",
+          "pattern": "^[0-2]$",
+          "access": "RW",
+          "options": {
+            "0": "At most once",
+            "1": "At least once",
+            "2": "Exactly once"
+          },
+          "default": "0",
+          "ui_widget": "combo",
+          "ui_group": "mqtt",
+          "ui_order": 88,
+          "description": "MQTT Quality of Service level"
+        },
+        "RC": {
+          "name": "Root CA Option",
+          "pattern": "^[0-2]$",
+          "access": "RW",
+          "options": {
+            "0": "None",
+            "1": "Optional",
+            "2": "Required"
+          },
+          "default": "0",
+          "ui_widget": "combo",
+          "ui_group": "certificate",
+          "ui_order": 90,
+          "description": "Root CA certificate validation"
+        },
+        "CE": {
+          "name": "Client Certificate Enable",
+          "pattern": "^[0-1]$",
+          "access": "RW",
+          "options": {
+            "0": "Disable",
+            "1": "Enable"
+          },
+          "default": "0",
+          "ui_widget": "checkbox",
+          "ui_group": "certificate",
+          "ui_order": 91,
+          "description": "Enable client certificate authentication"
+        },
+        "OC": {
+          "name": "Root CA",
+          "pattern": "",
+          "access": "WO",
+          "options": {},
+          "ui_widget": "textarea",
+          "ui_group": "certificate",
+          "ui_order": 92,
+          "description": "Root CA certificate (PEM format)"
+        },
+        "LC": {
+          "name": "Client Certificate",
+          "pattern": "",
+          "access": "WO",
+          "options": {},
+          "ui_widget": "textarea",
+          "ui_group": "certificate",
+          "ui_order": 93,
+          "description": "Client certificate (PEM format)"
+        },
+        "PK": {
+          "name": "Private Key",
+          "pattern": "",
+          "access": "WO",
+          "options": {},
+          "ui_widget": "textarea",
+          "ui_group": "certificate",
+          "ui_order": 94,
+          "description": "Client private key (PEM format)"
+        },
+        "PO": {
+          "name": "Status of Modbus protocol",
+          "pattern": "^[0-2]$",
+          "access": "RW",
+          "options": {
+            "0": "None",
+            "1": "Modbus RTU",
+            "2": "Modbus ASCII"
+          },
+          "default": "0",
+          "ui_widget": "combo",
+          "ui_group": "modbus",
+          "ui_order": 100,
+          "description": "Modbus protocol mode"
+        }
+      }
+    }
+  },
+
+  "device_models": {
+    "WIZ750SR": {
+      "display_name": "WIZ750SR",
+      "category": "ONE_PORT",
+      "inherits_from": "wiz75x_extended",
+      "specific_commands": {},
+      "firmware_support": {
+        "min_version": "1.0.0",
+        "version_overrides": {
+          "1.4.4": {
+            "added_commands": ["MB"],
+            "modified_commands": {
+              "MB": {
+                "name": "Status of Modbus protocol",
+                "pattern": "^[0-2]$",
+                "access": "RW",
+                "options": {
+                  "0": "None",
+                  "1": "Modbus RTU",
+                  "2": "Modbus ASCII"
+                },
+                "default": "0",
+                "ui_widget": "combo",
+                "ui_group": "modbus",
+                "ui_order": 100,
+                "description": "Modbus protocol (WIZ750SR v1.4.4+)"
+              }
+            }
+          }
+        }
+      },
+      "ui_tabs": [
+        {
+          "tab_id": "basic",
+          "label": "Basic Settings",
+          "order": 1
+        },
+        {
+          "tab_id": "advanced",
+          "label": "Advanced",
+          "order": 2
+        },
+        {
+          "tab_id": "gpio",
+          "label": "User I/O",
+          "order": 3
+        }
+      ]
+    },
+
+    "W55RP20-S2E": {
+      "display_name": "W55RP20-S2E",
+      "category": "SECURITY_ONE_PORT",
+      "inherits_from": "security_base",
+      "specific_commands": {
+        "SD": {
+          "name": "Send Data at Connection",
+          "pattern": "^.{0,30}$",
+          "access": "RW",
+          "options": {},
+          "max_length": 30,
+          "ui_widget": "text",
+          "ui_group": "trigger",
+          "ui_order": 110,
+          "description": "Data to send when connection established (max 30 chars)"
+        },
+        "DD": {
+          "name": "Send Data at Disconnection",
+          "pattern": "^.{0,30}$",
+          "access": "RW",
+          "options": {},
+          "max_length": 30,
+          "ui_widget": "text",
+          "ui_group": "trigger",
+          "ui_order": 111,
+          "description": "Data to send when connection closed (max 30 chars)"
+        },
+        "SE": {
+          "name": "Ethernet Data Connection Condition",
+          "pattern": "^.{0,30}$",
+          "access": "RW",
+          "options": {},
+          "max_length": 30,
+          "ui_widget": "text",
+          "ui_group": "trigger",
+          "ui_order": 112,
+          "description": "Condition for auto-connection (max 30 chars)"
+        }
+      },
+      "firmware_support": {
+        "min_version": "1.0.0",
+        "version_overrides": {
+          "1.1.8": {
+            "added_commands": ["SD", "DD", "SE"]
+          }
+        }
+      },
+      "ui_tabs": [
+        {
+          "tab_id": "basic",
+          "label": "Basic Settings",
+          "order": 1
+        },
+        {
+          "tab_id": "ssl",
+          "label": "SSL/TLS",
+          "order": 2,
+          "condition": {
+            "min_version": "1.0.0"
+          }
+        },
+        {
+          "tab_id": "mqtt",
+          "label": "MQTT",
+          "order": 3
+        },
+        {
+          "tab_id": "certificate",
+          "label": "Certificate",
+          "order": 4
+        },
+        {
+          "tab_id": "trigger",
+          "label": "Trigger Data",
+          "order": 5,
+          "condition": {
+            "min_version": "1.1.8"
+          }
+        }
+      ]
+    },
+
+    "W55RP20-S2E-2CH": {
+      "display_name": "W55RP20-S2E-2CH (Dual Channel)",
+      "category": "SECURITY_TWO_PORT",
+      "inherits_from": "security_base",
+      "specific_commands": {
+        "QS": {
+          "name": "Operation status for channel 1",
+          "pattern": "",
+          "access": "RO",
+          "options": {},
+          "ui_widget": "text",
+          "ui_group": "ch1_info",
+          "ui_order": 200,
+          "description": "Channel 1 operational status"
+        },
+        "EN": {
+          "name": "UART Interface(Str) for channel 1",
+          "pattern": "",
+          "access": "RO",
+          "options": {},
+          "ui_widget": "text",
+          "ui_group": "ch1_info",
+          "ui_order": 201,
+          "description": "Channel 1 UART interface info"
+        },
+        "AO": {
+          "name": "Network Operation Mode for channel 1 - Extended",
+          "pattern": "^[0-6]$",
+          "access": "RW",
+          "options": {
+            "0": "TCP Client mode",
+            "1": "TCP Server mode",
+            "2": "TCP Mixed mode",
+            "3": "UDP mode",
+            "4": "SSL TCP Client mode",
+            "5": "MQTT Client",
+            "6": "MQTTS Client"
+          },
+          "default": "0",
+          "ui_widget": "combo",
+          "ui_group": "ch1_network",
+          "ui_order": 210,
+          "description": "Channel 1 network mode"
+        },
+        "QL": {
+          "name": "Local port number for channel 1",
+          "pattern": "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])$",
+          "access": "RW",
+          "options": {},
+          "default": "5001",
+          "ui_widget": "number",
+          "ui_group": "ch1_network",
+          "ui_order": 211,
+          "description": "Channel 1 local port"
+        },
+        "EB": {
+          "name": "UART channel 1 Baud rate",
+          "pattern": "^([0-9]|1[0-5])$",
+          "access": "RW",
+          "options": {
+            "0": "300",
+            "1": "600",
+            "2": "1200",
+            "3": "1800",
+            "4": "2400",
+            "5": "4800",
+            "6": "9600",
+            "7": "14400",
+            "8": "19200",
+            "9": "28800",
+            "10": "38400",
+            "11": "57600",
+            "12": "115200",
+            "13": "230400",
+            "14": "460800",
+            "15": "921600"
+          },
+          "default": "12",
+          "ui_widget": "combo",
+          "ui_group": "ch1_serial",
+          "ui_order": 220,
+          "description": "Channel 1 baud rate"
+        }
+      },
+      "firmware_support": {
+        "min_version": "1.0.0",
+        "version_overrides": {
+          "1.1.8": {
+            "added_commands": ["SD", "DD", "SE", "RD", "RF", "EE"]
+          }
+        }
+      },
+      "ui_tabs": [
+        {
+          "tab_id": "ch0_basic",
+          "label": "Channel 0 - Basic",
+          "order": 1
+        },
+        {
+          "tab_id": "ch1_basic",
+          "label": "Channel 1 - Basic",
+          "order": 2
+        },
+        {
+          "tab_id": "ssl",
+          "label": "SSL/TLS",
+          "order": 3
+        },
+        {
+          "tab_id": "mqtt",
+          "label": "MQTT",
+          "order": 4
+        },
+        {
+          "tab_id": "certificate",
+          "label": "Certificate",
+          "order": 5
+        }
+      ]
+    },
+
+    "IP20": {
+      "display_name": "IP20",
+      "category": "SECURITY_ONE_PORT",
+      "inherits_from": "security_base",
+      "specific_commands": {
+        "SD": {
+          "name": "Send Data at Connection",
+          "pattern": "^.{0,30}$",
+          "access": "RW",
+          "options": {},
+          "max_length": 30,
+          "ui_widget": "text",
+          "ui_group": "trigger",
+          "ui_order": 110
+        },
+        "DD": {
+          "name": "Send Data at Disconnection",
+          "pattern": "^.{0,30}$",
+          "access": "RW",
+          "options": {},
+          "max_length": 30,
+          "ui_widget": "text",
+          "ui_group": "trigger",
+          "ui_order": 111
+        },
+        "SE": {
+          "name": "Ethernet Data Connection Condition",
+          "pattern": "^.{0,30}$",
+          "access": "RW",
+          "options": {},
+          "max_length": 30,
+          "ui_widget": "text",
+          "ui_group": "trigger",
+          "ui_order": 112
+        }
+      },
+      "firmware_support": {
+        "min_version": "1.1.8",
+        "version_overrides": {}
+      },
+      "ui_tabs": [
+        {
+          "tab_id": "basic",
+          "label": "Basic Settings",
+          "order": 1
+        },
+        {
+          "tab_id": "ssl",
+          "label": "SSL/TLS",
+          "order": 2
+        },
+        {
+          "tab_id": "mqtt",
+          "label": "MQTT/MQTTS",
+          "order": 3
+        },
+        {
+          "tab_id": "certificate",
+          "label": "Certificate",
+          "order": 4
+        }
+      ]
+    }
+  }
+}

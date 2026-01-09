@@ -1,0 +1,256 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://wiznet.io/schemas/device-model.json",
+  "title": "WIZnet S2E Device Model Schema",
+  "description": "Schema for defining WIZnet Serial-to-Ethernet device models, command sets, and firmware compatibility",
+  "type": "object",
+  "required": ["schema_version", "command_sets", "device_models"],
+
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version for compatibility checking",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "example": "2.0.0"
+    },
+
+    "command_sets": {
+      "type": "object",
+      "description": "Reusable command set definitions that can be inherited by device models",
+      "additionalProperties": {
+        "$ref": "#/definitions/CommandSet"
+      }
+    },
+
+    "device_models": {
+      "type": "object",
+      "description": "Device model definitions with their specific command sets",
+      "additionalProperties": {
+        "$ref": "#/definitions/DeviceModel"
+      }
+    }
+  },
+
+  "definitions": {
+    "CommandSet": {
+      "type": "object",
+      "description": "A named set of commands that can be inherited",
+      "properties": {
+        "inherits_from": {
+          "type": "string",
+          "description": "Name of parent command set to inherit from"
+        },
+        "commands": {
+          "type": "object",
+          "description": "Command definitions in this set",
+          "additionalProperties": {
+            "$ref": "#/definitions/Command"
+          }
+        }
+      },
+      "required": ["commands"]
+    },
+
+    "Command": {
+      "type": "object",
+      "description": "Single command definition with validation rules",
+      "required": ["name", "access"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Human-readable command name",
+          "example": "MAC address"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Regular expression for parameter validation",
+          "example": "^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$"
+        },
+        "access": {
+          "type": "string",
+          "enum": ["RO", "RW", "WO"],
+          "description": "Access mode: Read-Only, Read-Write, Write-Only"
+        },
+        "options": {
+          "type": "object",
+          "description": "Valid option values with their labels",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "example": {
+            "0": "TCP Client mode",
+            "1": "TCP Server mode"
+          }
+        },
+        "default": {
+          "type": "string",
+          "description": "Default value for this command"
+        },
+        "min_length": {
+          "type": "integer",
+          "description": "Minimum string length"
+        },
+        "max_length": {
+          "type": "integer",
+          "description": "Maximum string length"
+        },
+        "ui_widget": {
+          "type": "string",
+          "enum": ["text", "number", "combo", "checkbox", "ip", "mac", "textarea"],
+          "description": "UI widget type hint for auto-generation",
+          "default": "text"
+        },
+        "ui_group": {
+          "type": "string",
+          "description": "UI grouping hint (e.g., 'network', 'serial', 'mqtt')"
+        },
+        "ui_order": {
+          "type": "integer",
+          "description": "Display order hint for UI generation"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description for tooltips/help"
+        }
+      }
+    },
+
+    "DeviceModel": {
+      "type": "object",
+      "description": "Complete device model definition",
+      "required": ["display_name", "category"],
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "description": "User-facing device name",
+          "example": "WIZ750SR"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "ONE_PORT",
+            "TWO_PORT",
+            "SECURITY_ONE_PORT",
+            "SECURITY_TWO_PORT"
+          ],
+          "description": "Device category for feature detection"
+        },
+        "inherits_from": {
+          "type": "string",
+          "description": "Command set name to inherit from"
+        },
+        "specific_commands": {
+          "type": "object",
+          "description": "Device-specific commands (override/extend inherited)",
+          "additionalProperties": {
+            "$ref": "#/definitions/Command"
+          }
+        },
+        "firmware_support": {
+          "$ref": "#/definitions/FirmwareSupport"
+        },
+        "ui_tabs": {
+          "type": "array",
+          "description": "Tab configuration for UI generation",
+          "items": {
+            "$ref": "#/definitions/UITab"
+          }
+        }
+      }
+    },
+
+    "FirmwareSupport": {
+      "type": "object",
+      "description": "Firmware version compatibility rules",
+      "properties": {
+        "min_version": {
+          "type": "string",
+          "description": "Minimum supported firmware version",
+          "pattern": "^\\d+\\.\\d+\\.\\d+",
+          "example": "1.0.0"
+        },
+        "max_version": {
+          "type": "string",
+          "description": "Maximum supported firmware version (optional)",
+          "pattern": "^\\d+\\.\\d+\\.\\d+"
+        },
+        "version_overrides": {
+          "type": "object",
+          "description": "Version-specific command modifications",
+          "additionalProperties": {
+            "$ref": "#/definitions/VersionOverride"
+          }
+        }
+      }
+    },
+
+    "VersionOverride": {
+      "type": "object",
+      "description": "Command modifications for specific firmware version",
+      "properties": {
+        "added_commands": {
+          "type": "array",
+          "description": "Command codes added in this version",
+          "items": {
+            "type": "string"
+          }
+        },
+        "removed_commands": {
+          "type": "array",
+          "description": "Command codes removed in this version",
+          "items": {
+            "type": "string"
+          }
+        },
+        "modified_commands": {
+          "type": "object",
+          "description": "Commands with modified definitions",
+          "additionalProperties": {
+            "$ref": "#/definitions/Command"
+          }
+        }
+      }
+    },
+
+    "UITab": {
+      "type": "object",
+      "description": "UI tab configuration for auto-generated interfaces",
+      "required": ["tab_id", "label"],
+      "properties": {
+        "tab_id": {
+          "type": "string",
+          "description": "Unique tab identifier",
+          "example": "basic_settings"
+        },
+        "label": {
+          "type": "string",
+          "description": "Tab display label",
+          "example": "Basic Settings"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Icon name or path"
+        },
+        "order": {
+          "type": "integer",
+          "description": "Tab display order"
+        },
+        "condition": {
+          "type": "object",
+          "description": "Conditional display rules",
+          "properties": {
+            "min_version": {
+              "type": "string"
+            },
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
