@@ -9765,6 +9765,8 @@ Config</string>
     <addaction name="actionSave"/>
     <addaction name="actionLoad"/>
     <addaction name="separator"/>
+    <addaction name="action_edit_device_json"/>
+    <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuOption">
@@ -9986,6 +9988,11 @@ Config</string>
   <action name="action_document">
    <property name="text">
     <string>Documentation</string>
+   </property>
+  </action>
+  <action name="action_edit_device_json">
+   <property name="text">
+    <string>Edit Device Configuration (JSON)</string>
    </property>
   </action>
  </widget>

@@ -14,6 +14,7 @@ class DeviceRegistry:
     def __init__(self, config_path: Optional[str] = None):
         self._models: Dict[str, DeviceModel] = {}
         self._command_sets: Dict[str, Dict[str, Command]] = {}
+        self._config_path = config_path
 
         if config_path:
             self.load_from_file(config_path)
@@ -108,7 +109,8 @@ class DeviceRegistry:
                     commands = self._command_sets[cmdset_name].copy()
 
             # 장치별 특수 명령어로 오버라이드
-            for cmd_code, cmd_data in model_data.get('specific_commands', {}).items():
+            specific = model_data.get('specific_commands', {})
+            for cmd_code, cmd_data in specific.items():
                 commands[cmd_code] = Command.from_dict(cmd_code, cmd_data)
 
             # DeviceModel 생성
@@ -140,6 +142,13 @@ class DeviceRegistry:
         """모든 명령어 세트 이름 목록"""
         return list(self._command_sets.keys())
 
+    def reload(self):
+        """설정 파일을 다시 로드"""
+        if not self._config_path:
+            raise ValueError("No config path set for reload")
+
+        self.load_from_file(self._config_path)
+
 
 # 전역 레지스트리 인스턴스 (싱글톤)
 _global_registry: Optional[DeviceRegistry] = None
@@ -150,7 +159,8 @@ def get_global_registry() -> DeviceRegistry:
     global _global_registry
     if _global_registry is None:
         # 기본 설정 파일 경로
-        default_config = Path(__file__).parent.parent / 'config' / 'devices' / 'devices_sample.json'
+        base = Path(__file__).parent.parent
+        default_config = base / 'config' / 'devices' / 'devices_sample.json'
         if default_config.exists():
             _global_registry = DeviceRegistry(str(default_config))
         else:

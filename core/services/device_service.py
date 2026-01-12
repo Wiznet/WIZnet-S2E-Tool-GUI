@@ -254,6 +254,18 @@ class DeviceService:
 
         return errors
 
+    def reload_config(self):
+        """Reload device configuration from JSON file.
+
+        This is useful after editing the JSON configuration file.
+        """
+        try:
+            self.registry.reload()
+            self.logger.info("Device configuration reloaded successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to reload configuration: {e}")
+            raise
+
     # ========================================================================
     # Utility Methods
     # ========================================================================

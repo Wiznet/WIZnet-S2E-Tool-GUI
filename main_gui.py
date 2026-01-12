@@ -243,6 +243,9 @@ class WIZWindow(QMainWindow, main_window):
         self.about_wiz.triggered.connect(self.about_info)
         self.action_document.triggered.connect(self.menu_document)
 
+        # Menu event - File
+        self.action_edit_device_json.triggered.connect(self.open_json_editor)
+
         # Menu event - Option
         self.net_adapter_info()
 
@@ -2639,23 +2642,52 @@ class WIZWindow(QMainWindow, main_window):
             # Update cmdset
             self.cmdset.get_cmdset(self.curr_dev, self.curr_st, self.curr_ver)
             self.logger.info(f"Device setting: {self.curr_dev}")
+
             # Parameter validity check
             invalid_flag = 0
-            setcmd_cmd = list(setcmd.keys())
-            print(f"do_setting::setcmd={setcmd}")
-            for i in range(len(setcmd)):
-                if (
-                    self.cmdset.isvalidparameter(
-                        setcmd_cmd[i], setcmd.get(setcmd_cmd[i])
+
+            # NEW ARCHITECTURE: Use device_service for validation
+            if self.use_new_architecture:
+                try:
+                    from core.models.device_config import DeviceInfo
+
+                    device = DeviceInfo(
+                        mac_addr=self.curr_mac,
+                        model_id=self.curr_dev,
+                        firmware_version=self.curr_ver
                     )
-                    is False
-                ):
-                    self.logger.warning(
-                        "Invalid parameter: %s %s"
-                        % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i]))
-                    )
-                    self.msg_invalid(setcmd.get(setcmd_cmd[i]))
-                    invalid_flag += 1
+
+                    errors = self.device_service.validate_config(device, setcmd)
+
+                    if errors:
+                        for cmd_code, error_msg in errors.items():
+                            self.logger.warning(f"Invalid parameter: {cmd_code} - {error_msg}")
+                            self.show_msgbox("Validation Error",
+                                           f"{cmd_code}: {error_msg}",
+                                           QMessageBox.Warning)
+                            invalid_flag += 1
+                except Exception as e:
+                    self.logger.error(f"[New Architecture] Validation failed: {e}")
+                    # Fallback to legacy validation
+                    self.use_new_architecture = False
+
+            # LEGACY: Original validation
+            if not self.use_new_architecture:
+                setcmd_cmd = list(setcmd.keys())
+                print(f"do_setting::setcmd={setcmd}")
+                for i in range(len(setcmd)):
+                    if (
+                        self.cmdset.isvalidparameter(
+                            setcmd_cmd[i], setcmd.get(setcmd_cmd[i])
+                        )
+                        is False
+                    ):
+                        self.logger.warning(
+                            "Invalid parameter: %s %s"
+                            % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i]))
+                        )
+                        self.msg_invalid(setcmd.get(setcmd_cmd[i]))
+                        invalid_flag += 1
 
             if invalid_flag > 0:
                 self.logger.info(f"Setting: invalid flag: {invalid_flag}")
@@ -3308,6 +3340,56 @@ class WIZWindow(QMainWindow, main_window):
         self.logger.info("Menu: documentation")
         # documentation pop-up
         webbrowser.open("https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/wiki")
+
+    def open_json_editor(self):
+        """JSON 설정 파일 에디터 열기"""
+        self.logger.info("Menu: Edit Device Configuration (JSON)")
+
+        try:
+            from json_editor_dialog import JSONEditorDialog
+
+            # 기본 경로는 devices_sample.json
+            json_path = Path(resource_path("config/devices/devices_sample.json"))
+
+            if not json_path.exists():
+                QMessageBox.warning(
+                    self,
+                    "File Not Found",
+                    f"Configuration file not found:\n{json_path}"
+                )
+                return
+
+            # JSON 에디터 다이얼로그 열기
+            editor = JSONEditorDialog(str(json_path), parent=self)
+            result = editor.exec_()
+
+            if result == JSONEditorDialog.Accepted:
+                self.logger.info("JSON configuration updated successfully")
+
+                # 새 아키텍처 사용 시 설정 다시 로드
+                if self.use_new_architecture:
+                    try:
+                        self.device_service.reload_config()
+                        QMessageBox.information(
+                            self,
+                            "Configuration Reloaded",
+                            "Device configuration has been reloaded successfully."
+                        )
+                    except Exception as e:
+                        self.logger.error(f"Failed to reload config: {e}")
+                        QMessageBox.warning(
+                            self,
+                            "Reload Warning",
+                            f"Configuration saved but reload failed:\n{e}\n\nPlease restart the application."
+                        )
+
+        except Exception as e:
+            self.logger.error(f"Failed to open JSON editor: {e}")
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Failed to open JSON editor:\n{e}"
+            )
 
     def msg_not_support(self):
         msgbox = QMessageBox(self)
