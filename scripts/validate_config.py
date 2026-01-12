@@ -112,10 +112,12 @@ class ConfigValidator:
             )
             return False
 
-        # 정규식 패턴 검증
+        # 정규식 패턴 검증 및 테스트
         if 'pattern' in data and data['pattern']:
             try:
-                re.compile(data['pattern'])
+                pattern = re.compile(data['pattern'])
+                # 패턴 테스트 (샘플 값으로)
+                self._test_pattern(code, pattern, parent)
             except re.error as e:
                 self.add_error(
                     f"Command '{code}' in '{parent}' has invalid regex pattern: {e}"
@@ -123,13 +125,55 @@ class ConfigValidator:
                 return False
 
         # UI 위젯 검증
-        valid_widgets = ['text', 'number', 'combo', 'checkbox', 'ip', 'mac', 'textarea']
+        valid_widgets = ['text', 'number', 'combo', 'checkbox', 'ip', 'mac', 'textarea', 'ipaddr', 'ipport']
         if 'ui_widget' in data and data['ui_widget'] not in valid_widgets:
             self.add_warning(
                 f"Command '{code}' in '{parent}' has unknown ui_widget: {data['ui_widget']}"
             )
 
+        # Options 검증
+        if 'options' in data and data['options']:
+            if not isinstance(data['options'], dict):
+                self.add_error(f"Command '{code}' options must be a dictionary")
+                return False
+
         return True
+
+    def _test_pattern(self, code: str, pattern: re.Pattern, parent: str):
+        """정규식 패턴을 샘플 값으로 테스트"""
+        # 일반적인 샘플 값들
+        test_cases = {
+            # IP 주소 패턴
+            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}': [
+                ('192.168.1.1', True),
+                ('256.0.0.1', False),
+                ('abc', False)
+            ],
+            # MAC 주소 패턴
+            r'[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}': [
+                ('00:08:DC:12:34:56', True),
+                ('invalid', False)
+            ],
+            # 포트 번호
+            r'\d+': [
+                ('80', True),
+                ('65536', True),
+                ('abc', False)
+            ]
+        }
+
+        pattern_str = pattern.pattern
+        # 간단한 패턴 매칭으로 테스트 케이스 찾기
+        for test_pattern, cases in test_cases.items():
+            if test_pattern in pattern_str:
+                for value, should_match in cases:
+                    matches = bool(pattern.match(value))
+                    if matches != should_match:
+                        self.add_warning(
+                            f"Command '{code}' pattern may be incorrect: "
+                            f"'{value}' {'matched' if matches else 'did not match'} "
+                            f"but expected {'match' if should_match else 'no match'}"
+                        )
 
     def validate_device_models(self) -> bool:
         """장치 모델 검증"""
