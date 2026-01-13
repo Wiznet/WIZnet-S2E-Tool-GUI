@@ -1,9 +1,9 @@
 # WIZnet S2E Tool 리팩토링 상태 보고서
 
 **브랜치**: `feature/refactoring-v2`
-**작성일**: 2026-01-09
+**작성일**: 2026-01-12 (최종 업데이트)
 **버전**: v1.5.8.1 + 리팩토링 진행 중
-**상태**: 🟡 **미완성 (인프라 구축 단계)**
+**상태**: 🟢 **Tier 1-2 완료, 실제 기능 마이그레이션 시작**
 
 ---
 
@@ -21,31 +21,60 @@
 
 ## 🎯 현재 상태 요약
 
-### 솔직한 평가
+### 최근 진행 상황 (2026-01-12)
 
-**"새 아키텍처의 뼈대는 구축했지만, 실제로는 아직 사용되지 않습니다."**
+**Tier 1-2 완료**: 안전하고 빠르게 구현 가능한 작업들을 먼저 완료
 
-#### ✅ 완료된 것
-- JSON 기반 데이터 구조 설계 및 구현
-- Core 라이브러리 (UI 독립적 비즈니스 로직)
-- Adapter 패턴 (UI 추상화 계층)
-- 테스트 스크립트 및 검증 도구
-- uv 기반 실행 환경 구축
+#### ✅ **완료된 작업 (Tier 1: JSON 도구)**
+1. **JSON 검증 강화** (`scripts/validate_config.py`)
+   - 정규식 패턴 테스트 추가
+   - 상속 순환 참조 감지
+   - UI 위젯 타입 검증
+   - 통계 출력
 
-#### ❌ 완료 안된 것
-- **실제 기능 전환** (main_gui.py는 여전히 wizcmdset.py 사용)
-- **패킷 에디터** (JSON 수동 편집만 가능)
-- **OTA 기능** (펌웨어 다운로드/플래시)
-- **UI 개선** (Qt만 지원, Web/CLI 없음)
-- **새 브랜치 작업** (develop에 직접 작업했다가 지금 새 브랜치로 이동)
+2. **명령어 문서 자동 생성** (`scripts/generate_command_docs.py`)
+   - JSON에서 Markdown 문서 자동 생성
+   - 각 장치별 명령어 레퍼런스
+   - 옵션 상세 설명
+
+3. **JSON 백업/복원 도구** (`scripts/manage_config.py`)
+   - 타임스탬프 기반 자동 백업
+   - 백업 목록 조회
+   - 특정 백업으로 복원
+   - 백업 비교 기능
+
+4. **명령어 템플릿 생성기** (`scripts/create_template.py`)
+   - 새 장치 모델 템플릿
+   - 새 명령어 템플릿
+   - 명령어 세트 템플릿
+
+#### ✅ **완료된 작업 (Tier 2: 간단한 마이그레이션)**
+5. **설정 검증을 새 아키텍처로 전환** (`main_gui.py:do_setting()`)
+   - ⭐ **첫 실제 기능 마이그레이션!**
+   - `device_service.validate_config()` 사용
+   - Strangler Fig 패턴으로 안전하게 전환
+
+6. **JSON 설정 에디터 GUI** (`json_editor_dialog.py`)
+   - 간단한 JSON 편집기
+   - 구문 검증 (Validate)
+   - 자동 포맷팅 (Format)
+   - 자동 백업 생성
+   - File 메뉴에 통합
+   - 설정 변경 후 런타임 리로드
+
+7. **중앙화된 메시지 핸들러** (`message_handler.py`)
+   - 모든 사용자 메시지 통합
+   - 도메인 특화 메시지 (device_not_selected, invalid_parameter, etc.)
+   - 자동 로깅
+   - 일관된 UX
 
 ### 사용자 입장에서
 
-**변화**: 없음
-**개선**: 없음
-**새 기능**: 없음
+**변화**: JSON 설정을 GUI에서 직접 편집 가능
+**개선**: 설정 검증이 더 정확해짐 (새 아키텍처)
+**새 기능**: File 메뉴에 "Edit Device Configuration (JSON)" 추가
 
-현재는 **개발자를 위한 인프라**만 구축된 상태입니다.
+**개발자 입장에서**: 이제 실제로 새 아키텍처가 사용되기 시작했습니다!
 
 ---
 
@@ -245,22 +274,114 @@ adapter.show_error("Invalid IP address", "Validation Error")
 adapter.show_progress("Searching devices...", 50, 100)
 ```
 
-### 4. 테스트 및 검증
+### 4. JSON 관리 도구들 (NEW!)
 
 #### 4.1 설정 파일 검증 (`scripts/validate_config.py`)
 
 ```bash
+# 기본 검증
 python scripts/validate_config.py
+
+# 상세 출력
+python scripts/validate_config.py --verbose
+
+# 특정 파일 검증
+python scripts/validate_config.py --config config/devices/my_config.json
 ```
 
 **검증 항목**:
 - JSON 구조 유효성
 - 필수 필드 존재 여부
-- 정규식 패턴 문법
+- 정규식 패턴 문법 + 샘플 데이터 테스트
 - 명령어 세트 상속 체인
-- 순환 참조
+- 순환 참조 감지
+- UI 위젯 타입 검증
+- 통계 출력
 
-#### 4.2 단위 테스트
+#### 4.2 명령어 문서 생성 (`scripts/generate_command_docs.py`)
+
+```bash
+# 기본 문서 생성
+python scripts/generate_command_docs.py
+
+# 특정 출력 경로
+python scripts/generate_command_docs.py --output docs/MY_COMMANDS.md
+
+# 특정 설정 파일
+python scripts/generate_command_docs.py --config config/devices/custom.json
+```
+
+**생성 내용**:
+- 각 장치 모델별 명령어 목록 테이블
+- 명령어 상세 정보 (옵션, 패턴, 접근 모드)
+- 명령어 세트 상속 관계
+- 펌웨어 버전별 차이
+
+#### 4.3 설정 백업/복원 (`scripts/manage_config.py`)
+
+```bash
+# 현재 설정 백업
+python scripts/manage_config.py backup
+
+# 백업 목록 보기
+python scripts/manage_config.py list
+
+# 특정 백업으로 복원
+python scripts/manage_config.py restore 1    # 첫 번째 백업
+python scripts/manage_config.py restore latest
+
+# 백업 비교
+python scripts/manage_config.py compare 1 2
+
+# 오래된 백업 정리 (최근 10개만 유지)
+python scripts/manage_config.py clean 10
+```
+
+**기능**:
+- 타임스탬프 기반 자동 백업
+- 복원 전 자동 백업 (auto_backup_*.json)
+- 백업 파일 비교 (장치 모델, 명령어 세트 수)
+- 파일 크기 및 날짜 표시
+
+#### 4.4 템플릿 생성 (`scripts/create_template.py`)
+
+```bash
+# 새 장치 모델 템플릿
+python scripts/create_template.py device --model-id NEW_DEVICE \
+    --display-name "New Device" --category ONE_PORT
+
+# 새 명령어 템플릿
+python scripts/create_template.py command --code XX \
+    --name "New Command" --access RW
+
+# 새 명령어 세트 템플릿
+python scripts/create_template.py cmdset --name new_cmdset \
+    --inherits common
+
+# JSON 파일로 출력
+python scripts/create_template.py device --model-id TEST \
+    --output templates/test_device.json
+```
+
+**사용 목적**:
+- 새 장치 추가 시 구조 가이드
+- 수동 편집 오류 방지
+- 일관된 포맷 유지
+
+### 5. 테스트 도구
+
+#### 5.1 메시지 핸들러 테스트 (`tests/test_message_handler.py`)
+
+```bash
+python tests/test_message_handler.py
+```
+
+**기능**:
+- 각 메시지 타입 시각적 테스트
+- 정보/경고/에러/질문 메시지
+- 도메인 특화 메시지 (장치 미선택, 검증 실패 등)
+
+#### 5.2 기존 단위 테스트
 
 ```bash
 # Registry 테스트
