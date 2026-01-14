@@ -6,20 +6,22 @@ It translates Core operations to Qt widget manipulation and vice versa.
 
 from typing import List, Dict, Optional, Callable
 from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem, QLineEdit, QComboBox
-from PyQt5.QtCore import QObject
 
 from .base_adapter import BaseUIAdapter
 from core.models.device_config import DeviceInfo, DeviceConfig
 from core.models.device_model import DeviceModel
 
 
-class QtAdapter(BaseUIAdapter, QObject):
+class QtAdapter(BaseUIAdapter):
     """Qt-specific implementation of UI adapter.
 
     This adapter works with existing WIZWindow (main_gui.py) to:
     - Display data in Qt widgets
     - Handle Qt events and delegate to Core
     - Manage UI state based on Core responses
+
+    Note: Does not inherit from QObject since we don't need signals/slots.
+    The adapter is a simple bridge between Core and Qt widgets.
     """
 
     def __init__(self, window):
@@ -28,7 +30,7 @@ class QtAdapter(BaseUIAdapter, QObject):
         Args:
             window: WIZWindow instance (main_gui.py)
         """
-        QObject.__init__(self)
+        super().__init__()
         self.window = window
         self.logger = window.logger
 
