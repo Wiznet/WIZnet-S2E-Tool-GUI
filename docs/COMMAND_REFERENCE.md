@@ -1,6 +1,6 @@
 # WIZnet S2E 명령어 레퍼런스
 
-**생성일**: 2026-01-09 18:17:12
+**생성일**: 2026-01-14 16:19:22
 **소스**: config\devices\devices_sample.json
 
 ---
@@ -26,8 +26,13 @@
 | 코드 | 이름 | 접근 | 패턴 | 옵션 | UI 위젯 |
 |------|------|------|------|------|---------|
 | `BR` | UART Baud rate | 읽기/쓰기 | `^([0-9]|1[0-5])$` | 16개 옵션 | `combo` |
+| `CA` | Type and Direction of User I/O pin A | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
+| `CB` | Type and Direction of User I/O pin B | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
+| `CC` | Type and Direction of User I/O pin C | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
+| `CD` | Type and Direction of User I/O pin D | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
 | `CP` | Connection Password Enable | 읽기/쓰기 | `^[0-1]$` | 2개 옵션 | `checkbox` |
 | `DB` | UART Data bit length | 읽기/쓰기 | `^[0-1]$` | 2개 옵션 | `combo` |
+| `DG` | Serial Debug Message Enable | 읽기/쓰기 | `^[0-4]$` | 5개 옵션 | `combo` |
 | `DS` | DNS Server address | 읽기/쓰기 | `^(([0-9]|[1-9][0-9]|1[0-9]{...` | - | `ip` |
 | `FL` | UART Flow Control | 읽기/쓰기 | `^[0-4]$` | 5개 옵션 | `combo` |
 | `FR` | Device Factory Reset | 쓰기전용 | - | - | `text` |
@@ -57,8 +62,10 @@
 | `SC` | Status pin S0 and S1 Operation Mode Setting | 읽기/쓰기 | `^([0-1]{2})$` | 2개 옵션 | `combo` |
 | `SM` | Subnet mask | 읽기/쓰기 | `^(([0-9]|[1-9][0-9]|1[0-9]{...` | - | `ip` |
 | `SP` | Search ID Code | 읽기/쓰기 | - | - | `text` |
+| `SS` | Command mode Switch Code | 읽기/쓰기 | `^(([0-9a-fA-F][0-9a-fA-F]){...` | - | `text` |
 | `ST` | Operation status | 읽기전용 | - | - | `text` |
 | `SV` | Save Device Setting | 쓰기전용 | - | - | `text` |
+| `TE` | Command mode Switch Code Enable | 읽기/쓰기 | `^[0-1]$` | 2개 옵션 | `checkbox` |
 | `TR` | TCP Retransmission Retry count | 읽기/쓰기 | `^([1-9]|[1-9][0-9]|1[0-9][0...` | - | `number` |
 | `VR` | Firmware Version | 읽기전용 | - | - | `text` |
 
@@ -85,6 +92,38 @@
 | `14` | 460800 |
 | `15` | 921600 |
 
+#### CA - Type and Direction of User I/O pin A
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
+#### CB - Type and Direction of User I/O pin B
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
+#### CC - Type and Direction of User I/O pin C
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
+#### CD - Type and Direction of User I/O pin D
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
 #### CP - Connection Password Enable
 
 | 값 | 설명 |
@@ -98,6 +137,16 @@
 |-----|------|
 | `0` | 7-bit |
 | `1` | 8-bit |
+
+#### DG - Serial Debug Message Enable
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Disable |
+| `1` | Enable Level 1 |
+| `2` | Enable Level 2 |
+| `3` | Enable Level 3 |
+| `4` | Enable Level 4 |
 
 #### FL - UART Flow Control
 
@@ -168,6 +217,13 @@
 | `00` | PHY Link Status or TCP Connection Status |
 | `11` | DTR/DSR |
 
+#### TE - Command mode Switch Code Enable
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Disable |
+| `1` | Enable |
+
 ---
 
 ## W55RP20-S2E
@@ -182,9 +238,14 @@
 | 코드 | 이름 | 접근 | 패턴 | 옵션 | UI 위젯 |
 |------|------|------|------|------|---------|
 | `BR` | UART Baud rate | 읽기/쓰기 | `^([0-9]|1[0-5])$` | 16개 옵션 | `combo` |
+| `CA` | Type and Direction of User I/O pin A | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
+| `CB` | Type and Direction of User I/O pin B | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
+| `CC` | Type and Direction of User I/O pin C | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
+| `CD` | Type and Direction of User I/O pin D | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
 | `CE` | Client Certificate Enable | 읽기/쓰기 | `^[0-1]$` | 2개 옵션 | `checkbox` |
 | `CP` | Connection Password Enable | 읽기/쓰기 | `^[0-1]$` | 2개 옵션 | `checkbox` |
 | `DB` | UART Data bit length | 읽기/쓰기 | `^[0-1]$` | 2개 옵션 | `combo` |
+| `DG` | Serial Debug Message Enable | 읽기/쓰기 | `^[0-4]$` | 5개 옵션 | `combo` |
 | `DS` | DNS Server address | 읽기/쓰기 | `^(([0-9]|[1-9][0-9]|1[0-9]{...` | - | `ip` |
 | `FL` | UART Flow Control | 읽기/쓰기 | `^[0-4]$` | 5개 옵션 | `combo` |
 | `FR` | Device Factory Reset | 쓰기전용 | - | - | `text` |
@@ -223,8 +284,10 @@
 | `SM` | Subnet mask | 읽기/쓰기 | `^(([0-9]|[1-9][0-9]|1[0-9]{...` | - | `ip` |
 | `SO` | SSL receive timeout | 읽기/쓰기 | - | - | `number` |
 | `SP` | Search ID Code | 읽기/쓰기 | - | - | `text` |
+| `SS` | Command mode Switch Code | 읽기/쓰기 | `^(([0-9a-fA-F][0-9a-fA-F]){...` | - | `text` |
 | `ST` | Operation status | 읽기전용 | - | - | `text` |
 | `SV` | Save Device Setting | 쓰기전용 | - | - | `text` |
+| `TE` | Command mode Switch Code Enable | 읽기/쓰기 | `^[0-1]$` | 2개 옵션 | `checkbox` |
 | `U0` | MQTT Subscribe topic 1 | 읽기/쓰기 | - | - | `text` |
 | `U1` | MQTT Subscribe topic 2 | 읽기/쓰기 | - | - | `text` |
 | `U2` | MQTT Subscribe topic 3 | 읽기/쓰기 | - | - | `text` |
@@ -253,6 +316,38 @@
 | `14` | 460800 |
 | `15` | 921600 |
 
+#### CA - Type and Direction of User I/O pin A
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
+#### CB - Type and Direction of User I/O pin B
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
+#### CC - Type and Direction of User I/O pin C
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
+#### CD - Type and Direction of User I/O pin D
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
 #### CE - Client Certificate Enable
 
 | 값 | 설명 |
@@ -273,6 +368,16 @@
 |-----|------|
 | `0` | 7-bit |
 | `1` | 8-bit |
+
+#### DG - Serial Debug Message Enable
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Disable |
+| `1` | Enable Level 1 |
+| `2` | Enable Level 2 |
+| `3` | Enable Level 3 |
+| `4` | Enable Level 4 |
 
 #### FL - UART Flow Control
 
@@ -348,6 +453,13 @@
 |-----|------|
 | `0` | 1-bit |
 | `1` | 2-bit |
+
+#### TE - Command mode Switch Code Enable
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Disable |
+| `1` | Enable |
 
 ---
 
@@ -363,9 +475,14 @@
 | 코드 | 이름 | 접근 | 패턴 | 옵션 | UI 위젯 |
 |------|------|------|------|------|---------|
 | `BR` | UART Baud rate | 읽기/쓰기 | `^([0-9]|1[0-5])$` | 16개 옵션 | `combo` |
+| `CA` | Type and Direction of User I/O pin A | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
+| `CB` | Type and Direction of User I/O pin B | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
+| `CC` | Type and Direction of User I/O pin C | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
+| `CD` | Type and Direction of User I/O pin D | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
 | `CE` | Client Certificate Enable | 읽기/쓰기 | `^[0-1]$` | 2개 옵션 | `checkbox` |
 | `CP` | Connection Password Enable | 읽기/쓰기 | `^[0-1]$` | 2개 옵션 | `checkbox` |
 | `DB` | UART Data bit length | 읽기/쓰기 | `^[0-1]$` | 2개 옵션 | `combo` |
+| `DG` | Serial Debug Message Enable | 읽기/쓰기 | `^[0-4]$` | 5개 옵션 | `combo` |
 | `DS` | DNS Server address | 읽기/쓰기 | `^(([0-9]|[1-9][0-9]|1[0-9]{...` | - | `ip` |
 | `FL` | UART Flow Control | 읽기/쓰기 | `^[0-4]$` | 5개 옵션 | `combo` |
 | `FR` | Device Factory Reset | 쓰기전용 | - | - | `text` |
@@ -404,8 +521,10 @@
 | `SM` | Subnet mask | 읽기/쓰기 | `^(([0-9]|[1-9][0-9]|1[0-9]{...` | - | `ip` |
 | `SO` | SSL receive timeout | 읽기/쓰기 | - | - | `number` |
 | `SP` | Search ID Code | 읽기/쓰기 | - | - | `text` |
+| `SS` | Command mode Switch Code | 읽기/쓰기 | `^(([0-9a-fA-F][0-9a-fA-F]){...` | - | `text` |
 | `ST` | Operation status | 읽기전용 | - | - | `text` |
 | `SV` | Save Device Setting | 쓰기전용 | - | - | `text` |
+| `TE` | Command mode Switch Code Enable | 읽기/쓰기 | `^[0-1]$` | 2개 옵션 | `checkbox` |
 | `U0` | MQTT Subscribe topic 1 | 읽기/쓰기 | - | - | `text` |
 | `U1` | MQTT Subscribe topic 2 | 읽기/쓰기 | - | - | `text` |
 | `U2` | MQTT Subscribe topic 3 | 읽기/쓰기 | - | - | `text` |
@@ -434,6 +553,38 @@
 | `14` | 460800 |
 | `15` | 921600 |
 
+#### CA - Type and Direction of User I/O pin A
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
+#### CB - Type and Direction of User I/O pin B
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
+#### CC - Type and Direction of User I/O pin C
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
+#### CD - Type and Direction of User I/O pin D
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
 #### CE - Client Certificate Enable
 
 | 값 | 설명 |
@@ -454,6 +605,16 @@
 |-----|------|
 | `0` | 7-bit |
 | `1` | 8-bit |
+
+#### DG - Serial Debug Message Enable
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Disable |
+| `1` | Enable Level 1 |
+| `2` | Enable Level 2 |
+| `3` | Enable Level 3 |
+| `4` | Enable Level 4 |
 
 #### FL - UART Flow Control
 
@@ -529,6 +690,13 @@
 |-----|------|
 | `0` | 1-bit |
 | `1` | 2-bit |
+
+#### TE - Command mode Switch Code Enable
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Disable |
+| `1` | Enable |
 
 ---
 
@@ -544,9 +712,14 @@
 | 코드 | 이름 | 접근 | 패턴 | 옵션 | UI 위젯 |
 |------|------|------|------|------|---------|
 | `BR` | UART Baud rate | 읽기/쓰기 | `^([0-9]|1[0-5])$` | 16개 옵션 | `combo` |
+| `CA` | Type and Direction of User I/O pin A | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
+| `CB` | Type and Direction of User I/O pin B | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
+| `CC` | Type and Direction of User I/O pin C | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
+| `CD` | Type and Direction of User I/O pin D | 읽기/쓰기 | `^[0-2]$` | 3개 옵션 | `combo` |
 | `CE` | Client Certificate Enable | 읽기/쓰기 | `^[0-1]$` | 2개 옵션 | `checkbox` |
 | `CP` | Connection Password Enable | 읽기/쓰기 | `^[0-1]$` | 2개 옵션 | `checkbox` |
 | `DB` | UART Data bit length | 읽기/쓰기 | `^[0-1]$` | 2개 옵션 | `combo` |
+| `DG` | Serial Debug Message Enable | 읽기/쓰기 | `^[0-4]$` | 5개 옵션 | `combo` |
 | `DS` | DNS Server address | 읽기/쓰기 | `^(([0-9]|[1-9][0-9]|1[0-9]{...` | - | `ip` |
 | `FL` | UART Flow Control | 읽기/쓰기 | `^[0-4]$` | 5개 옵션 | `combo` |
 | `FR` | Device Factory Reset | 쓰기전용 | - | - | `text` |
@@ -585,8 +758,10 @@
 | `SM` | Subnet mask | 읽기/쓰기 | `^(([0-9]|[1-9][0-9]|1[0-9]{...` | - | `ip` |
 | `SO` | SSL receive timeout | 읽기/쓰기 | - | - | `number` |
 | `SP` | Search ID Code | 읽기/쓰기 | - | - | `text` |
+| `SS` | Command mode Switch Code | 읽기/쓰기 | `^(([0-9a-fA-F][0-9a-fA-F]){...` | - | `text` |
 | `ST` | Operation status | 읽기전용 | - | - | `text` |
 | `SV` | Save Device Setting | 쓰기전용 | - | - | `text` |
+| `TE` | Command mode Switch Code Enable | 읽기/쓰기 | `^[0-1]$` | 2개 옵션 | `checkbox` |
 | `U0` | MQTT Subscribe topic 1 | 읽기/쓰기 | - | - | `text` |
 | `U1` | MQTT Subscribe topic 2 | 읽기/쓰기 | - | - | `text` |
 | `U2` | MQTT Subscribe topic 3 | 읽기/쓰기 | - | - | `text` |
@@ -615,6 +790,38 @@
 | `14` | 460800 |
 | `15` | 921600 |
 
+#### CA - Type and Direction of User I/O pin A
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
+#### CB - Type and Direction of User I/O pin B
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
+#### CC - Type and Direction of User I/O pin C
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
+#### CD - Type and Direction of User I/O pin D
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Digital Input |
+| `1` | Digital Output |
+| `2` | Analog Input |
+
 #### CE - Client Certificate Enable
 
 | 값 | 설명 |
@@ -635,6 +842,16 @@
 |-----|------|
 | `0` | 7-bit |
 | `1` | 8-bit |
+
+#### DG - Serial Debug Message Enable
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Disable |
+| `1` | Enable Level 1 |
+| `2` | Enable Level 2 |
+| `3` | Enable Level 3 |
+| `4` | Enable Level 4 |
 
 #### FL - UART Flow Control
 
@@ -711,13 +928,20 @@
 | `0` | 1-bit |
 | `1` | 2-bit |
 
+#### TE - Command mode Switch Code Enable
+
+| 값 | 설명 |
+|-----|------|
+| `0` | Disable |
+| `1` | Enable |
+
 ---
 
 ## 명령어 세트
 
 ### common
 
-**명령어 수**: 32
+**명령어 수**: 39
 
 ### wiz75x_extended
 
