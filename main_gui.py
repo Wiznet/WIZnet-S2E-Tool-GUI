@@ -2068,7 +2068,8 @@ class WIZWindow(QMainWindow, main_window):
                 if "RR" in dev_data:
                     self.ch2_reconnection.setText(dev_data["RR"])
 
-                if "RO" in dev_data:
+                # RO: SSL recv timeout for channel 2 (2-channel devices only)
+                if "RO" in dev_data and self.curr_dev in SECURITY_TWO_PORT_DEV:
                     self.lineedit_ch1_ssl_recv_timeout_2.setText(dev_data["RO"])
 
                 if "EO" in dev_data:
@@ -2163,9 +2164,9 @@ class WIZWindow(QMainWindow, main_window):
                     self.combobox_current_bank.setCurrentIndex(int(dev_data["BA"]))
                 # SSL Timeout
                 if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in W55RP20_FAMILY or 'W232N' in self.curr_dev or 'IP20' in self.curr_dev:
-                    pass
-                    # if 'UF' in dev_data:
-                    #     self.combobox_current_bank.setCurrentIndex(int(dev_data['UF']))
+                    # SO: SSL recv timeout for channel 1 (all W55RP20 family)
+                    if "SO" in dev_data:
+                        self.lineedit_ch1_ssl_recv_timeout.setText(dev_data["SO"])
 
             self.object_config()
         except Exception as e:
@@ -2459,7 +2460,9 @@ class WIZWindow(QMainWindow, main_window):
 
                 setcmd["RR"] = self.ch2_reconnection.text()
 
-                setcmd["RO"] = self.lineedit_ch1_ssl_recv_timeout_2.text()
+                # RO: SSL recv timeout for channel 2 (2-channel devices only)
+                if self.curr_dev in SECURITY_TWO_PORT_DEV:
+                    setcmd["RO"] = self.lineedit_ch1_ssl_recv_timeout_2.text()
                 setcmd["EO"] = str(self.modbus_protocol_2.currentIndex())
 
                 rd_data = self.ch1_pack_char_8.text()
