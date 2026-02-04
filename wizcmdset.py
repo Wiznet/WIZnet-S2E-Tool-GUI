@@ -1,3 +1,24 @@
+"""
+WizNet S2E Tool - Command Set Definition
+
+CMDSET 상속 구조:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+common_cmdset (기본 명령어 집합, BR: 0-15)
+├─ WIZ75X_CMDSET (단일 포트 기본 장치)
+├─ WIZ752_CMDSET (2포트 장치, BR/EB: 0-13)
+└─ WIZ5XX_RP_CMDSET (보안 장치 기본, BR: 0-15)
+    ├─ [WIZ510SSL, WIZ5XXSR-RP, W232N, IP20 등] ← 그대로 사용
+    └─ W55RP20_CMDSET (고속 BR 지원, BR: 0-19)
+        └─ W55RP20_2CH_CMDSET (2채널, BR/EB: 0-19)
+
+장치별 Baudrate 지원:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- WIZ752 계열:       BR/EB 0-13  (최대 230400 bps)
+- 일반 장치:         BR 0-15     (최대 921600 bps)
+- W55RP20-S2E:       BR 0-19     (최대 8M bps)
+- W55RP20-S2E-2CH:   BR/EB 0-19  (최대 8M bps)
+"""
+
 import re
 from utils import logger
 from WIZMakeCMD import (
@@ -8,9 +29,13 @@ from WIZMakeCMD import (
 )
 from collections import namedtuple
 
-
+# ==================== Pattern Definitions ====================
 ip_pattern = r"^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
 port_pattern = r"^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9][0-9][0-9]|65[0-4][0-9][0-9]|655[0-2][0-9]|6553[0-5])$"
+
+# W55RP20 high-speed baudrate pattern (BR/EB index 0-19: 300bps ~ 8Mbps)
+# W55RP20-S2E와 W55RP20-S2E-2CH의 BR/EB에서 동일하게 사용
+w55rp20_baudrate_pattern = r"^([0-9]|1[0-9])$"
 baudrate_option = {
     "0": "300",
     "1": "600",
@@ -146,6 +171,9 @@ WIZ510SSL_CMDSET = {
     "BA": ["Current Flash Bank", "", {}, "RO"],
 }
 
+# ==================== WIZ5XX-RP Family CMDSET ====================
+# 적용 장치: WIZ510SSL, WIZ5XXSR-RP, W232N, IP20
+# 특징: SSL/MQTT 지원, BR 0-15 (최대 921600 bps)
 WIZ5XX_RP_CMDSET = {
     **common_cmdset,
     "OP": [
@@ -177,8 +205,22 @@ WIZ5XX_RP_CMDSET = {
     "SE": ["Ethernet Data Connection Condition", "^.{0,30}$", {}, "RW"],  # W55RP20-S2E, W232N, IP20, 최대 30글자
 }
 
-W55RP20_2CH_CMDSET = {
+# ==================== W55RP20 CMDSET (Single Channel) ====================
+# 적용 장치: W55RP20-S2E
+# 상속: WIZ5XX_RP_CMDSET
+# 특징: 고속 Baudrate 지원 (BR 0-19, 최대 8Mbps)
+W55RP20_CMDSET = {
     **WIZ5XX_RP_CMDSET,
+    # BR을 고속 baudrate로 재정의 (w55rp20_baudrate_pattern 사용)
+    "BR": ["UART Baud rate", w55rp20_baudrate_pattern, baudrate_option, "RW"],
+}
+
+# ==================== W55RP20 2-Channel CMDSET ====================
+# 적용 장치: W55RP20-S2E-2CH
+# 상속: W55RP20_CMDSET
+# 특징: 2채널 지원, 양쪽 채널 모두 고속 Baudrate (BR/EB 0-19, 최대 8Mbps)
+W55RP20_2CH_CMDSET = {
+    **W55RP20_CMDSET,
     "QS": ["Operation status for channel 1", "", {}, "RO"],
     "EN": ["UART Interface(Str) for channel 1", "", {}, "RO"],
     "AO": [
@@ -190,7 +232,8 @@ W55RP20_2CH_CMDSET = {
     "QL": ["Local port number for channel 1", port_pattern, {}, "RW"],
     "QH": ["Remote Host IP address for channel 1", ip_pattern, {}, "RW"],
     "AP": ["Remote Host Port number for channel 1", port_pattern, {}, "RW"],
-    "EB": ["UART channel 1 Baud rate", "^([0-9]|1[0-5])$", baudrate_option, "RW"],
+    # EB: BR과 동일한 패턴 사용 (w55rp20_baudrate_pattern, 0-19 지원)
+    "EB": ["UART channel 1 Baud rate", w55rp20_baudrate_pattern, baudrate_option, "RW"],
     "ED": ["UART channel 1 Data bit length", "^[0-1]$", {"0": "7-bit", "1": "8-bit"}, "RW"],
     "EP": ["UART channel 1 Parity bit", "^[0-2]$", {"0": "NONE", "1": "ODD", "2": "EVEN"}, "RW"],
     "ES": ["UART channel 1 Stop bit length", "^[0-1]$", {"0": "1-bit", "1": "2-bit"}, "RW"],
@@ -288,15 +331,23 @@ class Wizcmdset():
         if mode is not None:
             mode_str = mode.upper() if isinstance(mode, str) else str(mode).upper()
 
+        # ==================== 장치별 CMDSET 매핑 ====================
         if name in ONE_PORT_DEV:
             logger.debug('One port device')
             self.cmdset = WIZ75X_CMDSET.copy()
         elif name in SECURITY_DEVICE:
             if mode_str != "BOOT":
+                # W55RP20 Family: 고속 Baudrate 지원
                 if name == "W55RP20-S2E-2CH":
-                    logger.debug("Security device (2CH)")
+                    # 2채널, BR/EB 0-19 (최대 8Mbps)
+                    logger.debug("Security device (W55RP20-S2E-2CH)")
                     self.cmdset = W55RP20_2CH_CMDSET.copy()
+                elif name == "W55RP20-S2E":
+                    # 단일채널, BR 0-19 (최대 8Mbps)
+                    logger.debug("Security device (W55RP20-S2E)")
+                    self.cmdset = W55RP20_CMDSET.copy()
                 else:
+                    # 기타 보안 장치 (WIZ510SSL, W232N, IP20 등): BR 0-15 (최대 921600)
                     logger.debug("Security device")
                     self.cmdset = WIZ5XX_RP_CMDSET.copy()
             else:
