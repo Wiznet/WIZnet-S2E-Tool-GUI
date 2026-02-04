@@ -840,18 +840,29 @@ class WIZWindow(QMainWindow, main_window):
                 if idx >= 0:
                     self.ch1_baud.setCurrentIndex(idx)
         elif self.curr_dev in W55RP20_FAMILY:
-            # Baudrate configuration - get current device's BR value from dev_profile
-            current_baud = self._get_current_baud_from_profile(19)  # W55RP20: max BR index 19 (8M)
+            # W55RP20: 펌웨어 버전에 따라 고속 보드레이트 지원 여부 결정
+            # - FW < 1.2.1: BR 0-15 (최대 921600)
+            # - FW >= 1.2.1: BR 0-19 (최대 8M, 1M/2M/4M/8M 지원)
+            supports_high_speed = False
+            if hasattr(self, 'curr_ver') and self.curr_ver:
+                supports_high_speed = version_compare(self.curr_ver, "1.2.1") >= 0
 
-            # Baudrate configuration for W55RP20 (max 8M)
+            # Baudrate configuration - get current device's BR value from dev_profile
+            max_br_index = 19 if supports_high_speed else 15
+            current_baud = self._get_current_baud_from_profile(max_br_index)
+
+            # Baudrate configuration for W55RP20
             self.ch1_baud.clear()
             self.ch1_baud.addItems(BAUDRATE_BASE)  # 300 ~ 230400 (14 items)
             self.ch1_baud.addItem("460800")  # Add 460800 (index 14)
             self.ch1_baud.addItem("921600")  # Add 921600 (index 15)
-            self.ch1_baud.addItem("1M")  # Add 1M (index 16)
-            self.ch1_baud.addItem("2M")  # Add 2M (index 17)
-            self.ch1_baud.addItem("4M")  # Add 4M (index 18)
-            self.ch1_baud.addItem("8M")  # Add 8M (index 19)
+
+            # 펌웨어 1.2.1 이상에서만 고속 보드레이트 추가
+            if supports_high_speed:
+                self.ch1_baud.addItem("1M")  # Add 1M (index 16)
+                self.ch1_baud.addItem("2M")  # Add 2M (index 17)
+                self.ch1_baud.addItem("4M")  # Add 4M (index 18)
+                self.ch1_baud.addItem("8M")  # Add 8M (index 19)
 
             # Restore current device's selection
             if current_baud:
@@ -859,9 +870,12 @@ class WIZWindow(QMainWindow, main_window):
                 if idx >= 0:
                     self.ch1_baud.setCurrentIndex(idx)
 
-            # 2CH device: add high baudrates to ch2
+            # 2CH device: add high baudrates to ch2 (버전에 따라)
             if self.curr_dev in SECURITY_TWO_PORT_DEV:
-                high_baudrates = ["921600", "1M", "2M", "4M", "8M"]
+                if supports_high_speed:
+                    high_baudrates = ["921600", "1M", "2M", "4M", "8M"]
+                else:
+                    high_baudrates = ["921600"]
                 for baudrate in high_baudrates:
                     if self.ch2_baud.findText(baudrate) == -1:
                         self.ch2_baud.addItem(baudrate)
