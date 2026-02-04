@@ -708,7 +708,7 @@ class WIZWindow(QMainWindow, main_window):
 
         Args:
             max_supported_br_index: Maximum BR index supported by the device
-                                    (13: WIZ750SR/W232N, 14: Others, 15: W55RP20/IP20)
+                                    (13: WIZ750SR/W232N, 14: Others, 15: IP20, 19: W55RP20)
 
         Returns:
             str or None: Baudrate string (e.g., "115200") or None if not found
@@ -736,6 +736,14 @@ class WIZWindow(QMainWindow, main_window):
             return "460800"
         elif br_index == 15:
             return "921600"
+        elif br_index == 16:
+            return "1M"
+        elif br_index == 17:
+            return "2M"
+        elif br_index == 18:
+            return "4M"
+        elif br_index == 19:
+            return "8M"
 
         return None
 
@@ -831,11 +839,37 @@ class WIZWindow(QMainWindow, main_window):
                 idx = self.ch1_baud.findText(current_baud)
                 if idx >= 0:
                     self.ch1_baud.setCurrentIndex(idx)
-        elif ((self.curr_dev in W55RP20_FAMILY) or ("IP20" in self.curr_dev)):
+        elif self.curr_dev in W55RP20_FAMILY:
             # Baudrate configuration - get current device's BR value from dev_profile
-            current_baud = self._get_current_baud_from_profile(15)  # W55RP20/IP20: max BR index 15 (921600)
+            current_baud = self._get_current_baud_from_profile(19)  # W55RP20: max BR index 19 (8M)
 
-            # Baudrate configuration for W55RP20/IP20 (max 921600)
+            # Baudrate configuration for W55RP20 (max 8M)
+            self.ch1_baud.clear()
+            self.ch1_baud.addItems(BAUDRATE_BASE)  # 300 ~ 230400 (14 items)
+            self.ch1_baud.addItem("460800")  # Add 460800 (index 14)
+            self.ch1_baud.addItem("921600")  # Add 921600 (index 15)
+            self.ch1_baud.addItem("1M")  # Add 1M (index 16)
+            self.ch1_baud.addItem("2M")  # Add 2M (index 17)
+            self.ch1_baud.addItem("4M")  # Add 4M (index 18)
+            self.ch1_baud.addItem("8M")  # Add 8M (index 19)
+
+            # Restore current device's selection
+            if current_baud:
+                idx = self.ch1_baud.findText(current_baud)
+                if idx >= 0:
+                    self.ch1_baud.setCurrentIndex(idx)
+
+            # 2CH device: add high baudrates to ch2
+            if self.curr_dev in SECURITY_TWO_PORT_DEV:
+                high_baudrates = ["921600", "1M", "2M", "4M", "8M"]
+                for baudrate in high_baudrates:
+                    if self.ch2_baud.findText(baudrate) == -1:
+                        self.ch2_baud.addItem(baudrate)
+        elif "IP20" in self.curr_dev:
+            # Baudrate configuration - get current device's BR value from dev_profile
+            current_baud = self._get_current_baud_from_profile(15)  # IP20: max BR index 15 (921600)
+
+            # Baudrate configuration for IP20 (max 921600)
             self.ch1_baud.clear()
             self.ch1_baud.addItems(BAUDRATE_BASE)  # 300 ~ 230400 (14 items)
             self.ch1_baud.addItem("460800")  # Add 460800 (index 14)
@@ -846,12 +880,6 @@ class WIZWindow(QMainWindow, main_window):
                 idx = self.ch1_baud.findText(current_baud)
                 if idx >= 0:
                     self.ch1_baud.setCurrentIndex(idx)
-
-            # TODO: ch2_baud (EB) 관리 개선 필요 - 2채널 baudrate 목록 관리 로직 검토 및 리팩토링
-            # 2CH device: add 921600 to ch2
-            if self.curr_dev in SECURITY_TWO_PORT_DEV:
-                if self.ch2_baud.findText("921600") == -1:
-                    self.ch2_baud.addItem("921600")
         else:
             # Baudrate configuration - get current device's BR value from dev_profile
             current_baud = self._get_current_baud_from_profile(14)  # Other devices: max BR index 14 (460800)
