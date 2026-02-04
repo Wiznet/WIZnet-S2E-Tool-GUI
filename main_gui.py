@@ -870,15 +870,49 @@ class WIZWindow(QMainWindow, main_window):
                 if idx >= 0:
                     self.ch1_baud.setCurrentIndex(idx)
 
-            # 2CH device: add high baudrates to ch2 (버전에 따라)
+            # 2CH device: ch2_baud도 ch1_baud와 동일하게 구성 (버전에 따라)
             if self.curr_dev in SECURITY_TWO_PORT_DEV:
+                # ch2_baud의 현재 EB 값 가져오기
+                current_ch2_baud = None
+                if self.curr_mac in self.dev_profile:
+                    dev_data = self.dev_profile[self.curr_mac]
+                    if "EB" in dev_data:
+                        try:
+                            eb_index = int(dev_data["EB"])
+                            if 0 <= eb_index <= max_br_index:
+                                if eb_index < len(BAUDRATE_BASE):
+                                    current_ch2_baud = BAUDRATE_BASE[eb_index]
+                                elif eb_index == 14:
+                                    current_ch2_baud = "460800"
+                                elif eb_index == 15:
+                                    current_ch2_baud = "921600"
+                                elif eb_index == 16:
+                                    current_ch2_baud = "1M"
+                                elif eb_index == 17:
+                                    current_ch2_baud = "2M"
+                                elif eb_index == 18:
+                                    current_ch2_baud = "4M"
+                                elif eb_index == 19:
+                                    current_ch2_baud = "8M"
+                        except (ValueError, TypeError):
+                            pass
+
+                # ch2_baud를 ch1_baud와 동일하게 구성
+                self.ch2_baud.clear()
+                self.ch2_baud.addItems(BAUDRATE_BASE)  # 0-13
+                self.ch2_baud.addItem("460800")  # 14
+                self.ch2_baud.addItem("921600")  # 15
                 if supports_high_speed:
-                    high_baudrates = ["921600", "1M", "2M", "4M", "8M"]
-                else:
-                    high_baudrates = ["921600"]
-                for baudrate in high_baudrates:
-                    if self.ch2_baud.findText(baudrate) == -1:
-                        self.ch2_baud.addItem(baudrate)
+                    self.ch2_baud.addItem("1M")   # 16
+                    self.ch2_baud.addItem("2M")   # 17
+                    self.ch2_baud.addItem("4M")   # 18
+                    self.ch2_baud.addItem("8M")   # 19
+
+                # ch2_baud 현재 선택값 복원
+                if current_ch2_baud:
+                    idx = self.ch2_baud.findText(current_ch2_baud)
+                    if idx >= 0:
+                        self.ch2_baud.setCurrentIndex(idx)
         elif "IP20" in self.curr_dev:
             # Baudrate configuration - get current device's BR value from dev_profile
             current_baud = self._get_current_baud_from_profile(15)  # IP20: max BR index 15 (921600)
