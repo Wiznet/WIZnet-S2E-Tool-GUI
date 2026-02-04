@@ -2205,7 +2205,8 @@ class WIZWindow(QMainWindow, main_window):
                     else:
                         self.ch1_pack_char_7.setText(dev_data["EE"])
 
-            elif (
+            # SECURITY_TWO_PORT_DEV도 SECURITY_DEVICE에 속하므로 elif가 아닌 if 사용
+            if (
                 self.curr_dev in SECURITY_DEVICE
                 and "ST" in dev_data
                 and dev_data["ST"] not in DeviceStatusMinimum
@@ -2779,7 +2780,30 @@ class WIZWindow(QMainWindow, main_window):
             self.statusbar.showMessage(" Setting: wrong password.")
             self.msg_setting_pw_error()
         elif resp_len < 50:
-            self.logger.warning("Warning: setting is did not well.")
+            self.logger.warning(f"Warning: setting is did not well. resp_len={resp_len}")
+            # 디버깅: 실제 수신된 응답 내용 로깅
+            try:
+                if hasattr(self, 'wizmsghandler'):
+                    self.logger.warning(f"[DEBUG] wizmsghandler exists: {type(self.wizmsghandler)}")
+                    if hasattr(self.wizmsghandler, 'rcv_list'):
+                        self.logger.warning(f"[DEBUG] rcv_list exists, length: {len(self.wizmsghandler.rcv_list)}")
+                        if len(self.wizmsghandler.rcv_list) > 0:
+                            raw_response = self.wizmsghandler.rcv_list[0]
+                            self.logger.warning(f"[DEBUG] Raw response (bytes): {raw_response}")
+                            self.logger.warning(f"[DEBUG] Raw response (hex): {raw_response.hex()}")
+                            try:
+                                decoded = raw_response.decode('utf-8', errors='replace')
+                                self.logger.warning(f"[DEBUG] Decoded response: {decoded}")
+                            except Exception as e:
+                                self.logger.warning(f"[DEBUG] Failed to decode response: {e}")
+                        else:
+                            self.logger.warning("[DEBUG] rcv_list is empty")
+                    else:
+                        self.logger.warning("[DEBUG] wizmsghandler has no rcv_list attribute")
+                else:
+                    self.logger.warning("[DEBUG] wizmsghandler does not exist")
+            except Exception as e:
+                self.logger.error(f"[DEBUG] Error while logging response: {e}")
             self.statusbar.showMessage(" Warning: setting is did not well.")
             self.msg_set_warning()
 
