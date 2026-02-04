@@ -64,6 +64,14 @@ import ifaddr
 SECURITY_TWO_PORT_DEV = ("W55RP20-S2E-2CH",)
 W55RP20_FAMILY = ("W55RP20-S2E", "W55RP20-S2E-2CH")
 
+# Baudrate list base - common part for all devices (up to 230400)
+# Items 0-13, index-aligned with gui/wizconfig_gui.ui
+BAUDRATE_BASE = (
+    "300", "600", "1200", "1800", "2400", "4800", "9600",
+    "14400", "19200", "28800", "38400", "57600", "115200",
+    "230400"
+)
+
 
 def resource_path(relative_path):
     # Get absolute path to resource, works for dev and for PyInstaller
@@ -694,6 +702,43 @@ class WIZWindow(QMainWindow, main_window):
             return True
         return False
 
+    def _get_current_baud_from_profile(self, max_supported_br_index):
+        """
+        Retrieve the current baudrate string from dev_profile based on BR index.
+
+        Args:
+            max_supported_br_index: Maximum BR index supported by the device
+                                    (13: WIZ750SR/W232N, 14: Others, 15: W55RP20/IP20)
+
+        Returns:
+            str or None: Baudrate string (e.g., "115200") or None if not found
+        """
+        if self.curr_mac not in self.dev_profile:
+            return None
+
+        dev_data = self.dev_profile[self.curr_mac]
+        if "BR" not in dev_data:
+            return None
+
+        try:
+            br_index = int(dev_data["BR"])
+        except (ValueError, TypeError):
+            return None
+
+        # Validate BR index is within supported range
+        if br_index < 0 or br_index > max_supported_br_index:
+            return None
+
+        # Map BR index to baudrate string
+        if br_index < len(BAUDRATE_BASE):
+            return BAUDRATE_BASE[br_index]
+        elif br_index == 14:
+            return "460800"
+        elif br_index == 15:
+            return "921600"
+
+        return None
+
     # Object config for some Devices or F/W version
     def object_config_for_device(self):
         # IP20도 Certificate manager 탭 표시 (SSL/MQTTS 지원)
@@ -774,20 +819,56 @@ class WIZWindow(QMainWindow, main_window):
             self.ch1_mqttclient.setEnabled(False)
             self.ch1_mqtts_client.setEnabled(False)
 
-            # 20221208 Modify baud rate temperarily
-            self.ch1_baud.removeItem(14)
-            self.ch1_baud.removeItem(15)
+            # Baudrate configuration - get current device's BR value from dev_profile
+            current_baud = self._get_current_baud_from_profile(13)  # WIZ750SR/W232N: max BR index 13 (230400)
+
+            # Baudrate configuration for WIZ750SR/W232N (max 230400)
+            self.ch1_baud.clear()
+            self.ch1_baud.addItems(BAUDRATE_BASE)  # 300 ~ 230400 (14 items)
+
+            # Restore current device's selection
+            if current_baud:
+                idx = self.ch1_baud.findText(current_baud)
+                if idx >= 0:
+                    self.ch1_baud.setCurrentIndex(idx)
         elif ((self.curr_dev in W55RP20_FAMILY) or ("IP20" in self.curr_dev)):
-            # W55RP20-S2E의 경우 921600 baud rate 옵션 추가
-            if self.ch1_baud.count() == 15:
-                self.ch1_baud.insertItem(15, "921600")
+            # Baudrate configuration - get current device's BR value from dev_profile
+            current_baud = self._get_current_baud_from_profile(15)  # W55RP20/IP20: max BR index 15 (921600)
+
+            # Baudrate configuration for W55RP20/IP20 (max 921600)
+            self.ch1_baud.clear()
+            self.ch1_baud.addItems(BAUDRATE_BASE)  # 300 ~ 230400 (14 items)
+            self.ch1_baud.addItem("460800")  # Add 460800 (index 14)
+            self.ch1_baud.addItem("921600")  # Add 921600 (index 15)
+
+            # Restore current device's selection
+            if current_baud:
+                idx = self.ch1_baud.findText(current_baud)
+                if idx >= 0:
+                    self.ch1_baud.setCurrentIndex(idx)
+
+            # TODO: ch2_baud (EB) 관리 개선 필요 - 2채널 baudrate 목록 관리 로직 검토 및 리팩토링
+            # 2CH device: add 921600 to ch2
             if self.curr_dev in SECURITY_TWO_PORT_DEV:
                 if self.ch2_baud.findText("921600") == -1:
                     self.ch2_baud.addItem("921600")
         else:
-            if self.ch1_baud.count() == 14:
-                self.ch1_baud.insertItem(14, "460800")
-                self.ch1_baud.removeItem(15)
+            # Baudrate configuration - get current device's BR value from dev_profile
+            current_baud = self._get_current_baud_from_profile(14)  # Other devices: max BR index 14 (460800)
+
+            # Baudrate configuration for other devices (max 460800)
+            self.ch1_baud.clear()
+            self.ch1_baud.addItems(BAUDRATE_BASE)  # 300 ~ 230400 (14 items)
+            self.ch1_baud.addItem("460800")  # Add 460800 (index 14)
+
+            # Restore current device's selection
+            if current_baud:
+                idx = self.ch1_baud.findText(current_baud)
+                if idx >= 0:
+                    self.ch1_baud.setCurrentIndex(idx)
+
+            # TODO: ch2_baud (EB) 관리 개선 필요 - 2채널 baudrate 목록 관리 로직 검토 및 리팩토링
+            # Remove 921600 from ch2 if exists
             idx_921 = self.ch2_baud.findText("921600")
             if idx_921 != -1:
                 self.ch2_baud.removeItem(idx_921)
