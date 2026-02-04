@@ -398,6 +398,28 @@ class Wizcmdset():
         if mode_str == "BOOT":
             return
 
+        # W55RP20: 펌웨어 버전 1.2.0 이하는 고속 보드레이트 미지원
+        # BR/EB 패턴을 0-15 (최대 921600)로 제한
+        if name in ("W55RP20-S2E", "W55RP20-S2E-2CH") and version_compare(version, "1.2.1") < 0:
+            updated_cmdset = self.cmdset.copy()
+            # BR 패턴을 표준 패턴(0-15)으로 재정의
+            if "BR" in updated_cmdset:
+                updated_cmdset["BR"] = [
+                    "UART Baud rate",
+                    r"^([0-9]|1[0-5])$",  # 0-15 only
+                    baudrate_option,
+                    "RW"
+                ]
+            # 2CH의 경우 EB도 제한
+            if name == "W55RP20-S2E-2CH" and "EB" in updated_cmdset:
+                updated_cmdset["EB"] = [
+                    "UART channel 1 Baud rate",
+                    r"^([0-9]|1[0-5])$",  # 0-15 only
+                    baudrate_option,
+                    "RW"
+                ]
+            self.cmdset = updated_cmdset
+
         if ("WIZ750" in name or "WIZ750SR-T1L" in name) and version_compare(version, "1.4.4") >= 0:
             if "MB" not in self.cmdset:
                 updated_cmdset = self.cmdset.copy()
