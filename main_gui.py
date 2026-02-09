@@ -62,7 +62,7 @@ import ifaddr
 
 
 SECURITY_TWO_PORT_DEV = ("W55RP20-S2E-2CH",)
-W55RP20_FAMILY = ("W55RP20-S2E", "W55RP20-S2E-2CH")
+W55RP20_FAMILY = ("W55RP20-S2E", "W55RP20-S2E-2CH", "IP20")
 
 # Baudrate list base - common part for all devices (up to 230400)
 # Items 0-13, index-aligned with gui/wizconfig_gui.ui
@@ -698,7 +698,7 @@ class WIZWindow(QMainWindow, main_window):
             return True
         if self.curr_dev in W55RP20_FAMILY:
             return True
-        if "W232N" in self.curr_dev or "IP20" in self.curr_dev:
+        if "W232N" in self.curr_dev:
             return True
         return False
 
@@ -760,7 +760,7 @@ class WIZWindow(QMainWindow, main_window):
 
         # W55RP20-S2E, W232N, IP20인 경우에만 group_packing_12 표시 (SD/DD 기능)
         # 버전이 1.1.8 이상인 경우에만 표시
-        if self.curr_dev in (W55RP20_FAMILY + ("W232N", "IP20")) and version_compare(self.curr_ver, "1.1.8") >= 0:
+        if self.curr_dev in (W55RP20_FAMILY + ("W232N",)) and version_compare(self.curr_ver, "1.1.8") >= 0:
             self.group_packing_12.show()
             self.group_packing_13.show()
         else:
@@ -913,21 +913,6 @@ class WIZWindow(QMainWindow, main_window):
                     idx = self.ch2_baud.findText(current_ch2_baud)
                     if idx >= 0:
                         self.ch2_baud.setCurrentIndex(idx)
-        elif "IP20" in self.curr_dev:
-            # Baudrate configuration - get current device's BR value from dev_profile
-            current_baud = self._get_current_baud_from_profile(15)  # IP20: max BR index 15 (921600)
-
-            # Baudrate configuration for IP20 (max 921600)
-            self.ch1_baud.clear()
-            self.ch1_baud.addItems(BAUDRATE_BASE)  # 300 ~ 230400 (14 items)
-            self.ch1_baud.addItem("460800")  # Add 460800 (index 14)
-            self.ch1_baud.addItem("921600")  # Add 921600 (index 15)
-
-            # Restore current device's selection
-            if current_baud:
-                idx = self.ch1_baud.findText(current_baud)
-                if idx >= 0:
-                    self.ch1_baud.setCurrentIndex(idx)
         else:
             # Baudrate configuration - get current device's BR value from dev_profile
             current_baud = self._get_current_baud_from_profile(14)  # Other devices: max BR index 14 (460800)
@@ -958,7 +943,7 @@ class WIZWindow(QMainWindow, main_window):
                 self.radiobtn_group_s0.hide()
                 self.radiobtn_group_s1.hide()
                 self.group_dtrdsr.show()
-                if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in W55RP20_FAMILY or 'W232N' in self.curr_dev or 'IP20' in self.curr_dev:
+                if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in W55RP20_FAMILY or 'W232N' in self.curr_dev:
                     self.groupbox_ch1_timeout.show()
                     self.groupbox_ch1_timeout.setEnabled(True)
                 else:
@@ -981,7 +966,7 @@ class WIZWindow(QMainWindow, main_window):
             self.ch1_mqttclient.setEnabled(True)
             # Current bank (RO)
             self.group_current_bank.show()
-            if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in W55RP20_FAMILY or 'W232N' in self.curr_dev or 'IP20' in self.curr_dev:
+            if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in W55RP20_FAMILY or 'W232N' in self.curr_dev:
                 self.group_current_bank.hide()
                 # self.combobox_current_bank.setEnabled(True)
             else:
@@ -1079,7 +1064,7 @@ class WIZWindow(QMainWindow, main_window):
             # self.logger.debug(f'totalTab: {len(self.generalTab)}, currentTab: {self.generalTab.currentIndex()}')
             # self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
             # self.generalTab.setTabEnabled(2, True)
-            if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in W55RP20_FAMILY or 'W232N' in self.curr_dev or 'IP20' in self.curr_dev:
+            if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in W55RP20_FAMILY or 'W232N' in self.curr_dev:
                 # if len(self.generalTab) == 4:
                 #     # Basic settings / User I/O / Options / MQTT Options / Certificate manager
                 #     self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
@@ -2017,7 +2002,7 @@ class WIZWindow(QMainWindow, main_window):
             if "PD" in dev_data:
                 self.ch1_pack_char.setText(dev_data["PD"])
             # Send Data at Connection - W55RP20-S2E only (버전 1.1.8 이상)
-            if "SD" in dev_data and self.curr_dev in (W55RP20_FAMILY + ("W232N", "IP20")) and version_compare(self.curr_ver, "1.1.8") >= 0:
+            if "SD" in dev_data and self.curr_dev in (W55RP20_FAMILY + ("W232N",)) and version_compare(self.curr_ver, "1.1.8") >= 0:
                 print(f"[DEBUG] Loading SD data: '{dev_data['SD']}'")
                 # 공백(" ")인 경우 빈 문자열로 표시
                 if dev_data["SD"] == " ":
@@ -2025,7 +2010,7 @@ class WIZWindow(QMainWindow, main_window):
                 else:
                     self.ch1_pack_char_3.setText(dev_data["SD"])
             # Send Data at Disconnection - W55RP20-S2E only (버전 1.1.8 이상)
-            if "DD" in dev_data and self.curr_dev in (W55RP20_FAMILY + ("W232N", "IP20")) and version_compare(self.curr_ver, "1.1.8") >= 0:
+            if "DD" in dev_data and self.curr_dev in (W55RP20_FAMILY + ("W232N",)) and version_compare(self.curr_ver, "1.1.8") >= 0:
                 print(f"[DEBUG] Loading DD data: '{dev_data['DD']}'")
                 # 공백(" ")인 경우 빈 문자열로 표시
                 if dev_data["DD"] == " ":
@@ -2033,7 +2018,7 @@ class WIZWindow(QMainWindow, main_window):
                 else:
                     self.ch1_pack_char_4.setText(dev_data["DD"])
             # Ethernet Data Connection Condition - W55RP20-S2E, W232N, IP20 (버전 1.1.8 이상)
-            if "SE" in dev_data and self.curr_dev in (W55RP20_FAMILY + ("W232N", "IP20")) and version_compare(self.curr_ver, "1.1.8") >= 0:
+            if "SE" in dev_data and self.curr_dev in (W55RP20_FAMILY + ("W232N",)) and version_compare(self.curr_ver, "1.1.8") >= 0:
                 print(f"[DEBUG] Loading SE data: '{dev_data['SE']}'")
                 # 공백(" ")인 경우 빈 문자열로 표시
                 if dev_data["SE"] == " ":
@@ -2321,7 +2306,7 @@ class WIZWindow(QMainWindow, main_window):
                 if "BA" in dev_data and dev_data["BA"].isdigit():
                     self.combobox_current_bank.setCurrentIndex(int(dev_data["BA"]))
                 # SSL Timeout
-                if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in W55RP20_FAMILY or 'W232N' in self.curr_dev or 'IP20' in self.curr_dev:
+                if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in W55RP20_FAMILY or 'W232N' in self.curr_dev:
                     # SO: SSL recv timeout for channel 1 (all W55RP20 family)
                     if "SO" in dev_data:
                         self.lineedit_ch1_ssl_recv_timeout.setText(dev_data["SO"])
@@ -2442,7 +2427,7 @@ class WIZWindow(QMainWindow, main_window):
             setcmd["PS"] = self.ch1_pack_size.text()
             setcmd["PD"] = self.ch1_pack_char.text()
             # Send Data at Connection - W55RP20-S2E, W232N, IP20 (버전 1.1.8 이상)
-            if self.curr_dev in (W55RP20_FAMILY + ("W232N", "IP20")) and version_compare(self.curr_ver, "1.1.8") >= 0:
+            if self.curr_dev in (W55RP20_FAMILY + ("W232N",)) and version_compare(self.curr_ver, "1.1.8") >= 0:
                 sd_data = self.ch1_pack_char_3.text()
                 # 최대 30글자로 제한
                 if len(sd_data) > 30:
@@ -2695,7 +2680,7 @@ class WIZWindow(QMainWindow, main_window):
                 else:
                     setcmd["CE"] = "0"
                 # 2022.05.10 add option
-                if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in W55RP20_FAMILY or 'W232N' in self.curr_dev or 'IP20' in self.curr_dev:
+                if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in W55RP20_FAMILY or 'W232N' in self.curr_dev:
                     # Bank setting
                     # setcmd['UF'] = str(self.combobox_current_bank.currentIndex())
                     # Add ssl timeout option
@@ -3043,7 +3028,7 @@ class WIZWindow(QMainWindow, main_window):
 
             if self.curr_dev in SECURITY_DEVICE:
                 self.logger.info("SECURITY_DEVICE update")
-                if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in W55RP20_FAMILY or 'W232N' in self.curr_dev or 'IP20' in self.curr_dev:
+                if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in W55RP20_FAMILY or 'W232N' in self.curr_dev:
                     self.logger.info(f'{self.curr_dev} update')
                     self.firmware_update(self.fw_filename, self.fw_filesize)
                 else:
