@@ -13,6 +13,8 @@ from WIZUDPSock import WIZUDPSock
 from FWUploadThread import FWUploadThread
 from WIZMSGHandler import WIZMSGHandler, DataRefresh
 from certificatethread import certificatethread
+from TCPMulticastScanner import TCPMulticastScanner
+from network_utils import get_subnet_hosts, get_adapter_subnet_info, extract_ip_from_device_response
 
 from wizcmdset import (
     Wizcmdset,
@@ -166,6 +168,10 @@ class WIZWindow(QMainWindow, main_window):
 
         self.datarefresh = None
 
+        # TCP multicast scanner and search timing
+        self.tcp_scanner = None
+        self.search_start_time = None
+
         # Initial UI object
         self.init_ui_object()
 
@@ -227,6 +233,8 @@ class WIZWindow(QMainWindow, main_window):
         # Event: Search method
         self.broadcast.clicked.connect(self.event_search_method)
         self.unicast_ip.clicked.connect(self.event_search_method)
+        self.tcp_multicast.clicked.connect(self.event_search_method)
+        self.mixed_search.clicked.connect(self.event_search_method)
         # self.unicast_mac.clicked.connect(self.event_search_method)
 
         # Event: modbus
@@ -1317,12 +1325,42 @@ class WIZWindow(QMainWindow, main_window):
         self.logger.info(f"localip.text()={self.localip.text()}")
         if self.localip.text():
             self.search_ipaddr.setText(self.localip.text())
+
+        # UDP Broadcast - disable all input fields
         if self.broadcast.isChecked():
             self.search_ipaddr.setEnabled(False)
             self.search_port.setEnabled(False)
+            self.tcp_multicast_port.setEnabled(False)
+            self.label_tcp_multicast_port.setEnabled(False)
+            self.mixed_port.setEnabled(False)
+            self.label_mixed_port.setEnabled(False)
+
+        # TCP Unicast - enable IP and port
         elif self.unicast_ip.isChecked():
             self.search_ipaddr.setEnabled(True)
             self.search_port.setEnabled(True)
+            self.tcp_multicast_port.setEnabled(False)
+            self.label_tcp_multicast_port.setEnabled(False)
+            self.mixed_port.setEnabled(False)
+            self.label_mixed_port.setEnabled(False)
+
+        # TCP Multicast - enable port only
+        elif self.tcp_multicast.isChecked():
+            self.search_ipaddr.setEnabled(False)
+            self.search_port.setEnabled(False)
+            self.tcp_multicast_port.setEnabled(True)
+            self.label_tcp_multicast_port.setEnabled(True)
+            self.mixed_port.setEnabled(False)
+            self.label_mixed_port.setEnabled(False)
+
+        # Mixed Search - enable TCP port only
+        elif self.mixed_search.isChecked():
+            self.search_ipaddr.setEnabled(False)
+            self.search_port.setEnabled(False)
+            self.tcp_multicast_port.setEnabled(False)
+            self.label_tcp_multicast_port.setEnabled(False)
+            self.mixed_port.setEnabled(True)
+            self.label_mixed_port.setEnabled(True)
 
     def sock_close(self):
         # 기존 연결 fin
@@ -1411,6 +1449,65 @@ class WIZWindow(QMainWindow, main_window):
                     self.statusbar.showMessage(" Network unreachable: %s" % ip_addr)
                     self.btn_search.setEnabled(True)
                     self.msg_not_connected(ip_addr)
+
+            # TCP Multicast
+            elif self.tcp_multicast.isChecked():
+                if self.selected_eth is None:
+                    self.statusbar.showMessage(" Please select a network interface")
+                    self.btn_search.setEnabled(True)
+                    return
+
+                ip, prefix = get_adapter_subnet_info(self.selected_eth)
+
+                # IP 주소를 가져올 수 없는 경우
+                if ip is None:
+                    self.statusbar.showMessage(" Cannot get IP address for selected interface")
+                    self.btn_search.setEnabled(True)
+                    return
+
+                # ifaddr가 prefix를 제공하지 않으면 기본값 24 사용
+                if prefix is None:
+                    self.logger.warning("Network prefix not available, using /24 as default")
+                    prefix = 24
+
+                self.ip_scan_list = get_subnet_hosts(ip, prefix)
+                self.logger.info(f"TCP Multicast: {len(self.ip_scan_list)} IPs in /{prefix} subnet")
+
+                # 큰 서브넷 경고 (500개 이상)
+                if len(self.ip_scan_list) > 500:
+                    self.logger.warning(f"Large subnet detected: {len(self.ip_scan_list)} IPs")
+
+                self.isConnected = True
+
+            # Mixed Search
+            elif self.mixed_search.isChecked():
+                if self.selected_eth is None:
+                    self.statusbar.showMessage(" Please select a network interface")
+                    self.btn_search.setEnabled(True)
+                    return
+
+                ip, prefix = get_adapter_subnet_info(self.selected_eth)
+
+                # IP 주소를 가져올 수 없는 경우
+                if ip is None:
+                    self.statusbar.showMessage(" Cannot get IP address for selected interface")
+                    self.btn_search.setEnabled(True)
+                    return
+
+                if prefix is None:
+                    self.logger.warning("Network prefix not available, using /24 as default")
+                    prefix = 24
+
+                self.mixed_subnet_hosts = get_subnet_hosts(ip, prefix)
+                self.logger.info(f"Mixed: {len(self.mixed_subnet_hosts)} hosts in subnet")
+
+                # Phase 1: UDP broadcast (기존 메커니즘)
+                if self.selected_eth is None:
+                    self.conf_sock = WIZUDPSock(5000, 50001, "")
+                else:
+                    self.conf_sock = WIZUDPSock(5000, 50001, self.selected_eth)
+                self.conf_sock.open()
+
         except Exception as e:
             self.logger.error(f"socket_config error: {e}")
 
@@ -1575,8 +1672,11 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.info(f"search: conf_sock: {_conf_sock}")
 
             # Search devices
-            if self.isConnected or self.broadcast.isChecked():
+            if self.isConnected or self.broadcast.isChecked() or self.tcp_multicast.isChecked() or self.mixed_search.isChecked():
                 self.statusbar.showMessage(" Searching devices...")
+
+                # Start timing
+                self.search_start_time = time.time()
 
                 if len(self.searchcode_input.text()) == 0:
                     self.code = " "
@@ -1586,7 +1686,36 @@ class WIZWindow(QMainWindow, main_window):
                 cmd_list = self.wizmakecmd.presearch("FF:FF:FF:FF:FF:FF", self.code)
                 self.logger.debug(cmd_list)
 
-                if self.unicast_ip.isChecked():
+                # TCP Multicast mode
+                if self.tcp_multicast.isChecked():
+                    port = int(self.tcp_multicast_port.text())
+
+                    self.tcp_scanner = TCPMulticastScanner(
+                        self.ip_scan_list,
+                        port,
+                        cmd_list,
+                        timeout=2,
+                        max_workers=15
+                    )
+                    self.tcp_scanner.search_result.connect(self.get_search_result)
+                    self.tcp_scanner.progress_update.connect(self.update_scan_progress)
+                    self.tcp_scanner.start()
+
+                # Mixed search mode
+                elif self.mixed_search.isChecked():
+                    # Phase 1: UDP broadcast
+                    self.wizmsghandler = WIZMSGHandler(
+                        self.conf_sock,
+                        cmd_list,
+                        "udp",
+                        Opcode.OP_SEARCHALL,
+                        self.search_pre_wait_time,
+                    )
+                    self.wizmsghandler.search_result.connect(self.handle_mixed_phase1)
+                    self.wizmsghandler.start()
+
+                # TCP unicast mode
+                elif self.unicast_ip.isChecked():
                     self.wizmsghandler = WIZMSGHandler(
                         self.conf_sock,
                         cmd_list,
@@ -1594,6 +1723,10 @@ class WIZWindow(QMainWindow, main_window):
                         Opcode.OP_SEARCHALL,
                         self.search_pre_wait_time,
                     )
+                    self.wizmsghandler.search_result.connect(self.get_search_result)
+                    self.wizmsghandler.start()
+
+                # UDP broadcast mode (default)
                 else:
                     self.wizmsghandler = WIZMSGHandler(
                         self.conf_sock,
@@ -1602,8 +1735,8 @@ class WIZWindow(QMainWindow, main_window):
                         Opcode.OP_SEARCHALL,
                         self.search_pre_wait_time,
                     )
-                self.wizmsghandler.search_result.connect(self.get_search_result)
-                self.wizmsghandler.start()
+                    self.wizmsghandler.search_result.connect(self.get_search_result)
+                    self.wizmsghandler.start()
 
     def processing(self, time):
         # print('---------- processing ----------', int(time))
@@ -1721,8 +1854,17 @@ class WIZWindow(QMainWindow, main_window):
             self.vr_list = []
             self.st_list = []
 
-        if self.wizmsghandler.isRunning():
-            self.wizmsghandler.wait()
+        # Determine data source (wizmsghandler for UDP/TCP unicast, tcp_scanner for multicast)
+        data_source = None
+        if self.tcp_multicast.isChecked() and self.tcp_scanner is not None:
+            data_source = self.tcp_scanner
+            if self.tcp_scanner.isRunning():
+                self.tcp_scanner.wait()
+        elif self.wizmsghandler is not None:
+            data_source = self.wizmsghandler
+            if self.wizmsghandler.isRunning():
+                self.wizmsghandler.wait()
+
         if devnum >= 0:
             self.searched_devnum = devnum
             # self.logger.info(self.searched_devnum)
@@ -1734,11 +1876,11 @@ class WIZWindow(QMainWindow, main_window):
             else:
                 if self.search_retry_flag:
                     self.logger.info("search retry flag on")
-                    new_mac_list = self.wizmsghandler.mac_list
-                    new_mn_list = self.wizmsghandler.mn_list
-                    new_vr_list = self.wizmsghandler.vr_list
-                    new_st_list = self.wizmsghandler.st_list
-                    new_resp_list = self.wizmsghandler.rcv_list
+                    new_mac_list = data_source.mac_list if data_source else []
+                    new_mn_list = data_source.mn_list if data_source else []
+                    new_vr_list = data_source.vr_list if data_source else []
+                    new_st_list = data_source.st_list if data_source else []
+                    new_resp_list = data_source.rcv_list if data_source else []
 
                     # check mac list
                     for i in range(len(new_mac_list)):
@@ -1755,12 +1897,12 @@ class WIZWindow(QMainWindow, main_window):
                     # print('keep list >>', self.mac_list, self.mn_list, self.vr_list, self.st_list)
 
                 else:
-                    self.mac_list = self.wizmsghandler.mac_list
-                    self.mn_list = self.wizmsghandler.mn_list
-                    self.vr_list = self.wizmsghandler.vr_list
-                    self.st_list = self.wizmsghandler.st_list
+                    self.mac_list = data_source.mac_list if data_source else []
+                    self.mn_list = data_source.mn_list if data_source else []
+                    self.vr_list = data_source.vr_list if data_source else []
+                    self.st_list = data_source.st_list if data_source else []
                     # all response
-                    self.all_response = self.wizmsghandler.rcv_list
+                    self.all_response = data_source.rcv_list if data_source else []
 
                 # print('all_response', len(self.all_response), self.all_response)
                 # print('get_search_result():', self.mac_list, self.mn_list, self.vr_list, self.st_list)
@@ -1788,10 +1930,126 @@ class WIZWindow(QMainWindow, main_window):
                 self.list_device.horizontalHeader().setSectionResizeMode(2)
                 self.list_device.verticalHeader().setSectionResizeMode(2)
 
-            self.statusbar.showMessage(" Find %d devices" % devnum)
+            # Display result with elapsed time
+            if self.search_start_time is not None:
+                elapsed = time.time() - self.search_start_time
+                self.statusbar.showMessage(f" Find {devnum} devices ({elapsed:.2f} seconds)")
+                self.search_start_time = None  # Reset for next search
+            else:
+                self.statusbar.showMessage(f" Find {devnum} devices")
+
             self.get_dev_list()
         else:
             self.logger.error("search error")
+
+    def update_scan_progress(self, current, total):
+        """TCP multicast 진행률 업데이트"""
+        percentage = int((current / total) * 100)
+        self.pgbar.setFormat(f"TCP scan: {current}/{total} ({percentage}%)")
+        self.pgbar.setValue(percentage)
+        self.pgbar.show()
+
+    def handle_mixed_phase1(self, devnum):
+        """Mixed search Phase 1 (UDP) 완료 처리"""
+        self.logger.info(f"Mixed Phase 1: {devnum} devices via UDP")
+
+        # UDP로 발견된 IP 추출
+        found_ips = set()
+        for data in self.wizmsghandler.rcv_list:
+            ip = extract_ip_from_device_response(data)
+            if ip:
+                found_ips.add(ip)
+                self.logger.debug(f"Found IP via UDP: {ip}")
+
+        # UDP 결과 저장
+        self.udp_results = {
+            'mac_list': self.wizmsghandler.mac_list[:],
+            'mn_list': self.wizmsghandler.mn_list[:],
+            'vr_list': self.wizmsghandler.vr_list[:],
+            'st_list': self.wizmsghandler.st_list[:],
+            'rcv_list': self.wizmsghandler.rcv_list[:]
+        }
+
+        # 미발견 IP 계산
+        missing_ips = [ip for ip in self.mixed_subnet_hosts if ip not in found_ips]
+
+        if len(missing_ips) == 0:
+            self.logger.info("Mixed Phase 1 complete, no additional IPs to scan")
+            self.get_search_result(devnum)
+            return
+
+        self.logger.info(f"Mixed Phase 2: Scanning {len(missing_ips)} IPs via TCP")
+        self.statusbar.showMessage(f" Phase 2: Scanning {len(missing_ips)} additional IPs via TCP...")
+
+        # Phase 2: TCP scan
+        port = int(self.mixed_port.text())
+        cmd_list = self.wizmakecmd.presearch("FF:FF:FF:FF:FF:FF", self.code)
+
+        self.tcp_scanner = TCPMulticastScanner(
+            missing_ips, port, cmd_list, timeout=2, max_workers=15
+        )
+        self.tcp_scanner.search_result.connect(self.handle_mixed_phase2)
+        self.tcp_scanner.progress_update.connect(self.update_scan_progress)
+        self.tcp_scanner.start()
+
+    def handle_mixed_phase2(self, tcp_devnum):
+        """Mixed search Phase 2 (TCP) 완료 - 결과 병합"""
+        self.logger.info(f"Mixed Phase 2: {tcp_devnum} devices via TCP")
+
+        # 결과 병합: UDP + TCP
+        tcp_mac = self.tcp_scanner.mac_list if self.tcp_scanner else []
+        tcp_mn = self.tcp_scanner.mn_list if self.tcp_scanner else []
+        tcp_vr = self.tcp_scanner.vr_list if self.tcp_scanner else []
+        tcp_st = self.tcp_scanner.st_list if self.tcp_scanner else []
+        tcp_rcv = self.tcp_scanner.rcv_list if self.tcp_scanner else []
+
+        self.mac_list = self.udp_results['mac_list'] + tcp_mac
+        self.mn_list = self.udp_results['mn_list'] + tcp_mn
+        self.vr_list = self.udp_results['vr_list'] + tcp_vr
+        self.st_list = self.udp_results['st_list'] + tcp_st
+        self.all_response = self.udp_results['rcv_list'] + tcp_rcv
+
+        total_count = len(self.mac_list)
+        self.logger.info(f"Mixed search complete: {total_count} total devices (UDP: {len(self.udp_results['mac_list'])}, TCP: {tcp_devnum})")
+
+        # 검색 완료 처리
+        self.searched_devnum = total_count
+        self.searched_num.setText(str(self.searched_devnum))
+        self.btn_search.setEnabled(True)
+
+        if total_count == 0:
+            self.logger.info("No device.")
+        else:
+            # 테이블에 장치 목록 표시
+            self.list_device.setRowCount(len(self.mac_list))
+
+            try:
+                for i in range(0, len(self.mac_list)):
+                    self.list_device.setItem(
+                        i, 0, QTableWidgetItem(self.mac_list[i].decode())
+                    )
+                    self.list_device.setItem(
+                        i, 1, QTableWidgetItem(self.mn_list[i].decode())
+                    )
+            except Exception as e:
+                self.logger.error(e)
+
+            # 테이블 크기 조정
+            self.list_device.resizeColumnsToContents()
+            self.list_device.resizeRowsToContents()
+            self.list_device.horizontalHeader().setSectionResizeMode(2)
+            self.list_device.verticalHeader().setSectionResizeMode(2)
+
+        # 시간 표시
+        if self.search_start_time is not None:
+            elapsed = time.time() - self.search_start_time
+            self.statusbar.showMessage(f" Find {total_count} devices ({elapsed:.2f} seconds)")
+            self.search_start_time = None
+        else:
+            self.statusbar.showMessage(f" Find {total_count} devices")
+
+        # 장치 목록 갱신
+        self.get_dev_list()
 
     def get_dev_list(self):
         # basic_data = None
