@@ -7,16 +7,18 @@ common_cmdset (기본 명령어 집합, BR: 0-15)
 ├─ WIZ75X_CMDSET (단일 포트 기본 장치)
 ├─ WIZ752_CMDSET (2포트 장치, BR/EB: 0-13)
 └─ WIZ5XX_RP_CMDSET (보안 장치 기본, BR: 0-15)
-    ├─ [WIZ510SSL, WIZ5XXSR-RP, W232N, IP20 등] ← 그대로 사용
+    ├─ [WIZ510SSL, WIZ5XXSR-RP, W232N 등] ← 그대로 사용
     └─ W55RP20_CMDSET (고속 BR 지원, BR: 0-19)
+        ├─ W55RP20-S2E, IP20 ← 단일채널
         └─ W55RP20_2CH_CMDSET (2채널, BR/EB: 0-19)
 
 장치별 Baudrate 지원:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - WIZ752 계열:       BR/EB 0-13  (최대 230400 bps)
 - 일반 장치:         BR 0-15     (최대 921600 bps)
-- W55RP20-S2E:       BR 0-19     (최대 8M bps)
-- W55RP20-S2E-2CH:   BR/EB 0-19  (최대 8M bps)
+- W55RP20-S2E:       BR 0-19     (최대 8M bps, FW >= 1.2.1)
+- W55RP20-S2E-2CH:   BR/EB 0-19  (최대 8M bps, FW >= 1.2.1)
+- IP20:              BR 0-19     (최대 8M bps, FW >= 1.2.1)
 """
 
 import re
@@ -172,7 +174,7 @@ WIZ510SSL_CMDSET = {
 }
 
 # ==================== WIZ5XX-RP Family CMDSET ====================
-# 적용 장치: WIZ510SSL, WIZ5XXSR-RP, W232N, IP20
+# 적용 장치: WIZ510SSL, WIZ5XXSR-RP, W232N
 # 특징: SSL/MQTT 지원, BR 0-15 (최대 921600 bps)
 WIZ5XX_RP_CMDSET = {
     **common_cmdset,
@@ -342,12 +344,13 @@ class Wizcmdset():
                     # 2채널, BR/EB 0-19 (최대 8Mbps)
                     logger.debug("Security device (W55RP20-S2E-2CH)")
                     self.cmdset = W55RP20_2CH_CMDSET.copy()
-                elif name == "W55RP20-S2E":
+                elif name in ("W55RP20-S2E", "IP20"):
                     # 단일채널, BR 0-19 (최대 8Mbps)
-                    logger.debug("Security device (W55RP20-S2E)")
+                    # IP20은 W55RP20 칩 사용하므로 동일한 CMDSET 사용
+                    logger.debug(f"Security device ({name})")
                     self.cmdset = W55RP20_CMDSET.copy()
                 else:
-                    # 기타 보안 장치 (WIZ510SSL, W232N, IP20 등): BR 0-15 (최대 921600)
+                    # 기타 보안 장치 (WIZ510SSL, W232N 등): BR 0-15 (최대 921600)
                     logger.debug("Security device")
                     self.cmdset = WIZ5XX_RP_CMDSET.copy()
             else:
@@ -398,9 +401,9 @@ class Wizcmdset():
         if mode_str == "BOOT":
             return
 
-        # W55RP20: 펌웨어 버전 1.2.0 이하는 고속 보드레이트 미지원
+        # W55RP20 Family: 펌웨어 버전 1.2.0 이하는 고속 보드레이트 미지원
         # BR/EB 패턴을 0-15 (최대 921600)로 제한
-        if name in ("W55RP20-S2E", "W55RP20-S2E-2CH") and version_compare(version, "1.2.1") < 0:
+        if name in ("W55RP20-S2E", "W55RP20-S2E-2CH", "IP20") and version_compare(version, "1.2.1") < 0:
             updated_cmdset = self.cmdset.copy()
             # BR 패턴을 표준 패턴(0-15)으로 재정의
             if "BR" in updated_cmdset:
