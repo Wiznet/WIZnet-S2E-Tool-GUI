@@ -1937,10 +1937,10 @@ class WIZWindow(QMainWindow, main_window):
             # Display result with elapsed time
             if self.search_start_time is not None:
                 elapsed = time.time() - self.search_start_time
-                self.statusbar.showMessage(f" Find {devnum} devices ({elapsed:.2f} seconds)")
+                self.statusbar.showMessage(f" Done. {devnum} devices found ({elapsed:.2f} seconds)")
                 self.search_start_time = None  # Reset for next search
             else:
-                self.statusbar.showMessage(f" Find {devnum} devices")
+                self.statusbar.showMessage(f" Done. {devnum} devices found")
 
             self.get_dev_list()
         else:
@@ -2072,11 +2072,11 @@ class WIZWindow(QMainWindow, main_window):
             udp_time = getattr(self, 'udp_elapsed', 0)
 
             self.statusbar.showMessage(
-                f" Find {total_count} devices (UDP: {udp_time:.2f}s, TCP: {tcp_elapsed:.2f}s, Total: {total_elapsed:.2f}s)"
+                f" Done. {total_count} devices found (UDP: {udp_time:.2f}s, TCP: {tcp_elapsed:.2f}s, Total: {total_elapsed:.2f}s)"
             )
             self.search_start_time = None
         else:
-            self.statusbar.showMessage(f" Find {total_count} devices")
+            self.statusbar.showMessage(f" Done. {total_count} devices found")
 
         # 장치 목록 갱신
         self.get_dev_list()
