@@ -1797,7 +1797,7 @@ class WIZWindow(QMainWindow, main_window):
                 th_name.searched_data.connect(self.getsearch_each_dev)
                 th_name.start()
                 th_name.wait()
-                self.statusbar.showMessage(" Done.")
+                # Don't overwrite the search result message with elapsed time
 
     def getsearch_each_dev(self, dev_data):
         # self.logger.debug(f'getsearch_each_dev: {dev_data}')
