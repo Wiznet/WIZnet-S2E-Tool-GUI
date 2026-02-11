@@ -172,6 +172,10 @@ class WIZWindow(QMainWindow, main_window):
         self.tcp_scanner = None
         self.search_start_time = None
 
+        # 누적 검색 관련
+        self.detected_list = []  # 검색됨 상태 목록 (bool)
+        self.cumulative_mode = False  # 누적 모드 활성화 여부
+
         # Initial UI object
         self.init_ui_object()
 
@@ -213,6 +217,8 @@ class WIZWindow(QMainWindow, main_window):
         self.at_enable.stateChanged.connect(self.event_atmode)
         self.ch1_keepalive_enable.stateChanged.connect(self.event_keepalive)
         self.ch2_keepalive_enable.stateChanged.connect(self.event_keepalive)
+        # 누적 검색 모드 체크박스 이벤트
+        self.cumulative_search_mode.stateChanged.connect(self.event_cumulative_mode)
         self.ip_dhcp.clicked.connect(self.event_ip_alloc)
         self.ip_static.clicked.connect(self.event_ip_alloc)
 
@@ -1221,6 +1227,15 @@ class WIZWindow(QMainWindow, main_window):
         else:
             self.connect_pw.setEnabled(False)
 
+    def event_cumulative_mode(self):
+        """누적 검색 모드 체크박스 토글 이벤트"""
+        self.cumulative_mode = self.cumulative_search_mode.isChecked()
+
+        if self.cumulative_mode:
+            self.logger.info("누적 검색 모드 활성화: 이전 검색 결과 유지")
+        else:
+            self.logger.info("누적 검색 모드 비활성화: 기본 검색 동작")
+
     def event_opmode(self):
         if self.ch1_tcpclient.isChecked():
             self.ch1_remote.setEnabled(True)
@@ -1651,10 +1666,16 @@ class WIZWindow(QMainWindow, main_window):
                 self.logger.info("keep searched list")
                 pass
             else:
-                # List table initial (clear)
-                self.list_device.clear()
-                while self.list_device.rowCount() > 0:
-                    self.list_device.removeRow(0)
+                # 누적 모드가 OFF이면 기존 결과 삭제
+                if not self.cumulative_mode:
+                    # List table initial (clear)
+                    self.list_device.clear()
+                    while self.list_device.rowCount() > 0:
+                        self.list_device.removeRow(0)
+                else:
+                    # 누적 모드: 헤더만 재설정, 행은 유지
+                    self.list_device.clear()
+                    # 헤더 재설정은 아래 코드에서 수행
 
             item_mac = QTableWidgetItem()
             item_mac.setText("Mac address")
@@ -1665,6 +1686,11 @@ class WIZWindow(QMainWindow, main_window):
             item_name.setText("Name")
             item_name.setFont(self.midfont)
             self.list_device.setHorizontalHeaderItem(1, item_name)
+
+            item_detected = QTableWidgetItem()
+            item_detected.setText("검색됨")
+            item_detected.setFont(self.midfont)
+            self.list_device.setHorizontalHeaderItem(2, item_detected)
 
             # Set socket for search
             self.socket_config()
@@ -1859,11 +1885,18 @@ class WIZWindow(QMainWindow, main_window):
         if self.search_retry_flag:
             pass
         else:
-            # init old info
-            self.mac_list = []
-            self.mn_list = []
-            self.vr_list = []
-            self.st_list = []
+            # 누적 모드가 OFF이면 기존 데이터 삭제
+            if not self.cumulative_mode:
+                # init old info
+                self.mac_list = []
+                self.mn_list = []
+                self.vr_list = []
+                self.st_list = []
+                self.detected_list = []
+            else:
+                # 누적 모드: 기존 데이터 유지, 모든 "검색됨" 상태를 False로 초기화
+                self.detected_list = [False] * len(self.mac_list)
+                self.logger.info(f"누적 모드: 기존 {len(self.mac_list)}개 장비 유지, 검색됨 초기화")
 
         # Determine data source (wizmsghandler for UDP/TCP unicast, tcp_scanner for multicast)
         data_source = None
@@ -1908,12 +1941,29 @@ class WIZWindow(QMainWindow, main_window):
                     # print('keep list >>', self.mac_list, self.mn_list, self.vr_list, self.st_list)
 
                 else:
-                    self.mac_list = data_source.mac_list if data_source else []
-                    self.mn_list = data_source.mn_list if data_source else []
-                    self.vr_list = data_source.vr_list if data_source else []
-                    self.st_list = data_source.st_list if data_source else []
-                    # all response
-                    self.all_response = data_source.rcv_list if data_source else []
+                    # 새 검색 결과 가져오기
+                    new_mac_list = data_source.mac_list if data_source else []
+                    new_mn_list = data_source.mn_list if data_source else []
+                    new_vr_list = data_source.vr_list if data_source else []
+                    new_st_list = data_source.st_list if data_source else []
+                    new_rcv_list = data_source.rcv_list if data_source else []
+
+                    # 누적 모드 처리
+                    if self.cumulative_mode:
+                        self._merge_search_results(new_mac_list, new_mn_list, new_vr_list, new_st_list)
+                        # all_response도 병합 (기존 + 신규)
+                        for rcv in new_rcv_list:
+                            if rcv not in self.all_response:
+                                self.all_response.append(rcv)
+                    else:
+                        # 기본 모드: 그냥 새 결과로 교체
+                        self.mac_list = new_mac_list
+                        self.mn_list = new_mn_list
+                        self.vr_list = new_vr_list
+                        self.st_list = new_st_list
+                        self.detected_list = [True] * len(self.mac_list)
+                        # all response
+                        self.all_response = new_rcv_list
 
                 # print('all_response', len(self.all_response), self.all_response)
                 # print('get_search_result():', self.mac_list, self.mn_list, self.vr_list, self.st_list)
@@ -1923,13 +1973,24 @@ class WIZWindow(QMainWindow, main_window):
 
                 try:
                     for i in range(0, len(self.mac_list)):
-                        # device = "%s | %s" % (self.mac_list[i].decode(), self.mn_list[i].decode())
+                        # MAC 주소
                         self.list_device.setItem(
                             i, 0, QTableWidgetItem(self.mac_list[i].decode())
                         )
+                        # 장비 이름
                         self.list_device.setItem(
                             i, 1, QTableWidgetItem(self.mn_list[i].decode())
                         )
+                        # 검색됨 상태
+                        detected_item = QTableWidgetItem()
+                        if self.detected_list[i]:
+                            detected_item.setText("●")  # 또는 "✓"
+                            detected_item.setForeground(QtGui.QColor(0, 200, 0))  # 초록색
+                        else:
+                            detected_item.setText("○")  # 또는 "✗"
+                            detected_item.setForeground(QtGui.QColor(150, 150, 150))  # 회색
+                        detected_item.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter | QtCore.Qt.AlignmentFlag.AlignVCenter)
+                        self.list_device.setItem(i, 2, detected_item)
                 except Exception as e:
                     self.logger.error(e)
 
@@ -1957,6 +2018,47 @@ class WIZWindow(QMainWindow, main_window):
             self.get_dev_list()
         else:
             self.logger.error("search error")
+
+    def _merge_search_results(self, new_mac_list, new_mn_list, new_vr_list, new_st_list):
+        """누적 모드에서 새 검색 결과를 기존 목록과 병합
+
+        Args:
+            new_mac_list: 새로 발견된 MAC 주소 목록
+            new_mn_list: 새로 발견된 장비 이름 목록
+            new_vr_list: 새로 발견된 버전 목록
+            new_st_list: 새로 발견된 상태 목록
+        """
+        # 기존 MAC 주소 → 인덱스 매핑 생성
+        existing_mac_map = {}
+        for i, mac in enumerate(self.mac_list):
+            mac_str = mac.decode() if isinstance(mac, bytes) else mac
+            existing_mac_map[mac_str] = i
+
+        # 새 결과 처리
+        for i in range(len(new_mac_list)):
+            new_mac = new_mac_list[i]
+            new_mac_str = new_mac.decode() if isinstance(new_mac, bytes) else new_mac
+
+            if new_mac_str in existing_mac_map:
+                # 기존 장비 발견 → 데이터 갱신
+                idx = existing_mac_map[new_mac_str]
+                self.mn_list[idx] = new_mn_list[i]
+                self.vr_list[idx] = new_vr_list[i]
+                self.st_list[idx] = new_st_list[i]
+                self.detected_list[idx] = True
+                self.logger.debug(f"장비 갱신: {new_mac_str}")
+            else:
+                # 신규 장비 → 목록에 추가
+                self.mac_list.append(new_mac_list[i])
+                self.mn_list.append(new_mn_list[i])
+                self.vr_list.append(new_vr_list[i])
+                self.st_list.append(new_st_list[i])
+                self.detected_list.append(True)
+                self.logger.info(f"신규 장비 추가: {new_mac_str}")
+
+        detected_count = sum(1 for d in self.detected_list if d)
+        total_count = len(self.mac_list)
+        self.logger.info(f"누적 검색 결과: 전체 {total_count}개 (현재 검색: {detected_count}개)")
 
     def update_scan_progress(self, current, total):
         """TCP multicast 진행률 업데이트"""
