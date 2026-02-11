@@ -1797,7 +1797,12 @@ class WIZWindow(QMainWindow, main_window):
                 th_name.searched_data.connect(self.getsearch_each_dev)
                 th_name.start()
                 th_name.wait()
-                # Don't overwrite the search result message with elapsed time
+
+            # Restore the final status message with elapsed time
+            if hasattr(self, 'final_status_message'):
+                self.statusbar.showMessage(self.final_status_message)
+                self.pgbar.setFormat("Done")
+                self.pgbar.setValue(100)
 
     def getsearch_each_dev(self, dev_data):
         # self.logger.debug(f'getsearch_each_dev: {dev_data}')
@@ -1937,11 +1942,12 @@ class WIZWindow(QMainWindow, main_window):
             # Display result with elapsed time
             if self.search_start_time is not None:
                 elapsed = time.time() - self.search_start_time
-                self.statusbar.showMessage(f" Done. {devnum} devices found ({elapsed:.2f} seconds)")
+                self.final_status_message = f" Done. {devnum} devices found ({elapsed:.2f} seconds)"
                 self.search_start_time = None  # Reset for next search
             else:
-                self.statusbar.showMessage(f" Done. {devnum} devices found")
+                self.final_status_message = f" Done. {devnum} devices found"
 
+            self.statusbar.showMessage(self.final_status_message)
             self.get_dev_list()
         else:
             self.logger.error("search error")
@@ -2071,12 +2077,12 @@ class WIZWindow(QMainWindow, main_window):
             total_elapsed = time.time() - self.search_start_time
             udp_time = getattr(self, 'udp_elapsed', 0)
 
-            self.statusbar.showMessage(
-                f" Done. {total_count} devices found (UDP: {udp_time:.2f}s, TCP: {tcp_elapsed:.2f}s, Total: {total_elapsed:.2f}s)"
-            )
+            self.final_status_message = f" Done. {total_count} devices found (UDP: {udp_time:.2f}s, TCP: {tcp_elapsed:.2f}s, Total: {total_elapsed:.2f}s)"
             self.search_start_time = None
         else:
-            self.statusbar.showMessage(f" Done. {total_count} devices found")
+            self.final_status_message = f" Done. {total_count} devices found"
+
+        self.statusbar.showMessage(self.final_status_message)
 
         # 장치 목록 갱신
         self.get_dev_list()
