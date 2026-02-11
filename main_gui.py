@@ -1804,6 +1804,9 @@ class WIZWindow(QMainWindow, main_window):
         self.pgbar.setFormat("Done")
         self.pgbar.setValue(100)
 
+        # Hide progress bar after a delay (consistent with other search methods)
+        QtCore.QTimer.singleShot(2000, lambda: self.pgbar.hide())
+
     def getsearch_each_dev(self, dev_data):
         # self.logger.debug(f'getsearch_each_dev: {dev_data}')
         profile = {}
