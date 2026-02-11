@@ -1798,11 +1798,11 @@ class WIZWindow(QMainWindow, main_window):
                 th_name.start()
                 th_name.wait()
 
-            # Restore the final status message with elapsed time
-            if hasattr(self, 'final_status_message'):
-                self.statusbar.showMessage(self.final_status_message)
-                self.pgbar.setFormat("Done")
-                self.pgbar.setValue(100)
+        # Restore the final status message with elapsed time (always run after loop)
+        if hasattr(self, 'final_status_message'):
+            self.statusbar.showMessage(self.final_status_message)
+        self.pgbar.setFormat("Done")
+        self.pgbar.setValue(100)
 
     def getsearch_each_dev(self, dev_data):
         # self.logger.debug(f'getsearch_each_dev: {dev_data}')
