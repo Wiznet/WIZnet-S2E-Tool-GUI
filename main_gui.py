@@ -1756,6 +1756,9 @@ class WIZWindow(QMainWindow, main_window):
 
         if self.broadcast.isChecked():
             self.socket_config()
+        elif self.tcp_multicast.isChecked() or self.mixed_search.isChecked():
+            # TCP multicast or Mixed search: need to create UDP socket for each device query
+            self.socket_config()
         else:
             # tcp unicast일 경우 search_pre에서 이미 커넥션이 수립되어 있음
             pass
