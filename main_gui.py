@@ -1930,6 +1930,10 @@ class WIZWindow(QMainWindow, main_window):
                 self.list_device.horizontalHeader().setSectionResizeMode(2)
                 self.list_device.verticalHeader().setSectionResizeMode(2)
 
+            # Stop progress bar
+            self.pgbar.setFormat("Done")
+            self.pgbar.setValue(100)
+
             # Display result with elapsed time
             if self.search_start_time is not None:
                 elapsed = time.time() - self.search_start_time
@@ -1951,7 +1955,13 @@ class WIZWindow(QMainWindow, main_window):
 
     def handle_mixed_phase1(self, devnum):
         """Mixed search Phase 1 (UDP) 완료 처리"""
-        self.logger.info(f"Mixed Phase 1: {devnum} devices via UDP")
+        # UDP phase elapsed time
+        if hasattr(self, 'search_start_time') and self.search_start_time is not None:
+            self.udp_elapsed = time.time() - self.search_start_time
+            self.logger.info(f"Mixed Phase 1: {devnum} devices via UDP ({self.udp_elapsed:.2f}s)")
+        else:
+            self.udp_elapsed = 0
+            self.logger.info(f"Mixed Phase 1: {devnum} devices via UDP")
 
         # UDP로 발견된 IP 추출
         found_ips = set()
@@ -1975,11 +1985,17 @@ class WIZWindow(QMainWindow, main_window):
 
         if len(missing_ips) == 0:
             self.logger.info("Mixed Phase 1 complete, no additional IPs to scan")
+            # Stop progress bar
+            self.pgbar.setFormat("Done")
+            self.pgbar.setValue(100)
             self.get_search_result(devnum)
             return
 
         self.logger.info(f"Mixed Phase 2: Scanning {len(missing_ips)} IPs via TCP")
         self.statusbar.showMessage(f" Phase 2: Scanning {len(missing_ips)} additional IPs via TCP...")
+
+        # Record TCP phase start time
+        self.tcp_start_time = time.time()
 
         # Phase 2: TCP scan
         port = int(self.mixed_port.text())
@@ -1994,7 +2010,13 @@ class WIZWindow(QMainWindow, main_window):
 
     def handle_mixed_phase2(self, tcp_devnum):
         """Mixed search Phase 2 (TCP) 완료 - 결과 병합"""
-        self.logger.info(f"Mixed Phase 2: {tcp_devnum} devices via TCP")
+        # TCP phase elapsed time
+        if hasattr(self, 'tcp_start_time') and self.tcp_start_time is not None:
+            tcp_elapsed = time.time() - self.tcp_start_time
+            self.logger.info(f"Mixed Phase 2: {tcp_devnum} devices via TCP ({tcp_elapsed:.2f}s)")
+        else:
+            tcp_elapsed = 0
+            self.logger.info(f"Mixed Phase 2: {tcp_devnum} devices via TCP")
 
         # 결과 병합: UDP + TCP
         tcp_mac = self.tcp_scanner.mac_list if self.tcp_scanner else []
@@ -2011,6 +2033,10 @@ class WIZWindow(QMainWindow, main_window):
 
         total_count = len(self.mac_list)
         self.logger.info(f"Mixed search complete: {total_count} total devices (UDP: {len(self.udp_results['mac_list'])}, TCP: {tcp_devnum})")
+
+        # Stop progress bar
+        self.pgbar.setFormat("Done")
+        self.pgbar.setValue(100)
 
         # 검색 완료 처리
         self.searched_devnum = total_count
@@ -2040,10 +2066,14 @@ class WIZWindow(QMainWindow, main_window):
             self.list_device.horizontalHeader().setSectionResizeMode(2)
             self.list_device.verticalHeader().setSectionResizeMode(2)
 
-        # 시간 표시
+        # 시간 표시: UDP/TCP/Total
         if self.search_start_time is not None:
-            elapsed = time.time() - self.search_start_time
-            self.statusbar.showMessage(f" Find {total_count} devices ({elapsed:.2f} seconds)")
+            total_elapsed = time.time() - self.search_start_time
+            udp_time = getattr(self, 'udp_elapsed', 0)
+
+            self.statusbar.showMessage(
+                f" Find {total_count} devices (UDP: {udp_time:.2f}s, TCP: {tcp_elapsed:.2f}s, Total: {total_elapsed:.2f}s)"
+            )
             self.search_start_time = None
         else:
             self.statusbar.showMessage(f" Find {total_count} devices")
