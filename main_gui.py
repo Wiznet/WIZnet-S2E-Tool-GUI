@@ -1672,11 +1672,9 @@ class WIZWindow(QMainWindow, main_window):
                     self.list_device.clear()
                     while self.list_device.rowCount() > 0:
                         self.list_device.removeRow(0)
-                else:
-                    # 누적 모드: 헤더만 재설정, 행은 유지
-                    self.list_device.clear()
-                    # 헤더 재설정은 아래 코드에서 수행
+                # 누적 모드: 테이블 초기화하지 않음 (행 유지)
 
+            # 테이블 헤더 설정 (매번 재설정)
             item_mac = QTableWidgetItem()
             item_mac.setText("Mac address")
             item_mac.setFont(self.midfont)
