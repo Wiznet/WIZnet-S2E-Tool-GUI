@@ -739,6 +739,22 @@
                </item>
               </layout>
              </item>
+             <item row="6" column="0">
+              <widget class="QCheckBox" name="cumulative_search_mode">
+               <property name="font">
+                <font>
+                 <family>맑은 고딕</family>
+                 <pointsize>9</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>누적 검색 모드 (이전 결과 유지)</string>
+               </property>
+               <property name="checked">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
             </layout>
            </widget>
           </item>
@@ -905,7 +921,7 @@
              <number>0</number>
             </property>
             <property name="columnCount">
-             <number>2</number>
+             <number>3</number>
             </property>
             <attribute name="horizontalHeaderVisible">
              <bool>true</bool>
@@ -960,6 +976,23 @@
             <column>
              <property name="text">
               <string notr="true">Name</string>
+             </property>
+             <property name="toolTip">
+              <string notr="true"/>
+             </property>
+             <property name="whatsThis">
+              <string notr="true"/>
+             </property>
+             <property name="font">
+              <font>
+               <family>맑은 고딕</family>
+               <pointsize>8</pointsize>
+              </font>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>검색됨</string>
              </property>
              <property name="toolTip">
               <string notr="true"/>
