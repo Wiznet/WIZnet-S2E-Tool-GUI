@@ -53,11 +53,14 @@ from PyQt5.QtWidgets import (
     QProgressBar,
     QInputDialog,
     QTabWidget,
+    QLabel,
+    QGridLayout,
+    QToolTip,
+    QWidget,
+    QLayout,
     # QRadioButton,
     # QComboBox,
     # QCheckBox,
-    # QWidget,
-    # QGridLayout,
     # QGroupBox,
 )
 import ifaddr
@@ -65,6 +68,31 @@ import ifaddr
 
 SECURITY_TWO_PORT_DEV = ("W55RP20-S2E-2CH",)
 W55RP20_FAMILY = ("W55RP20-S2E", "W55RP20-S2E-2CH")
+
+
+class RetrySearchLimits:
+    """반복 검색 설정 상수 (중앙 관리)"""
+
+    # 예상 장비 수 제한
+    EXPECTED_DEVICE_MIN = 0
+    EXPECTED_DEVICE_MAX = 1000
+    EXPECTED_DEVICE_DEFAULT = 0
+
+    # 최대 반복 횟수 제한
+    MAX_RETRY_MIN = 1
+    MAX_RETRY_MAX = 100
+    MAX_RETRY_DEFAULT = 1
+
+    # 기타 설정
+    RETRY_DELAY_MS = 500  # 반복 간 딜레이 (밀리초)
+
+
+class UITooltipSettings:
+    """UI 툴팁 설정 상수"""
+
+    TOOLTIP_DELAY_MS = 300  # 툴팁 표시 지연 시간 (밀리초)
+    TOOLTIP_DURATION_MS = 5000  # 툴팁 표시 지속 시간 (밀리초)
+
 
 # Baudrate list base - common part for all devices (up to 230400)
 # Items 0-13, index-aligned with gui/wizconfig_gui.ui
@@ -79,6 +107,91 @@ def resource_path(relative_path):
     # Get absolute path to resource, works for dev and for PyInstaller
     base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
+
+
+class ClickableInfoLabel(QLabel):
+    """클릭 가능한 정보 아이콘 라벨 (ⓘ)
+
+    기능:
+    - UI에서 ⓘ 아이콘으로 표시되는 정보 라벨
+    - 마우스 호버 시 툴팁 표시 (빠른 반응: 300ms)
+    - 클릭 시에도 툴팁 표시 (사용자 편의성)
+    - 손가락 커서로 클릭 가능함을 시각적으로 표시
+
+    사용 위치:
+    - Search method 제목 옆 (검색 방법 전체 설명)
+    - TCP multicast 옆 (서브넷 스캔 설명)
+    - Mixed 옆 (UDP + TCP 혼합 방식 설명)
+
+    구현 특징:
+    - QLabel 상속으로 UI 파일의 일반 QLabel을 런타임에 교체 가능
+    - hideText() → 100ms 딜레이 → showText() 패턴으로 클릭 툴팁 안정화
+    - Qt 기본 호버 툴팁과 클릭 툴팁 모두 지원
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        # 마우스 커서를 손가락 모양(PointingHandCursor)으로 변경
+        # → 사용자에게 클릭 가능함을 시각적으로 알림
+        try:
+            self.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape(13)))  # 13 = PointingHandCursor
+        except:
+            pass
+
+        # 툴팁 표시 지속 시간 설정 (5000ms = 5초)
+        # → 충분한 시간 동안 정보를 읽을 수 있도록
+        self.setToolTipDuration(UITooltipSettings.TOOLTIP_DURATION_MS)
+
+    def mousePressEvent(self, ev):
+        """마우스 클릭 시 툴팁 표시
+
+        동작 원리:
+        1. 왼쪽 버튼 클릭 감지
+        2. 기존 툴팁 숨기기 (hideText)
+        3. 100ms 딜레이 (Qt 내부 상태 초기화 대기)
+        4. 새 툴팁 표시 (showText)
+
+        왜 이렇게 구현했는가:
+        - QToolTip.showText()를 바로 호출하면 표시 안 됨
+        - hideText() + 딜레이 + showText() 패턴이 안정적으로 동작
+        - 호버 툴팁과 클릭 툴팁이 충돌하지 않도록 조정
+        """
+        print(f"[DEBUG] ClickableInfoLabel.mousePressEvent called")
+        if ev and ev.button() == QtCore.Qt.MouseButton(1):  # 왼쪽 버튼만
+            tooltip_text = self.toolTip()
+            print(f"[DEBUG] Tooltip text: {tooltip_text}")
+            if tooltip_text:
+                # 1단계: 기존 툴팁 숨기기 (호버 툴팁 제거)
+                QToolTip.hideText()
+                print(f"[DEBUG] hideText() called")
+
+                # 2단계: 클릭 위치 계산 (글로벌 좌표계)
+                pos = self.mapToGlobal(ev.pos())
+                print(f"[DEBUG] Tooltip position: {pos}")
+
+                # 3단계: 100ms 딜레이 후 툴팁 표시
+                # → Qt 내부에서 hideText() 처리 완료 대기
+                QtCore.QTimer.singleShot(100, lambda: self._show_tooltip_delayed(pos, tooltip_text))
+                print(f"[DEBUG] Timer scheduled for delayed tooltip")
+
+        # 부모 클래스의 이벤트 처리도 실행 (이벤트 전파)
+        super().mousePressEvent(ev)
+
+    def _show_tooltip_delayed(self, pos, text):
+        """딜레이 후 툴팁 표시 (내부 헬퍼 메서드)
+
+        Args:
+            pos: 툴팁 표시 위치 (QPoint, 글로벌 좌표)
+            text: 툴팁 텍스트 내용
+
+        Note:
+            - QTimer.singleShot()에서 호출됨
+            - hideText() 이후 충분한 시간 경과 후 실행
+        """
+        print(f"[DEBUG] _show_tooltip_delayed called")
+        QToolTip.showText(pos, text, self, self.rect(), UITooltipSettings.TOOLTIP_DURATION_MS)
+        print(f"[DEBUG] showText() executed with duration={UITooltipSettings.TOOLTIP_DURATION_MS}ms")
 
 
 # VERSION = 'V1.5.5.1'  # github 이슈 #36 수정
@@ -172,9 +285,14 @@ class WIZWindow(QMainWindow, main_window):
         self.tcp_scanner = None
         self.search_start_time = None
 
-        # 누적 검색 관련
+        # 검색 결과 유지/갱신 관련
         self.detected_list = []  # 검색됨 상태 목록 (bool)
-        self.cumulative_mode = False  # 누적 모드 활성화 여부
+        self.cumulative_mode = False  # 검색 결과 유지/갱신 모드 활성화 여부
+
+        # 반복 검색 관련 (UDP broadcast 전용)
+        self.retry_search_current = 0  # 현재 반복 횟수
+        self.retry_search_expected_count = 0  # 예상 장비 수
+        self.retry_search_max_count = 1  # 최대 반복 횟수
 
         # Initial UI object
         self.init_ui_object()
@@ -217,7 +335,7 @@ class WIZWindow(QMainWindow, main_window):
         self.at_enable.stateChanged.connect(self.event_atmode)
         self.ch1_keepalive_enable.stateChanged.connect(self.event_keepalive)
         self.ch2_keepalive_enable.stateChanged.connect(self.event_keepalive)
-        # 누적 검색 모드 체크박스 이벤트
+        # 검색 결과 유지/갱신 모드 체크박스 이벤트
         self.cumulative_search_mode.stateChanged.connect(self.event_cumulative_mode)
         self.ip_dhcp.clicked.connect(self.event_ip_alloc)
         self.ip_static.clicked.connect(self.event_ip_alloc)
@@ -394,6 +512,23 @@ class WIZWindow(QMainWindow, main_window):
         self.ch1_pack_char_7.setMaxLength(30)
         self.ch1_pack_char_8.setMaxLength(30)
         self.ch1_pack_char_9.setMaxLength(30)
+
+        # 반복 검색 입력 필드 Validator 설정 (UI 레벨 검증)
+        from PyQt5.QtGui import QIntValidator
+
+        validator_expected = QIntValidator(
+            RetrySearchLimits.EXPECTED_DEVICE_MIN,
+            RetrySearchLimits.EXPECTED_DEVICE_MAX,
+            self
+        )
+        self.expected_device_count.setValidator(validator_expected)
+
+        validator_retry = QIntValidator(
+            RetrySearchLimits.MAX_RETRY_MIN,
+            RetrySearchLimits.MAX_RETRY_MAX,
+            self
+        )
+        self.max_retry_count.setValidator(validator_retry)
 
         # for WIZ5XXSR custom module
         # @TODO: a6e5282d1e 에서 U3~U9 가 삭제되어 아래 코드도 삭제되어야 함
@@ -1228,13 +1363,37 @@ class WIZWindow(QMainWindow, main_window):
             self.connect_pw.setEnabled(False)
 
     def event_cumulative_mode(self):
-        """누적 검색 모드 체크박스 토글 이벤트"""
+        """검색 결과 유지/갱신 모드 체크박스 토글 이벤트"""
         self.cumulative_mode = self.cumulative_search_mode.isChecked()
 
         if self.cumulative_mode:
-            self.logger.info("누적 검색 모드 활성화: 이전 검색 결과 유지")
+            self.logger.info("검색 결과 유지/갱신 모드 활성화: 기존 장비 갱신 + 새 장비 추가")
+            # 반복 검색 옵션 활성화 (UDP broadcast 선택 시만)
+            self._update_retry_options_state()
         else:
-            self.logger.info("누적 검색 모드 비활성화: 기본 검색 동작")
+            self.logger.info("검색 결과 유지/갱신 모드 비활성화: 기본 검색 동작")
+            # 반복 검색 옵션 비활성화
+            self.expected_device_count.setEnabled(False)
+            self.label_expected_device_count.setEnabled(False)
+            self.max_retry_count.setEnabled(False)
+            self.label_max_retry_count.setEnabled(False)
+
+    def _update_retry_options_state(self):
+        """반복 검색 옵션의 활성화 상태 업데이트
+
+        조건: 검색 결과 유지/갱신 모드 ON AND UDP broadcast 선택
+        """
+        should_enable = self.cumulative_mode and self.broadcast.isChecked()
+
+        self.expected_device_count.setEnabled(should_enable)
+        self.label_expected_device_count.setEnabled(should_enable)
+        self.max_retry_count.setEnabled(should_enable)
+        self.label_max_retry_count.setEnabled(should_enable)
+
+        if should_enable:
+            self.logger.info("반복 검색 옵션 활성화: 유지/갱신 모드 ON + UDP broadcast 선택")
+        else:
+            self.logger.info("반복 검색 옵션 비활성화")
 
     def event_opmode(self):
         if self.ch1_tcpclient.isChecked():
@@ -1376,6 +1535,14 @@ class WIZWindow(QMainWindow, main_window):
             self.label_tcp_multicast_port.setEnabled(False)
             self.mixed_port.setEnabled(True)
             self.label_mixed_port.setEnabled(True)
+
+        # 검색 방법 변경 시 반복 검색 카운터 리셋
+        if self.retry_search_current > 0:
+            self.logger.info(f"검색 방법 변경: 반복 검색 카운터 리셋 ({self.retry_search_current} → 0)")
+            self.retry_search_current = 0
+
+        # 반복 검색 옵션 상태 업데이트 (유지/갱신 모드 ON + UDP broadcast 선택 시만 활성화)
+        self._update_retry_options_state()
 
     def sock_close(self):
         # 기존 연결 fin
@@ -1653,11 +1820,71 @@ class WIZWindow(QMainWindow, main_window):
             # 기존 연결 close
             self.sock_close()
 
+            # 첫 검색 시작 시 설정 읽기 (유지/갱신 모드 + UDP broadcast)
+            if self.retry_search_current == 0 and self.cumulative_mode and self.broadcast.isChecked():
+                # 예상 장비 수 검증 (상수 사용)
+                try:
+                    expected = int(self.expected_device_count.text())
+                    original_expected = expected
+
+                    if expected < RetrySearchLimits.EXPECTED_DEVICE_MIN:
+                        expected = RetrySearchLimits.EXPECTED_DEVICE_MIN
+                        self.logger.warning(f"예상 장비 수 범위 미만 → {expected}로 설정")
+                    elif expected > RetrySearchLimits.EXPECTED_DEVICE_MAX:
+                        expected = RetrySearchLimits.EXPECTED_DEVICE_MAX
+                        self.logger.warning(f"예상 장비 수 범위 초과 → {expected}로 제한")
+
+                    self.retry_search_expected_count = expected
+
+                    # UI 반영 (값이 변경된 경우만)
+                    if original_expected != expected:
+                        self.expected_device_count.setText(str(expected))
+
+                except ValueError:
+                    self.retry_search_expected_count = RetrySearchLimits.EXPECTED_DEVICE_DEFAULT
+                    self.expected_device_count.setText(str(RetrySearchLimits.EXPECTED_DEVICE_DEFAULT))
+                    self.logger.warning(f"예상 장비 수 입력 오류 → {RetrySearchLimits.EXPECTED_DEVICE_DEFAULT}로 설정")
+
+                # 최대 반복 횟수 검증 (상수 사용)
+                try:
+                    max_retry = int(self.max_retry_count.text())
+                    original_max = max_retry
+
+                    if max_retry < RetrySearchLimits.MAX_RETRY_MIN:
+                        max_retry = RetrySearchLimits.MAX_RETRY_MIN
+                        self.logger.warning(f"최대 반복 횟수 범위 미만 → {max_retry}로 설정")
+                    elif max_retry > RetrySearchLimits.MAX_RETRY_MAX:
+                        max_retry = RetrySearchLimits.MAX_RETRY_MAX
+                        self.logger.warning(f"최대 반복 횟수 범위 초과 → {max_retry}로 제한")
+
+                    self.retry_search_max_count = max_retry
+
+                    # UI 반영 (값이 변경된 경우만)
+                    if original_max != max_retry:
+                        self.max_retry_count.setText(str(max_retry))
+
+                except ValueError:
+                    self.retry_search_max_count = RetrySearchLimits.MAX_RETRY_DEFAULT
+                    self.max_retry_count.setText(str(RetrySearchLimits.MAX_RETRY_DEFAULT))
+                    self.logger.warning(f"최대 반복 횟수 입력 오류 → {RetrySearchLimits.MAX_RETRY_DEFAULT}로 설정")
+
+                self.logger.info(f"반복 검색 시작: 예상 {self.retry_search_expected_count}개, 최대 {self.retry_search_max_count}회")
+
             cmd_list = []
             # default search id code
             self.code = " "
             self.all_response = []
-            self.pgbar.setFormat("Search all devices...")
+            # Progress bar 메시지 통일
+            if self.cumulative_mode and self.broadcast.isChecked():
+                if self.retry_search_current == 0:
+                    # 첫 검색
+                    self.pgbar.setFormat(f"Searching... (1/{self.retry_search_max_count})")
+                else:
+                    # 반복 검색
+                    self.pgbar.setFormat(f"Searching... ({self.retry_search_current + 1}/{self.retry_search_max_count})")
+            else:
+                # 일반 검색
+                self.pgbar.setFormat("Search all devices...")
             self.pgbar.setRange(0, 100)
             self.search_progress_thread.start()
             self.processing(self.search_pre_wait_time * 1000)
@@ -1666,13 +1893,13 @@ class WIZWindow(QMainWindow, main_window):
                 self.logger.info("keep searched list")
                 pass
             else:
-                # 누적 모드가 OFF이면 기존 결과 삭제
+                # 유지/갱신 모드가 OFF이면 기존 결과 삭제
                 if not self.cumulative_mode:
                     # List table initial (clear)
                     self.list_device.clear()
                     while self.list_device.rowCount() > 0:
                         self.list_device.removeRow(0)
-                # 누적 모드: 테이블 초기화하지 않음 (행 유지)
+                # 유지/갱신 모드: 테이블 초기화하지 않음 (행 유지)
 
             # 테이블 헤더 설정 (매번 재설정)
             item_mac = QTableWidgetItem()
@@ -1883,7 +2110,7 @@ class WIZWindow(QMainWindow, main_window):
         if self.search_retry_flag:
             pass
         else:
-            # 누적 모드가 OFF이면 기존 데이터 삭제
+            # 유지/갱신 모드가 OFF이면 기존 데이터 삭제
             if not self.cumulative_mode:
                 # init old info
                 self.mac_list = []
@@ -1892,9 +2119,9 @@ class WIZWindow(QMainWindow, main_window):
                 self.st_list = []
                 self.detected_list = []
             else:
-                # 누적 모드: 기존 데이터 유지, 모든 "검색됨" 상태를 False로 초기화
+                # 유지/갱신 모드: 기존 데이터 유지, 모든 "검색됨" 상태를 False로 초기화
                 self.detected_list = [False] * len(self.mac_list)
-                self.logger.info(f"누적 모드: 기존 {len(self.mac_list)}개 장비 유지, 검색됨 초기화")
+                self.logger.info(f"유지/갱신 모드: 기존 {len(self.mac_list)}개 장비 유지, 검색됨 초기화")
 
         # Determine data source (wizmsghandler for UDP/TCP unicast, tcp_scanner for multicast)
         data_source = None
@@ -1946,7 +2173,7 @@ class WIZWindow(QMainWindow, main_window):
                     new_st_list = data_source.st_list if data_source else []
                     new_rcv_list = data_source.rcv_list if data_source else []
 
-                    # 누적 모드 처리
+                    # 유지/갱신 모드 처리
                     if self.cumulative_mode:
                         self._merge_search_results(new_mac_list, new_mn_list, new_vr_list, new_st_list)
                         # all_response도 병합 (기존 + 신규)
@@ -2013,12 +2240,71 @@ class WIZWindow(QMainWindow, main_window):
                 self.final_status_message = f" Done. {devnum} devices found"
 
             self.statusbar.showMessage(self.final_status_message)
+
+            # 반복 검색 로직 (유지/갱신 모드 + UDP broadcast 전용)
+            if self.cumulative_mode and self.broadcast.isChecked() and devnum > 0:
+                self.retry_search_current += 1
+
+                # 유지/갱신으로 발견된 전체 장비 수 (핵심 지표)
+                total_count = len(self.mac_list)
+                # 이번 검색에서 새로 발견된 장비 수 (로깅용 참고 정보)
+                newly_detected = sum(1 for d in self.detected_list if d)
+
+                self.logger.info(f"반복 검색 {self.retry_search_current}회차: 전체 {total_count}개 (이번 검색: {newly_detected}개)")
+
+                # 조기 종료 조건 체크 (리팩토링)
+                reached_expected = (self.retry_search_expected_count > 0 and
+                                   total_count >= self.retry_search_expected_count)
+                reached_max = self.retry_search_current >= self.retry_search_max_count
+
+                # 종료 조건: 예상 장비 수 도달 OR 최대 반복 횟수 도달
+                should_continue = not (reached_expected or reached_max)
+
+                # 로깅: 종료 이유 명시
+                if reached_expected:
+                    self.logger.info(f"예상 장비 수 도달: {total_count}/{self.retry_search_expected_count}")
+                if reached_max:
+                    self.logger.info(f"최대 반복 횟수 도달: {self.retry_search_current}/{self.retry_search_max_count}")
+
+                # 계속 반복할지 결정
+                if should_continue:
+                    self.logger.info(f"반복 검색 계속: {self.retry_search_current + 1}회차 시작")
+                    # Progress bar는 search_pre()에서 설정하므로 여기서는 제거
+                    # 약간의 딜레이 후 재검색 (상수 사용)
+                    QtCore.QTimer.singleShot(RetrySearchLimits.RETRY_DELAY_MS, self._continue_retry_search)
+                    return  # get_dev_list() 호출하지 않음
+                else:
+                    # 반복 종료
+                    self.logger.info(f"반복 검색 완료: 총 {self.retry_search_current}회, {total_count}개 장비 발견")
+                    self.retry_search_current = 0  # 카운터 리셋
+
             self.get_dev_list()
         else:
             self.logger.error("search error")
 
+    def _continue_retry_search(self):
+        """반복 검색 계속 수행
+
+        Note: detected_list는 초기화하지 않음
+        - 유지/갱신 모드에서는 이전 결과를 유지해야 하므로
+        - _merge_search_results()에서 새로 발견된 장비만 True로 업데이트
+        """
+        try:
+            # search_pre 재호출 (detected_list는 유지)
+            self.search_pre()
+        except Exception as e:
+            self.logger.error(f"반복 검색 중 오류: {e}")
+            self.retry_search_current = 0
+            # 사용자에게 알림
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.critical(
+                self,
+                "반복 검색 오류",
+                f"반복 검색 중 오류가 발생했습니다:\n{str(e)}\n\n검색을 중단합니다."
+            )
+
     def _merge_search_results(self, new_mac_list, new_mn_list, new_vr_list, new_st_list):
-        """누적 모드에서 새 검색 결과를 기존 목록과 병합
+        """검색 결과 유지/갱신 모드에서 새 검색 결과를 기존 목록과 병합
 
         Args:
             new_mac_list: 새로 발견된 MAC 주소 목록
@@ -2056,7 +2342,7 @@ class WIZWindow(QMainWindow, main_window):
 
         detected_count = sum(1 for d in self.detected_list if d)
         total_count = len(self.mac_list)
-        self.logger.info(f"누적 검색 결과: 전체 {total_count}개 (현재 검색: {detected_count}개)")
+        self.logger.info(f"검색 결과 유지/갱신: 전체 {total_count}개 (현재 검색: {detected_count}개)")
 
     def update_scan_progress(self, current, total):
         """TCP multicast 진행률 업데이트"""
@@ -4119,6 +4405,262 @@ class WIZWindow(QMainWindow, main_window):
         self.gpiod_label.setFont(self.smallfont)
 
         # self.certificate_detail.setFont(self.certfont)
+
+        # ⓘ 아이콘 라벨 설정 (클릭 및 빠른 호버 지원)
+        self._setup_info_labels()
+
+    def _setup_info_labels(self):
+        """ⓘ 아이콘 라벨을 ClickableInfoLabel로 교체
+
+        목적:
+        - UI 파일(.ui)에 정의된 일반 QLabel을 ClickableInfoLabel로 런타임 교체
+        - 사용자에게 검색 방법에 대한 추가 정보 제공
+        - 호버링(300ms 지연) 및 클릭으로 툴팁 표시
+
+        교체 대상:
+        1. label_cumulative_info: 검색 결과 유지/갱신 옆 (검색 결과 유지/갱신 모드 설명)
+        2. label_broadcast_info: UDP broadcast 옆 (빠른 브로드캐스트 검색 설명)
+        3. label_unicast_info: TCP unicast 옆 (특정 IP 직접 검색 설명)
+        4. label_tcp_multicast_info: TCP multicast 옆 (서브넷 스캔 설명)
+        5. label_mixed_info: Mixed 옆 (UDP + TCP 혼합 방식 설명)
+
+        구현 방식:
+        - UI 파일의 QLabel을 그대로 두고, 프로그램 시작 시 교체
+        - 중첩 레이아웃에서도 동작하도록 재귀적 탐색 사용
+        - 원본 label의 속성(text, tooltip, 스타일 등) 모두 복사
+
+        호출 시점:
+        - WIZWindow.__init__() 마지막에서 호출
+        - UI 로딩 완료 후 실행
+        """
+        self.logger.info("[INFO] _setup_info_labels 시작")
+
+        # group_searchmethod을 강제로 표시
+        self.group_searchmethod.setVisible(True)
+        self.group_searchmethod.show()
+
+        # 디버깅: 부모 위젯 상태 확인
+        self.logger.info(f"[DEBUG] group_searchmethod.isVisible(): {self.group_searchmethod.isVisible()}")
+        self.logger.info(f"[DEBUG] broadcast.isChecked(): {self.broadcast.isChecked()}")
+        self.logger.info(f"[DEBUG] tcp_multicast.isChecked(): {self.tcp_multicast.isChecked()}")
+        self.logger.info(f"[DEBUG] mixed_search.isChecked(): {self.mixed_search.isChecked()}")
+
+        # 1. 검색 결과 유지/갱신 옆 ⓘ 아이콘 교체
+        # → 검색 결과 유지/갱신 모드에 대한 설명
+        self.logger.info(f"[INFO] label_cumulative_info 타입: {type(self.label_cumulative_info)}")
+        self._replace_label_with_clickable(
+            old_label=self.label_cumulative_info,
+            attr_name='label_cumulative_info'
+        )
+        self.logger.info(f"[INFO] 검색 결과 유지/갱신 info 교체 완료")
+        self.logger.info(f"[INFO] label_cumulative_info.isEnabled(): {self.label_cumulative_info.isEnabled()}")
+        self.logger.info(f"[INFO] label_cumulative_info.isVisible(): {self.label_cumulative_info.isVisible()}")
+        self.logger.info(f"[INFO] label_cumulative_info.toolTip(): {self.label_cumulative_info.toolTip()}")
+
+        # 2. UDP broadcast 옆 ⓘ 아이콘 교체
+        # → 빠른 네트워크 검색(약 3초 소요)에 대한 설명
+        self.logger.info(f"[INFO] label_broadcast_info 타입: {type(self.label_broadcast_info)}")
+        self._replace_label_with_clickable(
+            old_label=self.label_broadcast_info,
+            attr_name='label_broadcast_info'
+        )
+        self.logger.info(f"[INFO] UDP broadcast info 교체 완료")
+        self.logger.info(f"[INFO] label_broadcast_info.isEnabled(): {self.label_broadcast_info.isEnabled()}")
+        self.logger.info(f"[INFO] label_broadcast_info.isVisible(): {self.label_broadcast_info.isVisible()}")
+        self.logger.info(f"[INFO] label_broadcast_info.toolTip(): {self.label_broadcast_info.toolTip()}")
+
+        # 3. TCP unicast 옆 ⓘ 아이콘 교체
+        # → 특정 IP만 검색하는 방식 설명
+        self.logger.info(f"[INFO] label_unicast_info 타입: {type(self.label_unicast_info)}")
+        self._replace_label_with_clickable(
+            old_label=self.label_unicast_info,
+            attr_name='label_unicast_info'
+        )
+        self.logger.info(f"[INFO] TCP unicast info 교체 완료")
+        self.logger.info(f"[INFO] label_unicast_info.isEnabled(): {self.label_unicast_info.isEnabled()}")
+        self.logger.info(f"[INFO] label_unicast_info.isVisible(): {self.label_unicast_info.isVisible()}")
+        self.logger.info(f"[INFO] label_unicast_info.toolTip(): {self.label_unicast_info.toolTip()}")
+
+        # 4. TCP multicast 옆 ⓘ 아이콘 교체
+        # → 전체 서브넷 스캔(약 30초 소요)에 대한 상세 설명
+        self.logger.info(f"[INFO] label_tcp_multicast_info 타입: {type(self.label_tcp_multicast_info)}")
+        self._replace_label_with_clickable(
+            old_label=self.label_tcp_multicast_info,
+            attr_name='label_tcp_multicast_info'
+        )
+        self.logger.info(f"[INFO] TCP multicast info 교체 완료")
+        self.logger.info(f"[INFO] label_tcp_multicast_info.isEnabled(): {self.label_tcp_multicast_info.isEnabled()}")
+        self.logger.info(f"[INFO] label_tcp_multicast_info.isVisible(): {self.label_tcp_multicast_info.isVisible()}")
+        self.logger.info(f"[INFO] label_tcp_multicast_info.toolTip(): {self.label_tcp_multicast_info.toolTip()}")
+
+        # 5. Mixed search 옆 ⓘ 아이콘 교체
+        # → UDP broadcast 실패 시 TCP unicast 재시도하는 혼합 방식 설명
+        self.logger.info(f"[INFO] label_mixed_info 타입: {type(self.label_mixed_info)}")
+        self._replace_label_with_clickable(
+            old_label=self.label_mixed_info,
+            attr_name='label_mixed_info'
+        )
+        self.logger.info(f"[INFO] Mixed info 교체 완료")
+        self.logger.info(f"[INFO] label_mixed_info.isEnabled(): {self.label_mixed_info.isEnabled()}")
+        self.logger.info(f"[INFO] label_mixed_info.isVisible(): {self.label_mixed_info.isVisible()}")
+        self.logger.info(f"[INFO] label_mixed_info.toolTip(): {self.label_mixed_info.toolTip()}")
+
+        # 전역 설정: 창이 포커스를 잃어도 툴팁 표시
+        # → Qt 기본 동작은 창 포커스 잃으면 툴팁 숨김
+        # → WA_AlwaysShowToolTips로 항상 표시되도록 변경
+        try:
+            self.setAttribute(QtCore.Qt.WidgetAttribute(119), True)  # 119 = WA_AlwaysShowToolTips
+            self.logger.info("[INFO] WA_AlwaysShowToolTips 속성 설정 완료")
+        except Exception as e:
+            self.logger.warning(f"[WARN] WA_AlwaysShowToolTips 설정 실패: {e}")
+
+    def _replace_label_with_clickable(self, old_label, attr_name):
+        """기존 QLabel을 ClickableInfoLabel로 런타임 교체
+
+        Args:
+            old_label: UI 파일에서 로딩한 원본 QLabel 객체
+            attr_name: self.<attr_name>으로 저장할 속성 이름 (문자열)
+
+        동작 원리:
+        1. 재귀적 레이아웃 탐색으로 위젯 위치 찾기
+        2. 원본 label의 모든 속성 복사
+        3. 새 ClickableInfoLabel 생성
+        4. 원본과 같은 위치에 새 label 배치
+        5. self.<attr_name>에 새 label 저장
+
+        왜 이렇게 구현했는가:
+        - UI 파일(.ui)을 직접 수정하지 않고 런타임에 교체
+        - 중첩 레이아웃(gridLayout_99, gridLayout_100)에서도 동작
+        - Qt Designer에서 편집 가능한 UI 유지
+
+        문제 해결 히스토리:
+        - 초기: parentWidget().layout()으로 직접 접근 → indexOf() = -1 실패
+        - 개선: 재귀적 탐색으로 중첩 레이아웃 안의 위젯도 찾기 성공
+        - 결과: TCP multicast/Mixed 옆 i 아이콘 클릭 정상 동작
+        """
+
+        # 1단계: 부모 위젯 확인
+        parent_widget = old_label.parentWidget()
+        if parent_widget is None:
+            self.logger.warning(f"[{attr_name}] 부모 위젯을 찾을 수 없음")
+            return
+
+        # 2단계: 재귀적 레이아웃 탐색
+        def find_layout_containing_widget(search_layout, target_widget):
+            """레이아웃 트리를 재귀적으로 탐색하여 위젯을 포함하는 레이아웃 찾기
+
+            Args:
+                search_layout: 탐색 시작 레이아웃 (QLayout)
+                target_widget: 찾으려는 위젯 (QWidget)
+
+            Returns:
+                QLayout: 위젯을 직접 포함하는 레이아웃
+                None: 찾지 못함
+
+            동작:
+                - 현재 레이아웃에서 indexOf() 확인
+                - 못 찾으면 자식 레이아웃들을 재귀적으로 탐색
+                - DFS(깊이 우선 탐색) 방식
+
+            예시:
+                gridLayout_7 (root)
+                ├─ gridLayout_99
+                │  └─ label_tcp_multicast_info ← 여기서 찾음
+                └─ gridLayout_100
+                   └─ label_mixed_info ← 여기서 찾음
+            """
+            if search_layout is None:
+                return None
+
+            # 현재 레이아웃에 위젯이 있는지 확인
+            if search_layout.indexOf(target_widget) >= 0:
+                return search_layout  # 찾음!
+
+            # 자식 레이아웃들을 재귀적으로 탐색
+            for i in range(search_layout.count()):
+                item = search_layout.itemAt(i)
+                if item and item.layout():  # 아이템이 레이아웃인 경우
+                    result = find_layout_containing_widget(item.layout(), target_widget)
+                    if result:
+                        return result  # 재귀 호출에서 찾음
+
+            return None  # 이 브랜치에서는 못 찾음
+
+        # 재귀 탐색 시작
+        root_layout = parent_widget.layout()
+        layout = find_layout_containing_widget(root_layout, old_label)
+
+        if layout is None:
+            self.logger.warning(f"[{attr_name}] 위젯을 포함하는 레이아웃을 찾을 수 없음")
+            return
+
+        self.logger.info(f"[{attr_name}] 위젯을 포함하는 레이아웃 찾음: {type(layout).__name__}")
+
+        # 3단계: 기존 위젯의 속성 복사
+        # → 새 label이 원본과 동일하게 보이도록
+        tooltip = old_label.toolTip()  # 툴팁 텍스트
+        text = old_label.text()  # 표시 텍스트 (ⓘ)
+        stylesheet = old_label.styleSheet()  # CSS 스타일
+        min_size = old_label.minimumSize()  # 최소 크기
+        max_size = old_label.maximumSize()  # 최대 크기
+        alignment = old_label.alignment()  # 정렬 방식
+
+        # 4단계: 새 ClickableInfoLabel 생성 및 속성 설정
+        new_label = ClickableInfoLabel(parent_widget)
+        new_label.setText(text)
+        new_label.setToolTip(tooltip)
+        new_label.setStyleSheet(stylesheet)
+        new_label.setMinimumSize(min_size)
+        new_label.setMaximumSize(max_size)
+        new_label.setAlignment(alignment)
+
+        # 항상 활성화 상태 유지
+        # → 부모 위젯(라디오 버튼 등)이 비활성화되어도 i 아이콘은 클릭 가능
+        new_label.setEnabled(True)
+
+        # 항상 표시 상태 유지
+        # → ⓘ 아이콘이 항상 보이도록 강제
+        new_label.setVisible(True)
+
+        # 5단계: QGridLayout에서 원래 위치 찾아서 교체
+        if isinstance(layout, QGridLayout):
+            self.logger.debug(f"[{attr_name}] QGridLayout 감지, 총 {layout.count()}개 아이템")
+
+            # indexOf()로 위젯의 인덱스 찾기
+            index = layout.indexOf(old_label)
+            if index >= 0:
+                self.logger.debug(f"[{attr_name}] 위젯을 인덱스 {index}에서 발견")
+
+                # getItemPosition()으로 정확한 (row, col) 위치 가져오기
+                row, col, rowspan, colspan = layout.getItemPosition(index)
+                self.logger.debug(f"[{attr_name}] 위치: row={row}, col={col}, rowspan={rowspan}, colspan={colspan}")
+
+                # None 체크 (getItemPosition 실패 방지)
+                if row is not None and col is not None and rowspan is not None and colspan is not None:
+                    # 5-1. 기존 위젯 제거
+                    layout.removeWidget(old_label)
+                    old_label.deleteLater()  # Qt 객체 삭제 예약
+
+                    # 5-2. 새 위젯을 같은 위치에 추가
+                    layout.addWidget(new_label, row, col, rowspan, colspan)
+                    self.logger.debug(f"[{attr_name}] 새 위젯을 ({row}, {col})에 추가 완료")
+
+                    # 6단계: 성공 - 새 위젯을 self.<attr_name>에 저장
+                    setattr(self, attr_name, new_label)
+                    self.logger.debug(f"[{attr_name}] ClickableInfoLabel로 교체 완료")
+                    return
+                else:
+                    self.logger.warning(f"[{attr_name}] getItemPosition 반환값에 None 포함: row={row}, col={col}")
+
+            # 실패: 위치를 찾지 못함
+            self.logger.warning(f"[{attr_name}] QGridLayout에서 위치를 찾지 못함 (indexOf={index})")
+            setattr(self, attr_name, new_label)  # 속성만 저장, UI는 변경 안 됨
+            return
+        else:
+            # QGridLayout이 아닌 다른 레이아웃 (현재 미지원)
+            self.logger.warning(f"[{attr_name}] QGridLayout이 아닌 레이아웃 타입: {type(layout)}")
+            setattr(self, attr_name, new_label)  # 속성만 저장
+            return
 
 
 class ThreadProgress(QtCore.QThread):
