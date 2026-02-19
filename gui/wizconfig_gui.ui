@@ -279,6 +279,34 @@
               </property>
              </widget>
             </item>
+            <item row="0" column="3" alignment="Qt::AlignLeft">
+             <widget class="QPushButton" name="btn_clear_results">
+              <property name="minimumSize">
+               <size>
+                <width>60</width>
+                <height>22</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>80</width>
+                <height>22</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <family>맑은 고딕</family>
+                <pointsize>9</pointsize>
+               </font>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Clear search results&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Clear</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
           <item row="3" column="0">
