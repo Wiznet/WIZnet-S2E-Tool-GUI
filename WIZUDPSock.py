@@ -5,10 +5,10 @@ import socket
 
 class WIZUDPSock:
     # def __init__(self, port, peerport):
-    def __init__(self, port, peerport, ipaddr=None):
+    def __init__(self, port, peerport, ipaddr=None, localport=52000):
         self.sock = None
         # self.localport = randint(52000, 53000)
-        self.localport = 52000
+        self.localport = localport  # 0 = OS가 사용 가능한 포트 자동 할당
         self.peerport = peerport
         self.ipaddr = ipaddr
 
