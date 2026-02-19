@@ -293,6 +293,7 @@ class WIZWindow(QMainWindow, main_window):
         self.retry_search_current = 0  # 현재 반복 횟수
         self.retry_search_expected_count = 0  # 예상 장비 수
         self.retry_search_max_count = 1  # 최대 반복 횟수
+        self.retry_search_start_time = None  # 반복 검색 시작 시간
 
         # Initial UI object
         self.init_ui_object()
@@ -316,6 +317,9 @@ class WIZWindow(QMainWindow, main_window):
             self.btn_factory.triggered[QAction].connect(
                 self.event_factory_option_clicked
             )
+
+            # clear search results
+            self.btn_clear_results.clicked.connect(self.event_clear_results)
 
             # configuration save/load button
             self.btn_saveconfig.clicked.connect(self.dialog_save_file)
@@ -1395,6 +1399,40 @@ class WIZWindow(QMainWindow, main_window):
         else:
             self.logger.info("반복 검색 옵션 비활성화")
 
+    def event_clear_results(self):
+        """Clear search results 버튼 클릭 이벤트
+
+        검색 결과 테이블과 관련 데이터를 모두 초기화합니다.
+        """
+        try:
+            # 테이블 클리어
+            self.list_device.clear()
+            while self.list_device.rowCount() > 0:
+                self.list_device.removeRow(0)
+
+            # 리스트 초기화
+            self.mac_list = []
+            self.ver_list = []
+            self.name_list = []
+            self.st_list = []
+            self.detected_list = []
+
+            # 반복 검색 카운터 및 시간 초기화
+            self.retry_search_current = 0
+            self.retry_search_start_time = None
+
+            # Progress bar 초기화
+            self.pgbar.setFormat("Ready")
+            self.pgbar.setValue(0)
+
+            # 상태 바 메시지 초기화
+            self.statusbar.showMessage(" Search results cleared")
+
+            self.logger.info("검색 결과 초기화 완료")
+
+        except Exception as e:
+            self.logger.error(f"검색 결과 초기화 중 오류: {e}")
+
     def event_opmode(self):
         if self.ch1_tcpclient.isChecked():
             self.ch1_remote.setEnabled(True)
@@ -1869,6 +1907,8 @@ class WIZWindow(QMainWindow, main_window):
                     self.logger.warning(f"최대 반복 횟수 입력 오류 → {RetrySearchLimits.MAX_RETRY_DEFAULT}로 설정")
 
                 self.logger.info(f"반복 검색 시작: 예상 {self.retry_search_expected_count}개, 최대 {self.retry_search_max_count}회")
+                # 반복 검색 시작 시간 기록
+                self.retry_search_start_time = time.time()
 
             cmd_list = []
             # default search id code
@@ -2227,20 +2267,6 @@ class WIZWindow(QMainWindow, main_window):
                 self.list_device.horizontalHeader().setSectionResizeMode(2)
                 self.list_device.verticalHeader().setSectionResizeMode(2)
 
-            # Stop progress bar
-            self.pgbar.setFormat("Done")
-            self.pgbar.setValue(100)
-
-            # Display result with elapsed time
-            if self.search_start_time is not None:
-                elapsed = time.time() - self.search_start_time
-                self.final_status_message = f" Done. {devnum} devices found ({elapsed:.2f} seconds)"
-                self.search_start_time = None  # Reset for next search
-            else:
-                self.final_status_message = f" Done. {devnum} devices found"
-
-            self.statusbar.showMessage(self.final_status_message)
-
             # 반복 검색 로직 (유지/갱신 모드 + UDP broadcast 전용)
             if self.cumulative_mode and self.broadcast.isChecked() and devnum > 0:
                 self.retry_search_current += 1
@@ -2269,14 +2295,49 @@ class WIZWindow(QMainWindow, main_window):
                 # 계속 반복할지 결정
                 if should_continue:
                     self.logger.info(f"반복 검색 계속: {self.retry_search_current + 1}회차 시작")
-                    # Progress bar는 search_pre()에서 설정하므로 여기서는 제거
+                    # Progress bar 메시지 업데이트 (반복 중)
+                    self.pgbar.setFormat(f"Retry {self.retry_search_current}/{self.retry_search_max_count}...")
                     # 약간의 딜레이 후 재검색 (상수 사용)
                     QtCore.QTimer.singleShot(RetrySearchLimits.RETRY_DELAY_MS, self._continue_retry_search)
                     return  # get_dev_list() 호출하지 않음
                 else:
-                    # 반복 종료
+                    # 반복 종료 - 시간 계산 및 메시지 업데이트
+                    if self.retry_search_start_time is not None:
+                        elapsed = time.time() - self.retry_search_start_time
+                        pgbar_msg = f"Done. {total_count} devices found ({self.retry_search_current} retries, {elapsed:.1f}s)"
+                        status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries, {elapsed:.2f} seconds)"
+                        self.retry_search_start_time = None  # 리셋
+                    else:
+                        pgbar_msg = f"Done. {total_count} devices found ({self.retry_search_current} retries)"
+                        status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries)"
+
                     self.logger.info(f"반복 검색 완료: 총 {self.retry_search_current}회, {total_count}개 장비 발견")
-                    self.retry_search_current = 0  # 카운터 리셋
+
+                    # Progress bar 업데이트
+                    self.pgbar.setFormat(pgbar_msg)
+                    self.pgbar.setValue(100)
+
+                    # 상태바 메시지 업데이트
+                    self.final_status_message = status_msg
+                    self.statusbar.showMessage(self.final_status_message)
+
+                    # 카운터 리셋
+                    self.retry_search_current = 0
+            else:
+                # 일반 검색 완료 (비 반복 모드)
+                # Stop progress bar
+                self.pgbar.setFormat("Done")
+                self.pgbar.setValue(100)
+
+                # Display result with elapsed time
+                if self.search_start_time is not None:
+                    elapsed = time.time() - self.search_start_time
+                    self.final_status_message = f" Done. {devnum} devices found ({elapsed:.2f} seconds)"
+                    self.search_start_time = None  # Reset for next search
+                else:
+                    self.final_status_message = f" Done. {devnum} devices found"
+
+                self.statusbar.showMessage(self.final_status_message)
 
             self.get_dev_list()
         else:
