@@ -3,6 +3,7 @@
 
 import select
 import codecs
+import time
 from utils import logger
 
 from PyQt5.QtCore import QThread, pyqtSignal
@@ -140,19 +141,27 @@ class WIZMSGHandler(QThread):
             self.logger.error("[ERROR] WIZMSGHandler check_parameter(): %r" % e)
 
     def run(self):
+        t_send = None
         try:
             self.makecommands()
             if self.what_sock == "udp":
                 self.sendcommands()
+                t_send = time.time()
             elif self.what_sock == "tcp":
                 self.sendcommandsTCP()
+                t_send = time.time()
         except Exception as e:
             self.logger.error(f"[ERROR] WIZMSGHandler sendcommands: {e}")
 
         try:
+            if t_send is not None:
+                self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s initial select(timeout={self.timeout}s) 시작")
+            _t_sel0 = time.time()
             readready, writeready, errorready = select.select(
                 self.inputs, self.outputs, self.errors, self.timeout
             )
+            if t_send is not None:
+                self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s initial select 완료 ({(time.time()-_t_sel0)*1000:.0f}ms 소요, ready={len(readready)})")
 
             replylists = None
 
@@ -183,6 +192,8 @@ class WIZMSGHandler(QThread):
                     for sock in readready:
                         if sock == self.sock.sock:
                             data = self.sock.recvfrom()
+                            if t_send is not None:
+                                self.logger.info(f"[TIMING] iter={self.iter} recv #{len(self.rcv_list)+1} at +{time.time()-t_send:.3f}s")
                             self.logger.debug(f"Pre-search recv: {data}")
                             # self.searched_data.emit(data)
 
@@ -239,15 +250,25 @@ class WIZMSGHandler(QThread):
                                         else:
                                             self.setting_pw_wrong = False
 
+                    if t_send is not None:
+                        self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s iter={self.iter} 루프 select(1s) 시작")
+                    _t_loop_sel = time.time()
                     readready, writeready, errorready = select.select(
-                        self.inputs, self.outputs, self.errors, 1
+                        self.inputs, self.outputs, self.errors, 0.5
                     )
+                    if t_send is not None:
+                        self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s iter={self.iter} 루프 select 완료 ({(time.time()-_t_loop_sel)*1000:.0f}ms 소요, ready={len(readready)})")
 
                     if not readready or not replylists:
                         break
 
                 if self.opcode == Opcode.OP_SEARCHALL:
-                    self.msleep(500)
+                    if t_send is not None:
+                        t_loop_break = time.time()
+                        self.logger.info(f"[TIMING] loop broke at +{t_loop_break-t_send:.3f}s, {len(self.mac_list)} devices found")
+                    self.msleep(50)
+                    if t_send is not None:
+                        self.logger.info(f"[TIMING] after msleep(500): +{time.time()-t_send:.3f}s → emitting result")
                     # print('Search device:', self.mac_list)
                     self.search_result.emit(len(self.mac_list))
                     # return len(self.mac_list)
