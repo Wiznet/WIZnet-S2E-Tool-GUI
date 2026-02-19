@@ -2083,34 +2083,65 @@ class WIZWindow(QMainWindow, main_window):
             else:
                 self.code = self.searchcode_input.text()
 
-            # dev_info => [mac_addr, name, version]
-            for idx, dev_info in enumerate(dev_info_list):
-                self.logger.debug(dev_info)
-                print(f"dev_info={dev_info}")
-                cmd_list = self.wizmakecmd.search(
-                    dev_info[0], self.code, dev_info[1], dev_info[2], dev_info[3]
-                )
-                if self.unicast_ip.isChecked():
-                    th_name = WIZMSGHandler(
+            if self.unicast_ip.isChecked():
+                # TCP unicast: 단일 연결, 순차 처리
+                for idx, dev_info in enumerate(dev_info_list):
+                    self.logger.debug(dev_info)
+                    cmd_list = self.wizmakecmd.search(
+                        dev_info[0], self.code, dev_info[1], dev_info[2], dev_info[3]
+                    )
+                    th = WIZMSGHandler(
                         self.conf_sock,
                         cmd_list,
                         "tcp",
                         Opcode.OP_SEARCHALL,
                         self.search_wait_time_each,
                     )
-                else:
-                    th_name = WIZMSGHandler(
-                        self.conf_sock,
+                    th.searched_data.connect(self.getsearch_each_dev)
+                    th.start()
+                    th.wait()
+                    self.pgbar.setFormat(f"Querying devices... ({idx + 1}/{total_devs})")
+                    QApplication.processEvents()
+            else:
+                # UDP (broadcast/multicast/mixed): 장비마다 전용 소켓 → 전체 동시 시작
+                threads = []
+                dev_socks = []
+                peer_port = 50001  # WIZ 장비 수신 포트 (고정값)
+                local_ip = self.selected_eth if self.selected_eth is not None else ""
+
+                for dev_info in dev_info_list:
+                    self.logger.debug(dev_info)
+                    cmd_list = self.wizmakecmd.search(
+                        dev_info[0], self.code, dev_info[1], dev_info[2], dev_info[3]
+                    )
+                    # 장비마다 독립 소켓 (localport=0 → OS가 포트 자동 할당)
+                    dev_sock = WIZUDPSock(0, peer_port, local_ip, localport=0)
+                    dev_sock.open()
+                    dev_socks.append(dev_sock)
+
+                    th = WIZMSGHandler(
+                        dev_sock,
                         cmd_list,
                         "udp",
                         Opcode.OP_SEARCHALL,
                         self.search_wait_time_each,
                     )
-                th_name.searched_data.connect(self.getsearch_each_dev)
-                th_name.start()
-                th_name.wait()
-                self.pgbar.setFormat(f"Querying devices... ({idx + 1}/{total_devs})")
-                QApplication.processEvents()  # 각 장비 완료 후 pgbar 즉시 갱신
+                    th.searched_data.connect(self.getsearch_each_dev)
+                    th.start()
+                    threads.append(th)
+
+                # 모든 스레드 동시 대기 (병렬 실행, 총 시간 ≈ 최장 RTT)
+                for idx, th in enumerate(threads):
+                    th.wait()
+                    self.pgbar.setFormat(f"Querying devices... ({idx + 1}/{total_devs})")
+                    QApplication.processEvents()
+
+                # 전용 소켓 정리
+                for sock in dev_socks:
+                    try:
+                        sock.close()
+                    except Exception:
+                        pass
 
         # Restore the final status message with elapsed time (always run after loop)
         if hasattr(self, 'final_status_message'):
