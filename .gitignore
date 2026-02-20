@@ -113,6 +113,9 @@ gui/_wizconfig_gui.ui
 gui/wizconfig_gui-bak.ui
 .vscode/settings.json
 
+# User configuration files (exclude user overrides, keep defaults)
+config/device_search_timing.yaml
+
 *old*
 *.crt
 *.patch
