@@ -1,0 +1,198 @@
+# device_search_timing.default.yaml
+# WIZnet S2E Tool - 장비 검색 타이밍 및 성능 설정 (기본값)
+# Version: 1.0
+#
+# 이 파일은 기본값을 정의합니다. 사용자 설정을 변경하려면:
+# 1. 이 파일을 복사: device_search_timing.yaml
+# 2. 원하는 값 수정
+# 3. 프로그램 재시작
+
+# ============================================================
+# 메타 정보
+# ============================================================
+version: "1.0"
+schema_version: 1
+
+# ============================================================
+# 검색 타이밍 (Search Timing)
+# ============================================================
+search:
+  # Phase 1: 전체 검색 (UDP Broadcast / TCP Multicast)
+  phase1:
+    # 브로드캐스트 초기 타임아웃 (초)
+    # - 첫 응답까지 대기 시간
+    # - 장비 없을 경우 이 시간만큼 블로킹
+    # - 권장: 일반 3.0, 빠른 네트워크 2.0, 느린 5.0
+    broadcast_timeout_sec: 3.0
+
+    # 루프 select 타임아웃 (초)
+    # - 마지막 응답 이후 추가 응답 대기 시간
+    # - 권장: 일반 0.5, 구형 장비 많음 1.0, 고속 0.3
+    loop_select_timeout_sec: 0.5
+
+    # emit 전 안정화 대기 (밀리초)
+    # - PyQt signal queue 안정화 목적
+    # - 권장: 50 (실험적으로 0~100)
+    emit_stabilization_ms: 50
+
+  # Phase 3: 개별 장비 쿼리
+  phase3:
+    # 개별 장비 쿼리 타임아웃 (초)
+    # - 각 장비 응답 대기 시간
+    # - 권장: 일반 1.5, 빠른 1.0, 느린/원거리 2.0
+    device_query_timeout_sec: 1.5
+
+    # SET 명령 emit 전 대기 (밀리초)
+    # - 설정 변경 명령 후 안정화 대기
+    # - 권장: 500 (변경 시 주의)
+    set_command_delay_ms: 500
+
+  # TCP Multicast / Mixed Search
+  tcp:
+    # TCP 포트 스캔 타임아웃 (초)
+    # - 각 IP:port 연결 시도 타임아웃
+    # - 권장: 일반 2.0, 빠른 1.0, 느린 3.0
+    scan_timeout_sec: 2.0
+
+    # 최대 동시 연결 수
+    # - ThreadPoolExecutor max_workers
+    # - 권장: 15 (네트워크 대역폭에 따라 조정)
+    max_parallel_workers: 15
+
+  # 반복 검색 (Retry Search)
+  retry:
+    # 반복 검색 간 딜레이 (밀리초)
+    # - 각 반복 사이 대기 시간
+    # - 권장: 100 (네트워크 부하 방지)
+    delay_between_retries_ms: 100
+
+    # 최대 반복 횟수 제한
+    max_retry_count_limit: 100
+
+    # 기본 최대 반복 횟수
+    default_max_retry: 1
+
+# ============================================================
+# UI 응답성 (UI Responsiveness)
+# ============================================================
+ui:
+  # Progress Bar 설정
+  progress_bar:
+    # 자동 숨김 딜레이 (밀리초)
+    auto_hide_delay_ms: 2000
+
+    # 갱신 퍼센트 (1~100)
+    # - 값이 작을수록 자주 갱신 (부드럽지만 느림)
+    # - 값이 클수록 드물게 갱신 (빠르지만 뚝뚝 끊김)
+    # - 권장: 5~20
+    # - 예시: 10% → 20개 장비 시 2회 갱신
+    update_percent: 10
+
+  # Tooltip 설정
+  tooltips:
+    # 표시 딜레이 (밀리초)
+    show_delay_ms: 100
+
+  # 백그라운드 스레드
+  background_threads:
+    # Progress 업데이트 간격 (밀리초)
+    progress_update_interval_ms: 15
+
+# ============================================================
+# 실험적 기능 (Experimental Features)
+# ============================================================
+# 주의: 이 섹션의 기능들은 실험적입니다.
+# 기본값은 모두 OFF (false)이며, 사용자가 명시적으로 ON 해야 동작합니다.
+experimental:
+  # Auto-tune timeout (RTT 기반 자동 조정)
+  auto_tune:
+    # 활성화 여부 (기본: false)
+    # - true: 네트워크 RTT 측정 후 자동으로 timeout 조정
+    # - false: 고정값 사용
+    enabled: false
+
+    # RTT 배수 (기본: 2.0)
+    # - 측정된 RTT × 배수 = 조정된 timeout
+    rtt_multiplier: 2.0
+
+    # 최소 타임아웃 (초)
+    min_timeout_sec: 0.3
+
+    # 최대 타임아웃 (초)
+    max_timeout_sec: 1.0
+
+  # Phase 1 emit 전 msleep 생략 (기본: false)
+  # - true: msleep(50) 건너뜀 (약 -50ms)
+  # - false: 정상 동작
+  # - 주의: PyQt signal queue 불안정 가능성
+  skip_phase1_emit_delay: false
+
+  # Phase 1 소켓 재사용 (기본: false)
+  # - true: Phase 1 conf_sock을 Phase 3 첫 장비에 재사용
+  # - false: 장비마다 전용 소켓 생성
+  # - 효과: 소켓 생성 -1회 (미미)
+  reuse_phase1_socket: false
+
+  # Phase 3 병렬 소켓 수 제한 (기본: 0 = 무제한)
+  # - 0: 무제한
+  # - N: 최대 N개 소켓 동시 사용
+  max_parallel_sockets: 0
+
+# ============================================================
+# 네트워크 프리셋 (Network Presets)
+# ============================================================
+# 사용 방법: active_preset을 "fast", "normal", "slow" 중 선택
+presets:
+  # 고속 네트워크 (기가비트, 신형 장비)
+  fast:
+    name: "고속 네트워크 (기가비트, 신형 장비)"
+    description: "로컬 네트워크, 최신 펌웨어 장비용"
+    search:
+      phase1:
+        broadcast_timeout_sec: 2.0
+        loop_select_timeout_sec: 0.3
+        emit_stabilization_ms: 10
+      phase3:
+        device_query_timeout_sec: 1.0
+
+  # 일반 네트워크 (100Mbps, 혼합 장비)
+  normal:
+    name: "일반 네트워크 (100Mbps, 혼합 장비)"
+    description: "기본 권장 설정"
+    search:
+      phase1:
+        broadcast_timeout_sec: 3.0
+        loop_select_timeout_sec: 0.5
+        emit_stabilization_ms: 50
+      phase3:
+        device_query_timeout_sec: 1.5
+
+  # 느린 네트워크 (원거리, 구형 장비)
+  slow:
+    name: "느린 네트워크 (원거리, 구형 장비)"
+    description: "WAN, VPN, 구형 펌웨어용"
+    search:
+      phase1:
+        broadcast_timeout_sec: 5.0
+        loop_select_timeout_sec: 1.0
+        emit_stabilization_ms: 100
+      phase3:
+        device_query_timeout_sec: 2.5
+
+# 현재 활성 프리셋 ("fast", "normal", "slow")
+# - 주석 처리하거나 빈 문자열이면 프리셋 미사용
+active_preset: "normal"
+
+# ============================================================
+# 로깅 (Logging)
+# ============================================================
+logging:
+  # TIMING 로그 활성화
+  # - true: [TIMING] 로그 출력
+  # - false: TIMING 로그 숨김
+  enable_timing_logs: true
+
+  # 상세 디버그 로그
+  # - true: 모든 debug 로그 출력
+  # - false: info 이상만 출력
+  verbose_debug: false

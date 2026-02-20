@@ -29,6 +29,10 @@ class WIZMSGHandler(QThread):
 
     searched_data = pyqtSignal(bytes)
 
+    # Configuration class variables (loaded from device_search_config.py)
+    loop_select_timeout = 0.5  # Default: Phase 1 loop select timeout (sec)
+    emit_stabilization_ms = 50  # Default: emit stabilization delay (ms)
+
     def __init__(self, udpsock, cmd_list, what_sock, op_code, timeout):
         QThread.__init__(self)
 
@@ -254,7 +258,7 @@ class WIZMSGHandler(QThread):
                         self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s iter={self.iter} 루프 select(1s) 시작")
                     _t_loop_sel = time.time()
                     readready, writeready, errorready = select.select(
-                        self.inputs, self.outputs, self.errors, 0.5
+                        self.inputs, self.outputs, self.errors, WIZMSGHandler.loop_select_timeout
                     )
                     if t_send is not None:
                         self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s iter={self.iter} 루프 select 완료 ({(time.time()-_t_loop_sel)*1000:.0f}ms 소요, ready={len(readready)})")
@@ -266,9 +270,9 @@ class WIZMSGHandler(QThread):
                     if t_send is not None:
                         t_loop_break = time.time()
                         self.logger.info(f"[TIMING] loop broke at +{t_loop_break-t_send:.3f}s, {len(self.mac_list)} devices found")
-                    self.msleep(50)
+                    self.msleep(WIZMSGHandler.emit_stabilization_ms)
                     if t_send is not None:
-                        self.logger.info(f"[TIMING] after msleep(500): +{time.time()-t_send:.3f}s → emitting result")
+                        self.logger.info(f"[TIMING] after msleep({WIZMSGHandler.emit_stabilization_ms}): +{time.time()-t_send:.3f}s → emitting result")
                     # print('Search device:', self.mac_list)
                     self.search_result.emit(len(self.mac_list))
                     # return len(self.mac_list)

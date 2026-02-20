@@ -15,6 +15,7 @@ from WIZMSGHandler import WIZMSGHandler, DataRefresh
 from certificatethread import certificatethread
 from TCPMulticastScanner import TCPMulticastScanner
 from network_utils import get_subnet_hosts, get_adapter_subnet_info, extract_ip_from_device_response
+from device_search_config import DeviceSearchConfig
 
 from wizcmdset import (
     Wizcmdset,
@@ -260,10 +261,16 @@ class WIZWindow(QMainWindow, main_window):
         self.curr_ver = None
         self.curr_st = None
 
-        self.search_pre_wait_time = 3
-        self.search_wait_time_each = 1.5
+        # Load device search timing configuration
+        self.timing_config = DeviceSearchConfig()
+        self.search_pre_wait_time = self.timing_config.get_phase1_broadcast_timeout()
+        self.search_wait_time_each = self.timing_config.get_phase3_device_query_timeout()
         self.search_retry_flag = False
         self.search_retrynum = 0
+
+        # Apply configuration to WIZMSGHandler class variables
+        WIZMSGHandler.loop_select_timeout = self.timing_config.get_phase1_loop_select_timeout()
+        WIZMSGHandler.emit_stabilization_ms = self.timing_config.get_phase1_emit_stabilization_ms()
 
         self.localip_addr = None
 
