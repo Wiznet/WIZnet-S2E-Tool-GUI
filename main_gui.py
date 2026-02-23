@@ -42,6 +42,7 @@ from pathlib import Path
 
 # Additional package
 from PyQt5 import QtCore, QtGui, uic
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -49,6 +50,7 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QTableWidgetItem,
     QFileDialog,
+    QDialog,
     QMenu,
     QAction,
     QProgressBar,
@@ -93,6 +95,229 @@ class UITooltipSettings:
 
     TOOLTIP_DELAY_MS = 300  # 툴팁 표시 지연 시간 (밀리초)
     TOOLTIP_DURATION_MS = 5000  # 툴팁 표시 지속 시간 (밀리초)
+
+
+# =============================================================================
+# Phase 2: 방탄(Bulletproof) 헬퍼 클래스
+# =============================================================================
+
+class SearchContext:
+    """검색 리소스 자동 관리 (Context Manager - RAII 패턴)
+
+    사용:
+        with SearchContext(self):
+            self.search_pre()
+        # 예외 발생 시에도 자동 복구
+
+    보장:
+        - 검색 버튼 상태 복구
+        - Progress bar 정리
+        - 예외 발생 시에도 항상 cleanup 실행
+    """
+
+    def __init__(self, gui):
+        self.gui = gui
+        self.logger = gui.logger
+        self.original_btn_state = None
+        self.cleanup_done = False
+
+    def __enter__(self):
+        self.logger.debug("[SearchContext] 진입: UI 상태 백업")
+
+        # 현재 상태 백업
+        self.original_btn_state = self.gui.btn_search.isEnabled()
+
+        # 검색 상태로 전환
+        self.gui.btn_search.setEnabled(False)
+        self.gui.pgbar.show()
+        self.gui.pgbar.setValue(0)
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.cleanup_done:
+            return False
+
+        self.cleanup_done = True
+
+        if exc_type is not None:
+            self.logger.error(f"[SearchContext] 예외 발생: {exc_type.__name__}: {exc_val}")
+
+        self.logger.debug("[SearchContext] 종료: UI 상태 복구")
+
+        # 항상 복구 (예외 여부 무관)
+        self.gui.btn_search.setEnabled(True)
+        self.gui.pgbar.setFormat("Done")
+        self.gui.pgbar.setValue(100)
+
+        # 2초 후 pgbar 숨김
+        QtCore.QTimer.singleShot(2000, lambda: self.gui.pgbar.hide())
+
+        return False  # 예외 전파 (False = 예외 재발생)
+
+
+class SearchErrorCollector:
+    """검색 중 발생한 에러 수집 및 일괄 표시 (Qutebrowser 패턴)
+
+    사용:
+        collector = SearchErrorCollector()
+
+        try:
+            # 작업 1
+        except Exception as e:
+            collector.add("Phase 1 failed", e)
+
+        if collector.has_errors():
+            collector.show_msgbox(self)
+    """
+
+    def __init__(self):
+        self.errors = []
+
+    def add(self, context, exception, traceback_str=None):
+        """에러 추가
+
+        Args:
+            context: 에러 발생 위치 설명 (예: "Phase 1 broadcast")
+            exception: Exception 객체
+            traceback_str: traceback 문자열 (선택)
+        """
+        import traceback as tb
+
+        self.errors.append({
+            'context': context,
+            'type': type(exception).__name__,
+            'message': str(exception),
+            'traceback': traceback_str or tb.format_exc()
+        })
+
+    def has_errors(self):
+        return len(self.errors) > 0
+
+    def to_html(self):
+        """HTML 형식 에러 메시지 생성"""
+        if not self.has_errors():
+            return ""
+
+        html = "<h3>검색 중 오류 발생</h3><ul>"
+        for err in self.errors:
+            html += f"""
+            <li>
+                <b>{err['context']}</b>: {err['type']}<br/>
+                <small>{err['message']}</small>
+            </li>
+            """
+        html += "</ul>"
+        return html
+
+    def show_msgbox(self, parent):
+        """에러 메시지박스 표시"""
+        msgbox = QMessageBox(parent)
+        msgbox.setIcon(QMessageBox.Warning)
+        msgbox.setWindowTitle("검색 오류")
+        msgbox.setTextFormat(QtCore.Qt.RichText)  # IDE 경고 무시 (실제 작동함)
+        msgbox.setText(self.to_html())
+        msgbox.setStandardButtons(QMessageBox.Ok)
+        msgbox.exec_()
+
+
+from enum import Enum
+
+
+class SearchState(Enum):
+    """검색 상태 열거형"""
+    IDLE = "idle"
+    PHASE1_BROADCAST = "phase1_broadcast"
+    PHASE1_TCP_SCAN = "phase1_tcp_scan"  # Mixed search
+    PHASE3_QUERY = "phase3_query"
+    RETRYING = "retrying"
+    ERROR = "error"
+
+
+class SearchStateMachine:
+    """검색 상태 머신
+
+    보장:
+        - 무효한 상태 전환 방지
+        - 상태 전환 로그 자동 기록
+        - 현재 상태 조회
+    """
+
+    def __init__(self, logger):
+        self.state = SearchState.IDLE
+        self.logger = logger
+
+        # 유효한 상태 전환 정의
+        self.valid_transitions = {
+            SearchState.IDLE: [
+                SearchState.PHASE1_BROADCAST,
+                SearchState.PHASE1_TCP_SCAN
+            ],
+            SearchState.PHASE1_BROADCAST: [
+                SearchState.PHASE3_QUERY,
+                SearchState.RETRYING,
+                SearchState.ERROR,
+                SearchState.IDLE
+            ],
+            SearchState.PHASE1_TCP_SCAN: [
+                SearchState.PHASE3_QUERY,
+                SearchState.ERROR,
+                SearchState.IDLE
+            ],
+            SearchState.PHASE3_QUERY: [
+                SearchState.IDLE,
+                SearchState.ERROR
+            ],
+            SearchState.RETRYING: [
+                SearchState.PHASE1_BROADCAST,
+                SearchState.IDLE,
+                SearchState.ERROR
+            ],
+            SearchState.ERROR: [
+                SearchState.IDLE
+            ]
+        }
+
+    def can_transition_to(self, new_state):
+        """상태 전환 가능 여부"""
+        return new_state in self.valid_transitions.get(self.state, [])
+
+    def transition(self, new_state, force=False):
+        """상태 전환
+
+        Args:
+            new_state: 전환할 상태
+            force: True이면 검증 건너뜀 (강제 IDLE 복귀 등)
+
+        Raises:
+            ValueError: 무효한 상태 전환 시도
+        """
+        if force:
+            self.logger.warning(f"[State] FORCED: {self.state.value} → {new_state.value}")
+            self.state = new_state
+            return
+
+        if not self.can_transition_to(new_state):
+            raise ValueError(
+                f"Invalid state transition: {self.state.value} → {new_state.value}"
+            )
+
+        self.logger.info(f"[State] {self.state.value} → {new_state.value}")
+        self.state = new_state
+
+    def reset(self):
+        """강제로 IDLE 상태로 리셋"""
+        self.transition(SearchState.IDLE, force=True)
+
+    def is_idle(self):
+        return self.state == SearchState.IDLE
+
+    def is_searching(self):
+        return self.state in [
+            SearchState.PHASE1_BROADCAST,
+            SearchState.PHASE1_TCP_SCAN,
+            SearchState.PHASE3_QUERY
+        ]
 
 
 # Baudrate list base - common part for all devices (up to 230400)
@@ -271,6 +496,7 @@ class WIZWindow(QMainWindow, main_window):
         # Apply configuration to WIZMSGHandler class variables
         WIZMSGHandler.loop_select_timeout = self.timing_config.get_phase1_loop_select_timeout()
         WIZMSGHandler.emit_stabilization_ms = self.timing_config.get_phase1_emit_stabilization_ms()
+        WIZMSGHandler.skip_phase1_emit_delay = self.timing_config.is_skip_phase1_emit_delay()
 
         self.localip_addr = None
 
@@ -313,7 +539,7 @@ class WIZWindow(QMainWindow, main_window):
 
         """ Button event """
         try:
-            self.btn_search.clicked.connect(self.do_search_normal)
+            self.btn_search.clicked.connect(self._on_search_button_clicked)
 
             # WIZ2000: need setting password (setting, reset, upload, factory)
             self.btn_setting.clicked.connect(self.event_setting_clicked)
@@ -335,6 +561,9 @@ class WIZWindow(QMainWindow, main_window):
             # self.btn_upload.clicked.connect(self.update_btn_clicked)
             self.btn_upload.clicked.connect(self.event_upload_clicked)
             self.btn_exit.clicked.connect(self.msg_exit)
+
+            # 추가: 타이밍 설정 버튼 클릭 시그널
+            self.btn_timing_settings.clicked.connect(self.event_open_timing_settings)
         except Exception as e:
             self.logger.error(f"button event register error: {e}")
 
@@ -541,6 +770,19 @@ class WIZWindow(QMainWindow, main_window):
         )
         self.max_retry_count.setValidator(validator_retry)
 
+        # 디버깅 기간 기본값 설정
+        self.broadcast.setChecked(True)  # UDP Broadcast 검색 선택
+        self.cumulative_search_mode.setChecked(True)  # 검색 결과 유지/갱신 활성화
+        self.cumulative_mode = True  # 명시적으로 변수 설정 (시그널 의존하지 않음)
+        self.expected_device_count.setText("0")  # 예상 장비 수: 0
+        self.max_retry_count.setText("5")  # 반복 횟수: 5
+        # 반복 검색 옵션 명시적 활성화 (디버깅 기본값)
+        self.expected_device_count.setEnabled(True)
+        self.label_expected_device_count.setEnabled(True)
+        self.max_retry_count.setEnabled(True)
+        self.label_max_retry_count.setEnabled(True)
+        self.logger.info("디버깅 기본값: 누적 모드 활성화, 반복 검색 옵션 강제 활성화")
+
         # for WIZ5XXSR custom module
         # @TODO: a6e5282d1e 에서 U3~U9 가 삭제되어 아래 코드도 삭제되어야 함
         # for i in range(3, 10):
@@ -634,24 +876,53 @@ class WIZWindow(QMainWindow, main_window):
         adapters = ifaddr.get_adapters()
         self.net_list = []
 
+        # 네트워크 인터페이스를 수집하여 정렬 (물리 어댑터 우선, 가상 어댑터는 최하위)
+        adapter_list = []
         for adapter in adapters:
             self.logger.debug(f"Net Interface: {adapter.nice_name}")
             for ip in adapter.ips:
                 if len(ip.ip) > 6:
                     ipv4_addr = ip.ip
-                    if ipv4_addr == "127.0.0.1":
-                        pass
-                    else:
+                    if ipv4_addr != "127.0.0.1":
                         net_ifs = ipv4_addr + ":" + adapter.nice_name
+                        nice_name_lower = adapter.nice_name.lower()
 
-                        # -- get network interface list
-                        self.net_list.append(adapter.nice_name)
-                        netconfig = QAction(net_ifs, self)
-                        self.netconfig_menu.addAction(netconfig)
-                        self.combobox_net_interface.addItem(net_ifs)
-                else:
-                    # ipv6_addr = ip.ip
-                    pass
+                        # 가상 어댑터 판별 (이름 기반)
+                        virtual_keywords = [
+                            'virtualbox', 'vmware', 'hyper-v', 'vethernet',
+                            'docker', 'wsl', 'tap-windows', 'npcap',
+                            'virtual', 'vbox', 'bridge', 'loopback'
+                        ]
+                        is_virtual = any(keyword in nice_name_lower for keyword in virtual_keywords)
+
+                        # 우선순위 결정:
+                        # 0: 물리 Ethernet
+                        # 1: 물리 Wi-Fi
+                        # 2: 기타 물리 인터페이스
+                        # 3: 가상 어댑터
+                        # 4: APIPA/link-local (169.254.*)
+                        if ipv4_addr.startswith("169.254."):
+                            priority = 4  # APIPA/link-local (최하위)
+                        elif is_virtual:
+                            priority = 3  # 가상 어댑터
+                        elif 'ethernet' in nice_name_lower or 'eth' in nice_name_lower:
+                            priority = 0  # 물리 Ethernet
+                        elif 'wireless' in nice_name_lower or 'wi-fi' in nice_name_lower or 'wifi' in nice_name_lower:
+                            priority = 1  # 물리 Wi-Fi
+                        else:
+                            priority = 2  # 기타 물리 인터페이스
+
+                        adapter_list.append((priority, net_ifs, adapter.nice_name))
+
+        # 우선순위로 정렬 (물리 어댑터 먼저, 가상 어댑터는 나중)
+        adapter_list.sort(key=lambda x: (x[0], x[1]))
+
+        # 정렬된 순서로 추가
+        for priority, net_ifs, nice_name in adapter_list:
+            self.net_list.append(nice_name)
+            netconfig = QAction(net_ifs, self)
+            self.netconfig_menu.addAction(netconfig)
+            self.combobox_net_interface.addItem(net_ifs)
 
         # add refresh action 
         refresh_action = QAction("Refresh", self)
@@ -1828,6 +2099,16 @@ class WIZWindow(QMainWindow, main_window):
                 except Exception as e:
                     self.logger.error(e)
 
+    def _on_search_button_clicked(self):
+        """검색 버튼 클릭 이벤트 핸들러 - 타이머 시작"""
+        # 새 검색 시작 - 반복 검색 카운터 리셋 및 타이머 시작
+        self.retry_search_current = 0
+        self._timing_t0 = time.time()
+        self.logger.info("[TIMING] System timer started at button click")
+
+        # 실제 검색 함수 호출
+        self.do_search_normal()
+
     def do_search_retry(self, num):
         try:
             self.search_retry_flag = True
@@ -1841,12 +2122,21 @@ class WIZWindow(QMainWindow, main_window):
             self.search_error_msgbox()
 
     def do_search_normal(self):
+        """일반 검색 시작 (방어적 버전 - SearchContext 적용)
+
+        보장:
+            - 예외 발생 시에도 UI 상태 복구
+            - 검색 버튼 항상 재활성화
+            - pgbar 항상 정리
+        """
         try:
-            self.search_retry_flag = False
-            self.search_pre()
+            with SearchContext(self):
+                self.search_retry_flag = False
+                self.search_pre()
         except Exception as e:
-            self.logger.error(f"do_search_normal error: {e}")
+            self.logger.error(f"do_search_normal 예외: {e}", exc_info=True)
             self.search_error_msgbox()
+        # SearchContext __exit__에서 자동으로 UI 복구됨
 
     def search_error_msgbox(self):
         self.show_msgbox(
@@ -1863,9 +2153,7 @@ class WIZWindow(QMainWindow, main_window):
         return "+?.???s"
 
     def search_pre(self):
-        # 타이밍 기준 시각 설정 (첫 검색 또는 단독 검색 시 리셋)
-        if getattr(self, '_timing_t0', None) is None or self.retry_search_current == 0:
-            self._timing_t0 = time.time()
+        # 타이밍은 do_search_normal()에서 이미 설정됨
         self.logger.info(f"[TIMING] {self._T()} search_pre() 진입 (retry #{self.retry_search_current})")
 
         if self.wizmsghandler is not None and self.wizmsghandler.isRunning():
@@ -2062,6 +2350,7 @@ class WIZWindow(QMainWindow, main_window):
         QtCore.QTimer.singleShot(int(time), lambda: self.pgbar.hide())
 
     def search_each_dev(self, dev_info_list):
+        """Phase 3: 개별 장비 정보 조회 (pgbar 최적화 적용)"""
         cmd_list = []
         self.eachdev_info = []
 
@@ -2069,6 +2358,17 @@ class WIZWindow(QMainWindow, main_window):
         # self.all_response = []
         self.logger.info(f"search_each_dev() dev_info_list: {dev_info_list}")
         total_devs = len(dev_info_list)
+
+        # pgbar 최적화: 갱신 간격 계산
+        try:
+            update_percent = self.timing_config.get_pgbar_update_percent()
+        except Exception as e:
+            self.logger.warning(f"get_pgbar_update_percent 실패: {e}, 기본값 10 사용")
+            update_percent = 10
+
+        update_interval = self._calc_pgbar_update_interval(total_devs, update_percent)
+        self.logger.debug(f"pgbar 갱신 간격: {update_interval}개마다 (총 {total_devs}개, {update_percent}%)")
+
         self.pgbar.setFormat(f"Querying devices... (0/{total_devs})")
         QApplication.processEvents()  # "Querying..." 텍스트 즉시 렌더링
 
@@ -2091,7 +2391,7 @@ class WIZWindow(QMainWindow, main_window):
                 self.code = self.searchcode_input.text()
 
             if self.unicast_ip.isChecked():
-                # TCP unicast: 단일 연결, 순차 처리
+                # TCP unicast: 단일 연결, 순차 처리 (pgbar 최적화 적용)
                 for idx, dev_info in enumerate(dev_info_list):
                     self.logger.debug(dev_info)
                     cmd_list = self.wizmakecmd.search(
@@ -2107,8 +2407,11 @@ class WIZWindow(QMainWindow, main_window):
                     th.searched_data.connect(self.getsearch_each_dev)
                     th.start()
                     th.wait()
-                    self.pgbar.setFormat(f"Querying devices... ({idx + 1}/{total_devs})")
-                    QApplication.processEvents()
+
+                    # 조건부 pgbar 갱신 (최적화)
+                    if self._should_update_pgbar(idx, total_devs, update_interval):
+                        self.pgbar.setFormat(f"Querying devices... ({idx + 1}/{total_devs})")
+                        QApplication.processEvents()
             else:
                 # UDP (broadcast/multicast/mixed): 장비마다 전용 소켓 → 전체 동시 시작
                 threads = []
@@ -2137,11 +2440,14 @@ class WIZWindow(QMainWindow, main_window):
                     th.start()
                     threads.append(th)
 
-                # 모든 스레드 동시 대기 (병렬 실행, 총 시간 ≈ 최장 RTT)
+                # 모든 스레드 동시 대기 (병렬 실행, 총 시간 ≈ 최장 RTT) (pgbar 최적화 적용)
                 for idx, th in enumerate(threads):
                     th.wait()
-                    self.pgbar.setFormat(f"Querying devices... ({idx + 1}/{total_devs})")
-                    QApplication.processEvents()
+
+                    # 조건부 pgbar 갱신 (최적화)
+                    if self._should_update_pgbar(idx, len(threads), update_interval):
+                        self.pgbar.setFormat(f"Querying devices... ({idx + 1}/{total_devs})")
+                        QApplication.processEvents()
 
                 # 전용 소켓 정리
                 for sock in dev_socks:
@@ -2150,14 +2456,37 @@ class WIZWindow(QMainWindow, main_window):
                     except Exception:
                         pass
 
-        # Restore the final status message with elapsed time (always run after loop)
+        # Restore the final status message (without final system time yet)
         if hasattr(self, 'final_status_message'):
             self.statusbar.showMessage(self.final_status_message)
         self.pgbar.setFormat("Done")
         self.pgbar.setValue(100)
 
-        # Hide progress bar after a delay (consistent with other search methods)
-        QtCore.QTimer.singleShot(2000, lambda: self.pgbar.hide())
+        # Hide progress bar after a delay and calculate final system time when truly done
+        def _finalize_search():
+            """진행바 숨김 + 최종 System 시간 계산"""
+            self.pgbar.hide()
+
+            # 최종 System 시간 계산 (진행바 완전히 숨겨진 시점)
+            if hasattr(self, '_timing_t0') and self._timing_t0 is not None:
+                final_system_time = time.time() - self._timing_t0
+                self.logger.info(f"[TIMING] Final system time (after pgbar hidden): {final_system_time:.2f}s")
+
+                # 기존 메시지의 System 시간 부분을 최종 시간으로 업데이트
+                if hasattr(self, 'final_status_message') and self.final_status_message:
+                    import re
+                    # 기존 System 시간 제거
+                    msg = re.sub(r',?\s*System\s+[\d.]+\s+seconds?\)?', '', self.final_status_message)
+                    # 최종 System 시간 추가
+                    msg = msg.rstrip(')')
+                    if '(' in msg:
+                        msg += f", System {final_system_time:.2f} seconds)"
+                    else:
+                        msg += f" (System {final_system_time:.2f} seconds)"
+                    self.final_status_message = msg
+                    self.statusbar.showMessage(msg)
+
+        QtCore.QTimer.singleShot(2000, _finalize_search)
 
     def getsearch_each_dev(self, dev_data):
         # self.logger.debug(f'getsearch_each_dev: {dev_data}')
@@ -2368,15 +2697,24 @@ class WIZWindow(QMainWindow, main_window):
                     QtCore.QTimer.singleShot(RetrySearchLimits.RETRY_DELAY_MS, self._continue_retry_search)
                     return  # get_dev_list() 호출하지 않음
                 else:
-                    # 반복 종료 - 시간 계산 및 메시지 업데이트
+                    # 반복 종료 - 시간 계산 (Phase 3 이후 최종 업데이트됨)
+                    system_time = None  # Phase 3 완료 후 search_each_dev()에서 계산
                     if self.retry_search_start_time is not None:
                         elapsed = time.time() - self.retry_search_start_time
-                        pgbar_msg = f"Done. {total_count} devices found ({self.retry_search_current} retries, {elapsed:.1f}s)"
-                        status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries, {elapsed:.2f} seconds)"
+                        if system_time is not None:
+                            pgbar_msg = f"Done. {total_count} devices found ({self.retry_search_current} retries, {elapsed:.1f}s, System {system_time:.2f}s)"
+                            status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries, {elapsed:.2f} seconds, System {system_time:.2f} seconds)"
+                        else:
+                            pgbar_msg = f"Done. {total_count} devices found ({self.retry_search_current} retries, {elapsed:.1f}s)"
+                            status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries, {elapsed:.2f} seconds)"
                         self.retry_search_start_time = None  # 리셋
                     else:
-                        pgbar_msg = f"Done. {total_count} devices found ({self.retry_search_current} retries)"
-                        status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries)"
+                        if system_time is not None:
+                            pgbar_msg = f"Done. {total_count} devices found ({self.retry_search_current} retries, System {system_time:.2f}s)"
+                            status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries, System {system_time:.2f} seconds)"
+                        else:
+                            pgbar_msg = f"Done. {total_count} devices found ({self.retry_search_current} retries)"
+                            status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries)"
 
                     self.logger.info(f"반복 검색 완료: 총 {self.retry_search_current}회, {total_count}개 장비 발견")
 
@@ -2396,13 +2734,20 @@ class WIZWindow(QMainWindow, main_window):
                 self.pgbar.setFormat("Done")
                 self.pgbar.setValue(100)
 
-                # Display result with elapsed time
+                # Phase 3 이후 최종 업데이트됨
+                system_time = None  # Phase 3 완료 후 search_each_dev()에서 계산
                 if self.search_start_time is not None:
                     elapsed = time.time() - self.search_start_time
-                    self.final_status_message = f" Done. {devnum} devices found ({elapsed:.2f} seconds)"
+                    if system_time is not None:
+                        self.final_status_message = f" Done. {devnum} devices found ({elapsed:.2f} seconds, System {system_time:.2f} seconds)"
+                    else:
+                        self.final_status_message = f" Done. {devnum} devices found ({elapsed:.2f} seconds)"
                     self.search_start_time = None  # Reset for next search
                 else:
-                    self.final_status_message = f" Done. {devnum} devices found"
+                    if system_time is not None:
+                        self.final_status_message = f" Done. {devnum} devices found (System {system_time:.2f} seconds)"
+                    else:
+                        self.final_status_message = f" Done. {devnum} devices found"
 
                 self.statusbar.showMessage(self.final_status_message)
 
@@ -2431,6 +2776,173 @@ class WIZWindow(QMainWindow, main_window):
                 "반복 검색 오류",
                 f"반복 검색 중 오류가 발생했습니다:\n{str(e)}\n\n검색을 중단합니다."
             )
+
+    # =========================================================================
+    # Phase 2: 방어적 헬퍼 메서드
+    # =========================================================================
+
+    def _sync_detected_list(self):
+        """detected_list와 mac_list 길이 동기화
+
+        보장:
+            len(self.detected_list) == len(self.mac_list)
+
+        동작:
+            - 부족: False로 패딩
+            - 초과: 잘라내기
+            - 검증: assert로 확인
+        """
+        current_len = len(self.detected_list)
+        target_len = len(self.mac_list)
+
+        if current_len == target_len:
+            return  # 이미 동기화됨
+
+        if current_len < target_len:
+            # 부족: False로 채움
+            padding = [False] * (target_len - current_len)
+            self.detected_list.extend(padding)
+            self.logger.debug(f"detected_list 패딩: {current_len} → {target_len}")
+        else:
+            # 초과: 잘라냄
+            self.detected_list = self.detected_list[:target_len]
+            self.logger.warning(f"detected_list 잘라냄: {current_len} → {target_len}")
+
+        # 검증
+        assert len(self.detected_list) == len(self.mac_list), \
+            f"Sync failed: detected={len(self.detected_list)}, mac={len(self.mac_list)}"
+
+    def _safe_list_set(self, lst, idx, value, list_name="list"):
+        """리스트 인덱스 안전 설정
+
+        Args:
+            lst: 대상 리스트
+            idx: 인덱스
+            value: 설정할 값
+            list_name: 로그용 리스트 이름
+
+        Returns:
+            bool: 성공 여부
+        """
+        if not isinstance(lst, list):
+            self.logger.error(f"_safe_list_set: {list_name} is not list, type={type(lst)}")
+            return False
+
+        if idx < 0:
+            self.logger.error(f"_safe_list_set: negative index {idx} for {list_name}")
+            return False
+
+        if idx >= len(lst):
+            self.logger.error(
+                f"_safe_list_set: index {idx} out of range for {list_name} (len={len(lst)})"
+            )
+            return False
+
+        try:
+            lst[idx] = value
+            return True
+        except Exception as e:
+            self.logger.error(f"_safe_list_set: failed to set {list_name}[{idx}] = {value}: {e}")
+            return False
+
+    def _calc_pgbar_update_interval(self, total_devs, update_percent):
+        """Progress bar 갱신 간격 계산 (방어적 버전)
+
+        Args:
+            total_devs: 전체 장비 수 (양의 정수 기대)
+            update_percent: 갱신 퍼센트 1~100 (정수 기대)
+
+        Returns:
+            int: 갱신 간격 (항상 1 이상, total_devs 이하)
+
+        Examples:
+            total_devs=20, percent=10 → 2 (10개마다 1회)
+            total_devs=5, percent=10 → 1 (매번)
+            total_devs=None → 1 (기본값)
+            total_devs=-5 → 1 (기본값)
+            percent=200 → 100으로 제한
+        """
+        # 입력 검증: total_devs
+        if total_devs is None:
+            self.logger.warning("_calc_pgbar_update_interval: total_devs is None, using 1")
+            return 1
+
+        if not isinstance(total_devs, int):
+            self.logger.warning(f"_calc_pgbar_update_interval: total_devs is not int, type={type(total_devs)}, using 1")
+            return 1
+
+        if total_devs <= 0:
+            self.logger.warning(f"_calc_pgbar_update_interval: total_devs={total_devs} <= 0, using 1")
+            return 1
+
+        # 입력 검증: update_percent
+        if update_percent is None:
+            self.logger.warning("_calc_pgbar_update_interval: update_percent is None, using default 10")
+            update_percent = 10
+
+        if not isinstance(update_percent, (int, float)):
+            self.logger.warning(f"_calc_pgbar_update_interval: update_percent type={type(update_percent)}, using 10")
+            update_percent = 10
+
+        # 범위 제한 (1~100)
+        if update_percent < 1:
+            self.logger.warning(f"_calc_pgbar_update_interval: update_percent={update_percent} < 1, clamped to 1")
+            update_percent = 1
+        elif update_percent > 100:
+            self.logger.warning(f"_calc_pgbar_update_interval: update_percent={update_percent} > 100, clamped to 100")
+            update_percent = 100
+
+        # 간격 계산
+        interval = int(total_devs * update_percent / 100)
+
+        # 최소 1, 최대 total_devs 보장
+        interval = max(1, min(interval, total_devs))
+
+        return interval
+
+    def _should_update_pgbar(self, current_idx, total_devs, update_interval):
+        """Progress bar 갱신 여부 판단 (방어적 버전)
+
+        Args:
+            current_idx: 현재 인덱스 (0-based)
+            total_devs: 전체 장비 수
+            update_interval: 갱신 간격
+
+        Returns:
+            bool: 갱신 필요 여부
+
+        조건:
+            1. 간격마다 갱신 ((idx+1) % interval == 0)
+            2. 마지막 장비는 항상 갱신 (idx == total-1)
+            3. 잘못된 입력 시 항상 True (안전하게)
+        """
+        # 입력 검증
+        if not isinstance(current_idx, int) or current_idx < 0:
+            self.logger.warning(f"_should_update_pgbar: invalid current_idx={current_idx}, returning True")
+            return True
+
+        if not isinstance(total_devs, int) or total_devs <= 0:
+            self.logger.warning(f"_should_update_pgbar: invalid total_devs={total_devs}, returning True")
+            return True
+
+        if not isinstance(update_interval, int) or update_interval <= 0:
+            self.logger.warning(f"_should_update_pgbar: invalid update_interval={update_interval}, returning True")
+            return True
+
+        # 범위 검증
+        if current_idx >= total_devs:
+            self.logger.warning(f"_should_update_pgbar: current_idx={current_idx} >= total_devs={total_devs}, returning True")
+            return True
+
+        # 조건 1: 간격마다 갱신
+        if (current_idx + 1) % update_interval == 0:
+            return True
+
+        # 조건 2: 마지막 장비는 항상 갱신
+        if current_idx == total_devs - 1:
+            return True
+
+        return False
 
     def _merge_search_results(self, new_mac_list, new_mn_list, new_vr_list, new_st_list):
         """검색 결과 유지/갱신 모드에서 새 검색 결과를 기존 목록과 병합
@@ -2593,15 +3105,22 @@ class WIZWindow(QMainWindow, main_window):
             self.list_device.horizontalHeader().setSectionResizeMode(2)
             self.list_device.verticalHeader().setSectionResizeMode(2)
 
-        # 시간 표시: UDP/TCP/Total
+        # Phase 3 이후 최종 업데이트됨
+        system_time = None  # Phase 3 완료 후 search_each_dev()에서 계산
         if self.search_start_time is not None:
             total_elapsed = time.time() - self.search_start_time
             udp_time = getattr(self, 'udp_elapsed', 0)
 
-            self.final_status_message = f" Done. {total_count} devices found (UDP: {udp_time:.2f}s, TCP: {tcp_elapsed:.2f}s, Total: {total_elapsed:.2f}s)"
+            if system_time is not None:
+                self.final_status_message = f" Done. {total_count} devices found (UDP: {udp_time:.2f}s, TCP: {tcp_elapsed:.2f}s, Total: {total_elapsed:.2f}s, System {system_time:.2f}s)"
+            else:
+                self.final_status_message = f" Done. {total_count} devices found (UDP: {udp_time:.2f}s, TCP: {tcp_elapsed:.2f}s, Total: {total_elapsed:.2f}s)"
             self.search_start_time = None
         else:
-            self.final_status_message = f" Done. {total_count} devices found"
+            if system_time is not None:
+                self.final_status_message = f" Done. {total_count} devices found (System {system_time:.2f}s)"
+            else:
+                self.final_status_message = f" Done. {total_count} devices found"
 
         self.statusbar.showMessage(self.final_status_message)
 
@@ -4487,6 +5006,21 @@ class WIZWindow(QMainWindow, main_window):
         self.config_button_icon("gui/factory_48.ico", "btn_factory")
         self.config_button_icon("gui/exit_48.ico", "btn_exit")
 
+        # 추가: 타이밍 설정 버튼 아이콘 (16x16 크기)
+        self._set_timing_settings_icon()
+
+    def _set_timing_settings_icon(self):
+        """타이밍 설정 버튼 아이콘 설정 (작은 크기)"""
+        button = self.btn_timing_settings
+        icon = QtGui.QIcon()
+        icon.addPixmap(
+            QtGui.QPixmap(resource_path("gui/gear-svgrepo-com.svg")),
+            QtGui.QIcon.Normal,
+            QtGui.QIcon.Off
+        )
+        button.setIcon(icon)
+        button.setIconSize(QtCore.QSize(16, 16))  # 작은 크기
+
     def font_init(self):
         self.midfont = QtGui.QFont()
         self.midfont.setPixelSize(12)  # pointsize(9)
@@ -4790,6 +5324,312 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.warning(f"[{attr_name}] QGridLayout이 아닌 레이아웃 타입: {type(layout)}")
             setattr(self, attr_name, new_label)  # 속성만 저장
             return
+
+    # ================================================================
+    # 타이밍 설정 다이얼로그 관련 메서드
+    # ================================================================
+    def event_open_timing_settings(self):
+        """타이밍 설정 다이얼로그 표시 (기어 아이콘 버튼 클릭 이벤트)"""
+        try:
+            # 1. 현재 설정 값 읽기
+            current_values = self.timing_config.get_current_values()
+
+            # 2. 다이얼로그 생성 및 표시
+            dialog = self._create_timing_settings_dialog(current_values)
+            result = dialog.exec_()
+
+            # 3. 저장 버튼 클릭 시 적용
+            if result == QDialog.Accepted:
+                # 다이얼로그의 위젯들에서 값 추출
+                new_values = self._extract_dialog_values(dialog)
+
+                # 검증 및 저장
+                if self._apply_timing_settings(new_values):
+                    QMessageBox.information(
+                        self,
+                        "설정 저장",
+                        "검색 타이밍 설정이 저장되었습니다.\n\n"
+                        "일부 설정은 다음 검색부터 적용됩니다."
+                    )
+                else:
+                    QMessageBox.warning(
+                        self,
+                        "저장 실패",
+                        "설정 저장에 실패했습니다.\n"
+                        "로그를 확인해주세요."
+                    )
+
+        except Exception as e:
+            self.logger.error(f"타이밍 설정 다이얼로그 오류: {e}")
+            QMessageBox.critical(
+                self,
+                "오류",
+                f"타이밍 설정 중 오류가 발생했습니다:\n{e}"
+            )
+
+    def _create_timing_settings_dialog(self, current_values: dict) -> QDialog:
+        """타이밍 설정 다이얼로그 생성
+
+        Args:
+            current_values: 현재 설정 값
+
+        Returns:
+            QDialog: 설정 다이얼로그
+        """
+        from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, QDialogButtonBox,
+                                      QDoubleSpinBox, QSpinBox, QCheckBox, QGroupBox)
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("검색 타이밍 설정")
+        dialog.setModal(True)
+        dialog.setMinimumWidth(500)
+
+        # 메인 레이아웃
+        main_layout = QVBoxLayout()
+
+        # === Phase 1 타이밍 그룹 ===
+        phase1_group = QGroupBox("Phase 1 타이밍 (UDP Broadcast / TCP Multicast)")
+        phase1_layout = QFormLayout()
+
+        # Loop Select Timeout
+        dialog.spin_loop_timeout = QDoubleSpinBox()
+        dialog.spin_loop_timeout.setRange(0.1, 5.0)
+        dialog.spin_loop_timeout.setSingleStep(0.1)
+        dialog.spin_loop_timeout.setDecimals(1)
+        dialog.spin_loop_timeout.setSuffix(" 초")
+        dialog.spin_loop_timeout.setValue(current_values['phase1_loop_select_timeout'])
+        dialog.spin_loop_timeout.setToolTip(
+            "마지막 응답 이후 추가 응답 대기 시간\n"
+            "권장: 일반 0.5초, 구형 장비 1.0초, 고속 0.3초"
+        )
+        phase1_layout.addRow("Loop Select Timeout:", dialog.spin_loop_timeout)
+
+        # Emit Stabilization Delay
+        dialog.spin_emit_delay = QSpinBox()
+        dialog.spin_emit_delay.setRange(0, 500)
+        dialog.spin_emit_delay.setSingleStep(10)
+        dialog.spin_emit_delay.setSuffix(" ms")
+        dialog.spin_emit_delay.setValue(current_values['phase1_emit_stabilization_ms'])
+        dialog.spin_emit_delay.setToolTip(
+            "PyQt signal queue 안정화 대기 시간\n"
+            "권장: 50ms (실험적: 0~100ms)"
+        )
+        phase1_layout.addRow("Emit 안정화 딜레이:", dialog.spin_emit_delay)
+
+        # Skip Emit Delay (Experimental)
+        dialog.check_skip_delay = QCheckBox()
+        dialog.check_skip_delay.setChecked(current_values['skip_phase1_emit_delay'])
+        dialog.check_skip_delay.setToolTip(
+            "⚠ 실험적 기능: Emit 전 딜레이 생략\n"
+            "활성화 시 약 50ms 단축되지만 signal queue 불안정 가능성"
+        )
+        phase1_layout.addRow("Emit 딜레이 건너뛰기 (실험적):", dialog.check_skip_delay)
+
+        phase1_group.setLayout(phase1_layout)
+        main_layout.addWidget(phase1_group)
+
+        # === Phase 3 타이밍 그룹 ===
+        phase3_group = QGroupBox("Phase 3 타이밍 (개별 장비 쿼리)")
+        phase3_layout = QFormLayout()
+
+        # Device Query Timeout
+        dialog.spin_query_timeout = QDoubleSpinBox()
+        dialog.spin_query_timeout.setRange(0.5, 5.0)
+        dialog.spin_query_timeout.setSingleStep(0.1)
+        dialog.spin_query_timeout.setDecimals(1)
+        dialog.spin_query_timeout.setSuffix(" 초")
+        dialog.spin_query_timeout.setValue(current_values['phase3_device_query_timeout'])
+        dialog.spin_query_timeout.setToolTip(
+            "각 장비 응답 대기 시간\n"
+            "권장: 일반 1.5초, 빠른 1.0초, 느린/원거리 2.0초"
+        )
+        phase3_layout.addRow("장비 쿼리 타임아웃:", dialog.spin_query_timeout)
+
+        phase3_group.setLayout(phase3_layout)
+        main_layout.addWidget(phase3_group)
+
+        # === TCP 설정 그룹 ===
+        tcp_group = QGroupBox("TCP 설정 (TCP Multicast / Mixed Search)")
+        tcp_layout = QFormLayout()
+
+        # Max Parallel Workers
+        dialog.spin_tcp_workers = QSpinBox()
+        dialog.spin_tcp_workers.setRange(1, 50)
+        dialog.spin_tcp_workers.setSingleStep(5)
+        dialog.spin_tcp_workers.setValue(current_values['tcp_max_parallel_workers'])
+        dialog.spin_tcp_workers.setToolTip(
+            "최대 동시 연결 수\n"
+            "권장: 15 (네트워크 대역폭에 따라 조정)"
+        )
+        tcp_layout.addRow("최대 병렬 워커 수:", dialog.spin_tcp_workers)
+
+        tcp_group.setLayout(tcp_layout)
+        main_layout.addWidget(tcp_group)
+
+        # === UI 설정 그룹 ===
+        ui_group = QGroupBox("UI 설정")
+        ui_layout = QFormLayout()
+
+        # Progress Bar Update Percent
+        dialog.spin_pgbar_percent = QSpinBox()
+        dialog.spin_pgbar_percent.setRange(1, 100)
+        dialog.spin_pgbar_percent.setSingleStep(5)
+        dialog.spin_pgbar_percent.setSuffix(" %")
+        dialog.spin_pgbar_percent.setValue(current_values['pgbar_update_percent'])
+        dialog.spin_pgbar_percent.setToolTip(
+            "Progress bar 갱신 퍼센트\n"
+            "작을수록 자주 갱신 (부드럽지만 느림)\n"
+            "클수록 드물게 갱신 (빠르지만 뚝뚝 끊김)\n"
+            "권장: 5~20%"
+        )
+        ui_layout.addRow("Progress Bar 갱신 주기:", dialog.spin_pgbar_percent)
+
+        # Progress Bar Auto Hide Delay
+        dialog.spin_pgbar_hide = QSpinBox()
+        dialog.spin_pgbar_hide.setRange(0, 10000)
+        dialog.spin_pgbar_hide.setSingleStep(500)
+        dialog.spin_pgbar_hide.setSuffix(" ms")
+        dialog.spin_pgbar_hide.setValue(current_values['pgbar_auto_hide_delay_ms'])
+        dialog.spin_pgbar_hide.setToolTip(
+            "검색 완료 후 Progress bar 자동 숨김 대기 시간\n"
+            "0이면 즉시 숨김"
+        )
+        ui_layout.addRow("Progress Bar 자동 숨김 딜레이:", dialog.spin_pgbar_hide)
+
+        ui_group.setLayout(ui_layout)
+        main_layout.addWidget(ui_group)
+
+        # === 버튼 박스 ===
+        button_box = QDialogButtonBox()
+        btn_save = button_box.addButton("저장", QDialogButtonBox.AcceptRole)
+        btn_cancel = button_box.addButton("취소", QDialogButtonBox.RejectRole)
+        btn_reset = button_box.addButton("기본값 복원", QDialogButtonBox.ResetRole)
+
+        # 버튼 툴팁
+        btn_save.setToolTip("설정을 저장하고 적용합니다")
+        btn_cancel.setToolTip("변경사항을 무시하고 닫습니다")
+        btn_reset.setToolTip("모든 설정을 기본값으로 되돌립니다")
+
+        # 시그널 연결
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        btn_reset.clicked.connect(lambda: self._reset_dialog_to_defaults(dialog))
+
+        main_layout.addWidget(button_box)
+
+        dialog.setLayout(main_layout)
+        return dialog
+
+    def _extract_dialog_values(self, dialog: QDialog) -> dict:
+        """다이얼로그에서 사용자 입력 값 추출
+
+        Args:
+            dialog: 타이밍 설정 다이얼로그
+
+        Returns:
+            dict: 추출된 설정 값
+        """
+        return {
+            'phase1_loop_select_timeout': dialog.spin_loop_timeout.value(),
+            'phase1_emit_stabilization_ms': dialog.spin_emit_delay.value(),
+            'skip_phase1_emit_delay': dialog.check_skip_delay.isChecked(),
+            'phase3_device_query_timeout': dialog.spin_query_timeout.value(),
+            'tcp_max_parallel_workers': dialog.spin_tcp_workers.value(),
+            'pgbar_update_percent': dialog.spin_pgbar_percent.value(),
+            'pgbar_auto_hide_delay_ms': dialog.spin_pgbar_hide.value()
+        }
+
+    def _apply_timing_settings(self, new_values: dict) -> bool:
+        """새로운 타이밍 설정 적용
+
+        Args:
+            new_values: 새로운 설정 값
+
+        Returns:
+            bool: 성공 여부
+        """
+        try:
+            # 1. DeviceSearchConfig에 저장
+            if not self.timing_config.update_config_values(new_values):
+                self.logger.error("타이밍 설정 저장 실패")
+                return False
+
+            # 2. WIZMSGHandler 클래스 변수 즉시 업데이트
+            from WIZMSGHandler import WIZMSGHandler
+            WIZMSGHandler.loop_select_timeout = new_values['phase1_loop_select_timeout']
+            WIZMSGHandler.emit_stabilization_ms = new_values['phase1_emit_stabilization_ms']
+            WIZMSGHandler.skip_phase1_emit_delay = new_values['skip_phase1_emit_delay']
+
+            # 3. 인스턴스 변수 업데이트 (다음 검색 시 사용)
+            self.search_wait_time_each = new_values['phase3_device_query_timeout']
+
+            self.logger.info(f"타이밍 설정 업데이트 완료: {new_values}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"타이밍 설정 적용 실패: {e}")
+            return False
+
+    def _reset_dialog_to_defaults(self, dialog: QDialog):
+        """다이얼로그 값을 기본값으로 리셋
+
+        Args:
+            dialog: 타이밍 설정 다이얼로그
+        """
+        reply = QMessageBox.question(
+            dialog,
+            "기본값 복원 확인",
+            "모든 타이밍 설정을 기본값으로 되돌리시겠습니까?\n\n"
+            "이 작업은 즉시 저장되며, 되돌릴 수 없습니다.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            try:
+                # 1. DeviceSearchConfig 기본값 복원
+                if not self.timing_config.reset_to_defaults():
+                    QMessageBox.warning(
+                        dialog,
+                        "복원 실패",
+                        "기본값 복원에 실패했습니다.\n로그를 확인해주세요."
+                    )
+                    return
+
+                # 2. 다이얼로그 위젯 값 업데이트
+                defaults = self.timing_config.get_current_values()
+                dialog.spin_loop_timeout.setValue(defaults['phase1_loop_select_timeout'])
+                dialog.spin_emit_delay.setValue(defaults['phase1_emit_stabilization_ms'])
+                dialog.check_skip_delay.setChecked(defaults['skip_phase1_emit_delay'])
+                dialog.spin_query_timeout.setValue(defaults['phase3_device_query_timeout'])
+                dialog.spin_tcp_workers.setValue(defaults['tcp_max_parallel_workers'])
+                dialog.spin_pgbar_percent.setValue(defaults['pgbar_update_percent'])
+                dialog.spin_pgbar_hide.setValue(defaults['pgbar_auto_hide_delay_ms'])
+
+                # 3. WIZMSGHandler 클래스 변수 업데이트
+                from WIZMSGHandler import WIZMSGHandler
+                WIZMSGHandler.loop_select_timeout = defaults['phase1_loop_select_timeout']
+                WIZMSGHandler.emit_stabilization_ms = defaults['phase1_emit_stabilization_ms']
+                WIZMSGHandler.skip_phase1_emit_delay = defaults['skip_phase1_emit_delay']
+
+                # 4. 인스턴스 변수 업데이트
+                self.search_wait_time_each = defaults['phase3_device_query_timeout']
+
+                QMessageBox.information(
+                    dialog,
+                    "복원 완료",
+                    "모든 설정이 기본값으로 복원되었습니다."
+                )
+
+                self.logger.info("타이밍 설정 기본값 복원 완료")
+
+            except Exception as e:
+                self.logger.error(f"기본값 복원 실패: {e}")
+                QMessageBox.critical(
+                    dialog,
+                    "오류",
+                    f"기본값 복원 중 오류가 발생했습니다:\n{e}"
+                )
 
 
 class ThreadProgress(QtCore.QThread):
