@@ -470,8 +470,8 @@ class WIZWindow(QMainWindow, main_window):
         self.search_wait_time = 3
         # CSV MRU Manager 초기화
         self.csv_mru_manager = CSVMRUManager()
-        # CSV 경로 기억 (Save/Load Searched Results)
-        self.last_csv_directory = self.csv_mru_manager.get_most_recent_directory()
+        # CSV 경로 기억 (Save/Load Searched Results) - config/ui_state.json에서 로드
+        self.last_csv_directory = self.csv_mru_manager.get_last_directory()
 
         # check if use setting password
         self.use_setting_pw = False
@@ -5786,7 +5786,7 @@ class WIZWindow(QMainWindow, main_window):
             self,
             "검색 결과 저장",
             default_path,
-            "CSV Files (*.csv);;All Files (*)"
+            "CSV Files (*.csv);;All Files (*)",
         )
 
         if not file_path:
@@ -5831,6 +5831,7 @@ class WIZWindow(QMainWindow, main_window):
             # 저장 성공 시 MRU 업데이트 (Save: 초기화)
             self.csv_mru_manager.add_saved_file(file_path, memo="")
             self.last_csv_directory = os.path.dirname(file_path)
+            self.csv_mru_manager.set_last_directory(self.last_csv_directory)  # config 파일에 저장
             self.logger.info(f"Saved {len(self.mac_list)} devices to {file_path}")
             QtWidgets.QMessageBox.information(
                 self,
@@ -5847,14 +5848,31 @@ class WIZWindow(QMainWindow, main_window):
 
     def load_searched_results_from_csv(self):
         """CSV 파일에서 검색 결과 불러오기"""
-        # 파일 다이얼로그 (이전 경로 사용)
-        default_directory = self.last_csv_directory if self.last_csv_directory else ""
+        # 파일 다이얼로그 (가장 최근 파일 경로 사용 - 파일명까지 포함)
+        # 파일/디렉토리 존재 여부 확인하여 robust하게 처리
+        mru_list = self.csv_mru_manager.get_mru_list()
+        if mru_list:
+            recent_path = mru_list[0]['path']
+            if os.path.exists(recent_path):
+                # 파일 존재: 파일명까지 선택 (최고의 UX)
+                default_path = recent_path
+            elif os.path.exists(os.path.dirname(recent_path)):
+                # 파일 삭제됨, 디렉토리는 존재: 디렉토리만 사용
+                default_path = os.path.dirname(recent_path)
+                self.logger.info(f"MRU 파일 없음, 디렉토리 사용: {default_path}")
+            else:
+                # 디렉토리도 없음 (USB 제거, 네트워크 드라이브 연결 해제 등): last_directory로 폴백
+                default_path = self.last_csv_directory if self.last_csv_directory else ""
+                self.logger.warning(f"MRU 경로 접근 불가: {recent_path}, 폴백: {default_path}")
+        else:
+            # MRU 없으면 마지막 디렉토리만 사용
+            default_path = self.last_csv_directory if self.last_csv_directory else ""
 
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
             "검색 결과 불러오기",
-            default_directory,
-            "CSV Files (*.csv);;All Files (*)"
+            default_path,
+            "CSV Files (*.csv);;All Files (*)",
         )
 
         if not file_path:
@@ -5961,6 +5979,7 @@ class WIZWindow(QMainWindow, main_window):
                 # 불러오기 성공 시 MRU 업데이트 (Load: access_count 증가)
                 self.csv_mru_manager.add_loaded_file(file_path)
                 self.last_csv_directory = os.path.dirname(file_path)
+                self.csv_mru_manager.set_last_directory(self.last_csv_directory)  # config 파일에 저장
                 self.logger.info(f"Loaded {len(self.mac_list)} devices from {file_path}")
 
                 # Phase 2 자동 실행 (최신 정보 재수집)
