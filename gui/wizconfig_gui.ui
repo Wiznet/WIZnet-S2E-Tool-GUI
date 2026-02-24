@@ -279,34 +279,6 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="3" alignment="Qt::AlignLeft">
-             <widget class="QPushButton" name="btn_clear_results">
-              <property name="minimumSize">
-               <size>
-                <width>60</width>
-                <height>22</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>80</width>
-                <height>22</height>
-               </size>
-              </property>
-              <property name="font">
-               <font>
-                <family>맑은 고딕</family>
-                <pointsize>9</pointsize>
-               </font>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Clear search results&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Clear</string>
-              </property>
-             </widget>
-            </item>
            </layout>
           </item>
           <item row="3" column="0">
@@ -422,13 +394,13 @@
             <property name="minimumSize">
              <size>
               <width>220</width>
-              <height>200</height>
+              <height>120</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>440</width>
-              <height>400</height>
+              <height>240</height>
              </size>
             </property>
             <property name="font">
@@ -442,280 +414,34 @@
             </property>
             <layout class="QGridLayout" name="gridLayout_7">
              <item row="0" column="0">
-              <layout class="QGridLayout" name="gridLayout_104">
-               <item row="0" column="0">
-                <widget class="QCheckBox" name="cumulative_search_mode">
-                 <property name="minimumSize">
-                  <size>
-                   <width>110</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>220</width>
-                   <height>45</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>9</pointsize>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>검색 결과 유지/갱신</string>
-                 </property>
-                 <property name="checked">
-                  <bool>false</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QLabel" name="label_cumulative_info">
-                 <property name="visible">
-                  <bool>true</bool>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>15</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>15</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>10</pointsize>
-                  </font>
-                 </property>
-                 <property name="styleSheet">
-                  <string notr="true">color: #888;</string>
-                 </property>
-                 <property name="text">
-                  <string>ⓘ</string>
-                 </property>
-                 <property name="toolTip">
-                  <string>검색 결과 유지/갱신 모드
-• 이전 검색 결과 유지 (테이블 초기화 안 함)
-• 기존 장비 정보 갱신 + 새 장비 추가
-
-[반복 검색 옵션 - UDP broadcast 전용]
-장비 수: 예상 장비 개수 (0=무시, 도달 시 조기 종료)
-반복 횟수: 최대 반복 횟수 (최소 1회)</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+              <widget class="QRadioButton" name="broadcast">
+               <property name="minimumSize">
+                <size>
+                 <width>150</width>
+                 <height>22</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>300</width>
+                 <height>45</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <family>맑은 고딕</family>
+                 <pointsize>9</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>UDP broadcast</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
              </item>
              <item row="1" column="0">
-              <layout class="QGridLayout" name="gridLayout_101">
-               <item row="0" column="0">
-                <spacer name="horizontalSpacer_indent">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>20</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-               <item row="0" column="1">
-                <widget class="QLabel" name="label_expected_device_count">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>9</pointsize>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>장비 수:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="2">
-                <widget class="QLineEdit" name="expected_device_count">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>60</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>60</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>9</pointsize>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>0</string>
-                 </property>
-                 <property name="placeholderText">
-                  <string>0 = 무시</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="3">
-                <widget class="QLabel" name="label_max_retry_count">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>9</pointsize>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>반복 횟수:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="4">
-                <widget class="QLineEdit" name="max_retry_count">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>60</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>60</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>9</pointsize>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>1</string>
-                 </property>
-                 <property name="placeholderText">
-                  <string>최소 1</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="5">
-                <spacer name="horizontalSpacer_end">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>40</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-              </layout>
-             </item>
-             <item row="2" column="0">
-              <layout class="QGridLayout" name="gridLayout_103">
-               <item row="0" column="0">
-                <widget class="QRadioButton" name="broadcast">
-                 <property name="minimumSize">
-                  <size>
-                   <width>110</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>220</width>
-                   <height>45</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>9</pointsize>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>UDP broadcast</string>
-                 </property>
-                 <property name="checked">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QLabel" name="label_broadcast_info">
-                 <property name="visible">
-                  <bool>true</bool>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>15</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>15</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>10</pointsize>
-                  </font>
-                 </property>
-                 <property name="styleSheet">
-                  <string notr="true">color: #888;</string>
-                 </property>
-                 <property name="text">
-                  <string>ⓘ</string>
-                 </property>
-                 <property name="toolTip">
-                  <string>빠른 네트워크 검색 (로컬 서브넷 내 모든 장비에 한 번에 브로드캐스트, 약 3초 소요)</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-             <item row="3" column="0">
               <layout class="QGridLayout" name="gridLayout_97">
                <item row="0" column="0">
                 <widget class="QRadioButton" name="unicast_ip">
@@ -724,13 +450,13 @@
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>110</width>
+                   <width>150</width>
                    <height>22</height>
                   </size>
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>220</width>
+                   <width>300</width>
                    <height>45</height>
                   </size>
                  </property>
@@ -745,44 +471,7 @@
                  </property>
                 </widget>
                </item>
-               <item row="0" column="1">
-                <widget class="QLabel" name="label_unicast_info">
-                 <property name="visible">
-                  <bool>true</bool>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>15</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>15</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>10</pointsize>
-                  </font>
-                 </property>
-                 <property name="styleSheet">
-                  <string notr="true">color: #888;</string>
-                 </property>
-                 <property name="text">
-                  <string>ⓘ</string>
-                 </property>
-                 <property name="toolTip">
-                  <string>특정 IP만 검색 (알고 있는 장비 IP를 직접 입력)</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0" colspan="2">
+               <item row="1" column="0">
                 <layout class="QGridLayout" name="gridLayout_98">
                  <item row="0" column="0">
                   <widget class="QLineEdit" name="search_ipaddr">
@@ -895,232 +584,6 @@
                   </widget>
                  </item>
                 </layout>
-               </item>
-              </layout>
-             </item>
-             <item row="4" column="0">
-              <layout class="QGridLayout" name="gridLayout_99">
-               <item row="0" column="0">
-                <widget class="QRadioButton" name="tcp_multicast">
-                 <property name="minimumSize">
-                  <size>
-                   <width>110</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>220</width>
-                   <height>45</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>9</pointsize>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>TCP multicast</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QLabel" name="label_tcp_multicast_info">
-                 <property name="visible">
-                  <bool>true</bool>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>15</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>15</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>10</pointsize>
-                  </font>
-                 </property>
-                 <property name="styleSheet">
-                  <string notr="true">color: #888;</string>
-                 </property>
-                 <property name="text">
-                  <string>ⓘ</string>
-                 </property>
-                 <property name="toolTip">
-                  <string>전체 서브넷 스캔 (TCP unicast 방식으로 모든 IP 검색, 약 30초 소요)</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="2">
-                <widget class="QLabel" name="label_tcp_multicast_port">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>9</pointsize>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>Port:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="3">
-                <widget class="QLineEdit" name="tcp_multicast_port">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>57</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>57</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>9</pointsize>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>50001</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-             <item row="5" column="0">
-              <layout class="QGridLayout" name="gridLayout_100">
-               <item row="0" column="0">
-                <widget class="QRadioButton" name="mixed_search">
-                 <property name="minimumSize">
-                  <size>
-                   <width>110</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>220</width>
-                   <height>45</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>9</pointsize>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>Mixed</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QLabel" name="label_mixed_info">
-                 <property name="visible">
-                  <bool>true</bool>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>15</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>15</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>10</pointsize>
-                  </font>
-                 </property>
-                 <property name="styleSheet">
-                  <string notr="true">color: #888;</string>
-                 </property>
-                 <property name="text">
-                  <string>ⓘ</string>
-                 </property>
-                 <property name="toolTip">
-                  <string>UDP broadcast 실패 시 TCP unicast로 재시도 (빠른 검색 + 안정성)</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="2">
-                <widget class="QLabel" name="label_mixed_port">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>9</pointsize>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>TCP Port:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="3">
-                <widget class="QLineEdit" name="mixed_port">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>57</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>57</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>맑은 고딕</family>
-                   <pointsize>9</pointsize>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>50001</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
                </item>
               </layout>
              </item>
@@ -1290,7 +753,7 @@
              <number>0</number>
             </property>
             <property name="columnCount">
-             <number>3</number>
+             <number>2</number>
             </property>
             <attribute name="horizontalHeaderVisible">
              <bool>true</bool>
@@ -1345,23 +808,6 @@
             <column>
              <property name="text">
               <string notr="true">Name</string>
-             </property>
-             <property name="toolTip">
-              <string notr="true"/>
-             </property>
-             <property name="whatsThis">
-              <string notr="true"/>
-             </property>
-             <property name="font">
-              <font>
-               <family>맑은 고딕</family>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-            </column>
-            <column>
-             <property name="text">
-              <string>검색됨</string>
              </property>
              <property name="toolTip">
               <string notr="true"/>
