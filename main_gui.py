@@ -60,8 +60,6 @@ from PyQt5.QtWidgets import (
     QLabel,
     QGridLayout,
     QToolTip,
-    QWidget,
-    QLayout,
     # QRadioButton,
     # QComboBox,
     # QCheckBox,
@@ -366,7 +364,7 @@ class ClickableInfoLabel(QLabel):
         # → 사용자에게 클릭 가능함을 시각적으로 알림
         try:
             self.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape(13)))  # 13 = PointingHandCursor
-        except:
+        except Exception:
             pass
 
         # 툴팁 표시 지속 시간 설정 (5000ms = 5초)
@@ -387,14 +385,14 @@ class ClickableInfoLabel(QLabel):
         - hideText() + 딜레이 + showText() 패턴이 안정적으로 동작
         - 호버 툴팁과 클릭 툴팁이 충돌하지 않도록 조정
         """
-        print(f"[DEBUG] ClickableInfoLabel.mousePressEvent called")
+        print("[DEBUG] ClickableInfoLabel.mousePressEvent called")
         if ev and ev.button() == QtCore.Qt.MouseButton(1):  # 왼쪽 버튼만
             tooltip_text = self.toolTip()
             print(f"[DEBUG] Tooltip text: {tooltip_text}")
             if tooltip_text:
                 # 1단계: 기존 툴팁 숨기기 (호버 툴팁 제거)
                 QToolTip.hideText()
-                print(f"[DEBUG] hideText() called")
+                print("[DEBUG] hideText() called")
 
                 # 2단계: 클릭 위치 계산 (글로벌 좌표계)
                 pos = self.mapToGlobal(ev.pos())
@@ -403,7 +401,7 @@ class ClickableInfoLabel(QLabel):
                 # 3단계: 100ms 딜레이 후 툴팁 표시
                 # → Qt 내부에서 hideText() 처리 완료 대기
                 QtCore.QTimer.singleShot(100, lambda: self._show_tooltip_delayed(pos, tooltip_text))
-                print(f"[DEBUG] Timer scheduled for delayed tooltip")
+                print("[DEBUG] Timer scheduled for delayed tooltip")
 
         # 부모 클래스의 이벤트 처리도 실행 (이벤트 전파)
         super().mousePressEvent(ev)
@@ -419,7 +417,7 @@ class ClickableInfoLabel(QLabel):
             - QTimer.singleShot()에서 호출됨
             - hideText() 이후 충분한 시간 경과 후 실행
         """
-        print(f"[DEBUG] _show_tooltip_delayed called")
+        print("[DEBUG] _show_tooltip_delayed called")
         QToolTip.showText(pos, text, self, self.rect(), UITooltipSettings.TOOLTIP_DURATION_MS)
         print(f"[DEBUG] showText() executed with duration={UITooltipSettings.TOOLTIP_DURATION_MS}ms")
 
@@ -2053,6 +2051,12 @@ class WIZWindow(QMainWindow, main_window):
                 else:
                     # 반복 검색
                     self.pgbar.setFormat(f"Searching... ({self.retry_search_current + 1}/{self.retry_search_max_count})")
+
+                # 반복 검색 모드: 초기 진행률 설정
+                if self.retry_search_max_count > 1:
+                    base_progress = int((self.retry_search_current / self.retry_search_max_count) * 100)
+                    self.pgbar.setValue(base_progress)
+                    self.logger.debug(f"Phase 1 시작: base_progress={base_progress}% (반복 {self.retry_search_current + 1}/{self.retry_search_max_count})")
             else:
                 # 일반 검색
                 self.pgbar.setFormat("Search all devices...")
@@ -2164,7 +2168,17 @@ class WIZWindow(QMainWindow, main_window):
         update_interval = self._calc_pgbar_update_interval(total_devs, update_percent)
         self.logger.debug(f"pgbar 갱신 간격: {update_interval}개마다 (총 {total_devs}개, {update_percent}%)")
 
+        # 반복 검색 모드: 전체 진행률 계산 (현재 반복의 시작 진행률)
+        if self.cumulative_mode and self.broadcast.isChecked() and self.retry_search_max_count > 1:
+            base_progress = int((self.retry_search_current / self.retry_search_max_count) * 100)
+            self.logger.debug(f"반복 검색 진행률: {self.retry_search_current + 1}/{self.retry_search_max_count}, base_progress={base_progress}%")
+        else:
+            base_progress = 0
+
         self.pgbar.setFormat(f"Querying devices... (0/{total_devs})")
+        # 초기 진행률 설정
+        if base_progress > 0:
+            self.pgbar.setValue(base_progress)
         QApplication.processEvents()  # "Querying..." 텍스트 즉시 렌더링
 
         if self.broadcast.isChecked():
@@ -2203,6 +2217,11 @@ class WIZWindow(QMainWindow, main_window):
                     # 조건부 pgbar 갱신 (최적화)
                     if self._should_update_pgbar(idx, total_devs, update_interval):
                         self.pgbar.setFormat(f"Querying devices... ({idx + 1}/{total_devs})")
+                        # 반복 검색 모드: 전체 진행률 계산
+                        if self.cumulative_mode and self.broadcast.isChecked() and self.retry_search_max_count > 1:
+                            phase_progress = int(((idx + 1) / total_devs) * 100)
+                            total_progress = base_progress + int((phase_progress / 100) * (100 / self.retry_search_max_count))
+                            self.pgbar.setValue(total_progress)
                         QApplication.processEvents()
             else:
                 # UDP (broadcast/multicast/mixed): 장비마다 전용 소켓 → 전체 동시 시작
@@ -2239,6 +2258,11 @@ class WIZWindow(QMainWindow, main_window):
                     # 조건부 pgbar 갱신 (최적화)
                     if self._should_update_pgbar(idx, len(threads), update_interval):
                         self.pgbar.setFormat(f"Querying devices... ({idx + 1}/{total_devs})")
+                        # 반복 검색 모드: 전체 진행률 계산
+                        if self.cumulative_mode and self.broadcast.isChecked() and self.retry_search_max_count > 1:
+                            phase_progress = int(((idx + 1) / total_devs) * 100)
+                            total_progress = base_progress + int((phase_progress / 100) * (100 / self.retry_search_max_count))
+                            self.pgbar.setValue(total_progress)
                         QApplication.processEvents()
 
                 # 전용 소켓 정리
@@ -2252,7 +2276,15 @@ class WIZWindow(QMainWindow, main_window):
         if hasattr(self, 'final_status_message'):
             self.statusbar.showMessage(self.final_status_message)
         self.pgbar.setFormat("Done")
-        self.pgbar.setValue(100)
+
+        # 반복 검색 모드: 현재 반복의 끝 진행률 설정
+        if self.cumulative_mode and self.broadcast.isChecked() and self.retry_search_max_count > 1:
+            # 현재 반복 완료 시점의 진행률
+            end_progress = int(((self.retry_search_current + 1) / self.retry_search_max_count) * 100)
+            self.pgbar.setValue(end_progress)
+            self.logger.debug(f"Phase 3 완료: 진행률 {end_progress}% (반복 {self.retry_search_current + 1}/{self.retry_search_max_count})")
+        else:
+            self.pgbar.setValue(100)
 
         # Hide progress bar after a delay and calculate final system time when truly done
         def _finalize_search():
