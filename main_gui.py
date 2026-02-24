@@ -38,10 +38,11 @@ import subprocess
 import webbrowser
 import logging
 import datetime
+import csv
 from pathlib import Path
 
 # Additional package
-from PyQt5 import QtCore, QtGui, uic
+from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QApplication,
@@ -67,6 +68,9 @@ from PyQt5.QtWidgets import (
     # QGroupBox,
 )
 import ifaddr
+
+# CSV MRU Manager
+from csv_mru_manager import CSVMRUManager
 
 
 SECURITY_TWO_PORT_DEV = ("W55RP20-S2E-2CH",)
@@ -464,6 +468,10 @@ class WIZWindow(QMainWindow, main_window):
         # init search option
         self.retry_search_num = 1
         self.search_wait_time = 3
+        # CSV MRU Manager 초기화
+        self.csv_mru_manager = CSVMRUManager()
+        # CSV 경로 기억 (Save/Load Searched Results)
+        self.last_csv_directory = self.csv_mru_manager.get_most_recent_directory()
 
         # check if use setting password
         self.use_setting_pw = False
@@ -551,9 +559,6 @@ class WIZWindow(QMainWindow, main_window):
                 self.event_factory_option_clicked
             )
 
-            # clear search results
-            self.btn_clear_results.clicked.connect(self.event_clear_results)
-
             # configuration save/load button
             self.btn_saveconfig.clicked.connect(self.dialog_save_file)
             self.btn_loadconfig.clicked.connect(self.dialog_load_file)
@@ -561,9 +566,6 @@ class WIZWindow(QMainWindow, main_window):
             # self.btn_upload.clicked.connect(self.update_btn_clicked)
             self.btn_upload.clicked.connect(self.event_upload_clicked)
             self.btn_exit.clicked.connect(self.msg_exit)
-
-            # 추가: 타이밍 설정 버튼 클릭 시그널
-            self.btn_timing_settings.clicked.connect(self.event_open_timing_settings)
         except Exception as e:
             self.logger.error(f"button event register error: {e}")
 
@@ -575,8 +577,6 @@ class WIZWindow(QMainWindow, main_window):
         self.at_enable.stateChanged.connect(self.event_atmode)
         self.ch1_keepalive_enable.stateChanged.connect(self.event_keepalive)
         self.ch2_keepalive_enable.stateChanged.connect(self.event_keepalive)
-        # 검색 결과 유지/갱신 모드 체크박스 이벤트
-        self.cumulative_search_mode.stateChanged.connect(self.event_cumulative_mode)
         self.ip_dhcp.clicked.connect(self.event_ip_alloc)
         self.ip_static.clicked.connect(self.event_ip_alloc)
 
@@ -597,8 +597,6 @@ class WIZWindow(QMainWindow, main_window):
         # Event: Search method
         self.broadcast.clicked.connect(self.event_search_method)
         self.unicast_ip.clicked.connect(self.event_search_method)
-        self.tcp_multicast.clicked.connect(self.event_search_method)
-        self.mixed_search.clicked.connect(self.event_search_method)
         # self.unicast_mac.clicked.connect(self.event_search_method)
 
         # Event: modbus
@@ -617,6 +615,8 @@ class WIZWindow(QMainWindow, main_window):
         # Menu event - File
         self.actionSave.triggered.connect(self.dialog_save_file)
         self.actionLoad.triggered.connect(self.dialog_load_file)
+        self.actionSaveSearchResults.triggered.connect(self.save_searched_results_to_csv)
+        self.actionLoadSearchResults.triggered.connect(self.load_searched_results_from_csv)
         self.actionExit.triggered.connect(self.msg_exit)
 
         # Menu event - Help
@@ -627,6 +627,8 @@ class WIZWindow(QMainWindow, main_window):
         self.net_adapter_info()
 
         self.netconfig_menu.triggered[QAction].connect(self.net_ifs_selected)
+        # Menu event - Option - Advanced Search Options
+        self.actionAdvancedSearchOptions.triggered.connect(self.event_open_advanced_search_options)
         # Menu event - Option - Search option
         self.action_set_wait_time.triggered.connect(self.input_search_wait_time)
         self.action_retry_search.triggered.connect(self.input_retry_search)
@@ -753,35 +755,21 @@ class WIZWindow(QMainWindow, main_window):
         self.ch1_pack_char_8.setMaxLength(30)
         self.ch1_pack_char_9.setMaxLength(30)
 
-        # 반복 검색 입력 필드 Validator 설정 (UI 레벨 검증)
-        from PyQt5.QtGui import QIntValidator
+        # DeviceSearchConfig 초기화 (앱 시작 시)
+        if not hasattr(self, 'device_search_config'):
+            self.device_search_config = DeviceSearchConfig()
 
-        validator_expected = QIntValidator(
-            RetrySearchLimits.EXPECTED_DEVICE_MIN,
-            RetrySearchLimits.EXPECTED_DEVICE_MAX,
-            self
-        )
-        self.expected_device_count.setValidator(validator_expected)
+        # 검색 옵션을 DeviceSearchConfig에서 로드
+        config = self.device_search_config.get_current_values()
+        self.retry_search_expected_count = config.get('expected_device_count', 0)
+        self.retry_search_max_count = config.get('max_retry_count', 3)  # 기본값 3
 
-        validator_retry = QIntValidator(
-            RetrySearchLimits.MAX_RETRY_MIN,
-            RetrySearchLimits.MAX_RETRY_MAX,
-            self
-        )
-        self.max_retry_count.setValidator(validator_retry)
+        # cumulative_mode는 항상 True (UI 옵션 제거, 기능 유지)
+        self.cumulative_mode = True
 
-        # 디버깅 기간 기본값 설정
+        # 디버깅 편의를 위한 기본값 설정 (Search method 라디오 버튼만)
         self.broadcast.setChecked(True)  # UDP Broadcast 검색 선택
-        self.cumulative_search_mode.setChecked(True)  # 검색 결과 유지/갱신 활성화
-        self.cumulative_mode = True  # 명시적으로 변수 설정 (시그널 의존하지 않음)
-        self.expected_device_count.setText("0")  # 예상 장비 수: 0
-        self.max_retry_count.setText("5")  # 반복 횟수: 5
-        # 반복 검색 옵션 명시적 활성화 (디버깅 기본값)
-        self.expected_device_count.setEnabled(True)
-        self.label_expected_device_count.setEnabled(True)
-        self.max_retry_count.setEnabled(True)
-        self.label_max_retry_count.setEnabled(True)
-        self.logger.info("디버깅 기본값: 누적 모드 활성화, 반복 검색 옵션 강제 활성화")
+        self.logger.info(f"검색 설정 로드 완료: expected_device_count={self.retry_search_expected_count}, max_retry_count={self.retry_search_max_count}, cumulative_mode=True")
 
         # for WIZ5XXSR custom module
         # @TODO: a6e5282d1e 에서 U3~U9 가 삭제되어 아래 코드도 삭제되어야 함
@@ -1644,71 +1632,6 @@ class WIZWindow(QMainWindow, main_window):
         else:
             self.connect_pw.setEnabled(False)
 
-    def event_cumulative_mode(self):
-        """검색 결과 유지/갱신 모드 체크박스 토글 이벤트"""
-        self.cumulative_mode = self.cumulative_search_mode.isChecked()
-
-        if self.cumulative_mode:
-            self.logger.info("검색 결과 유지/갱신 모드 활성화: 기존 장비 갱신 + 새 장비 추가")
-            # 반복 검색 옵션 활성화 (UDP broadcast 선택 시만)
-            self._update_retry_options_state()
-        else:
-            self.logger.info("검색 결과 유지/갱신 모드 비활성화: 기본 검색 동작")
-            # 반복 검색 옵션 비활성화
-            self.expected_device_count.setEnabled(False)
-            self.label_expected_device_count.setEnabled(False)
-            self.max_retry_count.setEnabled(False)
-            self.label_max_retry_count.setEnabled(False)
-
-    def _update_retry_options_state(self):
-        """반복 검색 옵션의 활성화 상태 업데이트
-
-        조건: 검색 결과 유지/갱신 모드 ON AND UDP broadcast 선택
-        """
-        should_enable = self.cumulative_mode and self.broadcast.isChecked()
-
-        self.expected_device_count.setEnabled(should_enable)
-        self.label_expected_device_count.setEnabled(should_enable)
-        self.max_retry_count.setEnabled(should_enable)
-        self.label_max_retry_count.setEnabled(should_enable)
-
-        if should_enable:
-            self.logger.info("반복 검색 옵션 활성화: 유지/갱신 모드 ON + UDP broadcast 선택")
-        else:
-            self.logger.info("반복 검색 옵션 비활성화")
-
-    def event_clear_results(self):
-        """Clear search results 버튼 클릭 이벤트
-
-        검색 결과 테이블과 관련 데이터를 모두 초기화합니다.
-        """
-        try:
-            # 테이블 클리어
-            self.list_device.setRowCount(0)
-
-            # 리스트 초기화
-            self.mac_list = []
-            self.ver_list = []
-            self.name_list = []
-            self.st_list = []
-            self.detected_list = []
-
-            # 반복 검색 카운터 및 시간 초기화
-            self.retry_search_current = 0
-            self.retry_search_start_time = None
-
-            # Progress bar 초기화
-            self.pgbar.setFormat("Ready")
-            self.pgbar.setValue(0)
-
-            # 상태 바 메시지 초기화
-            self.statusbar.showMessage(" Search results cleared")
-
-            self.logger.info("검색 결과 초기화 완료")
-
-        except Exception as e:
-            self.logger.error(f"검색 결과 초기화 중 오류: {e}")
-
     def event_opmode(self):
         if self.ch1_tcpclient.isChecked():
             self.ch1_remote.setEnabled(True)
@@ -1818,45 +1741,16 @@ class WIZWindow(QMainWindow, main_window):
         if self.broadcast.isChecked():
             self.search_ipaddr.setEnabled(False)
             self.search_port.setEnabled(False)
-            self.tcp_multicast_port.setEnabled(False)
-            self.label_tcp_multicast_port.setEnabled(False)
-            self.mixed_port.setEnabled(False)
-            self.label_mixed_port.setEnabled(False)
 
         # TCP Unicast - enable IP and port
         elif self.unicast_ip.isChecked():
             self.search_ipaddr.setEnabled(True)
             self.search_port.setEnabled(True)
-            self.tcp_multicast_port.setEnabled(False)
-            self.label_tcp_multicast_port.setEnabled(False)
-            self.mixed_port.setEnabled(False)
-            self.label_mixed_port.setEnabled(False)
-
-        # TCP Multicast - enable port only
-        elif self.tcp_multicast.isChecked():
-            self.search_ipaddr.setEnabled(False)
-            self.search_port.setEnabled(False)
-            self.tcp_multicast_port.setEnabled(True)
-            self.label_tcp_multicast_port.setEnabled(True)
-            self.mixed_port.setEnabled(False)
-            self.label_mixed_port.setEnabled(False)
-
-        # Mixed Search - enable TCP port only
-        elif self.mixed_search.isChecked():
-            self.search_ipaddr.setEnabled(False)
-            self.search_port.setEnabled(False)
-            self.tcp_multicast_port.setEnabled(False)
-            self.label_tcp_multicast_port.setEnabled(False)
-            self.mixed_port.setEnabled(True)
-            self.label_mixed_port.setEnabled(True)
 
         # 검색 방법 변경 시 반복 검색 카운터 리셋
         if self.retry_search_current > 0:
             self.logger.info(f"검색 방법 변경: 반복 검색 카운터 리셋 ({self.retry_search_current} → 0)")
             self.retry_search_current = 0
-
-        # 반복 검색 옵션 상태 업데이트 (유지/갱신 모드 ON + UDP broadcast 선택 시만 활성화)
-        self._update_retry_options_state()
 
     def sock_close(self):
         # 기존 연결 fin
@@ -1945,64 +1839,6 @@ class WIZWindow(QMainWindow, main_window):
                     self.statusbar.showMessage(" Network unreachable: %s" % ip_addr)
                     self.btn_search.setEnabled(True)
                     self.msg_not_connected(ip_addr)
-
-            # TCP Multicast
-            elif self.tcp_multicast.isChecked():
-                if self.selected_eth is None:
-                    self.statusbar.showMessage(" Please select a network interface")
-                    self.btn_search.setEnabled(True)
-                    return
-
-                ip, prefix = get_adapter_subnet_info(self.selected_eth)
-
-                # IP 주소를 가져올 수 없는 경우
-                if ip is None:
-                    self.statusbar.showMessage(" Cannot get IP address for selected interface")
-                    self.btn_search.setEnabled(True)
-                    return
-
-                # ifaddr가 prefix를 제공하지 않으면 기본값 24 사용
-                if prefix is None:
-                    self.logger.warning("Network prefix not available, using /24 as default")
-                    prefix = 24
-
-                self.ip_scan_list = get_subnet_hosts(ip, prefix)
-                self.logger.info(f"TCP Multicast: {len(self.ip_scan_list)} IPs in /{prefix} subnet")
-
-                # 큰 서브넷 경고 (500개 이상)
-                if len(self.ip_scan_list) > 500:
-                    self.logger.warning(f"Large subnet detected: {len(self.ip_scan_list)} IPs")
-
-                self.isConnected = True
-
-            # Mixed Search
-            elif self.mixed_search.isChecked():
-                if self.selected_eth is None:
-                    self.statusbar.showMessage(" Please select a network interface")
-                    self.btn_search.setEnabled(True)
-                    return
-
-                ip, prefix = get_adapter_subnet_info(self.selected_eth)
-
-                # IP 주소를 가져올 수 없는 경우
-                if ip is None:
-                    self.statusbar.showMessage(" Cannot get IP address for selected interface")
-                    self.btn_search.setEnabled(True)
-                    return
-
-                if prefix is None:
-                    self.logger.warning("Network prefix not available, using /24 as default")
-                    prefix = 24
-
-                self.mixed_subnet_hosts = get_subnet_hosts(ip, prefix)
-                self.logger.info(f"Mixed: {len(self.mixed_subnet_hosts)} hosts in subnet")
-
-                # Phase 1: UDP broadcast (기존 메커니즘)
-                if self.selected_eth is None:
-                    self.conf_sock = WIZUDPSock(5000, 50001, "")
-                else:
-                    self.conf_sock = WIZUDPSock(5000, 50001, self.selected_eth)
-                self.conf_sock.open()
 
         except Exception as e:
             self.logger.error(f"socket_config error: {e}")
@@ -2101,6 +1937,19 @@ class WIZWindow(QMainWindow, main_window):
 
     def _on_search_button_clicked(self):
         """검색 버튼 클릭 이벤트 핸들러 - 타이머 시작"""
+        # Device Search 버튼 클릭 시 항상 이전 검색 결과 클리어
+        # (cumulative_mode와 상관없이 클리어 - 반복 검색 시에만 누적 유지)
+        self.mac_list = []
+        self.mn_list = []
+        self.vr_list = []
+        self.st_list = []
+        self.mode_list = []  # OP (Operation Mode) - Phase 1에서 받는 정보
+        self.detected_list = []
+        self.list_device.clearContents()
+        self.list_device.setRowCount(0)
+        self.searched_num.setText("0")
+        self.logger.info("이전 검색 결과 클리어 (Device Search 버튼 클릭)")
+
         # 새 검색 시작 - 반복 검색 카운터 리셋 및 타이머 시작
         self.retry_search_current = 0
         self._timing_t0 = time.time()
@@ -2168,51 +2017,25 @@ class WIZWindow(QMainWindow, main_window):
 
             # 첫 검색 시작 시 설정 읽기 (유지/갱신 모드 + UDP broadcast)
             if self.retry_search_current == 0 and self.cumulative_mode and self.broadcast.isChecked():
-                # 예상 장비 수 검증 (상수 사용)
-                try:
-                    expected = int(self.expected_device_count.text())
-                    original_expected = expected
+                # 내부 변수에서 값 읽기 (Advanced Search Options에서 설정된 값 사용)
+                # 값 검증 (범위 체크)
+                expected = getattr(self, 'retry_search_expected_count', 0)
+                if expected < RetrySearchLimits.EXPECTED_DEVICE_MIN:
+                    expected = RetrySearchLimits.EXPECTED_DEVICE_MIN
+                    self.logger.warning(f"예상 장비 수 범위 미만 → {expected}로 설정")
+                elif expected > RetrySearchLimits.EXPECTED_DEVICE_MAX:
+                    expected = RetrySearchLimits.EXPECTED_DEVICE_MAX
+                    self.logger.warning(f"예상 장비 수 범위 초과 → {expected}로 제한")
+                self.retry_search_expected_count = expected
 
-                    if expected < RetrySearchLimits.EXPECTED_DEVICE_MIN:
-                        expected = RetrySearchLimits.EXPECTED_DEVICE_MIN
-                        self.logger.warning(f"예상 장비 수 범위 미만 → {expected}로 설정")
-                    elif expected > RetrySearchLimits.EXPECTED_DEVICE_MAX:
-                        expected = RetrySearchLimits.EXPECTED_DEVICE_MAX
-                        self.logger.warning(f"예상 장비 수 범위 초과 → {expected}로 제한")
-
-                    self.retry_search_expected_count = expected
-
-                    # UI 반영 (값이 변경된 경우만)
-                    if original_expected != expected:
-                        self.expected_device_count.setText(str(expected))
-
-                except ValueError:
-                    self.retry_search_expected_count = RetrySearchLimits.EXPECTED_DEVICE_DEFAULT
-                    self.expected_device_count.setText(str(RetrySearchLimits.EXPECTED_DEVICE_DEFAULT))
-                    self.logger.warning(f"예상 장비 수 입력 오류 → {RetrySearchLimits.EXPECTED_DEVICE_DEFAULT}로 설정")
-
-                # 최대 반복 횟수 검증 (상수 사용)
-                try:
-                    max_retry = int(self.max_retry_count.text())
-                    original_max = max_retry
-
-                    if max_retry < RetrySearchLimits.MAX_RETRY_MIN:
-                        max_retry = RetrySearchLimits.MAX_RETRY_MIN
-                        self.logger.warning(f"최대 반복 횟수 범위 미만 → {max_retry}로 설정")
-                    elif max_retry > RetrySearchLimits.MAX_RETRY_MAX:
-                        max_retry = RetrySearchLimits.MAX_RETRY_MAX
-                        self.logger.warning(f"최대 반복 횟수 범위 초과 → {max_retry}로 제한")
-
-                    self.retry_search_max_count = max_retry
-
-                    # UI 반영 (값이 변경된 경우만)
-                    if original_max != max_retry:
-                        self.max_retry_count.setText(str(max_retry))
-
-                except ValueError:
-                    self.retry_search_max_count = RetrySearchLimits.MAX_RETRY_DEFAULT
-                    self.max_retry_count.setText(str(RetrySearchLimits.MAX_RETRY_DEFAULT))
-                    self.logger.warning(f"최대 반복 횟수 입력 오류 → {RetrySearchLimits.MAX_RETRY_DEFAULT}로 설정")
+                max_retry = getattr(self, 'retry_search_max_count', 3)
+                if max_retry < RetrySearchLimits.MAX_RETRY_MIN:
+                    max_retry = RetrySearchLimits.MAX_RETRY_MIN
+                    self.logger.warning(f"최대 반복 횟수 범위 미만 → {max_retry}로 설정")
+                elif max_retry > RetrySearchLimits.MAX_RETRY_MAX:
+                    max_retry = RetrySearchLimits.MAX_RETRY_MAX
+                    self.logger.warning(f"최대 반복 횟수 범위 초과 → {max_retry}로 제한")
+                self.retry_search_max_count = max_retry
 
                 self.logger.info(f"반복 검색 시작: 예상 {self.retry_search_expected_count}개, 최대 {self.retry_search_max_count}회")
                 # 반복 검색 시작 시간 기록
@@ -2275,7 +2098,7 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.info(f"search: conf_sock: {_conf_sock}")
 
             # Search devices
-            if self.isConnected or self.broadcast.isChecked() or self.tcp_multicast.isChecked() or self.mixed_search.isChecked():
+            if self.isConnected or self.broadcast.isChecked():
                 self.statusbar.showMessage(" Searching devices...")
 
                 # Start timing
@@ -2289,36 +2112,8 @@ class WIZWindow(QMainWindow, main_window):
                 cmd_list = self.wizmakecmd.presearch("FF:FF:FF:FF:FF:FF", self.code)
                 self.logger.debug(cmd_list)
 
-                # TCP Multicast mode
-                if self.tcp_multicast.isChecked():
-                    port = int(self.tcp_multicast_port.text())
-
-                    self.tcp_scanner = TCPMulticastScanner(
-                        self.ip_scan_list,
-                        port,
-                        cmd_list,
-                        timeout=2,
-                        max_workers=15
-                    )
-                    self.tcp_scanner.search_result.connect(self.get_search_result)
-                    self.tcp_scanner.progress_update.connect(self.update_scan_progress)
-                    self.tcp_scanner.start()
-
-                # Mixed search mode
-                elif self.mixed_search.isChecked():
-                    # Phase 1: UDP broadcast
-                    self.wizmsghandler = WIZMSGHandler(
-                        self.conf_sock,
-                        cmd_list,
-                        "udp",
-                        Opcode.OP_SEARCHALL,
-                        self.search_pre_wait_time,
-                    )
-                    self.wizmsghandler.search_result.connect(self.handle_mixed_phase1)
-                    self.wizmsghandler.start()
-
                 # TCP unicast mode
-                elif self.unicast_ip.isChecked():
+                if self.unicast_ip.isChecked():
                     self.wizmsghandler = WIZMSGHandler(
                         self.conf_sock,
                         cmd_list,
@@ -2373,9 +2168,6 @@ class WIZWindow(QMainWindow, main_window):
         QApplication.processEvents()  # "Querying..." 텍스트 즉시 렌더링
 
         if self.broadcast.isChecked():
-            self.socket_config()
-        elif self.tcp_multicast.isChecked() or self.mixed_search.isChecked():
-            # TCP multicast or Mixed search: need to create UDP socket for each device query
             self.socket_config()
         else:
             # tcp unicast일 경우 search_pre에서 이미 커넥션이 수립되어 있음
@@ -2535,29 +2327,34 @@ class WIZWindow(QMainWindow, main_window):
     def get_search_result(self, devnum):
         self.logger.info(f"[TIMING] {self._T()} get_search_result() 진입 (devnum={devnum}, emit→진입 시각)")
 
+        # CSV Load 모드 체크
+        csv_load_mode = getattr(self, 'csv_load_mode', False)
+        if csv_load_mode:
+            self.logger.info("CSV Load 모드: Phase 1 데이터 이미 로드됨, wizmsghandler 건너뜀")
+
         if self.search_retry_flag:
             pass
         else:
             # 유지/갱신 모드가 OFF이면 기존 데이터 삭제
             if not self.cumulative_mode:
-                # init old info
-                self.mac_list = []
-                self.mn_list = []
-                self.vr_list = []
-                self.st_list = []
-                self.detected_list = []
+                # CSV Load 모드가 아닐 때만 초기화 (CSV는 이미 데이터 로드됨)
+                if not csv_load_mode:
+                    # init old info
+                    self.mac_list = []
+                    self.mn_list = []
+                    self.vr_list = []
+                    self.st_list = []
+                    self.mode_list = []
+                    self.detected_list = []
             else:
                 # 유지/갱신 모드: 기존 데이터 유지, 모든 "검색됨" 상태를 False로 초기화
                 self.detected_list = [False] * len(self.mac_list)
                 self.logger.info(f"유지/갱신 모드: 기존 {len(self.mac_list)}개 장비 유지, 검색됨 초기화")
 
-        # Determine data source (wizmsghandler for UDP/TCP unicast, tcp_scanner for multicast)
+        # Determine data source (wizmsghandler for UDP/TCP unicast)
+        # CSV Load 모드에서는 건너뜀 (이미 데이터가 self.mac_list 등에 있음)
         data_source = None
-        if self.tcp_multicast.isChecked() and self.tcp_scanner is not None:
-            data_source = self.tcp_scanner
-            if self.tcp_scanner.isRunning():
-                self.tcp_scanner.wait()
-        elif self.wizmsghandler is not None:
+        if not csv_load_mode and self.wizmsghandler is not None:
             data_source = self.wizmsghandler
             if self.wizmsghandler.isRunning():
                 self.logger.info(f"[TIMING] {self._T()} wizmsghandler.wait() 시작 (get_search_result에서 아직 실행 중)")
@@ -2573,12 +2370,19 @@ class WIZWindow(QMainWindow, main_window):
             if devnum == 0:
                 self.logger.info("No device.")
             else:
-                if self.search_retry_flag:
+                # CSV Load 모드: wizmsghandler 데이터 로드 건너뛰기
+                # (이미 CSV에서 mac_list, mn_list, vr_list, st_list, mode_list 로드됨)
+                if csv_load_mode:
+                    self.logger.info(f"CSV Load 모드: {len(self.mac_list)}개 장비 데이터 사용 (wizmsghandler 건너뜀)")
+                    # detected_list 설정 (CSV에서 로드한 값 유지)
+                    # 테이블 업데이트는 아래 공통 코드에서 처리
+                elif self.search_retry_flag:
                     self.logger.info("search retry flag on")
                     new_mac_list = data_source.mac_list if data_source else []
                     new_mn_list = data_source.mn_list if data_source else []
                     new_vr_list = data_source.vr_list if data_source else []
                     new_st_list = data_source.st_list if data_source else []
+                    new_mode_list = data_source.mode_list if data_source else []
                     new_resp_list = data_source.rcv_list if data_source else []
 
                     # check mac list
@@ -2590,6 +2394,7 @@ class WIZWindow(QMainWindow, main_window):
                             self.mn_list.append(new_mn_list[i])
                             self.vr_list.append(new_vr_list[i])
                             self.st_list.append(new_st_list[i])
+                            self.mode_list.append(new_mode_list[i] if i < len(new_mode_list) else b'')
                             self.all_response.append(new_resp_list[i])
 
                     # print('keep list len >>', len(self.mac_list), len(self.mn_list), len(self.vr_list), len(self.st_list))
@@ -2601,12 +2406,13 @@ class WIZWindow(QMainWindow, main_window):
                     new_mn_list = data_source.mn_list if data_source else []
                     new_vr_list = data_source.vr_list if data_source else []
                     new_st_list = data_source.st_list if data_source else []
+                    new_mode_list = data_source.mode_list if data_source else []
                     new_rcv_list = data_source.rcv_list if data_source else []
 
                     # 유지/갱신 모드 처리
                     if self.cumulative_mode:
                         self.logger.info(f"[TIMING] {self._T()} _merge_search_results() 시작")
-                        self._merge_search_results(new_mac_list, new_mn_list, new_vr_list, new_st_list)
+                        self._merge_search_results(new_mac_list, new_mn_list, new_vr_list, new_st_list, new_mode_list)
                         self.logger.info(f"[TIMING] {self._T()} _merge_search_results() 완료")
                         # all_response도 병합 (기존 + 신규)
                         for rcv in new_rcv_list:
@@ -2618,6 +2424,7 @@ class WIZWindow(QMainWindow, main_window):
                         self.mn_list = new_mn_list
                         self.vr_list = new_vr_list
                         self.st_list = new_st_list
+                        self.mode_list = new_mode_list
                         self.detected_list = [True] * len(self.mac_list)
                         # all response
                         self.all_response = new_rcv_list
@@ -2663,7 +2470,8 @@ class WIZWindow(QMainWindow, main_window):
                 self.logger.info(f"[TIMING] {self._T()} 테이블 업데이트 완료 (resize 포함: {(time.time()-_t_resize)*1000:.1f}ms)")
 
             # 반복 검색 로직 (유지/갱신 모드 + UDP broadcast 전용)
-            if self.cumulative_mode and self.broadcast.isChecked() and devnum > 0:
+            # devnum == 0이어도 반복 검색 수행 (처음 응답 없던 장비가 나중에 응답할 수 있음)
+            if self.cumulative_mode and self.broadcast.isChecked():
                 self.retry_search_current += 1
 
                 # 유지/갱신으로 발견된 전체 장비 수 (핵심 지표)
@@ -2944,7 +2752,7 @@ class WIZWindow(QMainWindow, main_window):
 
         return False
 
-    def _merge_search_results(self, new_mac_list, new_mn_list, new_vr_list, new_st_list):
+    def _merge_search_results(self, new_mac_list, new_mn_list, new_vr_list, new_st_list, new_mode_list=None):
         """검색 결과 유지/갱신 모드에서 새 검색 결과를 기존 목록과 병합
 
         Args:
@@ -2952,6 +2760,7 @@ class WIZWindow(QMainWindow, main_window):
             new_mn_list: 새로 발견된 장비 이름 목록
             new_vr_list: 새로 발견된 버전 목록
             new_st_list: 새로 발견된 상태 목록
+            new_mode_list: 새로 발견된 동작 모드 목록 (OP - Operation Mode)
         """
         # 기존 MAC 주소 → 인덱스 매핑 생성
         existing_mac_map = {}
@@ -2970,6 +2779,8 @@ class WIZWindow(QMainWindow, main_window):
                 self.mn_list[idx] = new_mn_list[i]
                 self.vr_list[idx] = new_vr_list[i]
                 self.st_list[idx] = new_st_list[i]
+                if new_mode_list and i < len(new_mode_list):
+                    self.mode_list[idx] = new_mode_list[i]
                 self.detected_list[idx] = True
                 self.logger.debug(f"장비 갱신: {new_mac_str}")
             else:
@@ -2978,6 +2789,7 @@ class WIZWindow(QMainWindow, main_window):
                 self.mn_list.append(new_mn_list[i])
                 self.vr_list.append(new_vr_list[i])
                 self.st_list.append(new_st_list[i])
+                self.mode_list.append(new_mode_list[i] if new_mode_list and i < len(new_mode_list) else b'')
                 self.detected_list.append(True)
                 self.logger.info(f"신규 장비 추가: {new_mac_str}")
 
@@ -5006,21 +4818,6 @@ class WIZWindow(QMainWindow, main_window):
         self.config_button_icon("gui/factory_48.ico", "btn_factory")
         self.config_button_icon("gui/exit_48.ico", "btn_exit")
 
-        # 추가: 타이밍 설정 버튼 아이콘 (16x16 크기)
-        self._set_timing_settings_icon()
-
-    def _set_timing_settings_icon(self):
-        """타이밍 설정 버튼 아이콘 설정 (작은 크기)"""
-        button = self.btn_timing_settings
-        icon = QtGui.QIcon()
-        icon.addPixmap(
-            QtGui.QPixmap(resource_path("gui/gear-svgrepo-com.svg")),
-            QtGui.QIcon.Normal,
-            QtGui.QIcon.Off
-        )
-        button.setIcon(icon)
-        button.setIconSize(QtCore.QSize(16, 16))  # 작은 크기
-
     def font_init(self):
         self.midfont = QtGui.QFont()
         self.midfont.setPixelSize(12)  # pointsize(9)
@@ -5070,7 +4867,8 @@ class WIZWindow(QMainWindow, main_window):
         # self.certificate_detail.setFont(self.certfont)
 
         # ⓘ 아이콘 라벨 설정 (클릭 및 빠른 호버 지원)
-        self._setup_info_labels()
+        # NOTE: 1.5.7 UI 복원으로 인해 info 라벨들이 제거되어 비활성화
+        # self._setup_info_labels()
 
     def _setup_info_labels(self):
         """ⓘ 아이콘 라벨을 ClickableInfoLabel로 교체
@@ -5081,11 +4879,10 @@ class WIZWindow(QMainWindow, main_window):
         - 호버링(300ms 지연) 및 클릭으로 툴팁 표시
 
         교체 대상:
-        1. label_cumulative_info: 검색 결과 유지/갱신 옆 (검색 결과 유지/갱신 모드 설명)
-        2. label_broadcast_info: UDP broadcast 옆 (빠른 브로드캐스트 검색 설명)
-        3. label_unicast_info: TCP unicast 옆 (특정 IP 직접 검색 설명)
-        4. label_tcp_multicast_info: TCP multicast 옆 (서브넷 스캔 설명)
-        5. label_mixed_info: Mixed 옆 (UDP + TCP 혼합 방식 설명)
+        1. label_broadcast_info: UDP broadcast 옆 (빠른 브로드캐스트 검색 설명)
+        2. label_unicast_info: TCP unicast 옆 (특정 IP 직접 검색 설명)
+        3. label_tcp_multicast_info: TCP multicast 옆 (서브넷 스캔 설명)
+        4. label_mixed_info: Mixed 옆 (UDP + TCP 혼합 방식 설명)
 
         구현 방식:
         - UI 파일의 QLabel을 그대로 두고, 프로그램 시작 시 교체
@@ -5108,19 +4905,7 @@ class WIZWindow(QMainWindow, main_window):
         self.logger.info(f"[DEBUG] tcp_multicast.isChecked(): {self.tcp_multicast.isChecked()}")
         self.logger.info(f"[DEBUG] mixed_search.isChecked(): {self.mixed_search.isChecked()}")
 
-        # 1. 검색 결과 유지/갱신 옆 ⓘ 아이콘 교체
-        # → 검색 결과 유지/갱신 모드에 대한 설명
-        self.logger.info(f"[INFO] label_cumulative_info 타입: {type(self.label_cumulative_info)}")
-        self._replace_label_with_clickable(
-            old_label=self.label_cumulative_info,
-            attr_name='label_cumulative_info'
-        )
-        self.logger.info(f"[INFO] 검색 결과 유지/갱신 info 교체 완료")
-        self.logger.info(f"[INFO] label_cumulative_info.isEnabled(): {self.label_cumulative_info.isEnabled()}")
-        self.logger.info(f"[INFO] label_cumulative_info.isVisible(): {self.label_cumulative_info.isVisible()}")
-        self.logger.info(f"[INFO] label_cumulative_info.toolTip(): {self.label_cumulative_info.toolTip()}")
-
-        # 2. UDP broadcast 옆 ⓘ 아이콘 교체
+        # 1. UDP broadcast 옆 ⓘ 아이콘 교체
         # → 빠른 네트워크 검색(약 3초 소요)에 대한 설명
         self.logger.info(f"[INFO] label_broadcast_info 타입: {type(self.label_broadcast_info)}")
         self._replace_label_with_clickable(
@@ -5132,7 +4917,7 @@ class WIZWindow(QMainWindow, main_window):
         self.logger.info(f"[INFO] label_broadcast_info.isVisible(): {self.label_broadcast_info.isVisible()}")
         self.logger.info(f"[INFO] label_broadcast_info.toolTip(): {self.label_broadcast_info.toolTip()}")
 
-        # 3. TCP unicast 옆 ⓘ 아이콘 교체
+        # 2. TCP unicast 옆 ⓘ 아이콘 교체
         # → 특정 IP만 검색하는 방식 설명
         self.logger.info(f"[INFO] label_unicast_info 타입: {type(self.label_unicast_info)}")
         self._replace_label_with_clickable(
@@ -5144,7 +4929,7 @@ class WIZWindow(QMainWindow, main_window):
         self.logger.info(f"[INFO] label_unicast_info.isVisible(): {self.label_unicast_info.isVisible()}")
         self.logger.info(f"[INFO] label_unicast_info.toolTip(): {self.label_unicast_info.toolTip()}")
 
-        # 4. TCP multicast 옆 ⓘ 아이콘 교체
+        # 3. TCP multicast 옆 ⓘ 아이콘 교체
         # → 전체 서브넷 스캔(약 30초 소요)에 대한 상세 설명
         self.logger.info(f"[INFO] label_tcp_multicast_info 타입: {type(self.label_tcp_multicast_info)}")
         self._replace_label_with_clickable(
@@ -5156,7 +4941,7 @@ class WIZWindow(QMainWindow, main_window):
         self.logger.info(f"[INFO] label_tcp_multicast_info.isVisible(): {self.label_tcp_multicast_info.isVisible()}")
         self.logger.info(f"[INFO] label_tcp_multicast_info.toolTip(): {self.label_tcp_multicast_info.toolTip()}")
 
-        # 5. Mixed search 옆 ⓘ 아이콘 교체
+        # 4. Mixed search 옆 ⓘ 아이콘 교체
         # → UDP broadcast 실패 시 TCP unicast 재시도하는 혼합 방식 설명
         self.logger.info(f"[INFO] label_mixed_info 타입: {type(self.label_mixed_info)}")
         self._replace_label_with_clickable(
@@ -5630,6 +5415,639 @@ class WIZWindow(QMainWindow, main_window):
                     "오류",
                     f"기본값 복원 중 오류가 발생했습니다:\n{e}"
                 )
+
+    # ========== Advanced Search Options 다이얼로그 ==========
+
+    def event_open_advanced_search_options(self):
+        """Option 메뉴 → Advanced Search Options 선택 시"""
+        try:
+            # 최신 설정 읽기
+            config = self._get_current_search_config()
+
+            # 다이얼로그 생성 및 표시
+            dialog = self._create_advanced_search_dialog(config)
+
+            if dialog.exec_() == QtWidgets.QDialog.Accepted:
+                # 사용자 입력 추출
+                updates = self._extract_advanced_dialog_values(dialog)
+
+                # 설정 적용
+                self._apply_advanced_search_settings(updates)
+
+        except Exception as e:
+            self.logger.error(f"Advanced Search Options 다이얼로그 오류: {e}")
+            QtWidgets.QMessageBox.critical(
+                self,
+                "오류",
+                f"고급 검색 옵션 설정 중 오류가 발생했습니다:\n{e}"
+            )
+
+    def _get_current_search_config(self):
+        """현재 검색 설정 읽기 (DeviceSearchConfig + 내부 변수)"""
+        if not hasattr(self, 'device_search_config'):
+            self.device_search_config = DeviceSearchConfig()
+
+        config = self.device_search_config.get_current_values()
+
+        # 내부 변수 추가
+        config['expected_device_count'] = getattr(self, 'retry_search_expected_count', 0)
+        config['max_retry_count'] = getattr(self, 'retry_search_max_count', 3)
+
+        return config
+
+    def _create_advanced_search_dialog(self, config):
+        """Advanced Search Options 다이얼로그 UI 생성
+
+        Args:
+            config: 현재 설정 값
+
+        Returns:
+            QDialog: 설정 다이얼로그
+        """
+        from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, QDialogButtonBox,
+                                      QDoubleSpinBox, QSpinBox, QCheckBox, QGroupBox, QPushButton)
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Advanced Search Options")
+        dialog.setModal(True)
+        dialog.setMinimumWidth(550)
+
+        # 메인 레이아웃
+        main_layout = QVBoxLayout()
+
+        # === 검색 옵션 그룹 ===
+        search_group = QGroupBox("검색 옵션")
+        search_layout = QFormLayout()
+
+        # 예상 장비 수
+        dialog.spin_expected_device_count = QSpinBox()
+        dialog.spin_expected_device_count.setRange(0, 1000)
+        dialog.spin_expected_device_count.setSingleStep(1)
+        dialog.spin_expected_device_count.setValue(config.get('expected_device_count', 0))
+        dialog.spin_expected_device_count.setToolTip(
+            "검색 시 예상되는 장비 수 (0 = 무제한)\n"
+            "이 수에 도달하면 검색 조기 종료"
+        )
+        search_layout.addRow("예상 장비 수:", dialog.spin_expected_device_count)
+
+        # 최대 반복 횟수
+        dialog.spin_max_retry_count = QSpinBox()
+        dialog.spin_max_retry_count.setRange(1, 100)
+        dialog.spin_max_retry_count.setSingleStep(1)
+        dialog.spin_max_retry_count.setValue(config.get('max_retry_count', 3))
+        dialog.spin_max_retry_count.setToolTip(
+            "검색 반복 최대 횟수\n"
+            "권장: 일반 3회, 빠른 검색 1회"
+        )
+        search_layout.addRow("최대 반복 횟수:", dialog.spin_max_retry_count)
+
+        search_group.setLayout(search_layout)
+        main_layout.addWidget(search_group)
+
+        # === Phase 1 타이밍 그룹 ===
+        phase1_group = QGroupBox("Phase 1 타이밍 (UDP Broadcast / TCP Multicast)")
+        phase1_layout = QFormLayout()
+
+        # Loop Select Timeout
+        dialog.dspin_loop_select_timeout = QDoubleSpinBox()
+        dialog.dspin_loop_select_timeout.setRange(0.1, 10.0)
+        dialog.dspin_loop_select_timeout.setSingleStep(0.1)
+        dialog.dspin_loop_select_timeout.setDecimals(1)
+        dialog.dspin_loop_select_timeout.setSuffix(" 초")
+        dialog.dspin_loop_select_timeout.setValue(config.get('phase1_loop_select_timeout', 0.5))
+        dialog.dspin_loop_select_timeout.setToolTip(
+            "마지막 응답 이후 추가 응답 대기 시간\n"
+            "권장: 일반 0.5초, 구형 장비 1.0초, 고속 0.3초"
+        )
+        phase1_layout.addRow("Loop Select Timeout:", dialog.dspin_loop_select_timeout)
+
+        # Emit 안정화 딜레이
+        dialog.spin_emit_delay = QSpinBox()
+        dialog.spin_emit_delay.setRange(0, 1000)
+        dialog.spin_emit_delay.setSingleStep(10)
+        dialog.spin_emit_delay.setSuffix(" ms")
+        dialog.spin_emit_delay.setValue(config.get('phase1_emit_stabilization_ms', 50))
+        dialog.spin_emit_delay.setToolTip(
+            "PyQt signal queue 안정화 대기 시간\n"
+            "권장: 50ms (실험적: 0~100ms)"
+        )
+        phase1_layout.addRow("Emit 안정화 딜레이:", dialog.spin_emit_delay)
+
+        # Emit 딜레이 건너뛰기 (실험적)
+        dialog.cb_skip_emit_delay = QCheckBox()
+        dialog.cb_skip_emit_delay.setChecked(config.get('skip_phase1_emit_delay', False))
+        dialog.cb_skip_emit_delay.setToolTip(
+            "⚠ 실험적 기능: Emit 전 딜레이 생략\n"
+            "활성화 시 약 50ms 단축되지만 signal queue 불안정 가능성"
+        )
+        phase1_layout.addRow("☐ Emit 딜레이 건너뛰기 (실험적):", dialog.cb_skip_emit_delay)
+
+        phase1_group.setLayout(phase1_layout)
+        main_layout.addWidget(phase1_group)
+
+        # === Phase 3 타이밍 그룹 ===
+        phase3_group = QGroupBox("Phase 3 타이밍 (장비 정보 조회)")
+        phase3_layout = QFormLayout()
+
+        # 장비 쿼리 타임아웃
+        dialog.dspin_device_query_timeout = QDoubleSpinBox()
+        dialog.dspin_device_query_timeout.setRange(0.5, 10.0)
+        dialog.dspin_device_query_timeout.setSingleStep(0.1)
+        dialog.dspin_device_query_timeout.setDecimals(1)
+        dialog.dspin_device_query_timeout.setSuffix(" 초")
+        dialog.dspin_device_query_timeout.setValue(config.get('phase3_device_query_timeout', 1.5))
+        dialog.dspin_device_query_timeout.setToolTip(
+            "개별 장비 정보 조회 타임아웃\n"
+            "권장: 일반 1.5초, 구형 장비 2.0초, 고속 1.0초"
+        )
+        phase3_layout.addRow("장비 쿼리 타임아웃:", dialog.dspin_device_query_timeout)
+
+        phase3_group.setLayout(phase3_layout)
+        main_layout.addWidget(phase3_group)
+
+        # === TCP 설정 그룹 ===
+        tcp_group = QGroupBox("TCP 설정")
+        tcp_layout = QFormLayout()
+
+        # 최대 병렬 워커 수
+        dialog.spin_tcp_max_workers = QSpinBox()
+        dialog.spin_tcp_max_workers.setRange(1, 50)
+        dialog.spin_tcp_max_workers.setSingleStep(1)
+        dialog.spin_tcp_max_workers.setValue(config.get('tcp_max_parallel_workers', 15))
+        dialog.spin_tcp_max_workers.setToolTip(
+            "TCP Multicast 검색 시 최대 병렬 연결 수\n"
+            "권장: 일반 15, 저성능 PC 5, 고성능 PC 30"
+        )
+        tcp_layout.addRow("최대 병렬 워커 수:", dialog.spin_tcp_max_workers)
+
+        tcp_group.setLayout(tcp_layout)
+        main_layout.addWidget(tcp_group)
+
+        # === UI 설정 그룹 ===
+        ui_group = QGroupBox("UI 설정")
+        ui_layout = QFormLayout()
+
+        # Progress Bar 갱신 주기
+        dialog.spin_pgbar_update_step = QSpinBox()
+        dialog.spin_pgbar_update_step.setRange(1, 50)
+        dialog.spin_pgbar_update_step.setSingleStep(1)
+        dialog.spin_pgbar_update_step.setSuffix(" %")
+        dialog.spin_pgbar_update_step.setValue(config.get('pgbar_update_percent', 10))
+        dialog.spin_pgbar_update_step.setToolTip(
+            "진행바 업데이트 주기 (%)\n"
+            "값이 작을수록 부드럽지만 CPU 사용 증가"
+        )
+        ui_layout.addRow("Progress Bar 갱신 주기:", dialog.spin_pgbar_update_step)
+
+        # Progress Bar 자동 숨김 딜레이
+        dialog.spin_pgbar_auto_hide_delay = QSpinBox()
+        dialog.spin_pgbar_auto_hide_delay.setRange(500, 10000)
+        dialog.spin_pgbar_auto_hide_delay.setSingleStep(100)
+        dialog.spin_pgbar_auto_hide_delay.setSuffix(" ms")
+        dialog.spin_pgbar_auto_hide_delay.setValue(config.get('pgbar_auto_hide_delay_ms', 2000))
+        dialog.spin_pgbar_auto_hide_delay.setToolTip(
+            "검색 완료 후 진행바 자동 숨김 시간\n"
+            "권장: 2000ms (2초)"
+        )
+        ui_layout.addRow("Progress Bar 자동 숨김:", dialog.spin_pgbar_auto_hide_delay)
+
+        ui_group.setLayout(ui_layout)
+        main_layout.addWidget(ui_group)
+
+        # === 버튼 영역 ===
+        button_layout = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        button_layout.accepted.connect(dialog.accept)
+        button_layout.rejected.connect(dialog.reject)
+
+        # 기본값 복원 버튼 추가
+        reset_button = QPushButton("기본값 복원")
+        reset_button.clicked.connect(lambda: self._reset_advanced_dialog_to_defaults(dialog))
+        button_layout.addButton(reset_button, QDialogButtonBox.ResetRole)
+
+        main_layout.addWidget(button_layout)
+
+        dialog.setLayout(main_layout)
+        return dialog
+
+    def _extract_advanced_dialog_values(self, dialog):
+        """다이얼로그에서 사용자 입력값 추출"""
+        return {
+            # 검색 옵션
+            'expected_device_count': dialog.spin_expected_device_count.value(),
+            'max_retry_count': dialog.spin_max_retry_count.value(),
+
+            # Phase 1 타이밍
+            'phase1_loop_select_timeout': dialog.dspin_loop_select_timeout.value(),
+            'phase1_emit_stabilization_ms': dialog.spin_emit_delay.value(),
+            'skip_phase1_emit_delay': dialog.cb_skip_emit_delay.isChecked(),
+
+            # Phase 3 타이밍
+            'phase3_device_query_timeout': dialog.dspin_device_query_timeout.value(),
+
+            # TCP 설정
+            'tcp_max_parallel_workers': dialog.spin_tcp_max_workers.value(),
+
+            # UI 설정
+            'pgbar_update_percent': dialog.spin_pgbar_update_step.value(),
+            'pgbar_auto_hide_delay_ms': dialog.spin_pgbar_auto_hide_delay.value(),
+        }
+
+    def _apply_advanced_search_settings(self, updates):
+        """Advanced Search Options 설정 적용"""
+        try:
+            # 내부 변수 업데이트
+            self.retry_search_expected_count = updates['expected_device_count']
+            self.retry_search_max_count = updates['max_retry_count']
+
+            # YAML 파일 업데이트
+            self.device_search_config.update_config_values(updates)
+
+            # WIZMSGHandler 클래스 변수 즉시 업데이트
+            from WIZMSGHandler import WIZMSGHandler
+            WIZMSGHandler.loop_select_timeout = updates['phase1_loop_select_timeout']
+            WIZMSGHandler.emit_stabilization_ms = updates['phase1_emit_stabilization_ms']
+            WIZMSGHandler.skip_phase1_emit_delay = updates['skip_phase1_emit_delay']
+
+            # 인스턴스 변수 업데이트
+            self.search_wait_time_each = updates['phase3_device_query_timeout']
+
+            self.logger.info(f"Advanced search options applied: {updates}")
+            QtWidgets.QMessageBox.information(
+                self,
+                "설정 저장",
+                "고급 검색 옵션이 저장되었습니다.\n\n"
+                "일부 설정은 다음 검색부터 적용됩니다."
+            )
+
+        except Exception as e:
+            self.logger.error(f"Failed to apply advanced search options: {e}")
+            QtWidgets.QMessageBox.critical(
+                self,
+                "오류",
+                f"설정 저장 실패:\n{e}"
+            )
+
+    def _reset_advanced_dialog_to_defaults(self, dialog):
+        """Advanced Search Options 다이얼로그 기본값 복원"""
+        reply = QtWidgets.QMessageBox.question(
+            dialog,
+            "기본값 복원 확인",
+            "모든 고급 검색 옵션을 기본값으로 되돌리시겠습니까?\n\n"
+            "이 작업은 즉시 저장되며, 되돌릴 수 없습니다.",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No
+        )
+
+        if reply == QtWidgets.QMessageBox.Yes:
+            try:
+                # DeviceSearchConfig 기본값 복원
+                if not self.device_search_config.reset_to_defaults():
+                    QtWidgets.QMessageBox.warning(
+                        dialog,
+                        "복원 실패",
+                        "기본값 복원에 실패했습니다.\n로그를 확인해주세요."
+                    )
+                    return
+
+                # 다이얼로그 위젯 값 업데이트
+                defaults = DeviceSearchConfig.get_defaults()
+
+                # 검색 옵션 기본값
+                dialog.spin_expected_device_count.setValue(0)
+                dialog.spin_max_retry_count.setValue(3)
+
+                # Phase 1 타이밍 기본값
+                dialog.dspin_loop_select_timeout.setValue(defaults['phase1']['loop_select_timeout_sec'])
+                dialog.spin_emit_delay.setValue(defaults['phase1']['emit_stabilization_ms'])
+                dialog.cb_skip_emit_delay.setChecked(False)
+
+                # Phase 3 타이밍 기본값
+                dialog.dspin_device_query_timeout.setValue(defaults['phase3']['device_query_timeout_sec'])
+
+                # TCP 설정 기본값
+                dialog.spin_tcp_max_workers.setValue(defaults['tcp']['max_parallel_workers'])
+
+                # UI 설정 기본값 (device_search_config.py의 DEFAULTS['ui']에서 가져오기)
+                from device_search_config import DeviceSearchConfig
+                full_defaults = DeviceSearchConfig.DEFAULTS
+                dialog.spin_pgbar_update_step.setValue(full_defaults['ui']['progress_bar']['update_percent'])
+                dialog.spin_pgbar_auto_hide_delay.setValue(full_defaults['ui']['progress_bar']['auto_hide_delay_ms'])
+
+                # 내부 변수 업데이트
+                self.retry_search_expected_count = 0
+                self.retry_search_max_count = 3
+
+                # WIZMSGHandler 클래스 변수 업데이트
+                from WIZMSGHandler import WIZMSGHandler
+                WIZMSGHandler.loop_select_timeout = defaults['phase1']['loop_select_timeout_sec']
+                WIZMSGHandler.emit_stabilization_ms = defaults['phase1']['emit_stabilization_ms']
+                WIZMSGHandler.skip_phase1_emit_delay = False
+
+                # 인스턴스 변수 업데이트
+                self.search_wait_time_each = defaults['phase3']['device_query_timeout_sec']
+
+                QtWidgets.QMessageBox.information(
+                    dialog,
+                    "복원 완료",
+                    "모든 설정이 기본값으로 복원되었습니다."
+                )
+
+                self.logger.info("Advanced search options 기본값 복원 완료")
+
+            except Exception as e:
+                self.logger.error(f"기본값 복원 실패: {e}")
+                QtWidgets.QMessageBox.critical(
+                    dialog,
+                    "오류",
+                    f"기본값 복원 중 오류가 발생했습니다:\n{e}"
+                )
+
+    # ========== CSV 저장/불러오기 ==========
+
+    def save_searched_results_to_csv(self):
+        """검색 결과를 CSV 파일로 저장"""
+        # 검색 결과 확인
+        if not hasattr(self, 'mac_list') or not self.mac_list:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "저장 실패",
+                "검색된 장비가 없습니다."
+            )
+            return
+
+        # 파일 다이얼로그 (이전 경로 사용)
+        default_filename = "searched_results.csv"
+        if self.last_csv_directory:
+            default_path = os.path.join(self.last_csv_directory, default_filename)
+        else:
+            default_path = default_filename
+
+        file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "검색 결과 저장",
+            default_path,
+            "CSV Files (*.csv);;All Files (*)"
+        )
+
+        if not file_path:
+            return
+
+        try:
+            with open(file_path, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+
+                # 헤더 (Phase 1 모든 정보 포함)
+                writer.writerow([
+                    'Mac Address', 'Device Name', 'Firmware Version', 'Status', 'Operation Mode', 'Detected',
+                    'IP Address', 'Subnet Mask', 'Gateway', 'DNS', 'IP Mode', 'Local Port'
+                ])
+
+                # 데이터
+                for i in range(len(self.mac_list)):
+                    mac = self.mac_list[i].decode('utf-8') if isinstance(self.mac_list[i], bytes) else self.mac_list[i]
+                    name = self.mn_list[i].decode('utf-8') if isinstance(self.mn_list[i], bytes) else self.mn_list[i]
+                    version = self.vr_list[i].decode('utf-8') if isinstance(self.vr_list[i], bytes) else self.vr_list[i]
+                    status = self.st_list[i].decode('utf-8') if isinstance(self.st_list[i], bytes) else self.st_list[i]
+                    # Operation Mode (OP) - Phase 1에서 받은 정보
+                    op_mode = ''
+                    if hasattr(self, 'mode_list') and i < len(self.mode_list):
+                        op_mode = self.mode_list[i].decode('utf-8') if isinstance(self.mode_list[i], bytes) else self.mode_list[i]
+                    detected = "Yes" if (hasattr(self, 'detected_list') and i < len(self.detected_list) and self.detected_list[i]) else "No"
+
+                    # dev_profile에서 네트워크 정보 가져오기
+                    profile = self.dev_profile.get(mac, {})
+                    ip_addr = profile.get('LI', '')
+                    subnet = profile.get('SM', '')
+                    gateway = profile.get('GW', '')
+                    dns = profile.get('DS', '')
+                    ip_mode = 'DHCP' if profile.get('IM', '0') == '1' else 'Static'
+                    local_port = profile.get('LP', '')
+
+                    writer.writerow([
+                        mac, name, version, status, op_mode, detected,
+                        ip_addr, subnet, gateway, dns, ip_mode, local_port
+                    ])
+
+            # 저장 성공 시 MRU 업데이트 (Save: 초기화)
+            self.csv_mru_manager.add_saved_file(file_path, memo="")
+            self.last_csv_directory = os.path.dirname(file_path)
+            self.logger.info(f"Saved {len(self.mac_list)} devices to {file_path}")
+            QtWidgets.QMessageBox.information(
+                self,
+                "저장 완료",
+                f"{len(self.mac_list)}개 장비 정보가 저장되었습니다."
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to save CSV: {e}")
+            QtWidgets.QMessageBox.critical(
+                self,
+                "오류",
+                f"CSV 저장 실패:\n{e}"
+            )
+
+    def load_searched_results_from_csv(self):
+        """CSV 파일에서 검색 결과 불러오기"""
+        # 파일 다이얼로그 (이전 경로 사용)
+        default_directory = self.last_csv_directory if self.last_csv_directory else ""
+
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            "검색 결과 불러오기",
+            default_directory,
+            "CSV Files (*.csv);;All Files (*)"
+        )
+
+        if not file_path:
+            return
+
+        # 기존 결과 확인
+        if hasattr(self, 'mac_list') and self.mac_list:
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "확인",
+                "기존 검색 결과를 덮어쓰시겠습니까?",
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+            )
+            if reply != QtWidgets.QMessageBox.Yes:
+                return
+
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+
+                # 헤더 검증 (기본 필드만 필수, Operation Mode와 네트워크 정보는 선택)
+                required_headers = {'Mac Address', 'Device Name', 'Firmware Version', 'Status', 'Detected'}
+                if not required_headers.issubset(set(reader.fieldnames)):
+                    raise ValueError(f"CSV 헤더 누락: {required_headers - set(reader.fieldnames)}")
+
+                # 데이터 읽기
+                mac_list = []
+                mn_list = []
+                vr_list = []
+                st_list = []
+                mode_list = []  # OP (Operation Mode) - Phase 1 정보
+                detected_list = []
+                network_info_list = []  # 네트워크 정보 임시 저장
+
+                for row in reader:
+                    mac_list.append(row['Mac Address'].encode('utf-8'))
+                    mn_list.append(row['Device Name'].encode('utf-8'))
+                    vr_list.append(row['Firmware Version'].encode('utf-8'))
+                    st_list.append(row['Status'].encode('utf-8'))
+                    # Operation Mode (선택 필드, 없으면 빈 문자열)
+                    op_mode = row.get('Operation Mode', '')
+                    mode_list.append(op_mode.encode('utf-8') if op_mode else b'')
+                    detected_list.append(row['Detected'].lower() == 'yes')
+
+                    # 네트워크 정보 (있으면 저장, 없으면 빈 문자열)
+                    network_info_list.append({
+                        'ip': row.get('IP Address', ''),
+                        'subnet': row.get('Subnet Mask', ''),
+                        'gateway': row.get('Gateway', ''),
+                        'dns': row.get('DNS', ''),
+                        'ip_mode': row.get('IP Mode', 'Static'),
+                        'local_port': row.get('Local Port', '')
+                    })
+
+                # 내부 변수 업데이트
+                self.mac_list = mac_list
+                self.mn_list = mn_list
+                self.vr_list = vr_list
+                self.st_list = st_list
+                self.mode_list = mode_list
+                self.detected_list = detected_list
+
+                # dev_data 딕셔너리 초기화 (장비 선택 시 필요)
+                self.dev_data = {}
+                # dev_profile 딕셔너리 초기화 (확장된 프로파일 생성)
+                self.dev_profile = {}
+                # searched_dev 리스트 초기화
+                self.searched_dev = []
+
+                for i in range(len(self.mac_list)):
+                    mac_str = self.mac_list[i].decode('utf-8')
+                    name_str = self.mn_list[i].decode('utf-8')
+                    version_str = self.vr_list[i].decode('utf-8')
+                    status_str = self.st_list[i].decode('utf-8')
+                    net_info = network_info_list[i]
+
+                    # dev_data 초기화
+                    self.dev_data[mac_str] = [name_str, version_str, status_str]
+
+                    # dev_profile 초기화 (네트워크 정보 포함)
+                    self.dev_profile[mac_str] = {
+                        'MC': mac_str,
+                        'MN': name_str,
+                        'VR': version_str,
+                        'ST': status_str,
+                        'LI': net_info['ip'],
+                        'SM': net_info['subnet'],
+                        'GW': net_info['gateway'],
+                        'DS': net_info['dns'],
+                        'IM': '1' if net_info['ip_mode'] == 'DHCP' else '0',
+                        'LP': net_info['local_port'],
+                    }
+
+                    # searched_dev 리스트 초기화
+                    self.searched_dev.append([mac_str, name_str, version_str, status_str])
+
+                # 검색 결과 수 업데이트
+                self.searched_devnum = len(self.mac_list)
+                self.searched_num.setText(str(self.searched_devnum))
+
+                # 테이블 업데이트
+                self._update_device_table()
+
+                # 불러오기 성공 시 MRU 업데이트 (Load: access_count 증가)
+                self.csv_mru_manager.add_loaded_file(file_path)
+                self.last_csv_directory = os.path.dirname(file_path)
+                self.logger.info(f"Loaded {len(self.mac_list)} devices from {file_path}")
+
+                # Phase 2 자동 실행 (최신 정보 재수집)
+                # Device Search 버튼 클릭과 동일하게 동작 (반복 검색 옵션 자동 적용)
+                self._execute_phase2_from_csv()
+        except Exception as e:
+            self.logger.error(f"Failed to load CSV: {e}")
+            QtWidgets.QMessageBox.critical(
+                self,
+                "오류",
+                f"CSV 불러오기 실패:\n{e}"
+            )
+
+    def _execute_phase2_from_csv(self):
+        """CSV Load 후 Phase 2 실행 (Device Search와 완전히 동일하게 동작)
+
+        핵심 전략:
+            - Phase 1은 CSV에서 로드 완료 (mac_list, mn_list, vr_list, st_list, mode_list)
+            - get_search_result()를 직접 호출하여 Device Search와 동일한 로직 실행
+            - 반복 검색 옵션 자동 적용 (cumulative_mode, retry_search)
+            - csv_load_mode 플래그로 wizmsghandler 데이터 로드 건너뜀
+
+        Device Search vs CSV Load:
+            - Device Search: Phase 1 (Network Discovery) → get_search_result()
+            - CSV Load:      Phase 1 (File Load)         → get_search_result()
+            - Phase 2 이후는 완전히 동일 (반복 검색, Progress bar, 타이밍 등)
+        """
+        self.logger.info(f"Phase 2 실행 (CSV Load): {len(self.mac_list)}개 장비")
+
+        # Device Search와 동일한 초기화
+        self.retry_search_current = 0
+        self._timing_t0 = time.time()
+        self.logger.info("[TIMING] System timer started (CSV Load → Phase 2)")
+
+        # CSV Load 모드 플래그 설정
+        # - get_search_result()에서 wizmsghandler 데이터 로드 건너뜀
+        # - 이미 CSV에서 mac_list, mn_list 등이 로드됨
+        self.csv_load_mode = True
+
+        # get_search_result() 호출 → Device Search와 동일한 로직 실행
+        # - 반복 검색 로직 자동 적용
+        # - get_dev_list() → search_each_dev() 자동 호출
+        # - Progress bar, 타이밍 처리 자동
+        devnum = len(self.mac_list)
+        self.get_search_result(devnum)
+
+        # 플래그 해제
+        self.csv_load_mode = False
+
+    def _update_device_table(self):
+        """내부 변수 (mac_list 등)를 기반으로 테이블 업데이트"""
+        # 테이블 초기화
+        self.list_device.clearContents()
+        self.list_device.setRowCount(0)
+
+        # 데이터 채우기
+        for i in range(len(self.mac_list)):
+            self.list_device.insertRow(i)
+
+            # MAC Address
+            mac_item = QTableWidgetItem(
+                self.mac_list[i].decode('utf-8') if isinstance(self.mac_list[i], bytes) else self.mac_list[i]
+            )
+            self.list_device.setItem(i, 0, mac_item)
+
+            # Device Name
+            name_item = QTableWidgetItem(
+                self.mn_list[i].decode('utf-8') if isinstance(self.mn_list[i], bytes) else self.mn_list[i]
+            )
+            self.list_device.setItem(i, 1, name_item)
+
+            # Firmware Version
+            version_item = QTableWidgetItem(
+                self.vr_list[i].decode('utf-8') if isinstance(self.vr_list[i], bytes) else self.vr_list[i]
+            )
+            self.list_device.setItem(i, 2, version_item)
+
+            # Status
+            status_item = QTableWidgetItem(
+                self.st_list[i].decode('utf-8') if isinstance(self.st_list[i], bytes) else self.st_list[i]
+            )
+            self.list_device.setItem(i, 3, status_item)
+
+            # Detected (detected_list가 있는 경우)
+            if hasattr(self, 'detected_list') and i < len(self.detected_list):
+                detected_item = QTableWidgetItem("Yes" if self.detected_list[i] else "No")
+                self.list_device.setItem(i, 4, detected_item)
 
 
 class ThreadProgress(QtCore.QThread):
