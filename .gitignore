@@ -121,3 +121,4 @@ config/device_search_timing.yaml
 *.patch
 *pem
 *.sh
+.history/

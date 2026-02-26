@@ -9765,6 +9765,9 @@ Config</string>
     <addaction name="actionSave"/>
     <addaction name="actionLoad"/>
     <addaction name="separator"/>
+    <addaction name="actionSaveSearchResults"/>
+    <addaction name="actionLoadSearchResults"/>
+    <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuOption">
@@ -9781,6 +9784,7 @@ Config</string>
      <addaction name="action_set_wait_time"/>
      <addaction name="action_retry_search"/>
     </widget>
+    <addaction name="actionAdvancedSearchOptions"/>
     <addaction name="separator"/>
     <addaction name="menu_search_option"/>
     <addaction name="separator"/>
@@ -9986,6 +9990,21 @@ Config</string>
   <action name="action_document">
    <property name="text">
     <string>Documentation</string>
+   </property>
+  </action>
+  <action name="actionAdvancedSearchOptions">
+   <property name="text">
+    <string>Advanced Search Options</string>
+   </property>
+  </action>
+  <action name="actionSaveSearchResults">
+   <property name="text">
+    <string>Save Searched Results</string>
+   </property>
+  </action>
+  <action name="actionLoadSearchResults">
+   <property name="text">
+    <string>Load Searched Results</string>
    </property>
   </action>
  </widget>

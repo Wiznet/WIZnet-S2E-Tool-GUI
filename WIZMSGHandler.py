@@ -32,6 +32,7 @@ class WIZMSGHandler(QThread):
     # Configuration class variables (loaded from device_search_config.py)
     loop_select_timeout = 0.5  # Default: Phase 1 loop select timeout (sec)
     emit_stabilization_ms = 50  # Default: emit stabilization delay (ms)
+    skip_phase1_emit_delay = False  # Default: do NOT skip (experimental)
 
     def __init__(self, udpsock, cmd_list, what_sock, op_code, timeout):
         QThread.__init__(self)
@@ -270,9 +271,17 @@ class WIZMSGHandler(QThread):
                     if t_send is not None:
                         t_loop_break = time.time()
                         self.logger.info(f"[TIMING] loop broke at +{t_loop_break-t_send:.3f}s, {len(self.mac_list)} devices found")
-                    self.msleep(WIZMSGHandler.emit_stabilization_ms)
-                    if t_send is not None:
-                        self.logger.info(f"[TIMING] after msleep({WIZMSGHandler.emit_stabilization_ms}): +{time.time()-t_send:.3f}s → emitting result")
+
+                    # Phase 1 emit 전 안정화 대기 (실험적 플래그로 제어)
+                    if not WIZMSGHandler.skip_phase1_emit_delay:
+                        self.msleep(WIZMSGHandler.emit_stabilization_ms)
+                        if t_send is not None:
+                            self.logger.info(f"[TIMING] after msleep({WIZMSGHandler.emit_stabilization_ms}): +{time.time()-t_send:.3f}s → emitting result")
+                    else:
+                        # 실험적: msleep 생략 (PyQt signal queue 불안정 가능성)
+                        if t_send is not None:
+                            self.logger.warning(f"[TIMING] EXPERIMENTAL: skipped msleep({WIZMSGHandler.emit_stabilization_ms}) → emitting result immediately")
+
                     # print('Search device:', self.mac_list)
                     self.search_result.emit(len(self.mac_list))
                     # return len(self.mac_list)
