@@ -2043,29 +2043,9 @@ class WIZWindow(QMainWindow, main_window):
             # default search id code
             self.code = " "
             self.all_response = []
-            # Progress bar 메시지 통일
-            if self.cumulative_mode and self.broadcast.isChecked():
-                if self.retry_search_current == 0:
-                    # 첫 검색
-                    self.pgbar.setFormat(f"Searching... (1/{self.retry_search_max_count})")
-                else:
-                    # 반복 검색
-                    self.pgbar.setFormat(f"Searching... ({self.retry_search_current + 1}/{self.retry_search_max_count})")
-
-                # 반복 검색 모드: 초기 진행률 설정
-                if self.retry_search_max_count > 1:
-                    base_progress = int((self.retry_search_current / self.retry_search_max_count) * 100)
-                    self.pgbar.setValue(base_progress)
-                    self.logger.debug(f"Phase 1 시작: base_progress={base_progress}% (반복 {self.retry_search_current + 1}/{self.retry_search_max_count})")
-            else:
-                # 일반 검색
-                self.pgbar.setFormat("Search all devices...")
+            self.pgbar.hide()  # 이전 검색 잔여 진행바 즉시 숨김
             self.pgbar.setRange(0, 100)
-            self.logger.info(f"[TIMING] {self._T()} search_progress_thread.start() 호출 (isRunning={self.search_progress_thread.isRunning()})")
-            _t_prog = time.time()
-            self.search_progress_thread.start()
-            self.logger.info(f"[TIMING] {self._T()} search_progress_thread.start() 완료 ({(time.time()-_t_prog)*1000:.1f}ms 소요)")
-            self.processing(self.search_pre_wait_time * 1000)
+            self.processing()
 
             if self.search_retry_flag:
                 self.logger.info("keep searched list")
@@ -2141,12 +2121,9 @@ class WIZWindow(QMainWindow, main_window):
                     self.wizmsghandler.start()
                     self.logger.info(f"[TIMING] {self._T()} wizmsghandler.start() 완료 → search_pre() 종료")
 
-    def processing(self, time):
-        # print('---------- processing ----------', int(time))
+    def processing(self):
         self.btn_search.setEnabled(False)
-        # QtCore.QTimer.singleShot(1500, lambda: self.btn_search.setEnabled(True))
-        # QtCore.QTimer.singleShot(4500, lambda: self.btn_search.setEnabled(True))
-        QtCore.QTimer.singleShot(int(time), lambda: self.pgbar.hide())
+        # pgbar hide는 search_each_dev() 완료 후 _finalize_search()에서 처리
 
     def search_each_dev(self, dev_info_list):
         """Phase 3: 개별 장비 정보 조회 (pgbar 최적화 적용)"""
@@ -2175,11 +2152,11 @@ class WIZWindow(QMainWindow, main_window):
         else:
             base_progress = 0
 
-        self.pgbar.setFormat(f"Querying devices... (0/{total_devs})")
-        # 초기 진행률 설정
-        if base_progress > 0:
-            self.pgbar.setValue(base_progress)
-        QApplication.processEvents()  # "Querying..." 텍스트 즉시 렌더링
+        self.statusbar.showMessage(f" Querying devices... (0/{total_devs})")
+        self.pgbar.setFormat(" ")
+        self.pgbar.setValue(base_progress)
+        self.pgbar.show()
+        QApplication.processEvents()
 
         if self.broadcast.isChecked():
             self.socket_config()
@@ -2189,7 +2166,7 @@ class WIZWindow(QMainWindow, main_window):
 
         # Search devices
         if self.isConnected or self.broadcast.isChecked():
-            self.statusbar.showMessage(" Get each device information...")
+            pass
 
             if len(self.searchcode_input.text()) == 0:
                 self.code = " "
@@ -2216,7 +2193,7 @@ class WIZWindow(QMainWindow, main_window):
 
                     # 조건부 pgbar 갱신 (최적화)
                     if self._should_update_pgbar(idx, total_devs, update_interval):
-                        self.pgbar.setFormat(f"Querying devices... ({idx + 1}/{total_devs})")
+                        self.statusbar.showMessage(f" Querying devices... ({idx + 1}/{total_devs})")
                         # 반복 검색 모드: 전체 진행률 계산
                         if self.cumulative_mode and self.broadcast.isChecked() and self.retry_search_max_count > 1:
                             phase_progress = int(((idx + 1) / total_devs) * 100)
@@ -2257,7 +2234,7 @@ class WIZWindow(QMainWindow, main_window):
 
                     # 조건부 pgbar 갱신 (최적화)
                     if self._should_update_pgbar(idx, len(threads), update_interval):
-                        self.pgbar.setFormat(f"Querying devices... ({idx + 1}/{total_devs})")
+                        self.statusbar.showMessage(f" Querying devices... ({idx + 1}/{total_devs})")
                         # 반복 검색 모드: 전체 진행률 계산
                         if self.cumulative_mode and self.broadcast.isChecked() and self.retry_search_max_count > 1:
                             phase_progress = int(((idx + 1) / total_devs) * 100)
@@ -2275,7 +2252,7 @@ class WIZWindow(QMainWindow, main_window):
         # Restore the final status message (without final system time yet)
         if hasattr(self, 'final_status_message'):
             self.statusbar.showMessage(self.final_status_message)
-        self.pgbar.setFormat("Done")
+        self.pgbar.setFormat(" ")
 
         # 반복 검색 모드: 현재 반복의 끝 진행률 설정
         if self.cumulative_mode and self.broadcast.isChecked() and self.retry_search_max_count > 1:
@@ -2530,8 +2507,6 @@ class WIZWindow(QMainWindow, main_window):
                 # 계속 반복할지 결정
                 if should_continue:
                     self.logger.info(f"반복 검색 계속: {self.retry_search_current + 1}회차 시작")
-                    # Progress bar 메시지 업데이트 (반복 중)
-                    self.pgbar.setFormat(f"Retry {self.retry_search_current}/{self.retry_search_max_count}...")
                     # 약간의 딜레이 후 재검색 (상수 사용)
                     self.logger.info(f"[TIMING] {self._T()} QTimer.singleShot({RetrySearchLimits.RETRY_DELAY_MS}ms) 설정 → _continue_retry_search 예약")
                     QtCore.QTimer.singleShot(RetrySearchLimits.RETRY_DELAY_MS, self._continue_retry_search)
@@ -2542,27 +2517,19 @@ class WIZWindow(QMainWindow, main_window):
                     if self.retry_search_start_time is not None:
                         elapsed = time.time() - self.retry_search_start_time
                         if system_time is not None:
-                            pgbar_msg = f"Done. {total_count} devices found ({self.retry_search_current} retries, {elapsed:.1f}s, System {system_time:.2f}s)"
                             status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries, {elapsed:.2f} seconds, System {system_time:.2f} seconds)"
                         else:
-                            pgbar_msg = f"Done. {total_count} devices found ({self.retry_search_current} retries, {elapsed:.1f}s)"
                             status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries, {elapsed:.2f} seconds)"
                         self.retry_search_start_time = None  # 리셋
                     else:
                         if system_time is not None:
-                            pgbar_msg = f"Done. {total_count} devices found ({self.retry_search_current} retries, System {system_time:.2f}s)"
                             status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries, System {system_time:.2f} seconds)"
                         else:
-                            pgbar_msg = f"Done. {total_count} devices found ({self.retry_search_current} retries)"
                             status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries)"
 
                     self.logger.info(f"반복 검색 완료: 총 {self.retry_search_current}회, {total_count}개 장비 발견")
 
-                    # Progress bar 업데이트
-                    self.pgbar.setFormat(pgbar_msg)
-                    self.pgbar.setValue(100)
-
-                    # 상태바 메시지 업데이트
+                    # 상태바 메시지 업데이트 (진행바는 텍스트 없이 바만 표시)
                     self.final_status_message = status_msg
                     self.statusbar.showMessage(self.final_status_message)
 
@@ -2570,8 +2537,7 @@ class WIZWindow(QMainWindow, main_window):
                     self.retry_search_current = 0
             else:
                 # 일반 검색 완료 (비 반복 모드)
-                # Stop progress bar
-                self.pgbar.setFormat("Done")
+                self.pgbar.setFormat(" ")
                 self.pgbar.setValue(100)
 
                 # Phase 3 이후 최종 업데이트됨
@@ -2832,7 +2798,8 @@ class WIZWindow(QMainWindow, main_window):
     def update_scan_progress(self, current, total):
         """TCP multicast 진행률 업데이트"""
         percentage = int((current / total) * 100)
-        self.pgbar.setFormat(f"TCP scan: {current}/{total} ({percentage}%)")
+        self.statusbar.showMessage(f" TCP scan: {current}/{total} ({percentage}%)")
+        self.pgbar.setFormat(" ")
         self.pgbar.setValue(percentage)
         self.pgbar.show()
 
@@ -2869,7 +2836,7 @@ class WIZWindow(QMainWindow, main_window):
         if len(missing_ips) == 0:
             self.logger.info("Mixed Phase 1 complete, no additional IPs to scan")
             # Stop progress bar
-            self.pgbar.setFormat("Done")
+            self.pgbar.setFormat(" ")
             self.pgbar.setValue(100)
             self.get_search_result(devnum)
             return
@@ -2918,7 +2885,7 @@ class WIZWindow(QMainWindow, main_window):
         self.logger.info(f"Mixed search complete: {total_count} total devices (UDP: {len(self.udp_results['mac_list'])}, TCP: {tcp_devnum})")
 
         # Stop progress bar
-        self.pgbar.setFormat("Done")
+        self.pgbar.setFormat(" ")
         self.pgbar.setValue(100)
 
         # 검색 완료 처리
@@ -4937,7 +4904,7 @@ class WIZWindow(QMainWindow, main_window):
         self.logger.info(f"[DEBUG] tcp_multicast.isChecked(): {self.tcp_multicast.isChecked()}")
         self.logger.info(f"[DEBUG] mixed_search.isChecked(): {self.mixed_search.isChecked()}")
 
-        # 1. UDP broadcast 옆 ⓘ 아이콘 교체
+        # 1. UDP broadcast 옆 ⓘ 아이콘 교체 
         # → 빠른 네트워크 검색(약 3초 소요)에 대한 설명
         self.logger.info(f"[INFO] label_broadcast_info 타입: {type(self.label_broadcast_info)}")
         self._replace_label_with_clickable(
