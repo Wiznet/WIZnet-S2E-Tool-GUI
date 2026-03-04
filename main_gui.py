@@ -2104,6 +2104,7 @@ class WIZWindow(QMainWindow, main_window):
                         "tcp",
                         Opcode.OP_SEARCHALL,
                         self.search_pre_wait_time,
+                        presearch=True,
                     )
                     self.wizmsghandler.search_result.connect(self.get_search_result)
                     self.wizmsghandler.start()
@@ -2116,6 +2117,7 @@ class WIZWindow(QMainWindow, main_window):
                         "udp",
                         Opcode.OP_SEARCHALL,
                         self.search_pre_wait_time,
+                        presearch=True,
                     )
                     self.wizmsghandler.search_result.connect(self.get_search_result)
                     self.wizmsghandler.start()
@@ -2789,6 +2791,7 @@ class WIZWindow(QMainWindow, main_window):
                 self.st_list.append(new_st_list[i])
                 self.mode_list.append(new_mode_list[i] if new_mode_list and i < len(new_mode_list) else b'')
                 self.detected_list.append(True)
+                existing_mac_map[new_mac_str] = len(self.mac_list) - 1  # 이후 중복 방지
                 self.logger.info(f"신규 장비 추가: {new_mac_str}")
 
         detected_count = sum(1 for d in self.detected_list if d)
@@ -5507,6 +5510,20 @@ class WIZWindow(QMainWindow, main_window):
         phase1_group = QGroupBox("Phase 1 타이밍 (UDP Broadcast / TCP Multicast)")
         phase1_layout = QFormLayout()
 
+        # Broadcast Timeout (장비 못 찾을 때 딜레이의 핵심 파라미터)
+        dialog.dspin_broadcast_timeout = QDoubleSpinBox()
+        dialog.dspin_broadcast_timeout.setRange(0.5, 10.0)
+        dialog.dspin_broadcast_timeout.setSingleStep(0.5)
+        dialog.dspin_broadcast_timeout.setDecimals(1)
+        dialog.dspin_broadcast_timeout.setSuffix(" 초")
+        dialog.dspin_broadcast_timeout.setValue(config.get('phase1_broadcast_timeout', 3.0))
+        dialog.dspin_broadcast_timeout.setToolTip(
+            "UDP Broadcast 응답 대기 시간 (1회 검색당 대기)\n"
+            "장비 못 찾을 때: 반복횟수 × 이 값 = 총 대기 시간\n"
+            "권장: 일반 3.0초, 빠른 네트워크 2.0초, 느린 네트워크 5.0초"
+        )
+        phase1_layout.addRow("Broadcast Timeout:", dialog.dspin_broadcast_timeout)
+
         # Loop Select Timeout
         dialog.dspin_loop_select_timeout = QDoubleSpinBox()
         dialog.dspin_loop_select_timeout.setRange(0.1, 10.0)
@@ -5636,6 +5653,7 @@ class WIZWindow(QMainWindow, main_window):
             'max_retry_count': dialog.spin_max_retry_count.value(),
 
             # Phase 1 타이밍
+            'phase1_broadcast_timeout': dialog.dspin_broadcast_timeout.value(),
             'phase1_loop_select_timeout': dialog.dspin_loop_select_timeout.value(),
             'phase1_emit_stabilization_ms': dialog.spin_emit_delay.value(),
             'skip_phase1_emit_delay': dialog.cb_skip_emit_delay.isChecked(),
@@ -5660,6 +5678,10 @@ class WIZWindow(QMainWindow, main_window):
 
             # YAML 파일 업데이트
             self.device_search_config.update_config_values(updates)
+
+            # 인스턴스 변수 즉시 업데이트 (다음 검색부터 적용)
+            if 'phase1_broadcast_timeout' in updates:
+                self.search_pre_wait_time = updates['phase1_broadcast_timeout']
 
             # WIZMSGHandler 클래스 변수 즉시 업데이트
             from WIZMSGHandler import WIZMSGHandler
@@ -5709,6 +5731,7 @@ class WIZWindow(QMainWindow, main_window):
                     return
 
                 # 다이얼로그 위젯 값 업데이트
+                from device_search_config import DeviceSearchConfig
                 defaults = DeviceSearchConfig.get_defaults()
 
                 # 검색 옵션 기본값
@@ -5716,6 +5739,7 @@ class WIZWindow(QMainWindow, main_window):
                 dialog.spin_max_retry_count.setValue(3)
 
                 # Phase 1 타이밍 기본값
+                dialog.dspin_broadcast_timeout.setValue(defaults['phase1']['broadcast_timeout_sec'])
                 dialog.dspin_loop_select_timeout.setValue(defaults['phase1']['loop_select_timeout_sec'])
                 dialog.spin_emit_delay.setValue(defaults['phase1']['emit_stabilization_ms'])
                 dialog.cb_skip_emit_delay.setChecked(False)
@@ -5727,7 +5751,6 @@ class WIZWindow(QMainWindow, main_window):
                 dialog.spin_tcp_max_workers.setValue(defaults['tcp']['max_parallel_workers'])
 
                 # UI 설정 기본값 (device_search_config.py의 DEFAULTS['ui']에서 가져오기)
-                from device_search_config import DeviceSearchConfig
                 full_defaults = DeviceSearchConfig.DEFAULTS
                 dialog.spin_pgbar_update_step.setValue(full_defaults['ui']['progress_bar']['update_percent'])
                 dialog.spin_pgbar_auto_hide_delay.setValue(full_defaults['ui']['progress_bar']['auto_hide_delay_ms'])
