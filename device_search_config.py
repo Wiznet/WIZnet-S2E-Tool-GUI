@@ -404,6 +404,7 @@ class DeviceSearchConfig:
             }
         """
         return {
+            'phase1_broadcast_timeout': self.get_phase1_broadcast_timeout(),
             'phase1_loop_select_timeout': self.get_phase1_loop_select_timeout(),
             'phase1_emit_stabilization_ms': self.get_phase1_emit_stabilization_ms(),
             'skip_phase1_emit_delay': self.is_skip_phase1_emit_delay(),
@@ -453,6 +454,12 @@ class DeviceSearchConfig:
         """
         try:
             # 1. 입력 검증 및 config dict 업데이트
+            if 'phase1_broadcast_timeout' in updates:
+                value = float(updates['phase1_broadcast_timeout'])
+                if not (0.5 <= value <= 10.0):
+                    raise ValueError(f"phase1_broadcast_timeout must be 0.5~10.0, got {value}")
+                self.config['search']['phase1']['broadcast_timeout_sec'] = value
+
             if 'phase1_loop_select_timeout' in updates:
                 value = float(updates['phase1_loop_select_timeout'])
                 if not (0.1 <= value <= 5.0):

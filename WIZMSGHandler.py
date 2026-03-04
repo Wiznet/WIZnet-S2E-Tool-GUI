@@ -34,7 +34,7 @@ class WIZMSGHandler(QThread):
     emit_stabilization_ms = 50  # Default: emit stabilization delay (ms)
     skip_phase1_emit_delay = False  # Default: do NOT skip (experimental)
 
-    def __init__(self, udpsock, cmd_list, what_sock, op_code, timeout):
+    def __init__(self, udpsock, cmd_list, what_sock, op_code, timeout, presearch=False):
         QThread.__init__(self)
 
         self.logger = logger
@@ -52,6 +52,7 @@ class WIZMSGHandler(QThread):
         self.outputs = []
         self.errors = []
         self.opcode = None
+        self.presearch = presearch
         self.iter = 0
         self.dest_mac = None
         self.isvalid = False
@@ -178,7 +179,7 @@ class WIZMSGHandler(QThread):
             self.rcv_list = []
             # print('readready value: ', len(readready), readready)
 
-            if self.timeout < 2:
+            if self.opcode == Opcode.OP_SEARCHALL and not self.presearch:
                 # Search each device
                 for sock in readready:
                     if sock == self.sock.sock:
