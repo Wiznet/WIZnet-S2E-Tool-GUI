@@ -2310,8 +2310,8 @@ class WIZWindow(QMainWindow, main_window):
                         if cmdsets[j][:2] == b"MA":
                             pass
                         else:
-                            cmd = cmdsets[j][:2].decode()
-                            param = cmdsets[j][2:].decode()
+                            cmd = cmdsets[j][:2].decode('utf-8', errors='replace')
+                            param = cmdsets[j][2:].decode('utf-8', errors='replace')
                             profile[cmd] = param
 
                     # self.logger.info(profile)
@@ -2920,10 +2920,10 @@ class WIZWindow(QMainWindow, main_window):
             try:
                 for i in range(0, len(self.mac_list)):
                     self.list_device.setItem(
-                        i, 0, QTableWidgetItem(self.mac_list[i].decode())
+                        i, 0, QTableWidgetItem(self.mac_list[i].decode('utf-8', errors='replace'))
                     )
                     self.list_device.setItem(
-                        i, 1, QTableWidgetItem(self.mn_list[i].decode())
+                        i, 1, QTableWidgetItem(self.mn_list[i].decode('utf-8', errors='replace'))
                     )
             except Exception as e:
                 self.logger.error(e)
@@ -2969,16 +2969,16 @@ class WIZWindow(QMainWindow, main_window):
                     # self.dev_data[self.mac_list[i].decode()] = [self.mn_list[i].decode(), self.vr_list[i].decode()]
                     self.searched_dev.append(
                         [
-                            self.mac_list[i].decode(),
-                            self.mn_list[i].decode(),
-                            self.vr_list[i].decode(),
-                            self.st_list[i].decode(),
+                            self.mac_list[i].decode('utf-8', errors='replace'),
+                            self.mn_list[i].decode('utf-8', errors='replace'),
+                            self.vr_list[i].decode('utf-8', errors='replace'),
+                            self.st_list[i].decode('utf-8', errors='replace'),
                         ]
                     )
-                    self.dev_data[self.mac_list[i].decode()] = [
-                        self.mn_list[i].decode(),
-                        self.vr_list[i].decode(),
-                        self.st_list[i].decode(),
+                    self.dev_data[self.mac_list[i].decode('utf-8', errors='replace')] = [
+                        self.mn_list[i].decode('utf-8', errors='replace'),
+                        self.vr_list[i].decode('utf-8', errors='replace'),
+                        self.st_list[i].decode('utf-8', errors='replace'),
                     ]
             except Exception as e:
                 self.logger.error(e)
