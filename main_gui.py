@@ -2301,21 +2301,33 @@ class WIZWindow(QMainWindow, main_window):
                 self.logger.debug(
                     f"eachdev_info: ({len(self.eachdev_info)}), {self.eachdev_info}"
                 )
-                for i in range(len(self.eachdev_info)):
-                    # cmdsets = self.eachdev_info[i].splitlines()
-                    cmdsets = self.eachdev_info[i].split(b"\r\n")
+                for idx in range(len(self.eachdev_info)):
+                    # cmdsets = self.eachdev_info[idx].splitlines()
+                    cmdsets = self.eachdev_info[idx].split(b"\r\n")
 
-                    for i in range(len(cmdsets)):
-                        # print('cmdsets', i, cmdsets[i], cmdsets[i][:2], cmdsets[i][2:])
-                        if cmdsets[i][:2] == b"MA":
+                    for j in range(len(cmdsets)):
+                        # print('cmdsets', j, cmdsets[j], cmdsets[j][:2], cmdsets[j][2:])
+                        if cmdsets[j][:2] == b"MA":
                             pass
                         else:
-                            cmd = cmdsets[i][:2].decode()
-                            param = cmdsets[i][2:].decode()
+                            cmd = cmdsets[j][:2].decode()
+                            param = cmdsets[j][2:].decode()
                             profile[cmd] = param
 
                     # self.logger.info(profile)
-                    self.dev_profile[profile["MC"]] = profile
+                    mc = profile.get("MC")
+                    if mc:
+                        self.dev_profile[mc] = profile
+                    else:
+                        self.logger.error(
+                            f"getsearch_each_dev: 'MC' 필드 없음 "
+                            f"(entry {idx}/{len(self.eachdev_info)-1}), "
+                            f"profile keys={list(profile.keys())}, "
+                            f"raw={repr(self.eachdev_info[idx][:80])}"
+                        )
+                        self.statusbar.showMessage(
+                            f" [오류] 장비 응답에 MAC 주소(MC) 없음 (entry {idx}) — 해당 항목 건너뜀"
+                        )
                     profile = {}
 
                     self.all_response = self.eachdev_info
