@@ -1,6 +1,8 @@
-# WIZnet S2E Tool GUI - complete pinned requirements
+# WIZnet S2E Tool GUI - runtime requirements
 # Generated from: .venv pip freeze (Python 3.12, Windows 11)
 # Usage: uv pip install -r requirements.txt
+#
+# NOTE: PyInstaller는 custom bootloader 직접 컴파일 후 별도 설치 (SETUP_DEV.md 참고)
 
 # ── Runtime ──────────────────────────────────────────────────────
 PyQt5==5.15.11
@@ -15,29 +17,3 @@ certifi==2026.1.4
 charset-normalizer==3.4.4
 idna==3.11
 urllib3==2.6.3
-
-# ── Build (PyInstaller) ──────────────────────────────────────────
-pyinstaller==6.17.0
-pyinstaller-hooks-contrib==2025.11
-altgraph==0.17.5
-pefile==2024.8.26
-pywin32-ctypes==0.2.3
-
-# ── PyInstaller transitive deps ──────────────────────────────────
-autocommand==2.2.2
-backports.tarfile==1.2.0
-importlib-metadata==8.0.0
-inflect==7.3.1
-jaraco.collections==5.1.0
-jaraco.context==5.3.0
-jaraco.functools==4.0.1
-jaraco.text==3.12.1
-more-itertools==10.3.0
-packaging==25.0
-platformdirs==4.2.2
-setuptools==80.9.0
-tomli==2.0.1
-typeguard==4.3.0
-typing-extensions==4.12.2
-wheel==0.45.1
-zipp==3.19.2

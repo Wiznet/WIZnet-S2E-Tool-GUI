@@ -71,19 +71,76 @@ uv pip install -r requirements.txt
 ```
 
 > `uv venv` 실행 시 Python 3.12가 자동으로 감지되거나 없으면 자동 다운로드됩니다.
-> `requirements.txt` 에 PyInstaller 포함 모든 패키지가 버전 고정으로 명시되어 있습니다.
 
 설치 확인:
 
 ```powershell
-uv run python -c "import PyQt5; import PyInstaller; print('OK')"
+uv run python -c "import PyQt5; import yaml; print('OK')"
 ```
 
 `OK` 가 출력되면 완료.
 
 ---
 
-## 6. 디버깅 모드로 실행
+## 6. PyInstaller 설치 (custom bootloader 직접 컴파일)
+
+> **`pip install pyinstaller` 사용 금지** — 이 프로젝트는 직접 컴파일한 custom bootloader를 사용합니다.
+
+### 6-1. 사전 준비: Visual C++ Build Tools 설치
+
+https://visualstudio.microsoft.com/visual-cpp-build-tools/
+→ "C++ build tools" 워크로드 선택 → 설치
+
+설치 완료 후 PowerShell을 **새로 열고** 확인:
+
+```powershell
+cl
+```
+
+`Microsoft (R) C/C++ Optimizing Compiler` 로 시작하는 메시지가 나오면 OK.
+(안 되면 "x64 Native Tools Command Prompt for VS" 에서 PowerShell을 열 것)
+
+### 6-2. PyInstaller 소스 클론
+
+**WIZnet-S2E-Tool-GUI 폴더 안에서** 실행합니다 (uv가 .venv를 자동 감지).
+
+```powershell
+git clone --branch v6.17.0 https://github.com/pyinstaller/pyinstaller.git _pyinstaller_src
+```
+
+### 6-3. bootloader 컴파일
+
+```powershell
+cd _pyinstaller_src\bootloader
+uv run python .\waf all
+cd ..\..
+```
+
+완료되면 `_pyinstaller_src\PyInstaller\bootloader\Windows-64bit-intel\` 에 `run.exe`, `runw.exe` 등이 생성됩니다.
+
+### 6-4. 컴파일된 bootloader 포함 설치
+
+```powershell
+uv pip install .\_pyinstaller_src
+```
+
+### 6-5. 소스 삭제 (선택)
+
+```powershell
+Remove-Item -Recurse -Force _pyinstaller_src
+```
+
+### 6-6. 설치 확인
+
+```powershell
+uv run python -c "import PyInstaller; print(PyInstaller.__version__)"
+```
+
+`6.17.0` 이 출력되면 완료.
+
+---
+
+## 7. 디버깅 모드로 실행
 
 ```powershell
 uv run python main_gui.py
@@ -103,7 +160,7 @@ Get-Content "$env:USERPROFILE\.wizconfig\wizconfig.log" -Wait -Tail 50
 
 ---
 
-## 7. PyInstaller로 EXE 빌드 (bootloader 포함)
+## 8. PyInstaller로 EXE 빌드
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File build.ps1
@@ -115,20 +172,9 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 dist\wizconfig_s2e_tool_1.5.8.3.16.exe
 ```
 
-> **bootloader 직접 컴파일이 필요한 경우** (백신 오탐 회피 목적)
-> 아래 명령어로 소스에서 빌드합니다. Visual C++ Build Tools가 필요합니다.
-> https://visualstudio.microsoft.com/visual-cpp-build-tools/ 설치 후:
->
-> ```powershell
-> uv pip download pyinstaller --no-deps -d pyinst_src
-> # 다운로드된 .whl 압축 해제 → PyInstaller\bootloader\ 폴더에서
-> uv run python ./waf all
-> uv pip install pyinstaller --no-binary pyinstaller
-> ```
-
 ---
 
-## 8. 자주 발생하는 오류
+## 9. 자주 발생하는 오류
 
 | 증상 | 원인 | 해결 |
 |------|------|------|
