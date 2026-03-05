@@ -2459,28 +2459,27 @@ class WIZWindow(QMainWindow, main_window):
                 self.logger.info(f"[TIMING] {self._T()} 테이블 업데이트 시작 ({len(self.mac_list)}행)")
                 self.list_device.setRowCount(len(self.mac_list))
 
-                try:
-                    for i in range(0, len(self.mac_list)):
+                for i in range(0, len(self.mac_list)):
+                    try:
                         # MAC 주소
                         self.list_device.setItem(
-                            i, 0, QTableWidgetItem(self.mac_list[i].decode())
+                            i, 0, QTableWidgetItem(self.mac_list[i].decode('utf-8', errors='replace'))
                         )
                         # 장비 이름
-                        self.list_device.setItem(
-                            i, 1, QTableWidgetItem(self.mn_list[i].decode())
-                        )
+                        mn_str = self.mn_list[i].decode('utf-8', errors='replace') if i < len(self.mn_list) else ''
+                        self.list_device.setItem(i, 1, QTableWidgetItem(mn_str))
                         # 검색됨 상태
                         detected_item = QTableWidgetItem()
-                        if self.detected_list[i]:
-                            detected_item.setText("●")  # 또는 "✓"
-                            detected_item.setForeground(QtGui.QColor(0, 200, 0))  # 초록색
+                        if i < len(self.detected_list) and self.detected_list[i]:
+                            detected_item.setText("●")
+                            detected_item.setForeground(QtGui.QColor(0, 200, 0))
                         else:
-                            detected_item.setText("○")  # 또는 "✗"
-                            detected_item.setForeground(QtGui.QColor(150, 150, 150))  # 회색
+                            detected_item.setText("○")
+                            detected_item.setForeground(QtGui.QColor(150, 150, 150))
                         detected_item.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter | QtCore.Qt.AlignmentFlag.AlignVCenter)
                         self.list_device.setItem(i, 2, detected_item)
-                except Exception as e:
-                    self.logger.error(e)
+                    except Exception as e:
+                        self.logger.error(f"[ROW {i}] 테이블 표시 오류: {e}")
 
                 # resize for data
                 _t_resize = time.time()
