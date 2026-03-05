@@ -136,8 +136,7 @@ class WIZMSGHandler(QThread):
             if b"MA" not in cmdset:
                 # print('check_parameter() OK', cmdset, cmdset[:2], cmdset[2:])
                 if self.cmdset.isvalidparameter(
-                    cmdset[:2].decode('utf-8', errors='replace'),
-                    cmdset[2:].decode('utf-8', errors='replace')
+                    cmdset[:2].decode(), cmdset[2:].decode()
                 ):
                     return True
                 else:
@@ -217,25 +216,30 @@ class WIZMSGHandler(QThread):
 
                             if self.opcode == Opcode.OP_SEARCHALL:
                                 try:
+                                    # Parse one device's packet into a dict first,
+                                    # then append all fields atomically to keep lists aligned.
+                                    pkt = {}
                                     for i in range(0, len(replylists)):
-                                        if b"MC" in replylists[i]:
-                                            if self.check_parameter(replylists[i]):
-                                                self.mac_list.append(replylists[i][2:])
-                                        if b"MN" in replylists[i]:
-                                            if self.check_parameter(replylists[i]):
-                                                self.mn_list.append(replylists[i][2:])
-                                        if b"VR" in replylists[i]:
-                                            if self.check_parameter(replylists[i]):
-                                                self.vr_list.append(replylists[i][2:])
-                                        if b"OP" in replylists[i]:
-                                            if self.check_parameter(replylists[i]):
-                                                self.mode_list.append(replylists[i][2:])
-                                        if b"ST" in replylists[i]:
-                                            if self.check_parameter(replylists[i]):
-                                                self.st_list.append(replylists[i][2:])
+                                        line = replylists[i]
+                                        if len(line) < 2:
+                                            continue
+                                        if line[:2] == b"MA":
+                                            continue  # raw binary MAC – skip
+                                        try:
+                                            cmd = line[:2].decode('ascii')
+                                        except Exception:
+                                            continue
+                                        pkt[cmd] = line[2:]
+
+                                    if 'MC' in pkt and self.check_parameter(b"MC" + pkt['MC']):
+                                        self.mac_list.append(pkt['MC'])
+                                        self.mn_list.append(pkt.get('MN', b''))
+                                        self.vr_list.append(pkt.get('VR', b''))
+                                        self.mode_list.append(pkt.get('OP', b''))
+                                        self.st_list.append(pkt.get('ST', b''))
                                 except Exception as e:
                                     self.logger.error(
-                                        "[ERROR] WIZMSGHandler makecommands(): %r" % e
+                                        "[ERROR] WIZMSGHandler OP_SEARCHALL: %r" % e
                                     )
                             elif self.opcode == Opcode.OP_FWUP:
                                 for i in range(0, len(replylists)):
