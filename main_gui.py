@@ -2788,9 +2788,12 @@ class WIZWindow(QMainWindow, main_window):
             if new_mac_str in existing_mac_map:
                 # 기존 장비 발견 → 데이터 갱신
                 idx = existing_mac_map[new_mac_str]
-                self.mn_list[idx] = new_mn_list[i]
-                self.vr_list[idx] = new_vr_list[i]
-                self.st_list[idx] = new_st_list[i]
+                if i < len(new_mn_list):
+                    self.mn_list[idx] = new_mn_list[i]
+                if i < len(new_vr_list):
+                    self.vr_list[idx] = new_vr_list[i]
+                if i < len(new_st_list):
+                    self.st_list[idx] = new_st_list[i]
                 if new_mode_list and i < len(new_mode_list):
                     self.mode_list[idx] = new_mode_list[i]
                 self.detected_list[idx] = True
@@ -2798,9 +2801,9 @@ class WIZWindow(QMainWindow, main_window):
             else:
                 # 신규 장비 → 목록에 추가
                 self.mac_list.append(new_mac_list[i])
-                self.mn_list.append(new_mn_list[i])
-                self.vr_list.append(new_vr_list[i])
-                self.st_list.append(new_st_list[i])
+                self.mn_list.append(new_mn_list[i] if i < len(new_mn_list) else b'')
+                self.vr_list.append(new_vr_list[i] if i < len(new_vr_list) else b'')
+                self.st_list.append(new_st_list[i] if i < len(new_st_list) else b'')
                 self.mode_list.append(new_mode_list[i] if new_mode_list and i < len(new_mode_list) else b'')
                 self.detected_list.append(True)
                 existing_mac_map[new_mac_str] = len(self.mac_list) - 1  # 이후 중복 방지
