@@ -136,7 +136,8 @@ class WIZMSGHandler(QThread):
             if b"MA" not in cmdset:
                 # print('check_parameter() OK', cmdset, cmdset[:2], cmdset[2:])
                 if self.cmdset.isvalidparameter(
-                    cmdset[:2].decode(), cmdset[2:].decode()
+                    cmdset[:2].decode('utf-8', errors='replace'),
+                    cmdset[2:].decode('utf-8', errors='replace')
                 ):
                     return True
                 else:
