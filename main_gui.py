@@ -2126,47 +2126,15 @@ class WIZWindow(QMainWindow, main_window):
     def processing(self):
         self.btn_search.setEnabled(False)
         self.statusbar.showMessage(" Searching...")
-        k = getattr(self, 'retry_search_current', 0)
-        n = max(1, getattr(self, 'retry_search_max_count', 1))
-        if k == 0:
-            # 첫 번째 검색: pgbar 초기화 후 Phase1 타이머 시작 (0 → 59%)
+        if getattr(self, 'retry_search_current', 0) == 0:
+            # 첫 번째 검색: indeterminate 애니메이션 시작
             self.pgbar.setFormat(" ")
-            self.pgbar.setRange(0, 100)
-            self.pgbar.setValue(0)
+            self.pgbar.setRange(0, 0)
             self.pgbar.show()
-            self._start_pgbar_fill_timer(from_val=0, to_val=59,
-                                         duration_s=n * self.search_pre_wait_time)
-        # k>0: 타이머가 이미 진행 중 → 그대로 유지
-
-    def _start_pgbar_fill_timer(self, from_val: int, to_val: int, duration_s: float):
-        """from_val 에서 to_val 까지 duration_s 초에 걸쳐 서서히 채우는 타이머 시작"""
-        if not hasattr(self, '_pgbar_fill_timer') or self._pgbar_fill_timer is None:
-            self._pgbar_fill_timer = QtCore.QTimer(self)
-            self._pgbar_fill_timer.setInterval(100)
-            self._pgbar_fill_timer.timeout.connect(self._on_pgbar_fill_tick)
-        self._pgbar_fill_timer.stop()
-        self.pgbar.setValue(from_val)
-        self._pgbar_fill_from = from_val
-        self._pgbar_fill_target = to_val
-        ticks = max(1, duration_s * 10)
-        self._pgbar_fill_increment = max(0.1, (to_val - from_val) / ticks)
-        self._pgbar_fill_accumulator = 0.0
-        self._pgbar_fill_timer.start()
-
-    def _on_pgbar_fill_tick(self):
-        """pgbar 타이머 틱"""
-        if self.pgbar.value() < self._pgbar_fill_target:
-            self._pgbar_fill_accumulator += self._pgbar_fill_increment
-            new_val = min(self._pgbar_fill_target,
-                          self._pgbar_fill_from + int(self._pgbar_fill_accumulator))
-            self.pgbar.setValue(new_val)
-        else:
-            self._pgbar_fill_timer.stop()
+        # k>0: 이미 표시 중 → 그대로 유지
 
     def _stop_pgbar_fill_timer(self):
-        """진행바 타이머 중지"""
-        if hasattr(self, '_pgbar_fill_timer') and self._pgbar_fill_timer is not None:
-            self._pgbar_fill_timer.stop()
+        pass  # 타이머 없음 (하위 호환용 stub)
 
     def search_each_dev(self, dev_info_list):
         """Phase 3: 개별 장비 정보 조회 (pgbar 최적화 적용)"""
@@ -2188,18 +2156,6 @@ class WIZWindow(QMainWindow, main_window):
         update_interval = self._calc_pgbar_update_interval(total_devs, update_percent)
         self.logger.debug(f"pgbar 갱신 간격: {update_interval}개마다 (총 {total_devs}개, {update_percent}%)")
 
-        # 반복 검색 모드: 전체 진행률 계산 (현재 반복의 시작 진행률)
-        if self.cumulative_mode and self.broadcast.isChecked() and self.retry_search_max_count > 1:
-            base_progress = int((self.retry_search_current / self.retry_search_max_count) * 100)
-            self.logger.debug(f"반복 검색 진행률: {self.retry_search_current + 1}/{self.retry_search_max_count}, base_progress={base_progress}%")
-        else:
-            base_progress = 0
-
-        # Phase 1 완료: 60% snap 후 Phase 3 타이머 시작 (60 → 89%)
-        self._stop_pgbar_fill_timer()
-        self.pgbar.setValue(60)
-        self._start_pgbar_fill_timer(from_val=60, to_val=89,
-                                     duration_s=self.search_wait_time_each)
         self.statusbar.showMessage(f" Querying devices... (0/{total_devs})")
         QApplication.processEvents()
 
@@ -2306,8 +2262,8 @@ class WIZWindow(QMainWindow, main_window):
         if hasattr(self, 'final_status_message'):
             self.statusbar.showMessage(self.final_status_message)
 
-        # 타이머 중지 후 진행바 100% 즉시 완료
-        self._stop_pgbar_fill_timer()
+        # 완료: indeterminate → determinate 전환 후 100%
+        self.pgbar.setRange(0, 100)
         self.pgbar.setFormat(" ")
         self.pgbar.setValue(100)
 
@@ -3037,7 +2993,7 @@ class WIZWindow(QMainWindow, main_window):
                 # B-2: Phase 3 스킵 → Phase 1 완료 즉시 Done 처리
                 self.logger.info("[B-2] phase3_on_demand 활성화: search_each_dev() 스킵")
                 QApplication.processEvents()
-                self._stop_pgbar_fill_timer()
+                self.pgbar.setRange(0, 100)
                 self.pgbar.setFormat(" ")
                 self.pgbar.setValue(100)
                 if not hasattr(self, '_finalize_timer') or self._finalize_timer is None:
