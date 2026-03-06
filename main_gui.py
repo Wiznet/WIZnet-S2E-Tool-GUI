@@ -149,11 +149,8 @@ class SearchContext:
 
         # 항상 복구 (예외 여부 무관)
         self.gui.btn_search.setEnabled(True)
-        self.gui.pgbar.setFormat("Done")
-        self.gui.pgbar.setValue(100)
-
-        # 2초 후 pgbar 숨김
-        QtCore.QTimer.singleShot(2000, lambda: self.gui.pgbar.hide())
+        # pgbar 처리는 _finalize_timer(search_each_dev 완료 시)에서 담당
+        # 여기서 pgbar를 건드리면 Phase 3 도중 hide()가 발화하는 타이밍 버그 발생
 
         return False  # 예외 전파 (False = 예외 재발생)
 
