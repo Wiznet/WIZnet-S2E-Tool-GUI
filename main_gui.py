@@ -2289,7 +2289,18 @@ class WIZWindow(QMainWindow, main_window):
                     self.final_status_message = msg
                     self.statusbar.showMessage(msg)
 
-        QtCore.QTimer.singleShot(2000, _finalize_search)
+        # singleShot은 취소 불가 → retry 모드에서 N개 누적됨
+        # cancellable QTimer로 교체: 이전 타이머를 stop()한 뒤 재시작
+        if not hasattr(self, '_finalize_timer') or self._finalize_timer is None:
+            self._finalize_timer = QtCore.QTimer(self)
+            self._finalize_timer.setSingleShot(True)
+        self._finalize_timer.stop()
+        try:
+            self._finalize_timer.timeout.disconnect()
+        except RuntimeError:
+            pass
+        self._finalize_timer.timeout.connect(_finalize_search)
+        self._finalize_timer.start(self.timing_config.get_pgbar_auto_hide_delay_ms())
 
     def getsearch_each_dev(self, dev_data):
         try:
