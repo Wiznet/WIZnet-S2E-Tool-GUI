@@ -5792,6 +5792,8 @@ class WIZWindow(QMainWindow, main_window):
             # timing_config 인메모리 동기화 (즉시 적용)
             self.timing_config.config.setdefault('logging', {})['show_timing_in_statusbar'] = updates.get('show_timing_in_statusbar', False)
             self.timing_config.config.setdefault('experimental', {})['phase3_on_demand'] = updates.get('phase3_on_demand', False)
+            if 'pgbar_auto_hide_delay_ms' in updates:
+                self.timing_config.config.setdefault('ui', {}).setdefault('progress_bar', {})['auto_hide_delay_ms'] = int(updates['pgbar_auto_hide_delay_ms'])
 
             self.logger.info(f"Advanced search options applied: {updates}")
             QtWidgets.QMessageBox.information(
