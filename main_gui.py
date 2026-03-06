@@ -2292,60 +2292,62 @@ class WIZWindow(QMainWindow, main_window):
         QtCore.QTimer.singleShot(2000, _finalize_search)
 
     def getsearch_each_dev(self, dev_data):
-        # self.logger.debug(f'getsearch_each_dev: {dev_data}')
-        profile = {}
-
         try:
-            if dev_data is not None:
-                self.eachdev_info.append(dev_data)
-                self.logger.debug(
-                    f"eachdev_info: ({len(self.eachdev_info)}), {self.eachdev_info}"
-                )
-                for idx in range(len(self.eachdev_info)):
-                    # cmdsets = self.eachdev_info[idx].splitlines()
-                    cmdsets = self.eachdev_info[idx].split(b"\r\n")
+            if dev_data is None:
+                return
 
-                    for j in range(len(cmdsets)):
-                        # print('cmdsets', j, cmdsets[j], cmdsets[j][:2], cmdsets[j][2:])
-                        if cmdsets[j][:2] == b"MA":
-                            pass
-                        else:
-                            cmd = cmdsets[j][:2].decode('utf-8', errors='replace')
-                            param = cmdsets[j][2:].decode('utf-8', errors='replace')
-                            profile[cmd] = param
+            # 현재 수신된 패킷만 파싱 (기존 O(N²) 전체 재처리 → O(1))
+            profile = {}
+            cmdsets = dev_data.split(b"\r\n")
+            for cmdset in cmdsets:
+                if len(cmdset) < 2 or cmdset[:2] == b"MA":
+                    continue
+                cmd = cmdset[:2].decode('utf-8', errors='replace')
+                param = cmdset[2:].decode('utf-8', errors='replace')
+                profile[cmd] = param
 
-                    # self.logger.info(profile)
-                    mc = profile.get("MC")
-                    if mc:
-                        self.dev_profile[mc] = profile
-                    else:
-                        self.logger.error(
-                            f"getsearch_each_dev: 'MC' 필드 없음 "
-                            f"(entry {idx}/{len(self.eachdev_info)-1}), "
-                            f"profile keys={list(profile.keys())}, "
-                            f"raw={repr(self.eachdev_info[idx][:80])}"
+            mc = profile.get("MC")
+            if mc:
+                self.dev_profile[mc] = profile
+                self.logger.debug(f"dev_profile 갱신: {mc}")
+
+                # 브로드캐스트 응답(mn_list)이 비어있으면 개별 쿼리 결과로 채우기
+                mn_from_profile = profile.get("MN", "")
+                if mn_from_profile:
+                    for idx, mac_bytes in enumerate(self.mac_list):
+                        mac_str = (
+                            mac_bytes.decode('utf-8', errors='replace')
+                            if isinstance(mac_bytes, bytes)
+                            else str(mac_bytes)
                         )
-                        self.statusbar.showMessage(
-                            f" [오류] 장비 응답에 MAC 주소(MC) 없음 (entry {idx}) — 해당 항목 건너뜀"
-                        )
-                    profile = {}
-
-                    self.all_response = self.eachdev_info
-
-                    # when retry search
-                    if self.search_retrynum:
-                        self.logger.info(self.search_retrynum)
-                        self.search_retrynum = self.search_retrynum - 1
-                        self.search_pre()
-                    else:
-                        pass
+                        if mac_str == mc:
+                            if idx < len(self.mn_list) and not self.mn_list[idx]:
+                                self.mn_list[idx] = mn_from_profile.encode('utf-8')
+                                if self.list_device.rowCount() > idx:
+                                    self.list_device.setItem(
+                                        idx, 1, QTableWidgetItem(mn_from_profile)
+                                    )
+                                self.logger.debug(
+                                    f"mn_list[{idx}] 빈 MN → dev_profile로 갱신: {mn_from_profile!r}"
+                                )
+                            break
             else:
-                pass
+                self.logger.error(
+                    f"getsearch_each_dev: 'MC' 필드 없음, "
+                    f"profile keys={list(profile.keys())}, "
+                    f"raw={repr(dev_data[:80])}"
+                )
+                self.statusbar.showMessage(" [오류] 장비 응답에 MAC 주소(MC) 없음 — 해당 항목 건너뜀")
+
+            # 구 retry 메커니즘 (cumulative 모드에서는 항상 0)
+            if self.search_retrynum:
+                self.logger.info(self.search_retrynum)
+                self.search_retrynum -= 1
+                self.search_pre()
+
         except Exception as e:
             self.logger.error(e)
             self.msg_error("[ERROR] getsearch_each_dev(): {}".format(e))
-
-        # print('self.dev_profile', self.dev_profile)
 
     def get_search_result(self, devnum):
         self.logger.info(f"[TIMING] {self._T()} get_search_result() 진입 (devnum={devnum}, emit→진입 시각)")
