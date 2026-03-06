@@ -2393,6 +2393,25 @@ class WIZWindow(QMainWindow, main_window):
             if devnum == 0:
                 self.logger.info("No device.")
             else:
+                # [DIAG] WIZMSGHandler 수신 리스트 길이 검증
+                if data_source:
+                    _d = data_source
+                    self.logger.info(
+                        f"[DIAG] WIZMSGHandler lists: mac={len(_d.mac_list)}"
+                        f" mn={len(_d.mn_list)} vr={len(_d.vr_list)}"
+                        f" st={len(_d.st_list)} mode={len(_d.mode_list)}"
+                        f" rcv={len(_d.rcv_list)}"
+                    )
+                    # 정렬 이상 감지
+                    lens = [len(_d.mac_list), len(_d.mn_list), len(_d.vr_list), len(_d.st_list)]
+                    if len(set(lens)) > 1:
+                        self.logger.warning(f"[DIAG] WIZMSGHandler 리스트 길이 불일치! {lens}")
+                    # mn_list 내용 (비ASCII 포함 여부)
+                    for _i, _mn in enumerate(_d.mn_list):
+                        try:
+                            _mn.decode('ascii')
+                        except Exception:
+                            self.logger.warning(f"[DIAG] mn_list[{_i}] non-ASCII: {_mn!r}")
                 # CSV Load 모드: wizmsghandler 데이터 로드 건너뛰기
                 # (이미 CSV에서 mac_list, mn_list, vr_list, st_list, mode_list 로드됨)
                 if csv_load_mode:
@@ -2452,8 +2471,16 @@ class WIZWindow(QMainWindow, main_window):
                         # all response
                         self.all_response = new_rcv_list
 
-                # print('all_response', len(self.all_response), self.all_response)
-                # print('get_search_result():', self.mac_list, self.mn_list, self.vr_list, self.st_list)
+                # [DIAG] 병합/교체 후 self 리스트 길이 검증
+                _self_lens = [len(self.mac_list), len(self.mn_list), len(self.vr_list),
+                              len(self.st_list), len(self.detected_list)]
+                self.logger.info(
+                    f"[DIAG] 병합 후 self lists: mac={_self_lens[0]}"
+                    f" mn={_self_lens[1]} vr={_self_lens[2]}"
+                    f" st={_self_lens[3]} detected={_self_lens[4]}"
+                )
+                if len(set(_self_lens)) > 1:
+                    self.logger.warning(f"[DIAG] self 리스트 길이 불일치! {_self_lens}")
 
                 # row length = the number of searched devices
                 self.logger.info(f"[TIMING] {self._T()} 테이블 업데이트 시작 ({len(self.mac_list)}행)")
