@@ -2826,15 +2826,15 @@ class WIZWindow(QMainWindow, main_window):
             new_mac_str = new_mac.decode() if isinstance(new_mac, bytes) else new_mac
 
             if new_mac_str in existing_mac_map:
-                # 기존 장비 발견 → 데이터 갱신
+                # 기존 장비 발견 → 데이터 갱신 (비어있지 않은 값만 덮어씀)
                 idx = existing_mac_map[new_mac_str]
-                if i < len(new_mn_list):
+                if i < len(new_mn_list) and new_mn_list[i]:
                     self.mn_list[idx] = new_mn_list[i]
-                if i < len(new_vr_list):
+                if i < len(new_vr_list) and new_vr_list[i]:
                     self.vr_list[idx] = new_vr_list[i]
-                if i < len(new_st_list):
+                if i < len(new_st_list) and new_st_list[i]:
                     self.st_list[idx] = new_st_list[i]
-                if new_mode_list and i < len(new_mode_list):
+                if new_mode_list and i < len(new_mode_list) and new_mode_list[i]:
                     self.mode_list[idx] = new_mode_list[i]
                 self.detected_list[idx] = True
                 self.logger.debug(f"장비 갱신: {new_mac_str}")
