@@ -4080,12 +4080,13 @@ class WIZWindow(QMainWindow, main_window):
 
     def update_result(self, result):
         if result < 0:
-            text = "Firmware update failed.\n"
+            text = "Firmware update failed. "
             if result == -1:
                 text += "Please check the device's status."
             elif result == -2:
                 text += "No response from device."
             # self.show_msgbox("Error", text, QMessageBox.Critical)
+            self.statusbar.showMessage(text)
         elif result > 0:
             self.statusbar.showMessage(" Firmware update complete!")
             self.logger.info("FW Update OK")
