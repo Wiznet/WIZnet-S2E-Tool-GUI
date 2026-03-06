@@ -2043,7 +2043,8 @@ class WIZWindow(QMainWindow, main_window):
             # default search id code
             self.code = " "
             self.all_response = []
-            self.pgbar.hide()  # 이전 검색 잔여 진행바 즉시 숨김
+            if getattr(self, 'retry_search_current', 0) == 0:
+                self.pgbar.hide()  # 완전히 새 검색: 이전 pgbar 초기화
             self.processing()
 
             if self.search_retry_flag:
@@ -2124,36 +2125,40 @@ class WIZWindow(QMainWindow, main_window):
 
     def processing(self):
         self.btn_search.setEnabled(False)
-        self.pgbar.setFormat(" ")
-        self.pgbar.setRange(0, 100)
-        self.pgbar.setValue(5)  # 즉시 5% 표시
-        self.pgbar.show()
         self.statusbar.showMessage(" Searching...")
-        self._start_pgbar_fill_timer()
+        k = getattr(self, 'retry_search_current', 0)
+        n = max(1, getattr(self, 'retry_search_max_count', 1))
+        if k == 0:
+            # 첫 번째 검색: pgbar 초기화 후 Phase1 타이머 시작 (0 → 59%)
+            self.pgbar.setFormat(" ")
+            self.pgbar.setRange(0, 100)
+            self.pgbar.setValue(0)
+            self.pgbar.show()
+            self._start_pgbar_fill_timer(from_val=0, to_val=59,
+                                         duration_s=n * self.search_pre_wait_time)
+        # k>0: 타이머가 이미 진행 중 → 그대로 유지
 
-    def _start_pgbar_fill_timer(self):
-        """검색 진행 중 pgbar를 서서히 90%까지 채우는 타이머 시작"""
+    def _start_pgbar_fill_timer(self, from_val: int, to_val: int, duration_s: float):
+        """from_val 에서 to_val 까지 duration_s 초에 걸쳐 서서히 채우는 타이머 시작"""
         if not hasattr(self, '_pgbar_fill_timer') or self._pgbar_fill_timer is None:
             self._pgbar_fill_timer = QtCore.QTimer(self)
             self._pgbar_fill_timer.setInterval(100)
             self._pgbar_fill_timer.timeout.connect(self._on_pgbar_fill_tick)
         self._pgbar_fill_timer.stop()
-        # 예상 총 소요 시간 기반 증가량 계산 (5→90% = 85%)
-        n_retries = max(1, getattr(self, 'retry_search_max_count', 1))
-        phase1 = getattr(self, 'search_pre_wait_time', 3.0)
-        phase3 = getattr(self, 'search_wait_time_each', 1.5)
-        expected_total_s = n_retries * (phase1 + phase3)
-        # 100ms 틱당 증가량 (예상 시간 내에 90%에 도달)
-        self._pgbar_fill_increment = max(0.2, 85.0 / (expected_total_s * 10))
+        self.pgbar.setValue(from_val)
+        self._pgbar_fill_from = from_val
+        self._pgbar_fill_target = to_val
+        ticks = max(1, duration_s * 10)
+        self._pgbar_fill_increment = max(0.1, (to_val - from_val) / ticks)
         self._pgbar_fill_accumulator = 0.0
         self._pgbar_fill_timer.start()
 
     def _on_pgbar_fill_tick(self):
-        """pgbar 타이머 틱: 서서히 90%까지 증가"""
-        current = self.pgbar.value()
-        if current < 90:
+        """pgbar 타이머 틱"""
+        if self.pgbar.value() < self._pgbar_fill_target:
             self._pgbar_fill_accumulator += self._pgbar_fill_increment
-            new_val = min(90, 5 + int(self._pgbar_fill_accumulator))
+            new_val = min(self._pgbar_fill_target,
+                          self._pgbar_fill_from + int(self._pgbar_fill_accumulator))
             self.pgbar.setValue(new_val)
         else:
             self._pgbar_fill_timer.stop()
@@ -2190,6 +2195,11 @@ class WIZWindow(QMainWindow, main_window):
         else:
             base_progress = 0
 
+        # Phase 1 완료: 60% snap 후 Phase 3 타이머 시작 (60 → 89%)
+        self._stop_pgbar_fill_timer()
+        self.pgbar.setValue(60)
+        self._start_pgbar_fill_timer(from_val=60, to_val=89,
+                                     duration_s=self.search_wait_time_each)
         self.statusbar.showMessage(f" Querying devices... (0/{total_devs})")
         QApplication.processEvents()
 
@@ -2602,10 +2612,7 @@ class WIZWindow(QMainWindow, main_window):
                     # 카운터 리셋
                     self.retry_search_current = 0
             else:
-                # 일반 검색 완료 (비 반복 모드)
-                self.pgbar.setFormat(" ")
-                self.pgbar.setValue(100)
-
+                # 일반 검색 완료 (비 반복 모드) - pgbar는 search_each_dev에서 처리
                 # 타이밍 정보는 show_timing 옵션에 따라 표시
                 show_timing = self.timing_config.get('logging', 'show_timing_in_statusbar', default=False)
                 if show_timing and self.search_start_time is not None:
