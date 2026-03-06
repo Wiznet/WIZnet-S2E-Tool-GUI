@@ -5689,10 +5689,10 @@ class WIZWindow(QMainWindow, main_window):
         dialog.spin_pgbar_auto_hide_delay.setRange(500, 10000)
         dialog.spin_pgbar_auto_hide_delay.setSingleStep(100)
         dialog.spin_pgbar_auto_hide_delay.setSuffix(" ms")
-        dialog.spin_pgbar_auto_hide_delay.setValue(config.get('pgbar_auto_hide_delay_ms', 2000))
+        dialog.spin_pgbar_auto_hide_delay.setValue(config.get('pgbar_auto_hide_delay_ms', 1000))
         dialog.spin_pgbar_auto_hide_delay.setToolTip(
             "Delay before progress bar auto-hides after search completes\n"  # 검색 완료 후 진행바 자동 숨김 시간
-            "Recommended: 2000ms (2 seconds)"                                # 권장: 2000ms (2초)
+            "Recommended: 1000ms (1 second)"                                 # 권장: 1000ms (1초)
         )
         ui_layout.addRow("Progress Bar Auto-hide Delay:", dialog.spin_pgbar_auto_hide_delay)  # Progress Bar 자동 숨김
 

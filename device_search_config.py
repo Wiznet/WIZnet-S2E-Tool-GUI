@@ -100,7 +100,7 @@ class DeviceSearchConfig:
         },
         'ui': {
             'progress_bar': {
-                'auto_hide_delay_ms': 2000,
+                'auto_hide_delay_ms': 1000,
                 'update_percent': 10,
             },
             'tooltips': {
