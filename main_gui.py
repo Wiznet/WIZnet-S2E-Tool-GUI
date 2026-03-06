@@ -2193,14 +2193,16 @@ class WIZWindow(QMainWindow, main_window):
                     th.start()
                     th.wait()
 
-                    # 조건부 pgbar 갱신 (최적화)
+                    # pgbar는 항상 업데이트 (processEvents 조건 분리)
+                    if self.cumulative_mode and self.broadcast.isChecked() and self.retry_search_max_count > 1:
+                        phase_progress = int(((idx + 1) / total_devs) * 100)
+                        current_progress = base_progress + int((phase_progress / 100) * (100 / self.retry_search_max_count))
+                    else:
+                        current_progress = int(((idx + 1) / total_devs) * 100)
+                    self.pgbar.setValue(current_progress)
+                    # processEvents는 기존 조건 유지 (성능)
                     if self._should_update_pgbar(idx, total_devs, update_interval):
                         self.statusbar.showMessage(f" Querying devices... ({idx + 1}/{total_devs})")
-                        # 반복 검색 모드: 전체 진행률 계산
-                        if self.cumulative_mode and self.broadcast.isChecked() and self.retry_search_max_count > 1:
-                            phase_progress = int(((idx + 1) / total_devs) * 100)
-                            total_progress = base_progress + int((phase_progress / 100) * (100 / self.retry_search_max_count))
-                            self.pgbar.setValue(total_progress)
                         QApplication.processEvents()
             else:
                 # UDP (broadcast/multicast/mixed): 장비마다 전용 소켓 → 전체 동시 시작
@@ -2234,14 +2236,16 @@ class WIZWindow(QMainWindow, main_window):
                 for idx, th in enumerate(threads):
                     th.wait()
 
-                    # 조건부 pgbar 갱신 (최적화)
+                    # pgbar는 항상 업데이트 (processEvents 조건 분리)
+                    if self.cumulative_mode and self.broadcast.isChecked() and self.retry_search_max_count > 1:
+                        phase_progress = int(((idx + 1) / total_devs) * 100)
+                        current_progress = base_progress + int((phase_progress / 100) * (100 / self.retry_search_max_count))
+                    else:
+                        current_progress = int(((idx + 1) / len(threads)) * 100)
+                    self.pgbar.setValue(current_progress)
+                    # processEvents는 기존 조건 유지 (성능)
                     if self._should_update_pgbar(idx, len(threads), update_interval):
                         self.statusbar.showMessage(f" Querying devices... ({idx + 1}/{total_devs})")
-                        # 반복 검색 모드: 전체 진행률 계산
-                        if self.cumulative_mode and self.broadcast.isChecked() and self.retry_search_max_count > 1:
-                            phase_progress = int(((idx + 1) / total_devs) * 100)
-                            total_progress = base_progress + int((phase_progress / 100) * (100 / self.retry_search_max_count))
-                            self.pgbar.setValue(total_progress)
                         QApplication.processEvents()
 
                 # 전용 소켓 정리
@@ -2251,7 +2255,27 @@ class WIZWindow(QMainWindow, main_window):
                     except Exception:
                         pass
 
-        # Restore the final status message (without final system time yet)
+        # 시그널 큐 플러시: 미처리 getsearch_each_dev 시그널 모두 소화
+        QApplication.processEvents()
+
+        # System time 즉시 계산 (auto_hide_delay 전)
+        if hasattr(self, '_timing_t0') and self._timing_t0 is not None:
+            final_system_time = time.time() - self._timing_t0
+            self.logger.info(f"[TIMING] Phase 3 완료 System time: {final_system_time:.2f}s")
+
+            # show_timing_in_statusbar 활성화 시 statusbar 메시지에 System time 반영
+            show_timing = self.timing_config.get('logging', 'show_timing_in_statusbar', default=False)
+            if show_timing and hasattr(self, 'final_status_message') and self.final_status_message:
+                import re
+                msg = re.sub(r',?\s*System\s+[\d.]+\s+seconds?\)?', '', self.final_status_message)
+                msg = msg.rstrip(')')
+                if '(' in msg:
+                    msg += f", System {final_system_time:.2f} seconds)"
+                else:
+                    msg += f" (System {final_system_time:.2f} seconds)"
+                self.final_status_message = msg
+
+        # Done 메시지 즉시 표시 (auto_hide_delay 전)
         if hasattr(self, 'final_status_message'):
             self.statusbar.showMessage(self.final_status_message)
         self.pgbar.setFormat(" ")
@@ -2265,32 +2289,11 @@ class WIZWindow(QMainWindow, main_window):
         else:
             self.pgbar.setValue(100)
 
-        # Hide progress bar after a delay and calculate final system time when truly done
+        # _finalize_search: pgbar.hide()만 담당 (System time은 위에서 이미 계산 완료)
         def _finalize_search():
-            """진행바 숨김 + 최종 System 시간 계산"""
             self.pgbar.hide()
 
-            # 최종 System 시간 계산 (진행바 완전히 숨겨진 시점)
-            if hasattr(self, '_timing_t0') and self._timing_t0 is not None:
-                final_system_time = time.time() - self._timing_t0
-                self.logger.info(f"[TIMING] Final system time (after pgbar hidden): {final_system_time:.2f}s")
-
-                # 기존 메시지의 System 시간 부분을 최종 시간으로 업데이트
-                if hasattr(self, 'final_status_message') and self.final_status_message:
-                    import re
-                    # 기존 System 시간 제거
-                    msg = re.sub(r',?\s*System\s+[\d.]+\s+seconds?\)?', '', self.final_status_message)
-                    # 최종 System 시간 추가
-                    msg = msg.rstrip(')')
-                    if '(' in msg:
-                        msg += f", System {final_system_time:.2f} seconds)"
-                    else:
-                        msg += f" (System {final_system_time:.2f} seconds)"
-                    self.final_status_message = msg
-                    self.statusbar.showMessage(msg)
-
-        # singleShot은 취소 불가 → retry 모드에서 N개 누적됨
-        # cancellable QTimer로 교체: 이전 타이머를 stop()한 뒤 재시작
+        # cancellable QTimer: 이전 타이머를 stop()한 뒤 재시작
         if not hasattr(self, '_finalize_timer') or self._finalize_timer is None:
             self._finalize_timer = QtCore.QTimer(self)
             self._finalize_timer.setSingleShot(True)
@@ -3023,7 +3026,25 @@ class WIZWindow(QMainWindow, main_window):
                 self.logger.error(e)
 
             # print('get_dev_list()', self.searched_dev, self.dev_data)
-            self.search_each_dev(self.searched_dev)
+            phase3_on_demand = self.timing_config.get('experimental', 'phase3_on_demand', default=False)
+            if phase3_on_demand:
+                # B-2: Phase 3 스킵 → Phase 1 완료 즉시 Done 처리
+                self.logger.info("[B-2] phase3_on_demand 활성화: search_each_dev() 스킵")
+                QApplication.processEvents()
+                self.pgbar.setFormat(" ")
+                self.pgbar.setValue(100)
+                if not hasattr(self, '_finalize_timer') or self._finalize_timer is None:
+                    self._finalize_timer = QtCore.QTimer(self)
+                    self._finalize_timer.setSingleShot(True)
+                self._finalize_timer.stop()
+                try:
+                    self._finalize_timer.timeout.disconnect()
+                except (RuntimeError, TypeError):
+                    pass
+                self._finalize_timer.timeout.connect(lambda: self.pgbar.hide())
+                self._finalize_timer.start(self.timing_config.get_pgbar_auto_hide_delay_ms())
+            else:
+                self.search_each_dev(self.searched_dev)
         else:
             self.logger.info("There is no device.")
 
@@ -3085,7 +3106,37 @@ class WIZWindow(QMainWindow, main_window):
                 self.logger.info(
                     "[Warning] 검색된 장치의 수와 프로파일된 장치의 수가 다릅니다."
                 )
-            self.logger.info("[Warning] retry search")
+            # B-2: 온디맨드 Phase 3 조회
+            if self.timing_config.get('experimental', 'phase3_on_demand', default=False):
+                self._query_single_device(macaddr)
+            else:
+                self.logger.info("[Warning] retry search")
+
+    def _query_single_device(self, macaddr):
+        """B-2: 단일 장비 온디맨드 Phase 3 조회"""
+        dev_info = next((d for d in self.searched_dev if d[0] == macaddr), None)
+        if dev_info is None:
+            self.logger.warning(f"[B-2] _query_single_device: {macaddr} not in searched_dev")
+            return
+        self.statusbar.showMessage(f" Querying {macaddr}...")
+        QApplication.processEvents()
+        try:
+            code = self.code if hasattr(self, 'code') and self.code else " "
+            cmd_list = self.wizmakecmd.search(dev_info[0], code, dev_info[1], dev_info[2], dev_info[3])
+            dev_sock = WIZUDPSock(0, 50001, self.selected_eth or "", localport=0)
+            dev_sock.open()
+            th = WIZMSGHandler(dev_sock, cmd_list, "udp", Opcode.OP_SEARCHALL, self.search_wait_time_each)
+            th.searched_data.connect(self.getsearch_each_dev)
+            th.start()
+            th.wait()
+            dev_sock.close()
+            if macaddr in self.dev_profile:
+                self.fill_devinfo(self.dev_profile[macaddr])
+            else:
+                self.statusbar.showMessage(f" No response from {macaddr}")
+        except Exception as e:
+            self.logger.error(f"[B-2] _query_single_device error: {e}")
+            self.statusbar.showMessage(f" Error querying {macaddr}: {e}")
 
     def remove_empty_value(self, data):
         # remove empty value
@@ -5685,6 +5736,30 @@ class WIZWindow(QMainWindow, main_window):
         ui_group.setLayout(ui_layout)
         main_layout.addWidget(ui_group)
 
+        # === 디버그 설정 ===
+        debug_group = QGroupBox("디버그 / 실험적 기능")
+        debug_layout = QFormLayout()
+
+        dialog.cb_show_timing = QCheckBox("System 소요 시간 표시")
+        dialog.cb_show_timing.setChecked(config.get('show_timing_in_statusbar', False))
+        dialog.cb_show_timing.setToolTip(
+            "검색 완료 시 상태바에 System 소요 시간 표시\n"
+            "성능 측정용 디버그 옵션 (기본값: 꺼짐)"
+        )
+        debug_layout.addRow("타이밍 표시:", dialog.cb_show_timing)
+
+        dialog.cb_phase3_on_demand = QCheckBox("장비 클릭 시 정보 조회 (온디맨드)")
+        dialog.cb_phase3_on_demand.setChecked(config.get('phase3_on_demand', False))
+        dialog.cb_phase3_on_demand.setToolTip(
+            "검색 후 장비를 클릭할 때 해당 장비 정보를 조회합니다.\n"
+            "검색 완료가 빠르지만 첫 클릭 시 약 1~2초 대기가 발생합니다.\n"
+            "(실험적 기능, 기본값: 꺼짐)"
+        )
+        debug_layout.addRow("온디맨드 조회:", dialog.cb_phase3_on_demand)
+
+        debug_group.setLayout(debug_layout)
+        main_layout.addWidget(debug_group)
+
         # === 버튼 영역 ===
         button_layout = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         button_layout.accepted.connect(dialog.accept)
@@ -5722,6 +5797,10 @@ class WIZWindow(QMainWindow, main_window):
             # UI 설정
             'pgbar_update_percent': dialog.spin_pgbar_update_step.value(),
             'pgbar_auto_hide_delay_ms': dialog.spin_pgbar_auto_hide_delay.value(),
+
+            # 디버그 / 실험적
+            'show_timing_in_statusbar': dialog.cb_show_timing.isChecked(),
+            'phase3_on_demand': dialog.cb_phase3_on_demand.isChecked(),
         }
 
     def _apply_advanced_search_settings(self, updates):
@@ -5746,6 +5825,10 @@ class WIZWindow(QMainWindow, main_window):
 
             # 인스턴스 변수 업데이트
             self.search_wait_time_each = updates['phase3_device_query_timeout']
+
+            # timing_config 인메모리 동기화 (즉시 적용)
+            self.timing_config.config.setdefault('logging', {})['show_timing_in_statusbar'] = updates.get('show_timing_in_statusbar', False)
+            self.timing_config.config.setdefault('experimental', {})['phase3_on_demand'] = updates.get('phase3_on_demand', False)
 
             self.logger.info(f"Advanced search options applied: {updates}")
             QtWidgets.QMessageBox.information(
@@ -5810,6 +5893,10 @@ class WIZWindow(QMainWindow, main_window):
                 dialog.spin_pgbar_update_step.setValue(full_defaults['ui']['progress_bar']['update_percent'])
                 dialog.spin_pgbar_auto_hide_delay.setValue(full_defaults['ui']['progress_bar']['auto_hide_delay_ms'])
 
+                # 디버그 / 실험적 기본값
+                dialog.cb_show_timing.setChecked(False)
+                dialog.cb_phase3_on_demand.setChecked(False)
+
                 # 내부 변수 업데이트
                 self.retry_search_expected_count = 0
                 self.retry_search_max_count = 3
@@ -5822,6 +5909,10 @@ class WIZWindow(QMainWindow, main_window):
 
                 # 인스턴스 변수 업데이트
                 self.search_wait_time_each = defaults['phase3']['device_query_timeout_sec']
+
+                # timing_config 인메모리 동기화
+                self.timing_config.config.setdefault('logging', {})['show_timing_in_statusbar'] = False
+                self.timing_config.config.setdefault('experimental', {})['phase3_on_demand'] = False
 
                 QtWidgets.QMessageBox.information(
                     dialog,
