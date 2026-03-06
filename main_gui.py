@@ -2126,6 +2126,9 @@ class WIZWindow(QMainWindow, main_window):
     def processing(self):
         self.btn_search.setEnabled(False)
         self.statusbar.showMessage(" Searching...")
+        # 이전 검색의 자동 숨김 타이머 취소 (Phase 3 도중 hide() 방지)
+        if hasattr(self, '_finalize_timer') and self._finalize_timer is not None:
+            self._finalize_timer.stop()
         if getattr(self, 'retry_search_current', 0) == 0:
             # 첫 번째 검색: indeterminate 애니메이션 시작
             self.pgbar.setFormat(" ")
