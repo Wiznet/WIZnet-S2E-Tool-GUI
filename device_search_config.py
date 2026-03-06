@@ -120,11 +120,13 @@ class DeviceSearchConfig:
             'skip_phase1_emit_delay': False,
             'reuse_phase1_socket': False,
             'max_parallel_sockets': 0,
+            'phase3_on_demand': False,
         },
         'active_preset': 'normal',
         'logging': {
             'enable_timing_logs': True,
             'verbose_debug': False,
+            'show_timing_in_statusbar': False,
         },
     }
 
@@ -413,7 +415,9 @@ class DeviceSearchConfig:
             'pgbar_update_percent': self.get_pgbar_update_percent(),
             'pgbar_auto_hide_delay_ms': self.get_pgbar_auto_hide_delay_ms(),
             'expected_device_count': self.config.get('search', {}).get('options', {}).get('expected_device_count', 0),
-            'max_retry_count': self.config.get('search', {}).get('options', {}).get('max_retry_count', 3)
+            'max_retry_count': self.config.get('search', {}).get('options', {}).get('max_retry_count', 3),
+            'show_timing_in_statusbar': self.config.get('logging', {}).get('show_timing_in_statusbar', False),
+            'phase3_on_demand': self.config.get('experimental', {}).get('phase3_on_demand', False),
         }
 
     def save_config(self) -> bool:
@@ -511,6 +515,12 @@ class DeviceSearchConfig:
                 if not (1 <= value <= 100):
                     raise ValueError(f"max_retry_count must be 1~100, got {value}")
                 self.config.setdefault('search', {}).setdefault('options', {})['max_retry_count'] = value
+
+            if 'show_timing_in_statusbar' in updates:
+                self.config.setdefault('logging', {})['show_timing_in_statusbar'] = bool(updates['show_timing_in_statusbar'])
+
+            if 'phase3_on_demand' in updates:
+                self.config.setdefault('experimental', {})['phase3_on_demand'] = bool(updates['phase3_on_demand'])
 
             # 2. YAML 파일에 저장
             return self.save_config()
