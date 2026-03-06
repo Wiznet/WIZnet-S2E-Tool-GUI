@@ -5547,7 +5547,7 @@ class WIZWindow(QMainWindow, main_window):
         main_layout = QVBoxLayout()
 
         # === 검색 옵션 그룹 ===
-        search_group = QGroupBox("검색 옵션")
+        search_group = QGroupBox("Search Options")  # 검색 옵션
         search_layout = QFormLayout()
 
         # 예상 장비 수
@@ -5556,10 +5556,10 @@ class WIZWindow(QMainWindow, main_window):
         dialog.spin_expected_device_count.setSingleStep(1)
         dialog.spin_expected_device_count.setValue(config.get('expected_device_count', 0))
         dialog.spin_expected_device_count.setToolTip(
-            "검색 시 예상되는 장비 수 (0 = 무제한)\n"
-            "이 수에 도달하면 검색 조기 종료"
+            "Expected number of devices to find (0 = unlimited)\n"  # 검색 시 예상되는 장비 수 (0 = 무제한)
+            "Search stops early when this count is reached"          # 이 수에 도달하면 검색 조기 종료
         )
-        search_layout.addRow("예상 장비 수:", dialog.spin_expected_device_count)
+        search_layout.addRow("Expected Device Count:", dialog.spin_expected_device_count)  # 예상 장비 수
 
         # 최대 반복 횟수
         dialog.spin_max_retry_count = QSpinBox()
@@ -5567,16 +5567,16 @@ class WIZWindow(QMainWindow, main_window):
         dialog.spin_max_retry_count.setSingleStep(1)
         dialog.spin_max_retry_count.setValue(config.get('max_retry_count', 3))
         dialog.spin_max_retry_count.setToolTip(
-            "검색 반복 최대 횟수\n"
-            "권장: 일반 3회, 빠른 검색 1회"
+            "Maximum number of search retries\n"             # 검색 반복 최대 횟수
+            "Recommended: 3 (normal), 1 (fast search)"       # 권장: 일반 3회, 빠른 검색 1회
         )
-        search_layout.addRow("최대 반복 횟수:", dialog.spin_max_retry_count)
+        search_layout.addRow("Max Retry Count:", dialog.spin_max_retry_count)  # 최대 반복 횟수
 
         search_group.setLayout(search_layout)
         main_layout.addWidget(search_group)
 
         # === Phase 1 타이밍 그룹 ===
-        phase1_group = QGroupBox("Phase 1 타이밍 (UDP Broadcast / TCP Multicast)")
+        phase1_group = QGroupBox("Broadcast Search Timing (Phase 1)")  # Phase 1 타이밍 (UDP Broadcast / TCP Multicast)
         phase1_layout = QFormLayout()
 
         # Broadcast Timeout (장비 못 찾을 때 딜레이의 핵심 파라미터)
@@ -5584,12 +5584,12 @@ class WIZWindow(QMainWindow, main_window):
         dialog.dspin_broadcast_timeout.setRange(0.5, 10.0)
         dialog.dspin_broadcast_timeout.setSingleStep(0.5)
         dialog.dspin_broadcast_timeout.setDecimals(1)
-        dialog.dspin_broadcast_timeout.setSuffix(" 초")
+        dialog.dspin_broadcast_timeout.setSuffix(" sec")  # 초
         dialog.dspin_broadcast_timeout.setValue(config.get('phase1_broadcast_timeout', 3.0))
         dialog.dspin_broadcast_timeout.setToolTip(
-            "UDP Broadcast 응답 대기 시간 (1회 검색당 대기)\n"
-            "장비 못 찾을 때: 반복횟수 × 이 값 = 총 대기 시간\n"
-            "권장: 일반 3.0초, 빠른 네트워크 2.0초, 느린 네트워크 5.0초"
+            "Wait time for UDP broadcast responses (per search attempt)\n"  # UDP Broadcast 응답 대기 시간 (1회 검색당 대기)
+            "Total wait when no device found = retry count × this value\n"  # 장비 못 찾을 때: 반복횟수 × 이 값 = 총 대기 시간
+            "Recommended: 3.0s (normal), 2.0s (fast network), 5.0s (slow network)"  # 권장: 일반 3.0초, 빠른 네트워크 2.0초, 느린 네트워크 5.0초
         )
         phase1_layout.addRow("Broadcast Timeout:", dialog.dspin_broadcast_timeout)
 
@@ -5598,11 +5598,11 @@ class WIZWindow(QMainWindow, main_window):
         dialog.dspin_loop_select_timeout.setRange(0.1, 10.0)
         dialog.dspin_loop_select_timeout.setSingleStep(0.1)
         dialog.dspin_loop_select_timeout.setDecimals(1)
-        dialog.dspin_loop_select_timeout.setSuffix(" 초")
+        dialog.dspin_loop_select_timeout.setSuffix(" sec")  # 초
         dialog.dspin_loop_select_timeout.setValue(config.get('phase1_loop_select_timeout', 0.5))
         dialog.dspin_loop_select_timeout.setToolTip(
-            "마지막 응답 이후 추가 응답 대기 시간\n"
-            "권장: 일반 0.5초, 구형 장비 1.0초, 고속 0.3초"
+            "Additional wait time after the last device response\n"  # 마지막 응답 이후 추가 응답 대기 시간
+            "Recommended: 0.5s (normal), 1.0s (legacy devices), 0.3s (fast)"  # 권장: 일반 0.5초, 구형 장비 1.0초, 고속 0.3초
         )
         phase1_layout.addRow("Loop Select Timeout:", dialog.dspin_loop_select_timeout)
 
@@ -5613,25 +5613,25 @@ class WIZWindow(QMainWindow, main_window):
         dialog.spin_emit_delay.setSuffix(" ms")
         dialog.spin_emit_delay.setValue(config.get('phase1_emit_stabilization_ms', 50))
         dialog.spin_emit_delay.setToolTip(
-            "PyQt signal queue 안정화 대기 시간\n"
-            "권장: 50ms (실험적: 0~100ms)"
+            "PyQt signal queue stabilization wait time\n"  # PyQt signal queue 안정화 대기 시간
+            "Recommended: 50ms (experimental: 0~100ms)"   # 권장: 50ms (실험적: 0~100ms)
         )
-        phase1_layout.addRow("Emit 안정화 딜레이:", dialog.spin_emit_delay)
+        phase1_layout.addRow("Signal Stabilization Delay:", dialog.spin_emit_delay)  # Emit 안정화 딜레이
 
         # Emit 딜레이 건너뛰기 (실험적)
         dialog.cb_skip_emit_delay = QCheckBox()
         dialog.cb_skip_emit_delay.setChecked(config.get('skip_phase1_emit_delay', False))
         dialog.cb_skip_emit_delay.setToolTip(
-            "⚠ 실험적 기능: Emit 전 딜레이 생략\n"
-            "활성화 시 약 50ms 단축되지만 signal queue 불안정 가능성"
+            "⚠ Experimental: Skip the signal stabilization delay\n"  # 실험적 기능: Emit 전 딜레이 생략
+            "Saves ~50ms but may cause signal queue instability"      # 활성화 시 약 50ms 단축되지만 signal queue 불안정 가능성
         )
-        phase1_layout.addRow("☐ Emit 딜레이 건너뛰기 (실험적):", dialog.cb_skip_emit_delay)
+        phase1_layout.addRow("Skip Signal Delay (Experimental):", dialog.cb_skip_emit_delay)  # Emit 딜레이 건너뛰기 (실험적)
 
         phase1_group.setLayout(phase1_layout)
         main_layout.addWidget(phase1_group)
 
         # === Phase 3 타이밍 그룹 ===
-        phase3_group = QGroupBox("Phase 3 타이밍 (장비 정보 조회)")
+        phase3_group = QGroupBox("Device Query Timing (Phase 3)")  # Phase 3 타이밍 (장비 정보 조회)
         phase3_layout = QFormLayout()
 
         # 장비 쿼리 타임아웃
@@ -5639,19 +5639,19 @@ class WIZWindow(QMainWindow, main_window):
         dialog.dspin_device_query_timeout.setRange(0.5, 10.0)
         dialog.dspin_device_query_timeout.setSingleStep(0.1)
         dialog.dspin_device_query_timeout.setDecimals(1)
-        dialog.dspin_device_query_timeout.setSuffix(" 초")
+        dialog.dspin_device_query_timeout.setSuffix(" sec")  # 초
         dialog.dspin_device_query_timeout.setValue(config.get('phase3_device_query_timeout', 1.5))
         dialog.dspin_device_query_timeout.setToolTip(
-            "개별 장비 정보 조회 타임아웃\n"
-            "권장: 일반 1.5초, 구형 장비 2.0초, 고속 1.0초"
+            "Timeout for querying individual device information\n"  # 개별 장비 정보 조회 타임아웃
+            "Recommended: 1.5s (normal), 2.0s (legacy devices), 1.0s (fast)"  # 권장: 일반 1.5초, 구형 장비 2.0초, 고속 1.0초
         )
-        phase3_layout.addRow("장비 쿼리 타임아웃:", dialog.dspin_device_query_timeout)
+        phase3_layout.addRow("Device Query Timeout:", dialog.dspin_device_query_timeout)  # 장비 쿼리 타임아웃
 
         phase3_group.setLayout(phase3_layout)
         main_layout.addWidget(phase3_group)
 
         # === TCP 설정 그룹 ===
-        tcp_group = QGroupBox("TCP 설정")
+        tcp_group = QGroupBox("TCP Settings")  # TCP 설정
         tcp_layout = QFormLayout()
 
         # 최대 병렬 워커 수
@@ -5660,16 +5660,16 @@ class WIZWindow(QMainWindow, main_window):
         dialog.spin_tcp_max_workers.setSingleStep(1)
         dialog.spin_tcp_max_workers.setValue(config.get('tcp_max_parallel_workers', 15))
         dialog.spin_tcp_max_workers.setToolTip(
-            "TCP Multicast 검색 시 최대 병렬 연결 수\n"
-            "권장: 일반 15, 저성능 PC 5, 고성능 PC 30"
+            "Max parallel connections for TCP Multicast scan\n"  # TCP Multicast 검색 시 최대 병렬 연결 수
+            "Recommended: 15 (normal), 5 (low-end PC), 30 (high-end PC)"  # 권장: 일반 15, 저성능 PC 5, 고성능 PC 30
         )
-        tcp_layout.addRow("최대 병렬 워커 수:", dialog.spin_tcp_max_workers)
+        tcp_layout.addRow("Max Parallel Workers:", dialog.spin_tcp_max_workers)  # 최대 병렬 워커 수
 
         tcp_group.setLayout(tcp_layout)
         main_layout.addWidget(tcp_group)
 
         # === UI 설정 그룹 ===
-        ui_group = QGroupBox("UI 설정")
+        ui_group = QGroupBox("UI Settings")  # UI 설정
         ui_layout = QFormLayout()
 
         # Progress Bar 갱신 주기
@@ -5679,10 +5679,10 @@ class WIZWindow(QMainWindow, main_window):
         dialog.spin_pgbar_update_step.setSuffix(" %")
         dialog.spin_pgbar_update_step.setValue(config.get('pgbar_update_percent', 10))
         dialog.spin_pgbar_update_step.setToolTip(
-            "진행바 업데이트 주기 (%)\n"
-            "값이 작을수록 부드럽지만 CPU 사용 증가"
+            "Progress bar update interval (%)\n"       # 진행바 업데이트 주기 (%)
+            "Smaller value = smoother but higher CPU"  # 값이 작을수록 부드럽지만 CPU 사용 증가
         )
-        ui_layout.addRow("Progress Bar 갱신 주기:", dialog.spin_pgbar_update_step)
+        ui_layout.addRow("Progress Bar Update Step:", dialog.spin_pgbar_update_step)  # Progress Bar 갱신 주기
 
         # Progress Bar 자동 숨김 딜레이
         dialog.spin_pgbar_auto_hide_delay = QSpinBox()
@@ -5691,34 +5691,34 @@ class WIZWindow(QMainWindow, main_window):
         dialog.spin_pgbar_auto_hide_delay.setSuffix(" ms")
         dialog.spin_pgbar_auto_hide_delay.setValue(config.get('pgbar_auto_hide_delay_ms', 2000))
         dialog.spin_pgbar_auto_hide_delay.setToolTip(
-            "검색 완료 후 진행바 자동 숨김 시간\n"
-            "권장: 2000ms (2초)"
+            "Delay before progress bar auto-hides after search completes\n"  # 검색 완료 후 진행바 자동 숨김 시간
+            "Recommended: 2000ms (2 seconds)"                                # 권장: 2000ms (2초)
         )
-        ui_layout.addRow("Progress Bar 자동 숨김:", dialog.spin_pgbar_auto_hide_delay)
+        ui_layout.addRow("Progress Bar Auto-hide Delay:", dialog.spin_pgbar_auto_hide_delay)  # Progress Bar 자동 숨김
 
         ui_group.setLayout(ui_layout)
         main_layout.addWidget(ui_group)
 
         # === 디버그 설정 ===
-        debug_group = QGroupBox("디버그 / 실험적 기능")
+        debug_group = QGroupBox("Debug / Experimental")  # 디버그 / 실험적 기능
         debug_layout = QFormLayout()
 
-        dialog.cb_show_timing = QCheckBox("System 소요 시간 표시")
+        dialog.cb_show_timing = QCheckBox("Show search duration in status bar")  # System 소요 시간 표시
         dialog.cb_show_timing.setChecked(config.get('show_timing_in_statusbar', False))
         dialog.cb_show_timing.setToolTip(
-            "검색 완료 시 상태바에 System 소요 시간 표시\n"
-            "성능 측정용 디버그 옵션 (기본값: 꺼짐)"
+            "Show elapsed time in the status bar after search completes\n"  # 검색 완료 시 상태바에 System 소요 시간 표시
+            "Debug option for performance measurement (default: off)"       # 성능 측정용 디버그 옵션 (기본값: 꺼짐)
         )
-        debug_layout.addRow("타이밍 표시:", dialog.cb_show_timing)
+        debug_layout.addRow("Show Elapsed Time:", dialog.cb_show_timing)  # 타이밍 표시
 
-        dialog.cb_phase3_on_demand = QCheckBox("장비 클릭 시 정보 조회 (온디맨드)")
+        dialog.cb_phase3_on_demand = QCheckBox("Query device info on click (on-demand)")  # 장비 클릭 시 정보 조회 (온디맨드)
         dialog.cb_phase3_on_demand.setChecked(config.get('phase3_on_demand', False))
         dialog.cb_phase3_on_demand.setToolTip(
-            "검색 후 장비를 클릭할 때 해당 장비 정보를 조회합니다.\n"
-            "검색 완료가 빠르지만 첫 클릭 시 약 1~2초 대기가 발생합니다.\n"
-            "(실험적 기능, 기본값: 꺼짐)"
+            "Fetch device details only when a device is clicked.\n"     # 검색 후 장비를 클릭할 때 해당 장비 정보를 조회합니다.
+            "Faster search completion, but first click takes 1~2s.\n"   # 검색 완료가 빠르지만 첫 클릭 시 약 1~2초 대기가 발생합니다.
+            "(Experimental, default: off)"                               # (실험적 기능, 기본값: 꺼짐)
         )
-        debug_layout.addRow("온디맨드 조회:", dialog.cb_phase3_on_demand)
+        debug_layout.addRow("On-demand Query:", dialog.cb_phase3_on_demand)  # 온디맨드 조회
 
         debug_group.setLayout(debug_layout)
         main_layout.addWidget(debug_group)
@@ -5729,7 +5729,7 @@ class WIZWindow(QMainWindow, main_window):
         button_layout.rejected.connect(dialog.reject)
 
         # 기본값 복원 버튼 추가
-        reset_button = QPushButton("기본값 복원")
+        reset_button = QPushButton("Restore Defaults")  # 기본값 복원
         reset_button.clicked.connect(lambda: self._reset_advanced_dialog_to_defaults(dialog))
         button_layout.addButton(reset_button, QDialogButtonBox.ResetRole)
 
@@ -5798,9 +5798,9 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.info(f"Advanced search options applied: {updates}")
             QtWidgets.QMessageBox.information(
                 self,
-                "설정 저장",
-                "고급 검색 옵션이 저장되었습니다.\n\n"
-                "일부 설정은 다음 검색부터 적용됩니다."
+                "Settings Saved",  # 설정 저장
+                "Advanced search options have been saved.\n\n"  # 고급 검색 옵션이 저장되었습니다.
+                "Some settings will take effect from the next search."  # 일부 설정은 다음 검색부터 적용됩니다.
             )
 
         except Exception as e:
