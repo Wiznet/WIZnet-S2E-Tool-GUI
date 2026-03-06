@@ -2297,7 +2297,7 @@ class WIZWindow(QMainWindow, main_window):
         self._finalize_timer.stop()
         try:
             self._finalize_timer.timeout.disconnect()
-        except RuntimeError:
+        except (RuntimeError, TypeError):
             pass
         self._finalize_timer.timeout.connect(_finalize_search)
         self._finalize_timer.start(self.timing_config.get_pgbar_auto_hide_delay_ms())
