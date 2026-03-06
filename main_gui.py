@@ -2125,7 +2125,11 @@ class WIZWindow(QMainWindow, main_window):
 
     def processing(self):
         self.btn_search.setEnabled(False)
-        # pgbar hide는 search_each_dev() 완료 후 _finalize_search()에서 처리
+        # Phase 1 시작 즉시 pgbar 표시 (indeterminate: 0,0 = 애니메이션 막대)
+        self.pgbar.setFormat(" ")
+        self.pgbar.setRange(0, 0)
+        self.pgbar.show()
+        self.statusbar.showMessage(" Searching...")
 
     def search_each_dev(self, dev_info_list):
         """Phase 3: 개별 장비 정보 조회 (pgbar 최적화 적용)"""
@@ -2156,6 +2160,7 @@ class WIZWindow(QMainWindow, main_window):
 
         self.statusbar.showMessage(f" Querying devices... (0/{total_devs})")
         self.pgbar.setFormat(" ")
+        self.pgbar.setRange(0, 100)  # indeterminate → determinate 복원
         self.pgbar.setValue(base_progress)
         self.pgbar.show()
         QApplication.processEvents()
@@ -2568,20 +2573,18 @@ class WIZWindow(QMainWindow, main_window):
                     QtCore.QTimer.singleShot(RetrySearchLimits.RETRY_DELAY_MS, self._continue_retry_search)
                     return  # get_dev_list() 호출하지 않음
                 else:
-                    # 반복 종료 - 시간 계산 (Phase 3 이후 최종 업데이트됨)
-                    system_time = None  # Phase 3 완료 후 search_each_dev()에서 계산
-                    if self.retry_search_start_time is not None:
-                        elapsed = time.time() - self.retry_search_start_time
-                        if system_time is not None:
-                            status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries, {elapsed:.2f} seconds, System {system_time:.2f} seconds)"
-                        else:
+                    # 반복 종료 - 타이밍 정보는 show_timing 옵션에 따라 표시
+                    show_timing = self.timing_config.get('logging', 'show_timing_in_statusbar', default=False)
+                    if show_timing:
+                        if self.retry_search_start_time is not None:
+                            elapsed = time.time() - self.retry_search_start_time
                             status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries, {elapsed:.2f} seconds)"
-                        self.retry_search_start_time = None  # 리셋
-                    else:
-                        if system_time is not None:
-                            status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries, System {system_time:.2f} seconds)"
                         else:
                             status_msg = f" Done. {total_count} devices found ({self.retry_search_current} retries)"
+                    else:
+                        status_msg = f" Done. {total_count} devices found"
+                    if self.retry_search_start_time is not None:
+                        self.retry_search_start_time = None  # 리셋
 
                     self.logger.info(f"반복 검색 완료: 총 {self.retry_search_current}회, {total_count}개 장비 발견")
 
@@ -2596,20 +2599,15 @@ class WIZWindow(QMainWindow, main_window):
                 self.pgbar.setFormat(" ")
                 self.pgbar.setValue(100)
 
-                # Phase 3 이후 최종 업데이트됨
-                system_time = None  # Phase 3 완료 후 search_each_dev()에서 계산
-                if self.search_start_time is not None:
+                # 타이밍 정보는 show_timing 옵션에 따라 표시
+                show_timing = self.timing_config.get('logging', 'show_timing_in_statusbar', default=False)
+                if show_timing and self.search_start_time is not None:
                     elapsed = time.time() - self.search_start_time
-                    if system_time is not None:
-                        self.final_status_message = f" Done. {devnum} devices found ({elapsed:.2f} seconds, System {system_time:.2f} seconds)"
-                    else:
-                        self.final_status_message = f" Done. {devnum} devices found ({elapsed:.2f} seconds)"
-                    self.search_start_time = None  # Reset for next search
+                    self.final_status_message = f" Done. {devnum} devices found ({elapsed:.2f} seconds)"
                 else:
-                    if system_time is not None:
-                        self.final_status_message = f" Done. {devnum} devices found (System {system_time:.2f} seconds)"
-                    else:
-                        self.final_status_message = f" Done. {devnum} devices found"
+                    self.final_status_message = f" Done. {devnum} devices found"
+                if self.search_start_time is not None:
+                    self.search_start_time = None  # Reset for next search
 
                 self.statusbar.showMessage(self.final_status_message)
 
@@ -2976,22 +2974,16 @@ class WIZWindow(QMainWindow, main_window):
             self.list_device.horizontalHeader().setSectionResizeMode(2)
             self.list_device.verticalHeader().setSectionResizeMode(2)
 
-        # Phase 3 이후 최종 업데이트됨
-        system_time = None  # Phase 3 완료 후 search_each_dev()에서 계산
-        if self.search_start_time is not None:
+        # 타이밍 정보는 show_timing 옵션에 따라 표시
+        show_timing = self.timing_config.get('logging', 'show_timing_in_statusbar', default=False)
+        if show_timing and self.search_start_time is not None:
             total_elapsed = time.time() - self.search_start_time
             udp_time = getattr(self, 'udp_elapsed', 0)
-
-            if system_time is not None:
-                self.final_status_message = f" Done. {total_count} devices found (UDP: {udp_time:.2f}s, TCP: {tcp_elapsed:.2f}s, Total: {total_elapsed:.2f}s, System {system_time:.2f}s)"
-            else:
-                self.final_status_message = f" Done. {total_count} devices found (UDP: {udp_time:.2f}s, TCP: {tcp_elapsed:.2f}s, Total: {total_elapsed:.2f}s)"
-            self.search_start_time = None
+            self.final_status_message = f" Done. {total_count} devices found (UDP: {udp_time:.2f}s, TCP: {tcp_elapsed:.2f}s, Total: {total_elapsed:.2f}s)"
         else:
-            if system_time is not None:
-                self.final_status_message = f" Done. {total_count} devices found (System {system_time:.2f}s)"
-            else:
-                self.final_status_message = f" Done. {total_count} devices found"
+            self.final_status_message = f" Done. {total_count} devices found"
+        if self.search_start_time is not None:
+            self.search_start_time = None
 
         self.statusbar.showMessage(self.final_status_message)
 
@@ -3032,6 +3024,7 @@ class WIZWindow(QMainWindow, main_window):
                 self.logger.info("[B-2] phase3_on_demand 활성화: search_each_dev() 스킵")
                 QApplication.processEvents()
                 self.pgbar.setFormat(" ")
+                self.pgbar.setRange(0, 100)  # indeterminate → determinate 복원
                 self.pgbar.setValue(100)
                 if not hasattr(self, '_finalize_timer') or self._finalize_timer is None:
                     self._finalize_timer = QtCore.QTimer(self)
