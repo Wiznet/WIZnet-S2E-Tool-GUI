@@ -69,24 +69,11 @@ Python interpreter based and it is platform independent. It works on python vers
 - **W55RP20 high-speed baudrates**: 1M / 2M / 4M / 8M bps options for W55RP20 series
 - **WIZ750SR Modbus**: MB (Modbus) parameter support
 
-### New Search Methods
-
-- **TCP Multicast scan**: Discover devices via TCP using ThreadPoolExecutor parallel scanning
-- **Mixed search (UDP + TCP)**: UDP broadcast first, then TCP scan to cover devices on different subnets
-- Both methods are selectable from the UI alongside the existing UDP broadcast mode
-
-### Cumulative Search Mode
-
-- **"Keep Results" toggle**: Retains previously found devices across multiple searches
-- **"Detected" column**: Marks which devices responded in the most recent search
-- **"Clear Results" button**: Explicitly clears the accumulated device list
-- Prevents duplicate entries when the same device responds across retries
-
 ### Retry Search
 
-- Configurable **maximum retry count** and **expected device count**
-- Automatically repeats search until all expected devices are found or retry limit is reached
-- Elapsed time and retry count displayed in status bar (optional, see debug options below)
+- Search automatically repeats up to **3 times** by default, accumulating results across rounds to minimize missed devices
+- Stops early when the expected device count is reached
+- Configure via: Search options > **Set search retry count**
 
 ### Advanced Search Options
 
@@ -97,7 +84,6 @@ YAML-based configuration system (`device_search_config.yaml`) for fine-grained c
 | Phase 1 broadcast timeout | UDP broadcast wait time |
 | Phase 1 loop select timeout | Additional wait after last response |
 | Phase 3 device query timeout | Per-device info query timeout |
-| TCP max parallel workers | ThreadPoolExecutor worker count for TCP scan |
 | Progress bar update step | pgbar refresh granularity (%) |
 | Progress bar auto-hide delay | Delay before pgbar disappears after search (ms) |
 | Show timing in status bar | Debug: show elapsed seconds and retry count |
