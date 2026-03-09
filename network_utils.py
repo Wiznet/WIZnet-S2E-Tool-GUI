@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+# [사용되지 않는 기능 - 폐기 필요] TCP Multicast / Mixed search 폐기로 미사용
+
 """
 Network utility functions for subnet calculation and IP address operations.
 Used by Device Search functionality for TCP multicast and mixed search modes.

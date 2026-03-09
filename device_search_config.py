@@ -418,6 +418,7 @@ class DeviceSearchConfig:
             'max_retry_count': self.config.get('search', {}).get('options', {}).get('max_retry_count', 3),
             'show_timing_in_statusbar': self.config.get('logging', {}).get('show_timing_in_statusbar', False),
             'phase3_on_demand': self.config.get('experimental', {}).get('phase3_on_demand', False),
+            'delay_between_retries_ms': int(self.config.get('search', {}).get('retry', {}).get('delay_between_retries_ms', 100)),
         }
 
     def save_config(self) -> bool:
@@ -515,6 +516,12 @@ class DeviceSearchConfig:
                 if not (1 <= value <= 100):
                     raise ValueError(f"max_retry_count must be 1~100, got {value}")
                 self.config.setdefault('search', {}).setdefault('options', {})['max_retry_count'] = value
+
+            if 'delay_between_retries_ms' in updates:
+                value = int(updates['delay_between_retries_ms'])
+                if not (0 <= value <= 5000):
+                    raise ValueError(f"delay_between_retries_ms must be 0~5000, got {value}")
+                self.config.setdefault('search', {}).setdefault('retry', {})['delay_between_retries_ms'] = value
 
             if 'show_timing_in_statusbar' in updates:
                 self.config.setdefault('logging', {})['show_timing_in_statusbar'] = bool(updates['show_timing_in_statusbar'])

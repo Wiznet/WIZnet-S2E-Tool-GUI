@@ -13,8 +13,7 @@ from WIZUDPSock import WIZUDPSock
 from FWUploadThread import FWUploadThread
 from WIZMSGHandler import WIZMSGHandler, DataRefresh
 from certificatethread import certificatethread
-from TCPMulticastScanner import TCPMulticastScanner
-from network_utils import get_subnet_hosts, get_adapter_subnet_info, extract_ip_from_device_response
+from network_utils import get_subnet_hosts, get_adapter_subnet_info
 from device_search_config import DeviceSearchConfig
 
 from wizcmdset import (
@@ -89,7 +88,7 @@ class RetrySearchLimits:
     MAX_RETRY_DEFAULT = 1
 
     # 기타 설정
-    RETRY_DELAY_MS = 100  # 반복 간 딜레이 (밀리초)
+    RETRY_DELAY_MS: int = 100  # 반복 간 딜레이 (밀리초)
 
 
 class UITooltipSettings:
@@ -2611,37 +2610,6 @@ class WIZWindow(QMainWindow, main_window):
     # Phase 2: 방어적 헬퍼 메서드
     # =========================================================================
 
-    def _sync_detected_list(self):
-        """detected_list와 mac_list 길이 동기화
-
-        보장:
-            len(self.detected_list) == len(self.mac_list)
-
-        동작:
-            - 부족: False로 패딩
-            - 초과: 잘라내기
-            - 검증: assert로 확인
-        """
-        current_len = len(self.detected_list)
-        target_len = len(self.mac_list)
-
-        if current_len == target_len:
-            return  # 이미 동기화됨
-
-        if current_len < target_len:
-            # 부족: False로 채움
-            padding = [False] * (target_len - current_len)
-            self.detected_list.extend(padding)
-            self.logger.debug(f"detected_list 패딩: {current_len} → {target_len}")
-        else:
-            # 초과: 잘라냄
-            self.detected_list = self.detected_list[:target_len]
-            self.logger.warning(f"detected_list 잘라냄: {current_len} → {target_len}")
-
-        # 검증
-        assert len(self.detected_list) == len(self.mac_list), \
-            f"Sync failed: detected={len(self.detected_list)}, mac={len(self.mac_list)}"
-
     def _safe_list_set(self, lst, idx, value, list_name="list"):
         """리스트 인덱스 안전 설정
 
@@ -2822,143 +2790,6 @@ class WIZWindow(QMainWindow, main_window):
         detected_count = sum(1 for d in self.detected_list if d)
         total_count = len(self.mac_list)
         self.logger.info(f"검색 결과 유지/갱신: 전체 {total_count}개 (현재 검색: {detected_count}개)")
-
-    def update_scan_progress(self, current, total):
-        """TCP multicast 진행률 업데이트"""
-        percentage = int((current / total) * 100)
-        self.statusbar.showMessage(f" TCP scan: {current}/{total} ({percentage}%)")
-        self.pgbar.setFormat(" ")
-        self.pgbar.setValue(percentage)
-        self.pgbar.show()
-
-    def handle_mixed_phase1(self, devnum):
-        """Mixed search Phase 1 (UDP) 완료 처리"""
-        # UDP phase elapsed time
-        if hasattr(self, 'search_start_time') and self.search_start_time is not None:
-            self.udp_elapsed = time.time() - self.search_start_time
-            self.logger.info(f"Mixed Phase 1: {devnum} devices via UDP ({self.udp_elapsed:.2f}s)")
-        else:
-            self.udp_elapsed = 0
-            self.logger.info(f"Mixed Phase 1: {devnum} devices via UDP")
-
-        # UDP로 발견된 IP 추출
-        found_ips = set()
-        for data in self.wizmsghandler.rcv_list:
-            ip = extract_ip_from_device_response(data)
-            if ip:
-                found_ips.add(ip)
-                self.logger.debug(f"Found IP via UDP: {ip}")
-
-        # UDP 결과 저장
-        self.udp_results = {
-            'mac_list': self.wizmsghandler.mac_list[:],
-            'mn_list': self.wizmsghandler.mn_list[:],
-            'vr_list': self.wizmsghandler.vr_list[:],
-            'st_list': self.wizmsghandler.st_list[:],
-            'rcv_list': self.wizmsghandler.rcv_list[:]
-        }
-
-        # 미발견 IP 계산
-        missing_ips = [ip for ip in self.mixed_subnet_hosts if ip not in found_ips]
-
-        if len(missing_ips) == 0:
-            self.logger.info("Mixed Phase 1 complete, no additional IPs to scan")
-            # Stop progress bar
-            self.pgbar.setFormat(" ")
-            self.pgbar.setValue(100)
-            self.get_search_result(devnum)
-            return
-
-        self.logger.info(f"Mixed Phase 2: Scanning {len(missing_ips)} IPs via TCP")
-        self.statusbar.showMessage(f" Phase 2: Scanning {len(missing_ips)} additional IPs via TCP...")
-
-        # Record TCP phase start time
-        self.tcp_start_time = time.time()
-
-        # Phase 2: TCP scan
-        port = int(self.mixed_port.text())
-        cmd_list = self.wizmakecmd.presearch("FF:FF:FF:FF:FF:FF", self.code)
-
-        self.tcp_scanner = TCPMulticastScanner(
-            missing_ips, port, cmd_list, timeout=2, max_workers=15
-        )
-        self.tcp_scanner.search_result.connect(self.handle_mixed_phase2)
-        self.tcp_scanner.progress_update.connect(self.update_scan_progress)
-        self.tcp_scanner.start()
-
-    def handle_mixed_phase2(self, tcp_devnum):
-        """Mixed search Phase 2 (TCP) 완료 - 결과 병합"""
-        # TCP phase elapsed time
-        if hasattr(self, 'tcp_start_time') and self.tcp_start_time is not None:
-            tcp_elapsed = time.time() - self.tcp_start_time
-            self.logger.info(f"Mixed Phase 2: {tcp_devnum} devices via TCP ({tcp_elapsed:.2f}s)")
-        else:
-            tcp_elapsed = 0
-            self.logger.info(f"Mixed Phase 2: {tcp_devnum} devices via TCP")
-
-        # 결과 병합: UDP + TCP
-        tcp_mac = self.tcp_scanner.mac_list if self.tcp_scanner else []
-        tcp_mn = self.tcp_scanner.mn_list if self.tcp_scanner else []
-        tcp_vr = self.tcp_scanner.vr_list if self.tcp_scanner else []
-        tcp_st = self.tcp_scanner.st_list if self.tcp_scanner else []
-        tcp_rcv = self.tcp_scanner.rcv_list if self.tcp_scanner else []
-
-        self.mac_list = self.udp_results['mac_list'] + tcp_mac
-        self.mn_list = self.udp_results['mn_list'] + tcp_mn
-        self.vr_list = self.udp_results['vr_list'] + tcp_vr
-        self.st_list = self.udp_results['st_list'] + tcp_st
-        self.all_response = self.udp_results['rcv_list'] + tcp_rcv
-
-        total_count = len(self.mac_list)
-        self.logger.info(f"Mixed search complete: {total_count} total devices (UDP: {len(self.udp_results['mac_list'])}, TCP: {tcp_devnum})")
-
-        # Stop progress bar
-        self.pgbar.setFormat(" ")
-        self.pgbar.setValue(100)
-
-        # 검색 완료 처리
-        self.searched_devnum = total_count
-        self.searched_num.setText(str(self.searched_devnum))
-        self.btn_search.setEnabled(True)
-
-        if total_count == 0:
-            self.logger.info("No device.")
-        else:
-            # 테이블에 장치 목록 표시
-            self.list_device.setRowCount(len(self.mac_list))
-
-            try:
-                for i in range(0, len(self.mac_list)):
-                    self.list_device.setItem(
-                        i, 0, QTableWidgetItem(self.mac_list[i].decode('utf-8', errors='replace'))
-                    )
-                    self.list_device.setItem(
-                        i, 1, QTableWidgetItem(self.mn_list[i].decode('utf-8', errors='replace'))
-                    )
-            except Exception as e:
-                self.logger.error(e)
-
-            # 테이블 크기 조정
-            self.list_device.resizeColumnsToContents()
-            self.list_device.resizeRowsToContents()
-            self.list_device.horizontalHeader().setSectionResizeMode(2)
-            self.list_device.verticalHeader().setSectionResizeMode(2)
-
-        # 타이밍 정보는 show_timing 옵션에 따라 표시
-        show_timing = self.timing_config.get('logging', 'show_timing_in_statusbar', default=False)
-        if show_timing and self.search_start_time is not None:
-            total_elapsed = time.time() - self.search_start_time
-            udp_time = getattr(self, 'udp_elapsed', 0)
-            self.final_status_message = f" Done. {total_count} devices found (UDP: {udp_time:.2f}s, TCP: {tcp_elapsed:.2f}s, Total: {total_elapsed:.2f}s)"
-        else:
-            self.final_status_message = f" Done. {total_count} devices found"
-        if self.search_start_time is not None:
-            self.search_start_time = None
-
-        self.statusbar.showMessage(self.final_status_message)
-
-        # 장치 목록 갱신
-        self.get_dev_list()
 
     def get_dev_list(self):
         # basic_data = None
@@ -4941,246 +4772,6 @@ class WIZWindow(QMainWindow, main_window):
         # NOTE: 1.5.7 UI 복원으로 인해 info 라벨들이 제거되어 비활성화
         # self._setup_info_labels()
 
-    def _setup_info_labels(self):
-        """ⓘ 아이콘 라벨을 ClickableInfoLabel로 교체
-
-        목적:
-        - UI 파일(.ui)에 정의된 일반 QLabel을 ClickableInfoLabel로 런타임 교체
-        - 사용자에게 검색 방법에 대한 추가 정보 제공
-        - 호버링(300ms 지연) 및 클릭으로 툴팁 표시
-
-        교체 대상:
-        1. label_broadcast_info: UDP broadcast 옆 (빠른 브로드캐스트 검색 설명)
-        2. label_unicast_info: TCP unicast 옆 (특정 IP 직접 검색 설명)
-        3. label_tcp_multicast_info: TCP multicast 옆 (서브넷 스캔 설명)
-        4. label_mixed_info: Mixed 옆 (UDP + TCP 혼합 방식 설명)
-
-        구현 방식:
-        - UI 파일의 QLabel을 그대로 두고, 프로그램 시작 시 교체
-        - 중첩 레이아웃에서도 동작하도록 재귀적 탐색 사용
-        - 원본 label의 속성(text, tooltip, 스타일 등) 모두 복사
-
-        호출 시점:
-        - WIZWindow.__init__() 마지막에서 호출
-        - UI 로딩 완료 후 실행
-        """
-        self.logger.info("[INFO] _setup_info_labels 시작")
-
-        # group_searchmethod을 강제로 표시
-        self.group_searchmethod.setVisible(True)
-        self.group_searchmethod.show()
-
-        # 디버깅: 부모 위젯 상태 확인
-        self.logger.info(f"[DEBUG] group_searchmethod.isVisible(): {self.group_searchmethod.isVisible()}")
-        self.logger.info(f"[DEBUG] broadcast.isChecked(): {self.broadcast.isChecked()}")
-        self.logger.info(f"[DEBUG] tcp_multicast.isChecked(): {self.tcp_multicast.isChecked()}")
-        self.logger.info(f"[DEBUG] mixed_search.isChecked(): {self.mixed_search.isChecked()}")
-
-        # 1. UDP broadcast 옆 ⓘ 아이콘 교체 
-        # → 빠른 네트워크 검색(약 3초 소요)에 대한 설명
-        self.logger.info(f"[INFO] label_broadcast_info 타입: {type(self.label_broadcast_info)}")
-        self._replace_label_with_clickable(
-            old_label=self.label_broadcast_info,
-            attr_name='label_broadcast_info'
-        )
-        self.logger.info(f"[INFO] UDP broadcast info 교체 완료")
-        self.logger.info(f"[INFO] label_broadcast_info.isEnabled(): {self.label_broadcast_info.isEnabled()}")
-        self.logger.info(f"[INFO] label_broadcast_info.isVisible(): {self.label_broadcast_info.isVisible()}")
-        self.logger.info(f"[INFO] label_broadcast_info.toolTip(): {self.label_broadcast_info.toolTip()}")
-
-        # 2. TCP unicast 옆 ⓘ 아이콘 교체
-        # → 특정 IP만 검색하는 방식 설명
-        self.logger.info(f"[INFO] label_unicast_info 타입: {type(self.label_unicast_info)}")
-        self._replace_label_with_clickable(
-            old_label=self.label_unicast_info,
-            attr_name='label_unicast_info'
-        )
-        self.logger.info(f"[INFO] TCP unicast info 교체 완료")
-        self.logger.info(f"[INFO] label_unicast_info.isEnabled(): {self.label_unicast_info.isEnabled()}")
-        self.logger.info(f"[INFO] label_unicast_info.isVisible(): {self.label_unicast_info.isVisible()}")
-        self.logger.info(f"[INFO] label_unicast_info.toolTip(): {self.label_unicast_info.toolTip()}")
-
-        # 3. TCP multicast 옆 ⓘ 아이콘 교체
-        # → 전체 서브넷 스캔(약 30초 소요)에 대한 상세 설명
-        self.logger.info(f"[INFO] label_tcp_multicast_info 타입: {type(self.label_tcp_multicast_info)}")
-        self._replace_label_with_clickable(
-            old_label=self.label_tcp_multicast_info,
-            attr_name='label_tcp_multicast_info'
-        )
-        self.logger.info(f"[INFO] TCP multicast info 교체 완료")
-        self.logger.info(f"[INFO] label_tcp_multicast_info.isEnabled(): {self.label_tcp_multicast_info.isEnabled()}")
-        self.logger.info(f"[INFO] label_tcp_multicast_info.isVisible(): {self.label_tcp_multicast_info.isVisible()}")
-        self.logger.info(f"[INFO] label_tcp_multicast_info.toolTip(): {self.label_tcp_multicast_info.toolTip()}")
-
-        # 4. Mixed search 옆 ⓘ 아이콘 교체
-        # → UDP broadcast 실패 시 TCP unicast 재시도하는 혼합 방식 설명
-        self.logger.info(f"[INFO] label_mixed_info 타입: {type(self.label_mixed_info)}")
-        self._replace_label_with_clickable(
-            old_label=self.label_mixed_info,
-            attr_name='label_mixed_info'
-        )
-        self.logger.info(f"[INFO] Mixed info 교체 완료")
-        self.logger.info(f"[INFO] label_mixed_info.isEnabled(): {self.label_mixed_info.isEnabled()}")
-        self.logger.info(f"[INFO] label_mixed_info.isVisible(): {self.label_mixed_info.isVisible()}")
-        self.logger.info(f"[INFO] label_mixed_info.toolTip(): {self.label_mixed_info.toolTip()}")
-
-        # 전역 설정: 창이 포커스를 잃어도 툴팁 표시
-        # → Qt 기본 동작은 창 포커스 잃으면 툴팁 숨김
-        # → WA_AlwaysShowToolTips로 항상 표시되도록 변경
-        try:
-            self.setAttribute(QtCore.Qt.WidgetAttribute(119), True)  # 119 = WA_AlwaysShowToolTips
-            self.logger.info("[INFO] WA_AlwaysShowToolTips 속성 설정 완료")
-        except Exception as e:
-            self.logger.warning(f"[WARN] WA_AlwaysShowToolTips 설정 실패: {e}")
-
-    def _replace_label_with_clickable(self, old_label, attr_name):
-        """기존 QLabel을 ClickableInfoLabel로 런타임 교체
-
-        Args:
-            old_label: UI 파일에서 로딩한 원본 QLabel 객체
-            attr_name: self.<attr_name>으로 저장할 속성 이름 (문자열)
-
-        동작 원리:
-        1. 재귀적 레이아웃 탐색으로 위젯 위치 찾기
-        2. 원본 label의 모든 속성 복사
-        3. 새 ClickableInfoLabel 생성
-        4. 원본과 같은 위치에 새 label 배치
-        5. self.<attr_name>에 새 label 저장
-
-        왜 이렇게 구현했는가:
-        - UI 파일(.ui)을 직접 수정하지 않고 런타임에 교체
-        - 중첩 레이아웃(gridLayout_99, gridLayout_100)에서도 동작
-        - Qt Designer에서 편집 가능한 UI 유지
-
-        문제 해결 히스토리:
-        - 초기: parentWidget().layout()으로 직접 접근 → indexOf() = -1 실패
-        - 개선: 재귀적 탐색으로 중첩 레이아웃 안의 위젯도 찾기 성공
-        - 결과: TCP multicast/Mixed 옆 i 아이콘 클릭 정상 동작
-        """
-
-        # 1단계: 부모 위젯 확인
-        parent_widget = old_label.parentWidget()
-        if parent_widget is None:
-            self.logger.warning(f"[{attr_name}] 부모 위젯을 찾을 수 없음")
-            return
-
-        # 2단계: 재귀적 레이아웃 탐색
-        def find_layout_containing_widget(search_layout, target_widget):
-            """레이아웃 트리를 재귀적으로 탐색하여 위젯을 포함하는 레이아웃 찾기
-
-            Args:
-                search_layout: 탐색 시작 레이아웃 (QLayout)
-                target_widget: 찾으려는 위젯 (QWidget)
-
-            Returns:
-                QLayout: 위젯을 직접 포함하는 레이아웃
-                None: 찾지 못함
-
-            동작:
-                - 현재 레이아웃에서 indexOf() 확인
-                - 못 찾으면 자식 레이아웃들을 재귀적으로 탐색
-                - DFS(깊이 우선 탐색) 방식
-
-            예시:
-                gridLayout_7 (root)
-                ├─ gridLayout_99
-                │  └─ label_tcp_multicast_info ← 여기서 찾음
-                └─ gridLayout_100
-                   └─ label_mixed_info ← 여기서 찾음
-            """
-            if search_layout is None:
-                return None
-
-            # 현재 레이아웃에 위젯이 있는지 확인
-            if search_layout.indexOf(target_widget) >= 0:
-                return search_layout  # 찾음!
-
-            # 자식 레이아웃들을 재귀적으로 탐색
-            for i in range(search_layout.count()):
-                item = search_layout.itemAt(i)
-                if item and item.layout():  # 아이템이 레이아웃인 경우
-                    result = find_layout_containing_widget(item.layout(), target_widget)
-                    if result:
-                        return result  # 재귀 호출에서 찾음
-
-            return None  # 이 브랜치에서는 못 찾음
-
-        # 재귀 탐색 시작
-        root_layout = parent_widget.layout()
-        layout = find_layout_containing_widget(root_layout, old_label)
-
-        if layout is None:
-            self.logger.warning(f"[{attr_name}] 위젯을 포함하는 레이아웃을 찾을 수 없음")
-            return
-
-        self.logger.info(f"[{attr_name}] 위젯을 포함하는 레이아웃 찾음: {type(layout).__name__}")
-
-        # 3단계: 기존 위젯의 속성 복사
-        # → 새 label이 원본과 동일하게 보이도록
-        tooltip = old_label.toolTip()  # 툴팁 텍스트
-        text = old_label.text()  # 표시 텍스트 (ⓘ)
-        stylesheet = old_label.styleSheet()  # CSS 스타일
-        min_size = old_label.minimumSize()  # 최소 크기
-        max_size = old_label.maximumSize()  # 최대 크기
-        alignment = old_label.alignment()  # 정렬 방식
-
-        # 4단계: 새 ClickableInfoLabel 생성 및 속성 설정
-        new_label = ClickableInfoLabel(parent_widget)
-        new_label.setText(text)
-        new_label.setToolTip(tooltip)
-        new_label.setStyleSheet(stylesheet)
-        new_label.setMinimumSize(min_size)
-        new_label.setMaximumSize(max_size)
-        new_label.setAlignment(alignment)
-
-        # 항상 활성화 상태 유지
-        # → 부모 위젯(라디오 버튼 등)이 비활성화되어도 i 아이콘은 클릭 가능
-        new_label.setEnabled(True)
-
-        # 항상 표시 상태 유지
-        # → ⓘ 아이콘이 항상 보이도록 강제
-        new_label.setVisible(True)
-
-        # 5단계: QGridLayout에서 원래 위치 찾아서 교체
-        if isinstance(layout, QGridLayout):
-            self.logger.debug(f"[{attr_name}] QGridLayout 감지, 총 {layout.count()}개 아이템")
-
-            # indexOf()로 위젯의 인덱스 찾기
-            index = layout.indexOf(old_label)
-            if index >= 0:
-                self.logger.debug(f"[{attr_name}] 위젯을 인덱스 {index}에서 발견")
-
-                # getItemPosition()으로 정확한 (row, col) 위치 가져오기
-                row, col, rowspan, colspan = layout.getItemPosition(index)
-                self.logger.debug(f"[{attr_name}] 위치: row={row}, col={col}, rowspan={rowspan}, colspan={colspan}")
-
-                # None 체크 (getItemPosition 실패 방지)
-                if row is not None and col is not None and rowspan is not None and colspan is not None:
-                    # 5-1. 기존 위젯 제거
-                    layout.removeWidget(old_label)
-                    old_label.deleteLater()  # Qt 객체 삭제 예약
-
-                    # 5-2. 새 위젯을 같은 위치에 추가
-                    layout.addWidget(new_label, row, col, rowspan, colspan)
-                    self.logger.debug(f"[{attr_name}] 새 위젯을 ({row}, {col})에 추가 완료")
-
-                    # 6단계: 성공 - 새 위젯을 self.<attr_name>에 저장
-                    setattr(self, attr_name, new_label)
-                    self.logger.debug(f"[{attr_name}] ClickableInfoLabel로 교체 완료")
-                    return
-                else:
-                    self.logger.warning(f"[{attr_name}] getItemPosition 반환값에 None 포함: row={row}, col={col}")
-
-            # 실패: 위치를 찾지 못함
-            self.logger.warning(f"[{attr_name}] QGridLayout에서 위치를 찾지 못함 (indexOf={index})")
-            setattr(self, attr_name, new_label)  # 속성만 저장, UI는 변경 안 됨
-            return
-        else:
-            # QGridLayout이 아닌 다른 레이아웃 (현재 미지원)
-            self.logger.warning(f"[{attr_name}] QGridLayout이 아닌 레이아웃 타입: {type(layout)}")
-            setattr(self, attr_name, new_label)  # 속성만 저장
-            return
-
     # ================================================================
     # 타이밍 설정 다이얼로그 관련 메서드
     # ================================================================
@@ -5517,6 +5108,9 @@ class WIZWindow(QMainWindow, main_window):
         """현재 검색 설정 읽기 (DeviceSearchConfig + 내부 변수)"""
         if not hasattr(self, 'device_search_config'):
             self.device_search_config = DeviceSearchConfig()
+            # 앱 시작 시 config 파일의 delay 값을 상수에 반영
+            saved_delay = self.device_search_config.config.get('search', {}).get('retry', {}).get('delay_between_retries_ms', 100)
+            RetrySearchLimits.RETRY_DELAY_MS = int(saved_delay)
 
         config = self.device_search_config.get_current_values()
 
@@ -5571,6 +5165,18 @@ class WIZWindow(QMainWindow, main_window):
             "Recommended: 3 (normal), 1 (fast search)"       # 권장: 일반 3회, 빠른 검색 1회
         )
         search_layout.addRow("Max Retry Count:", dialog.spin_max_retry_count)  # 최대 반복 횟수
+
+        # 반복 간 딜레이
+        dialog.spin_retry_delay_ms = QSpinBox()
+        dialog.spin_retry_delay_ms.setRange(0, 5000)
+        dialog.spin_retry_delay_ms.setSingleStep(50)
+        dialog.spin_retry_delay_ms.setSuffix(" ms")
+        dialog.spin_retry_delay_ms.setValue(config.get('delay_between_retries_ms', 100))
+        dialog.spin_retry_delay_ms.setToolTip(
+            "Delay between consecutive search retries\n"      # 반복 검색 간 딜레이
+            "Recommended: 100ms (default)"                    # 권장: 100ms (기본값)
+        )
+        search_layout.addRow("Retry Interval Delay:", dialog.spin_retry_delay_ms)  # 반복 간 딜레이
 
         search_group.setLayout(search_layout)
         main_layout.addWidget(search_group)
@@ -5744,6 +5350,7 @@ class WIZWindow(QMainWindow, main_window):
             # 검색 옵션
             'expected_device_count': dialog.spin_expected_device_count.value(),
             'max_retry_count': dialog.spin_max_retry_count.value(),
+            'delay_between_retries_ms': dialog.spin_retry_delay_ms.value(),
 
             # Phase 1 타이밍
             'phase1_broadcast_timeout': dialog.dspin_broadcast_timeout.value(),
@@ -5772,6 +5379,8 @@ class WIZWindow(QMainWindow, main_window):
             # 내부 변수 업데이트
             self.retry_search_expected_count = updates['expected_device_count']
             self.retry_search_max_count = updates['max_retry_count']
+            if 'delay_between_retries_ms' in updates:
+                RetrySearchLimits.RETRY_DELAY_MS = int(updates['delay_between_retries_ms'])
 
             # YAML 파일 업데이트
             self.device_search_config.update_config_values(updates)
@@ -5840,6 +5449,8 @@ class WIZWindow(QMainWindow, main_window):
                 # 검색 옵션 기본값
                 dialog.spin_expected_device_count.setValue(0)
                 dialog.spin_max_retry_count.setValue(3)
+                dialog.spin_retry_delay_ms.setValue(defaults['retry']['delay_between_retries_ms'])
+                RetrySearchLimits.RETRY_DELAY_MS = defaults['retry']['delay_between_retries_ms']
 
                 # Phase 1 타이밍 기본값
                 dialog.dspin_broadcast_timeout.setValue(defaults['phase1']['broadcast_timeout_sec'])

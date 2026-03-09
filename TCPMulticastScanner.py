@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+# [사용되지 않는 기능 - 폐기 필요] TCP Multicast / Mixed search 폐기로 미사용
+
 """
 TCP Multicast Scanner - Concurrent TCP device scanner using ThreadPoolExecutor.
 
