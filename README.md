@@ -60,7 +60,7 @@ Python interpreter based and it is platform independent. It works on python vers
 
 # What's New
 
-## v1.5.8.3 (dev/feat-search-methods)
+## v1.5.9
 
 ### New Devices Support
 
