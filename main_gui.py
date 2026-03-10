@@ -5651,7 +5651,7 @@ class WIZWindow(QMainWindow, main_window):
 
                 for row in reader:
                     mac_list.append(row['Mac Address'].encode('utf-8'))
-                    mn_list.append(row['Device Name'].encode('utf-8'))
+                    mn_list.append(row['Device Name'])
                     vr_list.append(row['Firmware Version'].encode('utf-8'))
                     st_list.append(row['Status'].encode('utf-8'))
                     # Operation Mode (선택 필드, 없으면 빈 문자열)
