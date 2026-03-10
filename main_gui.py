@@ -2313,7 +2313,7 @@ class WIZWindow(QMainWindow, main_window):
                         )
                         if mac_str == mc:
                             if idx < len(self.mn_list) and not self.mn_list[idx]:
-                                self.mn_list[idx] = mn_from_profile.encode('utf-8')
+                                self.mn_list[idx] = mn_from_profile
                                 if self.list_device.rowCount() > idx:
                                     self.list_device.setItem(
                                         idx, 1, QTableWidgetItem(mn_from_profile)
@@ -2399,12 +2399,10 @@ class WIZWindow(QMainWindow, main_window):
                     lens = [len(_d.mac_list), len(_d.mn_list), len(_d.vr_list), len(_d.st_list)]
                     if len(set(lens)) > 1:
                         self.logger.warning(f"[DIAG] WIZMSGHandler 리스트 길이 불일치! {lens}")
-                    # mn_list 내용 (비ASCII 포함 여부)
+                    # mn_list 내용 (비정상 바이트 포함 여부)
                     for _i, _mn in enumerate(_d.mn_list):
-                        try:
-                            _mn.decode('ascii')
-                        except Exception:
-                            self.logger.warning(f"[DIAG] mn_list[{_i}] non-ASCII: {_mn!r}")
+                        if '(' in _mn:
+                            self.logger.warning(f"[DIAG] mn_list[{_i}] non-printable bytes: {_mn!r}")
                 # CSV Load 모드: wizmsghandler 데이터 로드 건너뛰기
                 # (이미 CSV에서 mac_list, mn_list, vr_list, st_list, mode_list 로드됨)
                 if csv_load_mode:
@@ -2486,7 +2484,7 @@ class WIZWindow(QMainWindow, main_window):
                             i, 0, QTableWidgetItem(self.mac_list[i].decode('utf-8', errors='replace'))
                         )
                         # 장비 이름
-                        mn_str = self.mn_list[i].decode('utf-8', errors='replace') if i < len(self.mn_list) else ''
+                        mn_str = self.mn_list[i] if i < len(self.mn_list) else ''
                         self.list_device.setItem(i, 1, QTableWidgetItem(mn_str))
                         # 검색됨 상태
                         detected_item = QTableWidgetItem()
@@ -2779,7 +2777,7 @@ class WIZWindow(QMainWindow, main_window):
             else:
                 # 신규 장비 → 목록에 추가
                 self.mac_list.append(new_mac_list[i])
-                self.mn_list.append(new_mn_list[i] if i < len(new_mn_list) else b'')
+                self.mn_list.append(new_mn_list[i] if i < len(new_mn_list) else '')
                 self.vr_list.append(new_vr_list[i] if i < len(new_vr_list) else b'')
                 self.st_list.append(new_st_list[i] if i < len(new_st_list) else b'')
                 self.mode_list.append(new_mode_list[i] if new_mode_list and i < len(new_mode_list) else b'')
@@ -2805,13 +2803,13 @@ class WIZWindow(QMainWindow, main_window):
                     self.searched_dev.append(
                         [
                             self.mac_list[i].decode('utf-8', errors='replace'),
-                            self.mn_list[i].decode('utf-8', errors='replace'),
+                            self.mn_list[i],
                             self.vr_list[i].decode('utf-8', errors='replace'),
                             self.st_list[i].decode('utf-8', errors='replace'),
                         ]
                     )
                     self.dev_data[self.mac_list[i].decode('utf-8', errors='replace')] = [
-                        self.mn_list[i].decode('utf-8', errors='replace'),
+                        self.mn_list[i],
                         self.vr_list[i].decode('utf-8', errors='replace'),
                         self.st_list[i].decode('utf-8', errors='replace'),
                     ]
@@ -5549,7 +5547,7 @@ class WIZWindow(QMainWindow, main_window):
                 # 데이터
                 for i in range(len(self.mac_list)):
                     mac = self.mac_list[i].decode('utf-8') if isinstance(self.mac_list[i], bytes) else self.mac_list[i]
-                    name = self.mn_list[i].decode('utf-8') if isinstance(self.mn_list[i], bytes) else self.mn_list[i]
+                    name = self.mn_list[i]
                     version = self.vr_list[i].decode('utf-8') if isinstance(self.vr_list[i], bytes) else self.vr_list[i]
                     status = self.st_list[i].decode('utf-8') if isinstance(self.st_list[i], bytes) else self.st_list[i]
                     # Operation Mode (OP) - Phase 1에서 받은 정보
@@ -5688,7 +5686,7 @@ class WIZWindow(QMainWindow, main_window):
 
                 for i in range(len(self.mac_list)):
                     mac_str = self.mac_list[i].decode('utf-8')
-                    name_str = self.mn_list[i].decode('utf-8')
+                    name_str = self.mn_list[i]
                     version_str = self.vr_list[i].decode('utf-8')
                     status_str = self.st_list[i].decode('utf-8')
                     net_info = network_info_list[i]
@@ -5791,7 +5789,7 @@ class WIZWindow(QMainWindow, main_window):
 
             # Device Name
             name_item = QTableWidgetItem(
-                self.mn_list[i].decode('utf-8') if isinstance(self.mn_list[i], bytes) else self.mn_list[i]
+                self.mn_list[i]
             )
             self.list_device.setItem(i, 1, name_item)
 

@@ -17,6 +17,38 @@ exitflag = 0
 PACKET_SIZE = 4096
 
 
+def _sanitize_device_name(raw: bytes) -> str:
+    """WIZnet 장비 MN 필드 바이트 → str 변환.
+
+    - null 패딩(\\x00) 제거 후 UTF-8 디코딩 시도
+    - 실패 시 인쇄 가능 ASCII(0x20~0x7E)와 비정상 바이트를 구분하여,
+      연속된 비정상 바이트는 (xxyyzz) 형태로 묶어 표현
+      예) b'WIZ\\xff\\xffSR' → 'WIZ(ffff)SR'
+    - 빈 bytes / 전체 null → ''
+    """
+    if not raw:
+        return ''
+    raw = raw.rstrip(b'\x00')
+    if not raw:
+        return ''
+    try:
+        return raw.decode('utf-8')
+    except (UnicodeDecodeError, ValueError):
+        result = []
+        bad_run = []
+        for b in raw:
+            if 0x20 <= b <= 0x7E:
+                if bad_run:
+                    result.append('(' + ''.join(f'{x:02x}' for x in bad_run) + ')')
+                    bad_run = []
+                result.append(chr(b))
+            else:
+                bad_run.append(b)
+        if bad_run:
+            result.append('(' + ''.join(f'{x:02x}' for x in bad_run) + ')')
+        return ''.join(result)
+
+
 def timeout_func():
     # print('timeout')
     global exitflag
@@ -233,7 +265,7 @@ class WIZMSGHandler(QThread):
 
                                     if 'MC' in pkt and self.check_parameter(b"MC" + pkt['MC']):
                                         self.mac_list.append(pkt['MC'])
-                                        self.mn_list.append(pkt.get('MN', b''))
+                                        self.mn_list.append(_sanitize_device_name(pkt.get('MN', b'')))
                                         self.vr_list.append(pkt.get('VR', b''))
                                         self.mode_list.append(pkt.get('OP', b''))
                                         self.st_list.append(pkt.get('ST', b''))
