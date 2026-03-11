@@ -22,15 +22,18 @@ class WIZUDPSock:
 
         # self.sock.bind(("", self.localport))
         self.sock.bind((self.ipaddr, self.localport))
-        self.sock.setblocking(0)
+        self.sock.setblocking(False)
 
     def sendto(self, msg):
+        assert self.sock is not None, "sendto() called before open()"
         self.sock.sendto(msg, ("255.255.255.255", self.peerport))
         # self.sock.sendto(msg, ("192.168.50.255", self.peerport))
 
     def recvfrom(self):
+        assert self.sock is not None, "recvfrom() called before open()"
         data, addr = self.sock.recvfrom(4096)
         return data
 
     def close(self):
+        assert self.sock is not None, "close() called before open()"
         self.sock.close()

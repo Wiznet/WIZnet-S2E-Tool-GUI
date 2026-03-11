@@ -31,10 +31,10 @@ def get_logger(logger_name, path, filename):
     logging.handlers.RotatingFileHandler(log_path, maxBytes=LOG_MAX_SIZE, backupCount=LOG_FILE_CNT)
 
     # log format
-    if LOG_LEVEL == logging.INFO:
-        fileformatter = logging.Formatter('[%(asctime)s|%(levelname)s]-%(message)s')
-    elif LOG_LEVEL == logging.DEBUG:
+    if LOG_LEVEL == logging.DEBUG:
         fileformatter = logging.Formatter('[%(asctime)s|%(levelname)s|%(filename)s|(%(funcName)s)]-%(message)s')
+    else:
+        fileformatter = logging.Formatter('[%(asctime)s|%(levelname)s]-%(message)s')
 
     fileHandler = logging.FileHandler(log_path, encoding='utf-8')
     fileHandler.setFormatter(fileformatter)
