@@ -458,7 +458,11 @@ class WIZWindow(QMainWindow, main_window):
         self.wizmakecmd = WIZMakeCMD()
 
         self.dev_profile = {}
+        self.dev_data = {}
+        self.searched_dev = []
         self.searched_devnum = None
+        self.conf_sock = None
+        self._finalize_timer = None
         # init search option
         self.retry_search_num = 1
         self.search_wait_time = 3
@@ -807,7 +811,10 @@ class WIZWindow(QMainWindow, main_window):
 
     @funclog(logger)
     def net_ifs_selected(self, netifs):
-        ifs = netifs.text().split(":")
+        text = netifs.text()
+        if ':' not in text:
+            return
+        ifs = text.split(":", 1)
         selected_ip = ifs[0]
         selected_name = ifs[1]
 
@@ -824,6 +831,12 @@ class WIZWindow(QMainWindow, main_window):
         if len(self.list_device.selectedItems()) == 0:
             self.disable_object()
         else:
+            mac_item = next((item for item in self.list_device.selectedItems() if item.column() == 0), None)
+            if mac_item and mac_item.text() not in self.dev_profile:
+                # Phase 3 미완료: curr_mac/dev/ver/st 는 설정하되 Apply 버튼 활성화는 스킵
+                self.selected_devinfo()
+                self.statusBar().showMessage('Retrieving device info, please wait...')
+                return
             self.object_config()
 
     def net_changed(self, index):
@@ -2302,6 +2315,20 @@ class WIZWindow(QMainWindow, main_window):
                 self.dev_profile[mc] = profile
                 self.logger.debug(f"dev_profile 갱신: {mc}")
 
+                # Phase 3 완료: 해당 행 색 복원 (주황-빨강 → 정상)
+                for idx, mac_bytes in enumerate(self.mac_list):
+                    mac_str = (
+                        mac_bytes.decode('utf-8', errors='replace')
+                        if isinstance(mac_bytes, bytes)
+                        else str(mac_bytes)
+                    )
+                    if mac_str == mc:
+                        for col in (0, 1):
+                            _item = self.list_device.item(idx, col)
+                            if _item:
+                                _item.setForeground(QtGui.QColor(0, 0, 0))
+                        break
+
                 # 브로드캐스트 응답(mn_list)이 비어있으면 개별 쿼리 결과로 채우기
                 mn_from_profile = profile.get("MN", "")
                 if mn_from_profile:
@@ -2477,15 +2504,18 @@ class WIZWindow(QMainWindow, main_window):
                 self.logger.info(f"[TIMING] {self._T()} 테이블 업데이트 시작 ({len(self.mac_list)}행)")
                 self.list_device.setRowCount(len(self.mac_list))
 
+                _loading_color = QtGui.QColor(200, 80, 0)  # 주황-빨강: Phase 3 수집 중
                 for i in range(0, len(self.mac_list)):
                     try:
                         # MAC 주소
-                        self.list_device.setItem(
-                            i, 0, QTableWidgetItem(self.mac_list[i].decode('utf-8', errors='replace'))
-                        )
+                        item_mac = QTableWidgetItem(self.mac_list[i].decode('utf-8', errors='replace'))
+                        item_mac.setForeground(_loading_color)
+                        self.list_device.setItem(i, 0, item_mac)
                         # 장비 이름
                         mn_str = self.mn_list[i] if i < len(self.mn_list) else ''
-                        self.list_device.setItem(i, 1, QTableWidgetItem(mn_str))
+                        item_mn = QTableWidgetItem(mn_str)
+                        item_mn.setForeground(_loading_color)
+                        self.list_device.setItem(i, 1, item_mn)
                         # 검색됨 상태
                         detected_item = QTableWidgetItem()
                         if i < len(self.detected_list) and self.detected_list[i]:
@@ -2844,7 +2874,7 @@ class WIZWindow(QMainWindow, main_window):
         # dev_info = []
         # clicked_mac = ""
         # if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
-        if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev:
+        if self.curr_dev and ("WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev):
             if self.generalTab.currentIndex() == 2:
                 self.gpio_check()
                 self.get_refresh_time()
@@ -2858,6 +2888,10 @@ class WIZWindow(QMainWindow, main_window):
         self.get_clicked_devinfo(clicked_mac, call_from)
 
     def get_clicked_devinfo(self, macaddr, call_from=None):
+        if macaddr not in self.dev_profile:
+            self.statusBar().showMessage('Retrieving device info, please wait...')
+            QToolTip.showText(QtGui.QCursor.pos(), "장치 정보 수집 중입니다.\n검색 완료 후 다시 클릭하세요.", self)
+            return
         try:
             self.object_config()
         except Exception as e:
@@ -3914,9 +3948,22 @@ class WIZWindow(QMainWindow, main_window):
             # 현재 0번 열은 맥주소이고 1번 열은 장치명
             if currentItem.column() == 0:
                 self.curr_mac = currentItem.text()
-                self.curr_ver = self.dev_data[self.curr_mac][1]
-                self.curr_st = self.dev_data[self.curr_mac][2]
-                selected_row = currentItem.row()
+                row = currentItem.row()
+                _dev_info = self.dev_data.get(self.curr_mac)
+                if _dev_info is not None:
+                    self.curr_ver = _dev_info[1]
+                    self.curr_st  = _dev_info[2]
+                else:
+                    # Phase 3 미완료: Phase 1 데이터로 폴백 (curr_ver 빈 문자열 방지)
+                    self.curr_ver = (
+                        self.vr_list[row].decode('utf-8', errors='replace')
+                        if row < len(self.vr_list) else ''
+                    )
+                    self.curr_st = (
+                        self.st_list[row].decode('utf-8', errors='replace')
+                        if row < len(self.st_list) else ''
+                    )
+                selected_row = row
                 # print('current device:', self.curr_mac, self.curr_ver, self.curr_st)
             elif currentItem.column() == 1:
                 self.curr_dev = currentItem.text()

@@ -156,6 +156,8 @@ def version_compare(version1: str, version2: str):
         version1 (str): 첫번째 버전
         version2 (str): 두번째 버전
     """
+    if not version1 or not version2:
+        return 0
     return 0 if version1 == version2 else -1 if Version(version1) < Version(version2) else 1
 
 
