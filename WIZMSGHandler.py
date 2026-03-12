@@ -130,16 +130,15 @@ class WIZMSGHandler(QThread):
                     # hex_string = cmd[1].decode('hex')
                     try:
                         hex_string = codecs.decode(cmd[1], "hex")
+                        self.msg[self.size :] = hex_string
+                        self.dest_mac = hex_string
+                        # self.dest_mac = (int(cmd[1], 16)).to_bytes(6, byteorder='big') # Hexadecimal string to hexadecimal binary
+                        # self.msg[self.size:] = self.dest_mac
+                        self.size += 6
                     except Exception as e:
                         self.logger.error(
                             "[ERROR] makecommands() decode:", cmd[0], cmd[1], e
                         )
-
-                    self.msg[self.size :] = hex_string
-                    self.dest_mac = hex_string
-                    # self.dest_mac = (int(cmd[1], 16)).to_bytes(6, byteorder='big') # Hexadecimal string to hexadecimal binary
-                    # self.msg[self.size:] = self.dest_mac
-                    self.size += 6
                 else:
                     try:
                         self.msg[self.size :] = str.encode(cmd[1])

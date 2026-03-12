@@ -13,7 +13,6 @@ from WIZUDPSock import WIZUDPSock
 from FWUploadThread import FWUploadThread
 from WIZMSGHandler import WIZMSGHandler, DataRefresh
 from certificatethread import certificatethread
-from network_utils import get_subnet_hosts, get_adapter_subnet_info
 from device_search_config import DeviceSearchConfig
 
 from wizcmdset import (
@@ -39,6 +38,7 @@ import logging
 import datetime
 import csv
 from pathlib import Path
+from enum import Enum
 
 # Additional package
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
@@ -55,9 +55,9 @@ from PyQt5.QtWidgets import (
     QAction,
     QProgressBar,
     QInputDialog,
-    QTabWidget,
+    # QTabWidget,
     QLabel,
-    QGridLayout,
+    # QGridLayout,
     QToolTip,
     # QRadioButton,
     # QComboBox,
@@ -213,13 +213,10 @@ class SearchErrorCollector:
         msgbox = QMessageBox(parent)
         msgbox.setIcon(QMessageBox.Warning)
         msgbox.setWindowTitle("검색 오류")
-        msgbox.setTextFormat(QtCore.Qt.RichText)  # IDE 경고 무시 (실제 작동함)
+        msgbox.setTextFormat(QtCore.Qt.TextFormat.RichText)  # IDE 경고 무시 (실제 작동함)
         msgbox.setText(self.to_html())
         msgbox.setStandardButtons(QMessageBox.Ok)
         msgbox.exec_()
-
-
-from enum import Enum
 
 
 class SearchState(Enum):
@@ -463,6 +460,21 @@ class WIZWindow(QMainWindow, main_window):
         self.searched_devnum = None
         self.conf_sock = None
         self._finalize_timer = None
+        self.mode_list = []
+        self._timing_t0 = None
+        self.all_response = []
+        self.eachdev_info = []
+        self.final_status_message = ""
+        self.tab_structure = {}
+        self.factory_setting_action: "QAction | None" = None
+        self.factory_firmware_action: "QAction | None" = None
+        self.netconfig_menu: "QMenu | None" = None
+        self.net_list = []
+        self.t_fwup = None
+        self.th_cert = None
+        self.certfont = None
+        self.largefont = None
+        self.csv_load_mode = False
         # init search option
         self.retry_search_num = 1
         self.search_wait_time = 3
@@ -517,6 +529,7 @@ class WIZWindow(QMainWindow, main_window):
         self.isConnected = False
         self.set_reponse = None
         self.wizmsghandler = None
+        self.intv_time = 0
 
         self.datarefresh = None
 
@@ -624,7 +637,8 @@ class WIZWindow(QMainWindow, main_window):
         # Menu event - Option
         self.net_adapter_info()
 
-        self.netconfig_menu.triggered[QAction].connect(self.net_ifs_selected)
+        if self.netconfig_menu is not None:
+            self.netconfig_menu.triggered[QAction].connect(self.net_ifs_selected)
         # Menu event - Option - Advanced Search Options
         self.actionAdvancedSearchOptions.triggered.connect(self.event_open_advanced_search_options)
         # Menu event - Option - Search option
@@ -724,10 +738,10 @@ class WIZWindow(QMainWindow, main_window):
         # for WIZ5XXSR-RP
         self.groupbox_ch1_timeout.hide()
         # self.groupbox_ch1_timeout.setEnabled(False)
-        
+
         # group_packing_12는 기본적으로 숨김 (W55RP20-S2E일 때만 표시)
         self.group_packing_12.hide()
-        
+
         # group_packing_13은 기본적으로 숨김 (W55RP20-S2E, W232N, IP20일 때만 표시)
         self.group_packing_13.hide()
 
@@ -790,6 +804,8 @@ class WIZWindow(QMainWindow, main_window):
         When tab changed
         - check user IO tab
         """
+        if not self.curr_dev:
+            return
         if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev:
             if self.generalTab.currentIndex() == 2:
                 self.logger.debug(
@@ -835,7 +851,7 @@ class WIZWindow(QMainWindow, main_window):
             if mac_item and mac_item.text() not in self.dev_profile:
                 # Phase 3 미완료: curr_mac/dev/ver/st 는 설정하되 Apply 버튼 활성화는 스킵
                 self.selected_devinfo()
-                self.statusBar().showMessage('Retrieving device info, please wait...')
+                self.statusbar.showMessage('Retrieving device info, please wait...')
                 return
             self.object_config()
 
@@ -856,7 +872,6 @@ class WIZWindow(QMainWindow, main_window):
 
         self.statusbar.showMessage(f"Selected eth: {selected_ip} - {selected_name}")
         self.selected_eth = selected_ip
-
 
     # Get network adapter & IP list
     def net_adapter_info(self):
@@ -919,7 +934,7 @@ class WIZWindow(QMainWindow, main_window):
             self.netconfig_menu.addAction(netconfig)
             self.combobox_net_interface.addItem(net_ifs)
 
-        # add refresh action 
+        # add refresh action
         refresh_action = QAction("Refresh", self)
         refresh_action.setFont(self.midfont)
         refresh_action.triggered.connect(self.on_refresh_network_adapter)
@@ -929,7 +944,7 @@ class WIZWindow(QMainWindow, main_window):
         self.combobox_net_interface.setCurrentIndex(0)
         # 힌트 텍스트 설정
         # self.combobox_net_interface.setPlaceholderText('<Select Network Interface>')
-        
+
     def on_refresh_network_adapter(self):
         # 1) "Network Interface Config" 메뉴 제거
         for action in self.menuOption.actions():
@@ -945,8 +960,6 @@ class WIZWindow(QMainWindow, main_window):
         # 3) 로그 남기기
         self.logger.info("Network interface config menu re-created.")
         self.statusbar.showMessage("Network interface config menu re-created.")
-
-    
 
     def disable_object(self):
         self.btn_reset.setEnabled(False)
@@ -1068,6 +1081,8 @@ class WIZWindow(QMainWindow, main_window):
             )
 
     def gpio_check(self):
+        if not self.curr_dev:
+            return
         if "WIZ5XX" in self.curr_dev:
             gpio_list = ["a", "b"]
         else:
@@ -1175,6 +1190,8 @@ class WIZWindow(QMainWindow, main_window):
 
     # Object config for some Devices or F/W version
     def object_config_for_device(self):
+        if not self.curr_dev or not self.curr_ver:
+            return
         # IP20도 Certificate manager 탭 표시 (SSL/MQTTS 지원)
         # if self.curr_dev == "IP20":
         #     # certificate_tab_text는 init_ui_object에서 저장됨
@@ -1192,7 +1209,7 @@ class WIZWindow(QMainWindow, main_window):
         else:
             self.group_packing_12.hide()
             self.group_packing_13.hide()
-        
+
         # ...existing code...
         is_security_two_port = self.curr_dev in SECURITY_TWO_PORT_DEV
         is_legacy_two_port = (
@@ -1375,7 +1392,6 @@ class WIZWindow(QMainWindow, main_window):
             if idx_921 != -1:
                 self.ch2_baud.removeItem(idx_921)
 
-
         # SC: Status pin option
         if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
             pass
@@ -1398,8 +1414,10 @@ class WIZWindow(QMainWindow, main_window):
 
         if self.curr_dev in SECURITY_DEVICE:
             self.tcp_timeout.setEnabled(True)
-            self.factory_setting_action.setEnabled(True)
-            self.factory_firmware_action.setEnabled(True)
+            if self.factory_setting_action is not None:
+                self.factory_setting_action.setEnabled(True)
+            if self.factory_firmware_action is not None:
+                self.factory_firmware_action.setEnabled(True)
             # 'OP' option
             # IP20도 SSL, MQTTs 지원
             self.ch1_ssl_tcpclient.setEnabled(True)
@@ -1413,8 +1431,10 @@ class WIZWindow(QMainWindow, main_window):
             else:
                 self.combobox_current_bank.setEnabled(False)
         else:
-            self.factory_setting_action.setEnabled(True)
-            self.factory_firmware_action.setEnabled(False)
+            if self.factory_setting_action is not None:
+                self.factory_setting_action.setEnabled(True)
+            if self.factory_firmware_action is not None:
+                self.factory_firmware_action.setEnabled(False)
             # 'OP' option
             self.ch1_ssl_tcpclient.setEnabled(False)
             self.ch1_mqttclient.setEnabled(False)
@@ -1433,6 +1453,8 @@ class WIZWindow(QMainWindow, main_window):
         @mason 이사가 BOOT/UPGRADE 모드일 때 advance_tab 도 뺐으면 좋겠다고 해서 기존 코드에 advance_tab 추가 코드도 작성
         그 외 장비는 basic_tab, advance_tab 만 보여줌
         """
+        if not self.curr_dev:
+            return
         # General tab ui setup by device
         n_tabs: int = self.generalTab.count()
         print(f"n_tabs={n_tabs}")
@@ -1451,7 +1473,7 @@ class WIZWindow(QMainWindow, main_window):
             # 디바이스 상태가 DeviceStatusMinimum 이면 ExcludeTabInMinimum 에 속한 탭 삭제
             # 디바이스 상태가 DeviceStatusMinimum 이 아니면 ExcludeTabInMinimum 탭이 없으면 탭 추가
             if self.curr_st in DeviceStatusMinimum:
-                _tab: tuple[int, QTabWidget]
+                _tab: SysTabIndex
                 for _tab in list_tabs:
                     if _tab.name in ExcludeTabInMinimum:
                         self.generalTab.removeTab(_tab.idx)
@@ -1463,6 +1485,8 @@ class WIZWindow(QMainWindow, main_window):
                     if _new_tab not in repr(list_tabs):
                         _new_tab_object = self.tab_structure.get(_new_tab)
                         print(f"_new_tab={_new_tab},_new_tab_object={_new_tab_object}")
+                        if _new_tab_object is None:
+                            continue
                         self.generalTab.insertTab(
                             next_tab_idx,
                             _new_tab_object.object,
@@ -1487,6 +1511,8 @@ class WIZWindow(QMainWindow, main_window):
             for _new_tab in IncludeTabInCommon:
                 if _new_tab not in repr(list_tabs):
                     _new_tab_object = self.tab_structure.get(_new_tab)
+                    if _new_tab_object is None:
+                        continue
                     self.generalTab.insertTab(
                         next_tab_idx, _new_tab_object.object, _new_tab_object.ui_text
                     )
@@ -1544,6 +1570,8 @@ class WIZWindow(QMainWindow, main_window):
             #     self.generalTab.removeTab(2)
 
     def channel_tab_config(self):
+        if not self.curr_dev:
+            return
         # channel tab config
         print("channel_tab_config::curr_st=", self.curr_st)
         if self.curr_st in DeviceStatusMinimum:
@@ -1903,7 +1931,7 @@ class WIZWindow(QMainWindow, main_window):
         if num == 0:
             pass
         else:
-            if not self.datarefresh.rcv_list:
+            if self.datarefresh is None or not self.datarefresh.rcv_list:
                 pass
             else:
                 resp = self.datarefresh.rcv_list[0]
@@ -2086,7 +2114,7 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.info(f"[TIMING] {self._T()} socket_config() 시작")
             _t_sock = time.time()
             self.socket_config()
-            self.logger.info(f"[TIMING] {self._T()} socket_config() 완료 ({(time.time()-_t_sock)*1000:.1f}ms 소요)")
+            self.logger.info(f"[TIMING] {self._T()} socket_config() 완료 ({(time.time() - _t_sock) * 1000:.1f}ms 소요)")
             _conf_sock = "None" if not hasattr(self, "conf_sock") else self.conf_sock
             self.logger.info(f"search: conf_sock: {_conf_sock}")
 
@@ -2537,7 +2565,7 @@ class WIZWindow(QMainWindow, main_window):
                 # row/column resize disable
                 self.list_device.horizontalHeader().setSectionResizeMode(2)
                 self.list_device.verticalHeader().setSectionResizeMode(2)
-                self.logger.info(f"[TIMING] {self._T()} 테이블 업데이트 완료 (resize 포함: {(time.time()-_t_resize)*1000:.1f}ms)")
+                self.logger.info(f"[TIMING] {self._T()} 테이블 업데이트 완료 (resize 포함: {(time.time() - _t_resize) * 1000:.1f}ms)")
 
             # 반복 검색 로직 (유지/갱신 모드 + UDP broadcast 전용)
             # devnum == 0이어도 반복 검색 수행 (처음 응답 없던 장비가 나중에 응답할 수 있음)
@@ -2553,7 +2581,7 @@ class WIZWindow(QMainWindow, main_window):
 
                 # 조기 종료 조건 체크 (리팩토링)
                 reached_expected = (self.retry_search_expected_count > 0 and
-                                   total_count >= self.retry_search_expected_count)
+                                    total_count >= self.retry_search_expected_count)
                 reached_max = self.retry_search_current >= self.retry_search_max_count
 
                 # 종료 조건: 예상 장비 수 도달 OR 최대 반복 횟수 도달
@@ -2889,7 +2917,7 @@ class WIZWindow(QMainWindow, main_window):
 
     def get_clicked_devinfo(self, macaddr, call_from=None):
         if macaddr not in self.dev_profile:
-            self.statusBar().showMessage('Retrieving device info, please wait...')
+            self.statusbar.showMessage('Retrieving device info, please wait...')
             QToolTip.showText(QtGui.QCursor.pos(), "장치 정보 수집 중입니다.\n검색 완료 후 다시 클릭하세요.", self)
             return
         try:
@@ -2990,6 +3018,8 @@ class WIZWindow(QMainWindow, main_window):
 
     # Check: decode exception handling
     def fill_devinfo(self, dev_data):
+        if not self.curr_dev or not self.curr_ver:
+            return
         print("fill_devinfo", type(dev_data), dev_data)
         try:
             # device info (RO)
@@ -3425,13 +3455,11 @@ class WIZWindow(QMainWindow, main_window):
         msgbox.setDetailedText(str(error))
         msgbox.exec_()
 
-    def getinfo_for_setting(self, row_index):
-        self.rcv_data[row_index] = self.set_reponse[0]
-        # print('getinfo_for_setting set_response', self.set_reponse)
-
     # get each object's value for setting
     def get_object_value(self):
         self.selected_devinfo()
+        if not self.curr_dev or not self.curr_ver:
+            return
         setcmd = {}
 
         try:
@@ -3521,7 +3549,7 @@ class WIZWindow(QMainWindow, main_window):
             setcmd["PS"] = self.ch1_pack_size.text()
             setcmd["PD"] = self.ch1_pack_char.text()
             # Send Data at Connection - W55RP20-S2E, W232N, IP20 (버전 1.1.8 이상)
-            if self.curr_dev in (W55RP20_FAMILY + ("W232N", "IP20")) and version_compare(self.curr_ver, "1.1.8") >= 0:
+            if self.curr_dev in (W55RP20_FAMILY + ("W232N", "IP20")) and version_compare(self.curr_ver or "", "1.1.8") >= 0:
                 sd_data = self.ch1_pack_char_3.text()
                 # 최대 30글자로 제한
                 if len(sd_data) > 30:
@@ -3530,7 +3558,7 @@ class WIZWindow(QMainWindow, main_window):
                 # 빈 문자열인 경우 공백 전송 (MQTT와 동일한 방식)
                 print(f"[DEBUG] Saving SD data: '{sd_data}'")
                 setcmd["SD"] = sd_data if sd_data else " "
-                
+
                 # Send Data at Disconnection - W55RP20-S2E, W232N, IP20
                 dd_data = self.ch1_pack_char_4.text()
                 # 최대 30글자로 제한
@@ -3540,7 +3568,7 @@ class WIZWindow(QMainWindow, main_window):
                 # 빈 문자열인 경우 공백 전송 (MQTT와 동일한 방식)
                 print(f"[DEBUG] Saving DD data: '{dd_data}'")
                 setcmd["DD"] = dd_data if dd_data else " "
-                
+
                 # Ethernet Data Connection Condition - W55RP20-S2E, W232N, IP20
                 se_data = self.ch1_pack_char_5.text()
                 # 최대 30글자로 제한
@@ -3802,6 +3830,8 @@ class WIZWindow(QMainWindow, main_window):
             # matching set command
             setcmd = self.get_object_value()
             # self.selected_devinfo()
+            if setcmd is None:
+                return
 
             # Update cmdset
             self.cmdset.get_cmdset(self.curr_dev, self.curr_st, self.curr_ver)
@@ -3859,6 +3889,8 @@ class WIZWindow(QMainWindow, main_window):
                 self.wizmsghandler.start()
 
     def get_setting_result(self, resp_len):
+        if not self.curr_dev or not self.curr_ver:
+            return
         prev_channel_tab_index = self.channel_tab.currentIndex()
         set_result = {}
 
@@ -3870,9 +3902,12 @@ class WIZWindow(QMainWindow, main_window):
 
             if self.isConnected and self.unicast_ip.isChecked():
                 self.logger.info("close socket")
-                self.conf_sock.shutdown()
+                if self.conf_sock is not None:
+                    self.conf_sock.close()
 
             # get setting result
+            if self.wizmsghandler is None:
+                return
             self.set_reponse = self.wizmsghandler.rcv_list[0]
 
             # cmdsets = self.set_reponse.splitlines()
@@ -3910,7 +3945,7 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.warning(f"Warning: setting is did not well. resp_len={resp_len}")
             # 디버깅: 실제 수신된 응답 내용 로깅
             try:
-                if hasattr(self, 'wizmsghandler'):
+                if self.wizmsghandler is not None:
                     self.logger.warning(f"[DEBUG] wizmsghandler exists: {type(self.wizmsghandler)}")
                     if hasattr(self.wizmsghandler, 'rcv_list'):
                         self.logger.warning(f"[DEBUG] rcv_list exists, length: {len(self.wizmsghandler.rcv_list)}")
@@ -3952,7 +3987,7 @@ class WIZWindow(QMainWindow, main_window):
                 _dev_info = self.dev_data.get(self.curr_mac)
                 if _dev_info is not None:
                     self.curr_ver = _dev_info[1]
-                    self.curr_st  = _dev_info[2]
+                    self.curr_st = _dev_info[2]
                 else:
                     # Phase 3 미완료: Phase 1 데이터로 폴백 (curr_ver 빈 문자열 방지)
                     self.curr_ver = (
@@ -3969,13 +4004,13 @@ class WIZWindow(QMainWindow, main_window):
                 self.curr_dev = currentItem.text()
                 selected_row = currentItem.row()
                 # print('current dev name:', self.curr_dev)
-        
+
         # 행이 선택되었는데 curr_dev가 설정되지 않은 경우, 해당 행의 1번 열에서 장치명 가져오기
         if selected_row >= 0 and self.curr_dev is None:
             dev_name_item = self.list_device.item(selected_row, 1)
             if dev_name_item:
                 self.curr_dev = dev_name_item.text()
-        
+
         self.statusbar.showMessage(
             " Current device [%s : %s], %s"
             % (self.curr_mac, self.curr_dev, self.curr_ver)
@@ -3996,7 +4031,8 @@ class WIZWindow(QMainWindow, main_window):
             self.pgbar.setValue(8)
             self.msg_upload_success()
         if self.isConnected and self.unicast_ip.isChecked():
-            self.conf_sock.shutdown()
+            if self.conf_sock is not None:
+                self.conf_sock.close()
         self.pgbar.hide()
 
     def update_error(self, error):
@@ -4018,7 +4054,7 @@ class WIZWindow(QMainWindow, main_window):
         self.logger.error(text)
 
         try:
-            if self.t_fwup.isRunning():
+            if self.t_fwup is not None and self.t_fwup.isRunning():
                 self.t_fwup.terminate()
         except Exception as e:
             self.logger.error(e)
@@ -4037,12 +4073,13 @@ class WIZWindow(QMainWindow, main_window):
             # self.msg_upload_success()
             self.show_msgbox_info("Upload complete", "Certificate update complete!")
         if self.isConnected and self.unicast_ip.isChecked():
-            self.conf_sock.shutdown()
+            if self.conf_sock is not None:
+                self.conf_sock.close()
         self.pgbar.hide()
 
     def cert_error(self, error):
         try:
-            if self.th_cert.isRunning():
+            if self.th_cert is not None and self.th_cert.isRunning():
                 self.th_cert.terminate()
         except Exception as e:
             self.logger.error(e)
@@ -4052,7 +4089,7 @@ class WIZWindow(QMainWindow, main_window):
                 " Certificate update failed. No response from device."
             )
         elif error == -2:
-            self.statusbar.showMessage(" Certificate update: Nework connection failed.")
+            self.statusbar.showMessage(" Certificate update: Network connection failed.")
             self.msg_connection_failed()
         elif error == -3:
             self.statusbar.showMessage(" Certificate update error.")
@@ -4105,6 +4142,10 @@ class WIZWindow(QMainWindow, main_window):
                 port,
                 self.curr_dev,
             )
+        if self.t_fwup is None:
+            self.logger.error("firmware_update: t_fwup not initialized (no search mode selected)")
+            self.update_result(-1)
+            return
         self.t_fwup.uploading_size.connect(self.pgbar.setValue)
         self.t_fwup.upload_result.connect(self.update_result)
         self.t_fwup.error_flag.connect(self.update_error)
@@ -4115,6 +4156,8 @@ class WIZWindow(QMainWindow, main_window):
             self.update_result(-1)
 
     def firmware_file_open(self):
+        if not self.curr_dev:
+            return
         fname, _ = QFileDialog.getOpenFileName(
             self, "Firmware file open", "", "Binary Files (*.bin);;All Files (*)"
         )
@@ -4146,7 +4189,7 @@ class WIZWindow(QMainWindow, main_window):
                     bankval = doc.toPlainText()
 
                     msgbox = QMessageBox(self)
-                    msgbox.setTextFormat(QtCore.Qt.RichText)
+                    msgbox.setTextFormat(QtCore.Qt.TextFormat.RichText)
                     text = f"- Current bank: {bankval}\n- Selected file: {self.fw_filename.split('/')[-1]}\n\nThe bank number must match with current device bank number.\nDo you want to update now?"
                     btnReply = msgbox.question(
                         self,
@@ -4206,7 +4249,8 @@ class WIZWindow(QMainWindow, main_window):
             self.statusbar.showMessage(" Reset complete.")
             self.msg_reset_success()
             if self.isConnected and self.unicast_ip.isChecked():
-                self.conf_sock.shutdown()
+                if self.conf_sock is not None:
+                    self.conf_sock.close()
         elif resp_len < 0:
             self.statusbar.showMessage(
                 " Reset/Factory failed: no response from device."
@@ -4219,7 +4263,8 @@ class WIZWindow(QMainWindow, main_window):
             self.statusbar.showMessage(" Factory reset complete.")
             self.msg_factory_success()
             if self.isConnected and self.unicast_ip.isChecked():
-                self.conf_sock.shutdown()
+                if self.conf_sock is not None:
+                    self.conf_sock.close()
         elif resp_len < 0:
             self.statusbar.showMessage(
                 " Reset/Factory failed: no response from device."
@@ -4403,10 +4448,9 @@ class WIZWindow(QMainWindow, main_window):
             filename = self.fw_filename
 
         try:
-            if self.broadcast.isChecked():
-                ip_addr = self.localip.text()
-                port = 50002
-            elif self.unicast_ip.isChecked():
+            ip_addr = self.localip.text()
+            port = 50002
+            if self.unicast_ip.isChecked():
                 ip_addr = self.search_ipaddr.text()
                 port = int(self.search_port.text())
 
@@ -4448,7 +4492,7 @@ class WIZWindow(QMainWindow, main_window):
         msgbox = QMessageBox(self)
         msgbox.setIcon(type)
         msgbox.setWindowTitle(title)
-        msgbox.setTextFormat(QtCore.Qt.RichText)
+        msgbox.setTextFormat(QtCore.Qt.TextFormat.RichText)
         msgbox.setText(msg)
         msgbox.exec_()
 
@@ -4474,7 +4518,7 @@ class WIZWindow(QMainWindow, main_window):
 
     def about_info(self):
         msgbox = QMessageBox(self)
-        msgbox.setTextFormat(QtCore.Qt.RichText)
+        msgbox.setTextFormat(QtCore.Qt.TextFormat.RichText)
         text = f"""
         <html>
         <head>
@@ -4517,7 +4561,7 @@ class WIZWindow(QMainWindow, main_window):
         msgbox = QMessageBox(self)
         msgbox.setIcon(QMessageBox.Warning)
         msgbox.setWindowTitle("Not supported device")
-        msgbox.setTextFormat(QtCore.Qt.RichText)
+        msgbox.setTextFormat(QtCore.Qt.TextFormat.RichText)
         text = (
             "The device != supported.<br>Please contact us by the link below.<br><br>"
             "<a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/issues'># Github issue page</a>"
@@ -4664,7 +4708,7 @@ class WIZWindow(QMainWindow, main_window):
             self.close()
 
     def dialog_save_file(self):
-        mac_part = self.curr_mac.replace(":", "")[6:]
+        mac_part = (self.curr_mac or "").replace(":", "")[6:]
         fname, _ = QFileDialog.getSaveFileName(
             self,
             "Save Configuration",
@@ -4683,6 +4727,8 @@ class WIZWindow(QMainWindow, main_window):
     def save_configuration(self, filename):
         setcmd = self.get_object_value()
         # self.logger.info(setcmd)
+        if setcmd is None:
+            return
         set_list = list(setcmd.keys())
 
         with open(filename, "w+", encoding="utf-8") as f:
@@ -4749,7 +4795,7 @@ class WIZWindow(QMainWindow, main_window):
 
         icon = QtGui.QIcon()
         icon.addPixmap(
-            QtGui.QPixmap(resource_path(iconfile)), QtGui.QIcon.Normal, QtGui.QIcon.Off
+            QtGui.QPixmap(resource_path(iconfile)), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off
         )
         button.setIcon(icon)
         button.setIconSize(QtCore.QSize(40, 40))
@@ -4794,7 +4840,7 @@ class WIZWindow(QMainWindow, main_window):
         self.group_searchmethod.setFont(self.smallfont)
         self.input_searchcode.setFont(self.smallfont)
         self.statusbar.setFont(self.smallfont)
-        self.menuBar.setFont(self.midfont)
+        self.menuBar.setFont(self.midfont)  # type: ignore[union-attr]
         self.menuFile.setFont(self.midfont)
         self.menuOption.setFont(self.midfont)
         self.menuHelp.setFont(self.midfont)
@@ -4869,7 +4915,7 @@ class WIZWindow(QMainWindow, main_window):
             QDialog: 설정 다이얼로그
         """
         from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, QDialogButtonBox,
-                                      QDoubleSpinBox, QSpinBox, QCheckBox, QGroupBox)
+                                     QDoubleSpinBox, QSpinBox, QCheckBox, QGroupBox)
 
         dialog = QDialog(self)
         dialog.setWindowTitle("검색 타이밍 설정")
@@ -4998,14 +5044,18 @@ class WIZWindow(QMainWindow, main_window):
         btn_reset = button_box.addButton("기본값 복원", QDialogButtonBox.ResetRole)
 
         # 버튼 툴팁
-        btn_save.setToolTip("설정을 저장하고 적용합니다")
-        btn_cancel.setToolTip("변경사항을 무시하고 닫습니다")
-        btn_reset.setToolTip("모든 설정을 기본값으로 되돌립니다")
+        if btn_save is not None:
+            btn_save.setToolTip("설정을 저장하고 적용합니다")
+        if btn_cancel is not None:
+            btn_cancel.setToolTip("변경사항을 무시하고 닫습니다")
+        if btn_reset is not None:
+            btn_reset.setToolTip("모든 설정을 기본값으로 되돌립니다")
 
         # 시그널 연결
         button_box.accepted.connect(dialog.accept)
         button_box.rejected.connect(dialog.reject)
-        btn_reset.clicked.connect(lambda: self._reset_dialog_to_defaults(dialog))
+        if btn_reset is not None:
+            btn_reset.clicked.connect(lambda: self._reset_dialog_to_defaults(dialog))
 
         main_layout.addWidget(button_box)
 
@@ -5175,7 +5225,7 @@ class WIZWindow(QMainWindow, main_window):
             QDialog: 설정 다이얼로그
         """
         from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, QDialogButtonBox,
-                                      QDoubleSpinBox, QSpinBox, QCheckBox, QGroupBox, QPushButton)
+                                     QDoubleSpinBox, QSpinBox, QCheckBox, QGroupBox, QPushButton)
 
         dialog = QDialog(self)
         dialog.setWindowTitle("Advanced Search Options")
@@ -5684,8 +5734,8 @@ class WIZWindow(QMainWindow, main_window):
 
                 # 헤더 검증 (기본 필드만 필수, Operation Mode와 네트워크 정보는 선택)
                 required_headers = {'Mac Address', 'Device Name', 'Firmware Version', 'Status', 'Detected'}
-                if not required_headers.issubset(set(reader.fieldnames)):
-                    raise ValueError(f"CSV 헤더 누락: {required_headers - set(reader.fieldnames)}")
+                if not required_headers.issubset(set(reader.fieldnames or [])):
+                    raise ValueError(f"CSV 헤더 누락: {required_headers - set(reader.fieldnames or [])}")
 
                 # 데이터 읽기
                 mac_list = []
@@ -5879,11 +5929,12 @@ class ThreadProgress(QtCore.QThread):
 
 
 if __name__ == "__main__":
-    
     # High DPI mode
-    from PyQt5.QtCore import Qt
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+    # PyQt5 High DPI (일부 환경에서 속성 없을 수 있음)
+    if hasattr(Qt, 'AA_EnableHighDpiScaling'):
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)  # type: ignore[attr-defined]
+    if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
+        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)  # type: ignore[attr-defined]
 
     app = QApplication(sys.argv)
     wizwindow = WIZWindow()

@@ -415,6 +415,7 @@ class WIZMakeCMD:
 
     def reset(self, mac_addr, idcode, set_pw, devname):
         self.logger.info(f'Reset: {mac_addr}')
+        cmd_list = []
         try:
             print("reset", mac_addr, idcode, set_pw, devname)
             cmd_list = self.make_header(mac_addr, idcode, devname=devname, set_pw=set_pw)
@@ -425,6 +426,7 @@ class WIZMakeCMD:
 
     def factory_reset(self, mac_addr, idcode, set_pw, devname, param):
         self.logger.info(f'Factory: {mac_addr}')
+        cmd_list = []
         try:
             cmd_list = self.make_header(mac_addr, idcode, devname=devname, set_pw=set_pw)
             cmd_list.append(["FR", param])

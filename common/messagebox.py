@@ -11,7 +11,7 @@ def show_msgbox_richtext(title, msg, type):
     msgbox = QtWidgets.QMessageBox()
     msgbox.setIcon(type)
     msgbox.setWindowTitle(title)
-    msgbox.setTextFormat(QtCore.Qt.RichText)
+    msgbox.setTextFormat(QtCore.Qt.TextFormat.RichText)
     msgbox.setText(msg)
     msgbox.exec_()
 
