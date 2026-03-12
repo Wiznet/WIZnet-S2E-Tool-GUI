@@ -9,7 +9,7 @@ Used by Device Search functionality for TCP multicast and mixed search modes.
 """
 
 import ipaddress
-from typing import List, Set, Tuple, Optional
+from typing import List, Tuple, Optional
 import ifaddr
 
 
