@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from packaging.version import Version
 
 """
 Make Serial command
@@ -14,12 +15,21 @@ ONE_PORT_DEV = [
     # "WIZ750SR-100",
     # "WIZ750SR-105",
     # "WIZ750SR-110",
+    "WIZ750SR-T1L",
     "WIZ107SR",
     "WIZ108SR",
     "W7500-S2E",
     "W7500P-S2E",
 ]
-SECURITY_DEVICE = ["WIZ510SSL", "WIZ5XXSR-RP", "WIZ5XXSR-RP_E-SAVE", "W55RP20-S2E", "W232N"]
+SECURITY_DEVICE = [
+    "WIZ510SSL",
+    "WIZ5XXSR-RP",
+    "WIZ5XXSR-RP_E-SAVE",
+    "W55RP20-S2E",
+    "W55RP20-S2E-2CH",
+    "W232N",
+    "IP20",
+]
 TWO_PORT_DEV = ["WIZ752SR-12x", "WIZ752SR-120", "WIZ752SR-125"]
 
 """
@@ -28,9 +38,13 @@ Command List
 # for pre-search
 cmd_presearch = ["MC", "VR", "MN", "ST", "IM", "OP", "LI", "SM", "GW"]
 
+# Command for bootloader
+cmd_boot = ["MC", "VR", "MN", "ST", "IM", "OP", "LI", "SM", "GW", "SP", "DS"]  # cmd_presearch
+# cmd_boot = ["MC", "VR", "MN", "ST", "IM", "OP", "LI", "SM", "GW"]  # cmd_presearch
+
 # Command for each device
 cmd_ch1 = [
-    "MC", "VR", "MN", "UN", "ST", "IM", "OP", "CP", "PO", "DG", 
+    "MC", "VR", "MN", "UN", "ST", "IM", "OP", "CP", "DG", 
     "KA", "KI", "KE", "RI", "LI", "SM", "GW", "DS", "PI", "PP",
     "DX", "DP", "DI", "DW", "DH", "LP", "RP", "RH", "BR", "DB",
     "PR", "SB", "FL", "IT", "PT", "PS", "PD", "TE", "SS", "NP",
@@ -62,16 +76,48 @@ cmd_wiz510ssl_added = ['BA']
 
 # 2022.05.10
 # WIZ5XXSR-RP added commands
-cmd_wiz5xxsr_added = ['SO', 'UF','PO']
+# 전역에서 "PO" 삭제 #36
+cmd_wiz5xxsr_added = ['SO', 'UF']
+
+# W55RP20-S2E specific commands
+cmd_w55rp20_added = ['SD', 'DD', 'SE']  # Send Data at Connection, Send Data at Disconnection, Ethernet Data Connection Condition
+
+# W55RP20-S2E-2CH channel 1 specific commands
+cmd_w55rp20_2ch_ch1 = [
+    'QS',  # Channel 1 status
+    'EN',  # Channel 1 UART interface
+    'AO',  # Channel 1 operation mode (extended)
+    'QL',  # Channel 1 local port
+    'QH',  # Channel 1 remote host
+    'AP',  # Channel 1 remote port
+    'EB',  # Channel 1 baud rate
+    'ED',  # Channel 1 data bit
+    'EP',  # Channel 1 parity
+    'ES',  # Channel 1 stop bit
+    'EF',  # Channel 1 flow control
+    'ND',  # Channel 1 packing delimiter
+    'NS',  # Channel 1 packing size
+    'AT',  # Channel 1 packing time
+    'RV',  # Channel 1 inactivity timer
+    'RA',  # Channel 1 keep-alive enable
+    'RS',  # Channel 1 keep-alive initial interval
+    'RE',  # Channel 1 keep-alive retry interval
+    'RR',  # Channel 1 reconnection interval
+    'RO',  # Channel 1 SSL timeout
+    'EO',  # Channel 1 Modbus option
+    'RD',  # Channel 1 serial connected data
+    'RF',  # Channel 1 serial disconnected data
+    'EE',  # Channel 1 ethernet connected data
+]
 
 # WIZ5XXSR-RP_E-SAVE commands
 #cmd_wiz5xxsr_esave = ['U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9']
 
 
-
 """
 Command Set
 """
+cmd_1p_boot = cmd_boot
 cmd_1p_default = cmd_ch1
 cmd_1p_advanced = cmd_ch1 + cmd_wiz75xsr + cmd_added
 cmd_2p_default = cmd_ch1 + cmd_ch2
@@ -79,22 +125,74 @@ cmd_2p_default = cmd_ch1 + cmd_ch2
 # Security devices
 cmd_wiz510ssl = cmd_security_base + cmd_wiz510ssl_added
 cmd_wiz5xxsr = cmd_security_base + cmd_wiz5xxsr_added
+cmd_w55rp20 = cmd_security_base + cmd_wiz5xxsr_added + cmd_w55rp20_added
+cmd_w55rp20_2ch = cmd_w55rp20 + cmd_w55rp20_2ch_ch1
 
 
-def version_compare(version1, version2):
+# @TODO:@BUG 아래 경우 1을 반환해야 하는데 -1을 반환함
+# >>> version_compare("1.10.8.1.9", "1.2.8")
+# version_compare: obj1 = ['1', '10', '8', '1', '9'] , obj2 = ['1', '2', '8'] , obj1 > obj2 = 0 obj1 < obj2 = 1
+# -1
+def version_compare_old(version1: str, version2: str):
+    """버전을 비교해서 앞이 크면 1 뒤가 크면 -1 같으면 0을 반환
+    Args:
+        version1 (str): 첫번째 버전
+        version2 (str): 두번째 버전
+    """
     def normalize(v):
         # return [x for x in re.sub(r'(\.0+)*$','',v).split('.')]
         return [x for x in re.sub(r"(\.0+\.[dev])*$", "", v).split(".")]
-
     obj1 = normalize(version1)
     obj2 = normalize(version2)
+    print("version_compare: obj1 =", obj1, ", obj2 =", obj2, ", obj1 > obj2 =", int(obj1 > obj2), "obj1 < obj2 =", int(obj1 < obj2))
     return (obj1 > obj2) - (obj1 < obj2)
     # if return value < 0: version2 upper than version1
+
+
+# 이슈 수정 중 함수 버그 발견해서 수정함 #36
+def version_compare(version1: str, version2: str):
+    """버전을 비교해서 앞이 크면 1 뒤가 크면 -1 같으면 0을 반환
+    Args:
+        version1 (str): 첫번째 버전
+        version2 (str): 두번째 버전
+    """
+    if not version1 or not version2:
+        return 0
+    return 0 if version1 == version2 else -1 if Version(version1) < Version(version2) else 1
 
 
 class WIZMakeCMD:
     def __init__(self):
         self.logger = logger
+
+    def _modbus_command(self, devname: str, version: str):
+        """Return the Modbus command keyword supported by the device, if any."""
+        if not devname or not version:
+            return None
+
+        # New firmware for WIZ750SR family and WIZ750SR-T1L uses the MB parameter
+        if ("WIZ750" in devname or "WIZ750SR-T1L" in devname) and version_compare(version, "1.4.4") >= 0:
+            return "MB"
+
+        # Existing security product families continue to rely on PO
+        if "WIZ5XXSR" in devname and version_compare("1.0.8", version) <= 0:
+            return "PO"
+        if "W55RP20" in devname or "W232N" in devname or "IP20" in devname:
+            return "PO"
+
+        return None
+
+    def _append_modbus_command(self, cmd_list, devname: str, version: str):
+        """Append the appropriate Modbus command if the target device supports it."""
+        modbus_cmd = self._modbus_command(devname, version)
+        if not modbus_cmd:
+            return
+
+        # Avoid duplicates if the command was already injected elsewhere
+        if any(entry[0] == modbus_cmd for entry in cmd_list):
+            return
+
+        cmd_list.append([modbus_cmd, ""])
 
     def make_header(self, mac_addr, idcode, devname="", set_pw=""):
         """
@@ -114,7 +212,7 @@ class WIZMakeCMD:
             cmd_list.append([cmd, ""])
         return cmd_list
 
-    def search(self, mac_addr, idcode, devname, version):
+    def search(self, mac_addr, idcode, devname, version, devstatus=None):
         # Search All Devices on the network
         # print('search()', mac_addr, idcode, devname, version)
         cmd_list = self.make_header(mac_addr, idcode)
@@ -140,15 +238,74 @@ class WIZMakeCMD:
             if 'WIZ510SSL' in devname:
                 for cmd in cmd_wiz510ssl:
                     cmd_list.append([cmd, ""])
-            elif 'WIZ5XXSR' or 'W55RP20-S2E' in devname or 'W232N' in devname:
+            elif 'WIZ5XXSR' in devname:
+                print(f"search::devstatus={devstatus}")
+                if devstatus == 'BOOT':
+                    for cmd in cmd_1p_boot:
+                        cmd_list.append([cmd, ""])
+                    print(f"search::cmd_list={cmd_list}")
+                    return cmd_list
                 for cmd in cmd_wiz5xxsr:
                     cmd_list.append([cmd, ""])
+                print(f"search::cmd_list2={cmd_list}")
+                # Commands for E-SAVE
+                #if 'E-SAVE' in devname:
+                #    for cmd in cmd_wiz5xxsr_esave:
+                #        cmd_list.append([cmd, ""])
+            elif 'W55RP20-S2E-2CH' in devname:
+                print(f"search::devstatus={devstatus}")
+                if devstatus == 'BOOT':
+                    for cmd in cmd_1p_boot:
+                        cmd_list.append([cmd, ""])
+                    print(f"search::cmd_list={cmd_list}")
+                    return cmd_list
+
+                if version_compare(version, "1.1.8") >= 0:
+                    temp_cmd_w55rp20_2ch = cmd_w55rp20_2ch
+                else:
+                    # 하위 버전은 채널1 확장 명령 대신 기본 명령으로 구성
+                    temp_cmd_w55rp20_2ch = cmd_security_base + cmd_wiz5xxsr_added
+                for cmd in temp_cmd_w55rp20_2ch:
+                    cmd_list.append([cmd, ""])
+                print(f"search::cmd_list2={cmd_list}")
+
+            elif 'W55RP20-S2E' in devname:
+                print(f"search::devstatus={devstatus}")
+                if devstatus == 'BOOT':
+                    for cmd in cmd_1p_boot:
+                        cmd_list.append([cmd, ""])
+                    print(f"search::cmd_list={cmd_list}")
+                    return cmd_list
+                # W55RP20-S2E는 SD 명령어 포함 (버전 1.1.8 이상인 경우에만)
+                if version_compare(version, "1.1.8") >= 0:
+                    temp_cmd_w55rp20 = cmd_w55rp20
+                else:
+                    temp_cmd_w55rp20 = cmd_security_base + cmd_wiz5xxsr_added
+                for cmd in temp_cmd_w55rp20:
+                    cmd_list.append([cmd, ""])
+                print(f"search::cmd_list2={cmd_list}")
+            elif 'W232N' in devname or 'IP20' in devname:
+                print(f"search::devstatus={devstatus}")
+                if devstatus == 'BOOT':
+                    for cmd in cmd_1p_boot:
+                        cmd_list.append([cmd, ""])
+                    print(f"search::cmd_list={cmd_list}")
+                    return cmd_list
+                # W232N과 IP20도 SD, DD, SE 명령어 지원 (버전 1.1.8 이상인 경우에만)
+                if version_compare(version, "1.1.8") >= 0:
+                    temp_cmd_wiz5xxsr = cmd_wiz5xxsr + cmd_w55rp20_added
+                else:
+                    temp_cmd_wiz5xxsr = cmd_wiz5xxsr
+                for cmd in temp_cmd_wiz5xxsr:
+                    cmd_list.append([cmd, ""])
+                print(f"search::cmd_list2={cmd_list}")
                 # Commands for E-SAVE
                 #if 'E-SAVE' in devname:
                 #    for cmd in cmd_wiz5xxsr_esave:
                 #        cmd_list.append([cmd, ""])
         else:
             pass
+        self._append_modbus_command(cmd_list, devname, version)
         # print("search()", cmd_list)
         return cmd_list
 
@@ -160,12 +317,12 @@ class WIZMakeCMD:
         else:
             for cmd in cmd_gpio_4pin:
                 cmd_list.append([cmd, ""])
-
+        print(f"devname={devname}, cmds={cmd_list}")
         return cmd_list
 
     # Set device
     # TODO: device profile 적용
-    def setcommand(self, mac_addr, idcode, set_pw, command_list, param_list, devname, version):
+    def setcommand(self, mac_addr, idcode, set_pw, command_list, param_list, devname, version, status=None):
         """
         Make device setting command set
         - set commands + get commands
@@ -199,13 +356,56 @@ class WIZMakeCMD:
                 if 'WIZ510SSL' in devname:
                     for cmd in cmd_wiz510ssl:
                         cmd_list.append([cmd, ""])
-                elif 'WIZ5XXSR' in devname or 'W55RP20-S2E' in devname or 'W232N' in devname:
-                    for cmd in cmd_wiz5xxsr:
-                        cmd_list.append([cmd, ""])
+                elif 'W55RP20-S2E-2CH' in devname:
+                    if status != "BOOT":
+                        if version_compare(version, "1.1.8") >= 0:
+                            for cmd in cmd_w55rp20_2ch:
+                                cmd_list.append([cmd, ""])
+                        else:
+                            for cmd in cmd_security_base + cmd_wiz5xxsr_added:
+                                cmd_list.append([cmd, ""])
+                    else:
+                        for cmd in cmd_1p_boot:
+                            cmd_list.append([cmd, ""])
+                elif 'W55RP20-S2E' in devname:
+                    if status != "BOOT":
+                        # 버전 1.1.8 이상인 경우에만 SD, DD, SE 명령어 포함
+                        if version_compare(version, "1.1.8") >= 0:
+                            for cmd in cmd_w55rp20:
+                                cmd_list.append([cmd, ""])
+                        else:
+                            for cmd in cmd_security_base + cmd_wiz5xxsr_added:
+                                cmd_list.append([cmd, ""])
+                    else:
+                        for cmd in cmd_1p_boot:
+                            cmd_list.append([cmd, ""])
+                elif 'WIZ5XXSR' in devname:
+                    if status != "BOOT":
+                        for cmd in cmd_wiz5xxsr:
+                            cmd_list.append([cmd, ""])
+                    else:
+                        for cmd in cmd_1p_boot:
+                            cmd_list.append([cmd, ""])
+                elif 'W232N' in devname or 'IP20' in devname:
+                    if status != "BOOT":
+                        # W232N과 IP20도 SD, DD, SE 명령어 지원 (버전 1.1.8 이상인 경우에만)
+                        if version_compare(version, "1.1.8") >= 0:
+                            for cmd in cmd_wiz5xxsr + cmd_w55rp20_added:
+                                cmd_list.append([cmd, ""])
+                        else:
+                            for cmd in cmd_wiz5xxsr:
+                                cmd_list.append([cmd, ""])
+                    else:
+                        for cmd in cmd_1p_boot:
+                            cmd_list.append([cmd, ""])
                     # Commands for E-SAVE
                     #if 'E-SAVE' in devname:
                     #    for cmd in cmd_wiz5xxsr_esave:
                     #        cmd_list.append([cmd, ""])
+            # if status == "BOOT":
+            #     return cmd_list
+            if status != "BOOT":
+                self._append_modbus_command(cmd_list, devname, version)
             cmd_list.append(["SV", ""])  # save device setting
             cmd_list.append(["RT", ""])  # Device reboot
             # print("setcommand()", cmd_list)
@@ -215,6 +415,7 @@ class WIZMakeCMD:
 
     def reset(self, mac_addr, idcode, set_pw, devname):
         self.logger.info(f'Reset: {mac_addr}')
+        cmd_list = []
         try:
             print("reset", mac_addr, idcode, set_pw, devname)
             cmd_list = self.make_header(mac_addr, idcode, devname=devname, set_pw=set_pw)
@@ -223,9 +424,9 @@ class WIZMakeCMD:
             self.logger.error(e)
         return cmd_list
 
-
     def factory_reset(self, mac_addr, idcode, set_pw, devname, param):
         self.logger.info(f'Factory: {mac_addr}')
+        cmd_list = []
         try:
             cmd_list = self.make_header(mac_addr, idcode, devname=devname, set_pw=set_pw)
             cmd_list.append(["FR", param])

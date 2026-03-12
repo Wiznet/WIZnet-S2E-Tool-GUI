@@ -75,6 +75,9 @@ class FWUploadThread(QThread):
         cmd_list.append(["PW", self.idcode])
         cmd_list.append(["AB", ""])
 
+        sock_mode = 'TCP' if 'TCP' in self.sock_type else 'UDP'
+        self.logger.info(f'[FW-1] AB (App Boot) 명령 전송 → {self.dest_mac} via {sock_mode}')
+
         if 'TCP' in self.sock_type:
             self.wizmsghangler = WIZMSGHandler(
                 self.conf_sock, cmd_list, 'tcp', Opcode.OP_FWUP, 2)
@@ -83,9 +86,12 @@ class FWUploadThread(QThread):
                 self.conf_sock, cmd_list, 'udp', Opcode.OP_FWUP, 2)
 
         self.resp = self.wizmsghangler.run()
+        self.logger.info(f'[FW-1] AB 응답: {repr(self.resp)} (장치 리부팅 중이면 빈 값 정상)')
 
         self.uploading_size.emit(1)
+        self.logger.info('[FW-1] 장치 리부팅 대기 1초...')
         self.msleep(1000)
+        self.logger.info('[FW-1] 리부팅 대기 완료')
 
     def sendCmd(self, command):
         cmd_list = []
@@ -98,6 +104,8 @@ class FWUploadThread(QThread):
 
         self.logger.debug(f'sendCmd() cmd_list => {cmd_list}')
 
+        sock_mode = 'TCP' if 'TCP' in self.sock_type else 'UDP'
+
         if 'TCP' in self.sock_type:
             self.wizmsghangler = WIZMSGHandler(
                 self.conf_sock, cmd_list, 'tcp', Opcode.OP_FWUP, 2)
@@ -107,9 +115,11 @@ class FWUploadThread(QThread):
 
         # if no reponse from device, retry for several times.
         for i in range(4):
-            # self.resp = self.wizmsghangler.parseresponse()
+            self.logger.info(f'[FW-2] {command} 명령 전송 [{i+1}/4] → {self.dest_mac} via {sock_mode}, filesize={self.filesize}')
             self.resp = self.wizmsghangler.run()
+            self.logger.info(f'[FW-2] {command} 응답: {repr(self.resp)}')
             if self.resp != '':
+                self.logger.info(f'[FW-2] {command} 응답 수신 성공 → retry loop 종료')
                 break
 
         self.msleep(500)
@@ -117,49 +127,66 @@ class FWUploadThread(QThread):
 
     def run(self):
         self.setparam()
+        assert self.data is not None  # setparam()에서 파일 읽어 bytes로 설정됨
+        self.logger.info('=' * 60)
+        self.logger.info(f'[FW] 펌웨어 업로드 시작')
+        self.logger.info(f'[FW] 장치: {self.dest_mac} ({self.mn_list})')
+        self.logger.info(f'[FW] 파일: {self.bin_filename} ({self.filesize} bytes)')
+        self.logger.info(f'[FW] 소켓: {self.sock_type}')
+        self.logger.info('=' * 60)
+
         # wiz2000/wiz510ssl: not use 'AB' command
         if self.mn_list in SECURITY_DEVICE:
-            self.logger.info(f'Security device firmware upload: {self.mn_list}')
+            self.logger.info(f'[FW-1] SECURITY_DEVICE → AB 명령 생략')
         else:
             self.jumpToApp()
 
         if 'UDP' in self.sock_type:
-            pass
+            self.logger.info('[FW] UDP broadcast 소켓 사용 (FW 프로토콜)')
         elif 'TCP' in self.sock_type:
+            self.logger.info('[FW] TCP unicast 소켓 재구성...')
             self.sock_close()
             self.SocketConfig()
 
         self.sendCmd('FW')
 
-        if self.resp != '' and self.resp is not None:
+        if isinstance(self.resp, bytes) and self.resp != b'':
             resp = self.resp.decode('utf-8')
             # print('resp', resp)
             params = resp.split(':')
-            self.logger.info(f'Dest IP: {params[0]}, Dest Port num: {int(params[1])}')
+            self.logger.info(f'[FW-2] FW 응답 파싱: IP={params[0]}, Port={int(params[1])}')
             self.serverip = params[0]
             self.serverport = int(params[1])
 
             self.uploading_size.emit(3)
         else:
             params = None
-            self.logger.warning('No response from device. Check the network or device status.')
+            self.logger.warning('[FW-2] FAIL: FW 명령 4회 시도 모두 응답 없음 → 장치가 펌웨어 모드로 진입하지 않았을 가능성')
             self.error_flag.emit(-1)
             self.error_noresponse = -1
         try:
             if params is not None:
+                self.logger.info(f'[FW-3] TCPClient 생성: {params[0]}:{params[1]}')
                 self.client = TCPClient(2, params[0], int(params[1]))
         except Exception as e:
-            self.logger.error(str(e))
+            self.logger.error(f'[FW-3] TCPClient 생성 실패: {e}')
+            self.error_noresponse = -1
         try:
             if self.error_noresponse < 0:
                 pass
+            elif self.client is None:
+                self.logger.error('[FW-3] client not initialized, aborting')
             else:
+                total_chunks = (self.filesize + FW_PACKET_SIZE - 1) // FW_PACKET_SIZE
+                self.logger.info(f'[FW-3] TCP connect 시도 시작 (최대 7회) → {self.serverip}:{self.serverport}')
                 # print("%r\r\n" % self.client.state)
                 while True:
                     if self.retrycheck > 6:
+                        self.logger.warning(f'[FW-3] FAIL: TCP connect 7회 실패 → {self.serverip}:{self.serverport} 응답 없음')
                         break
 
                     self.retrycheck += 1
+                    self.logger.info(f'[FW-3] TCP retry {self.retrycheck}/7 → {self.serverip}:{self.serverport}, state={self.client.state}')
                     if self.client.state == SockState.SOCK_CLOSE:
                         if self.timer1 is not None:
                             self.timer1.cancel()
@@ -169,29 +196,33 @@ class FWUploadThread(QThread):
                             # self.logger.debug('1 : %r' % self.client.getsockstate())
                             # print("%r\r\n" % self.client.state)
                             if self.client.state == SockState.SOCK_OPEN:
-                                self.logger.info('[%r] is OPEN' % (self.serverip))
+                                self.logger.info(f'[FW-3] 소켓 OPEN 완료, 500ms 대기 후 connect 시도...')
                                 # print('[%r] client.working_state == %r' % (self.serverip, self.client.working_state))
                                 self.msleep(500)
                         except Exception as e:
-                            self.logger.error(str(e))
+                            self.logger.error(f'[FW-3] open() 오류: {e}')
 
                     elif self.client.state == SockState.SOCK_OPEN:
                         self.uploading_size.emit(4)
                         # cur_state = self.client.state
+                        self.logger.info(f'[FW-3] TCP connect() 호출 중... ({self.serverip}:{self.serverport})')
                         try:
                             self.client.connect()
                             # self.logger.debug('2 : %r' % self.client.getsockstate())
                             if self.client.state == SockState.SOCK_CONNECT:
-                                self.logger.info('[%r] is CONNECTED' % (self.serverip))
+                                self.logger.info(f'[FW-3] TCP CONNECTED! → {self.serverip}:{self.serverport}')
                                 # print('[%r] client.working_state == %r' % (self.serverip, self.client.working_state))
+                            else:
+                                self.logger.warning(f'[FW-3] connect() 완료 but state={self.client.state} (기대: SOCK_CONNECT)')
                         except Exception as e:
-                            print(e)
+                            self.logger.error(f'[FW-3] connect() 오류: {e}')
 
                     elif self.client.state == SockState.SOCK_CONNECT:
                         # if self.client.working_state == idle_state:
                         #    self.logger.debug('3 : %r' % self.client.getsockstate())
                         try:
                             self.uploading_size.emit(5)
+                            self.logger.info(f'[FW-4] 데이터 전송 시작: {self.filesize} bytes, ~{total_chunks} 청크 ({FW_PACKET_SIZE}B/청크)')
                             while self.remainbytes != 0:
                                 if self.client.working_state == idle_state:
                                     if self.remainbytes >= FW_PACKET_SIZE:
@@ -201,7 +232,7 @@ class FWUploadThread(QThread):
                                         self.client.write(msg)
                                         self.sentbyte = FW_PACKET_SIZE
                                         # print('FW_PACKET_SIZE bytes sent from at %r' % (self.curr_ptr))
-                                        self.logger.info('[%s] FW_PACKET_SIZE bytes sent from at %r' % (self.serverip, self.curr_ptr))
+                                        self.logger.info(f'[FW-4] 청크 전송: offset={self.curr_ptr}, size={FW_PACKET_SIZE}, 남은={self.remainbytes - FW_PACKET_SIZE}')
                                         self.curr_ptr += FW_PACKET_SIZE
                                         self.remainbytes -= FW_PACKET_SIZE
                                     else:
@@ -211,7 +242,7 @@ class FWUploadThread(QThread):
                                                            self.remainbytes]
                                         self.client.write(msg)
                                         # print('Last %r byte sent from at %r ' % (self.remainbytes, self.curr_ptr))
-                                        self.logger.info('[%s] Last %r byte sent from at %r' % (self.serverip, self.remainbytes, self.curr_ptr))
+                                        self.logger.info(f'[FW-4] 마지막 청크 전송: offset={self.curr_ptr}, size={self.remainbytes}')
                                         self.curr_ptr += self.remainbytes
                                         self.remainbytes = 0
                                         self.sentbyte = self.remainbytes
@@ -226,17 +257,19 @@ class FWUploadThread(QThread):
                                     response = self.client.readbytes(2)
                                     if response is not None:
                                         if int(binascii.hexlify(response), 16):
+                                            self.logger.info(f'[FW-4] 청크 ACK 수신, ptr={self.curr_ptr}')
                                             self.client.working_state = idle_state
-                                            self.timer1.cancel()
+                                            if self.timer1 is not None:
+                                                self.timer1.cancel()
                                             self.istimeout = 0
                                         else:
-                                            self.logger.error('ERROR: No response from device. Stop FW upload...')
+                                            self.logger.error(f'[FW-4] FAIL: 장치 오류 응답 (ptr={self.curr_ptr})')
                                             self.client.close()
                                             self.upload_result.emit(-1)
                                             self.terminate()
 
                                     if self.istimeout == 1:
-                                        self.logger.warning('Timeout occured')
+                                        self.logger.warning(f'[FW-4] 청크 ACK timeout (ptr={self.curr_ptr}, 3초 초과)')
                                         self.istimeout = 0
                                         self.client.working_state = idle_state
                                         self.client.close()
@@ -244,28 +277,33 @@ class FWUploadThread(QThread):
                                         self.terminate()
 
                                 self.uploading_size.emit(7)
+                            self.logger.info(f'[FW-4] 데이터 루프 완료: 전송={self.curr_ptr}/{self.filesize} bytes, working_state={self.client.working_state}')
                         except Exception as e:
-                            self.logger.error(str(e))
+                            self.logger.error(f'[FW-4] 데이터 전송 예외: {e}')
                             response = ""
                         break
 
             self.logger.info('retrycheck: %d' % self.retrycheck)
 
             if self.retrycheck > 6 or self.error_noresponse < 0:
-                self.logger.error(f'Device [{self.dest_mac}] firmware upload failed.')
+                self.logger.error(f'[FW] FAIL: Device [{self.dest_mac}] firmware upload failed.')
                 self.upload_result.emit(-1)
             elif self.error_noresponse >= 0:
                 self.uploading_size.emit(8)
-                self.logger.info(f'Device [{self.dest_mac}] firmware upload success!')
+                self.logger.info(f'[FW] SUCCESS: Device [{self.dest_mac}] 펌웨어 업로드 완료!')
                 self.upload_result.emit(1)
                 # send FIN packet
+                self.logger.info('[FW] FIN 전송 (500ms 대기 후)...')
                 self.msleep(500)
-                self.client.shutdown()
-                if 'TCP' in self.sock_type:
-                    self.conf_sock.shutdown()
+                if self.client is not None:
+                    self.client.shutdown()
+                    self.logger.info('[FW] client.shutdown() 완료')
+                if 'TCP' in self.sock_type and self.conf_sock is not None:
+                    self.conf_sock.close()
+                    self.logger.info('[FW] conf_sock.close() 완료')
         except Exception as e:
             self.error_flag.emit(-3)
-            self.logger.error(str(e))
+            self.logger.error(f'[FW] 예외 발생: {e}')
         finally:
             pass
 
@@ -275,7 +313,7 @@ class FWUploadThread(QThread):
             if self.tcp_sock.state != SockState.SOCK_CLOSE:
                 self.tcp_sock.shutdown()
         if self.conf_sock is not None:
-            self.conf_sock.shutdown()
+            self.conf_sock.close()
 
     def tcpConnection(self, serverip, port):
         retrynum = 0

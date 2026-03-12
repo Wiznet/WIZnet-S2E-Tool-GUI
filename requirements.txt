@@ -1,5 +1,20 @@
-# WIZnet-S2E-Tool-GUI requirements
+# WIZnet S2E Tool GUI - runtime requirements
+# Generated from: .venv pip freeze (Python 3.12, Windows 11)
+# Usage: uv pip install -r requirements.txt
+#
+# NOTE: PyInstaller는 custom bootloader 직접 컴파일 후 별도 설치 (SETUP_DEV.md 참고)
 
-PyQt5
-ifaddr
-requests
+# ── Runtime ──────────────────────────────────────────────────────
+PyQt5==5.15.11
+PyQt5-Qt5==5.15.2
+pyqt5-sip==12.17.2
+ifaddr==0.2.0
+requests==2.32.5
+pyyaml==6.0.3
+packaging==26.0
+
+# ── requests transitive deps ─────────────────────────────────────
+certifi==2026.1.4
+charset-normalizer==3.4.4
+idna==3.11
+urllib3==2.6.3

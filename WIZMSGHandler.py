@@ -3,7 +3,7 @@
 
 import select
 import codecs
-import os
+import time
 from utils import logger
 
 from PyQt5.QtCore import QThread, pyqtSignal
@@ -15,6 +15,38 @@ exitflag = 0
 # PACKET_SIZE = 1024
 # PACKET_SIZE = 2048
 PACKET_SIZE = 4096
+
+
+def _sanitize_device_name(raw: bytes) -> str:
+    """WIZnet 장비 MN 필드 바이트 → str 변환.
+
+    - null 패딩(\\x00) 제거 후 UTF-8 디코딩 시도
+    - 실패 시 인쇄 가능 ASCII(0x20~0x7E)와 비정상 바이트를 구분하여,
+      연속된 비정상 바이트는 (xxyyzz) 형태로 묶어 표현
+      예) b'WIZ\\xff\\xffSR' → 'WIZ(ffff)SR'
+    - 빈 bytes / 전체 null → ''
+    """
+    if not raw:
+        return ''
+    raw = raw.rstrip(b'\x00')
+    if not raw:
+        return ''
+    try:
+        return raw.decode('utf-8')
+    except (UnicodeDecodeError, ValueError):
+        result = []
+        bad_run = []
+        for b in raw:
+            if 0x20 <= b <= 0x7E:
+                if bad_run:
+                    result.append('(' + ''.join(f'{x:02x}' for x in bad_run) + ')')
+                    bad_run = []
+                result.append(chr(b))
+            else:
+                bad_run.append(b)
+        if bad_run:
+            result.append('(' + ''.join(f'{x:02x}' for x in bad_run) + ')')
+        return ''.join(result)
 
 
 def timeout_func():
@@ -29,7 +61,12 @@ class WIZMSGHandler(QThread):
 
     searched_data = pyqtSignal(bytes)
 
-    def __init__(self, udpsock, cmd_list, what_sock, op_code, timeout):
+    # Configuration class variables (loaded from device_search_config.py)
+    loop_select_timeout = 0.5  # Default: Phase 1 loop select timeout (sec)
+    emit_stabilization_ms = 50  # Default: emit stabilization delay (ms)
+    skip_phase1_emit_delay = False  # Default: do NOT skip (experimental)
+
+    def __init__(self, udpsock, cmd_list, what_sock, op_code, timeout, presearch=False):
         QThread.__init__(self)
 
         self.logger = logger
@@ -41,18 +78,19 @@ class WIZMSGHandler(QThread):
         try:
             self.inputs = [self.sock.sock]
         except Exception as e:
-            self.logger.error('socket error:', e)
+            self.logger.error("socket error:", e)
             self.terminate()
 
         self.outputs = []
         self.errors = []
         self.opcode = None
+        self.presearch = presearch
         self.iter = 0
         self.dest_mac = None
         self.isvalid = False
         # self.timer1 = None
         self.istimeout = False
-        self.reply = ''
+        self.reply = ""
         self.setting_pw_wrong = False
 
         self.mac_list = []
@@ -69,7 +107,7 @@ class WIZMSGHandler(QThread):
 
         self.timeout = timeout
 
-        self.cmdset = Wizcmdset('WIZ750SR')
+        self.cmdset = Wizcmdset("WIZ750SR")
 
     def timeout_func(self):
         self.istimeout = True
@@ -81,9 +119,9 @@ class WIZMSGHandler(QThread):
             for cmd in self.cmd_list:
                 # print('cmd[0]: %s, cmd[1]: %s' % (cmd[0], cmd[1]))
                 try:
-                    self.msg[self.size:] = str.encode(cmd[0])
+                    self.msg[self.size :] = str.encode(cmd[0])
                 except Exception as e:
-                    self.logger.error('[ERROR] makecommands() encode:', cmd[0], e)
+                    self.logger.error("[ERROR] makecommands() encode:", cmd[0], e)
                 self.size += len(cmd[0])
                 if cmd[0] == "MA":
                     # sys.stdout.write('cmd[1]: %r\r\n' % cmd[1])
@@ -91,30 +129,31 @@ class WIZMSGHandler(QThread):
                     # print(cmd[1])
                     # hex_string = cmd[1].decode('hex')
                     try:
-                        hex_string = codecs.decode(cmd[1], 'hex')
+                        hex_string = codecs.decode(cmd[1], "hex")
+                        self.msg[self.size :] = hex_string
+                        self.dest_mac = hex_string
+                        # self.dest_mac = (int(cmd[1], 16)).to_bytes(6, byteorder='big') # Hexadecimal string to hexadecimal binary
+                        # self.msg[self.size:] = self.dest_mac
+                        self.size += 6
                     except Exception as e:
                         self.logger.error(
-                            '[ERROR] makecommands() decode:', cmd[0], cmd[1], e)
-
-                    self.msg[self.size:] = hex_string
-                    self.dest_mac = hex_string
-                    # self.dest_mac = (int(cmd[1], 16)).to_bytes(6, byteorder='big') # Hexadecimal string to hexadecimal binary
-                    # self.msg[self.size:] = self.dest_mac
-                    self.size += 6
+                            "[ERROR] makecommands() decode:", cmd[0], cmd[1], e
+                        )
                 else:
                     try:
-                        self.msg[self.size:] = str.encode(cmd[1])
+                        self.msg[self.size :] = str.encode(cmd[1])
                     except Exception as e:
                         self.logger.error(
-                            '[ERROR] makecommands() encode param:', cmd[0], cmd[1], e)
+                            "[ERROR] makecommands() encode param:", cmd[0], cmd[1], e
+                        )
                     self.size += len(cmd[1])
                 if "\r\n" not in cmd[1]:
-                    self.msg[self.size:] = str.encode("\r\n")
+                    self.msg[self.size :] = str.encode("\r\n")
                     self.size += 2
 
                     # print(self.size, self.msg)
         except Exception as e:
-            self.logger.error('[ERROR] WIZMSGHandler makecommands(): %r' % e)
+            self.logger.error("[ERROR] WIZMSGHandler makecommands(): %r" % e)
 
     def sendcommands(self):
         self.sock.sendto(self.msg)
@@ -125,32 +164,42 @@ class WIZMSGHandler(QThread):
     def check_parameter(self, cmdset):
         # print('check_parameter()', cmdset, cmdset[:2], cmdset[2:])
         try:
-            if b'MA' not in cmdset:
+            if b"MA" not in cmdset:
                 # print('check_parameter() OK', cmdset, cmdset[:2], cmdset[2:])
-                if self.cmdset.isvalidparameter(cmdset[:2].decode(), cmdset[2:].decode()):
+                if self.cmdset.isvalidparameter(
+                    cmdset[:2].decode(), cmdset[2:].decode()
+                ):
                     return True
                 else:
                     return False
             else:
                 return False
         except Exception as e:
-            self.logger.error('[ERROR] WIZMSGHandler check_parameter(): %r' % e)
+            self.logger.error("[ERROR] WIZMSGHandler check_parameter(): %r" % e)
 
-    
     def run(self):
+        t_send = None
         try:
             self.makecommands()
-            if self.what_sock == 'udp':
+            if self.what_sock == "udp":
                 self.sendcommands()
-            elif self.what_sock == 'tcp':
+                t_send = time.time()
+            elif self.what_sock == "tcp":
                 self.sendcommandsTCP()
+                t_send = time.time()
         except Exception as e:
-            self.logger.error(f'[ERROR] WIZMSGHandler sendcommands: {e}')
+            self.logger.error(f"[ERROR] WIZMSGHandler sendcommands: {e}")
 
         try:
+            if t_send is not None:
+                self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s initial select(timeout={self.timeout}s) 시작")
+            _t_sel0 = time.time()
             readready, writeready, errorready = select.select(
-                self.inputs, self.outputs, self.errors, self.timeout)
-        
+                self.inputs, self.outputs, self.errors, self.timeout
+            )
+            if t_send is not None:
+                self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s initial select 완료 ({(time.time()-_t_sel0)*1000:.0f}ms 소요, ready={len(readready)})")
+
             replylists = None
 
             self.getreply = []
@@ -161,12 +210,12 @@ class WIZMSGHandler(QThread):
             self.rcv_list = []
             # print('readready value: ', len(readready), readready)
 
-            if self.timeout < 2:
+            if self.opcode == Opcode.OP_SEARCHALL and not self.presearch:
                 # Search each device
                 for sock in readready:
                     if sock == self.sock.sock:
                         data = self.sock.recvfrom()
-                        self.logger.debug(f'Each-search recv: {data}')
+                        self.logger.debug(f"Each-search recv: {data}")
                         self.searched_data.emit(data)
                         # replylists = data.splitlines()
                         replylists = data.split(b"\r\n")
@@ -180,7 +229,9 @@ class WIZMSGHandler(QThread):
                     for sock in readready:
                         if sock == self.sock.sock:
                             data = self.sock.recvfrom()
-                            self.logger.debug(f'Pre-search recv: {data}')
+                            if t_send is not None:
+                                self.logger.info(f"[TIMING] iter={self.iter} recv #{len(self.rcv_list)+1} at +{time.time()-t_send:.3f}s")
+                            self.logger.debug(f"Pre-search recv: {data}")
                             # self.searched_data.emit(data)
 
                             # check if data reduplication
@@ -196,52 +247,78 @@ class WIZMSGHandler(QThread):
 
                             if self.opcode == Opcode.OP_SEARCHALL:
                                 try:
+                                    # Parse one device's packet into a dict first,
+                                    # then append all fields atomically to keep lists aligned.
+                                    pkt = {}
                                     for i in range(0, len(replylists)):
-                                        if b'MC' in replylists[i]:
-                                            if self.check_parameter(replylists[i]):
-                                                self.mac_list.append(replylists[i][2:])
-                                        if b'MN' in replylists[i]:
-                                            if self.check_parameter(replylists[i]):
-                                                self.mn_list.append(replylists[i][2:])
-                                        if b'VR' in replylists[i]:
-                                            if self.check_parameter(replylists[i]):
-                                                self.vr_list.append(replylists[i][2:])
-                                        if b'OP' in replylists[i]:
-                                            if self.check_parameter(replylists[i]):
-                                                self.mode_list.append(replylists[i][2:])
-                                        if b'ST' in replylists[i]:
-                                            if self.check_parameter(replylists[i]):
-                                                self.st_list.append(replylists[i][2:])
+                                        line = replylists[i]
+                                        if len(line) < 2:
+                                            continue
+                                        if line[:2] == b"MA":
+                                            continue  # raw binary MAC – skip
+                                        try:
+                                            cmd = line[:2].decode('ascii')
+                                        except Exception:
+                                            continue
+                                        pkt[cmd] = line[2:]
+
+                                    if 'MC' in pkt and self.check_parameter(b"MC" + pkt['MC']):
+                                        self.mac_list.append(pkt['MC'])
+                                        self.mn_list.append(_sanitize_device_name(pkt.get('MN', b'')))
+                                        self.vr_list.append(pkt.get('VR', b''))
+                                        self.mode_list.append(pkt.get('OP', b''))
+                                        self.st_list.append(pkt.get('ST', b''))
                                 except Exception as e:
-                                    self.logger.error('[ERROR] WIZMSGHandler makecommands(): %r' % e)
+                                    self.logger.error(
+                                        "[ERROR] WIZMSGHandler OP_SEARCHALL: %r" % e
+                                    )
                             elif self.opcode == Opcode.OP_FWUP:
                                 for i in range(0, len(replylists)):
-                                    if b'MA' in replylists[i][:2]:
+                                    if b"MA" in replylists[i][:2]:
                                         pass
                                         # self.isvalid = True
                                     else:
                                         self.isvalid = False
                                     # sys.stdout.write("%r\r\n" % replylists[i][:2])
-                                    if b'FW' in replylists[i][:2]:
+                                    if b"FW" in replylists[i][:2]:
                                         # sys.stdout.write('self.isvalid == True\r\n')
                                         # param = replylists[i][2:].split(b':')
                                         self.reply = replylists[i][2:]
                             elif self.opcode == Opcode.OP_SETCOMMAND:
                                 for i in range(0, len(replylists)):
-                                    if b'AP' in replylists[i][:2]:
-                                        if replylists[i][2:] == b' ':
+                                    if b"AP" in replylists[i][:2]:
+                                        if replylists[i][2:] == b" ":
                                             self.setting_pw_wrong = True
                                         else:
                                             self.setting_pw_wrong = False
 
+                    if t_send is not None:
+                        self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s iter={self.iter} 루프 select(1s) 시작")
+                    _t_loop_sel = time.time()
                     readready, writeready, errorready = select.select(
-                        self.inputs, self.outputs, self.errors, 1)
+                        self.inputs, self.outputs, self.errors, WIZMSGHandler.loop_select_timeout
+                    )
+                    if t_send is not None:
+                        self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s iter={self.iter} 루프 select 완료 ({(time.time()-_t_loop_sel)*1000:.0f}ms 소요, ready={len(readready)})")
 
                     if not readready or not replylists:
                         break
 
                 if self.opcode == Opcode.OP_SEARCHALL:
-                    self.msleep(500)
+                    if t_send is not None:
+                        t_loop_break = time.time()
+                        self.logger.info(f"[TIMING] loop broke at +{t_loop_break-t_send:.3f}s, {len(self.mac_list)} devices found")
+
+                    # Phase 1 emit 전 안정화 대기 (실험적 플래그로 제어)
+                    if not WIZMSGHandler.skip_phase1_emit_delay:
+                        self.msleep(WIZMSGHandler.emit_stabilization_ms)
+                        if t_send is not None:
+                            self.logger.info(f"[TIMING] after msleep({WIZMSGHandler.emit_stabilization_ms}): +{time.time()-t_send:.3f}s → emitting result")
+                    else:
+                        # 실험적: msleep 생략 (PyQt signal queue 불안정 가능성)
+                        if t_send is not None:
+                            self.logger.warning(f"[TIMING] EXPERIMENTAL: skipped msleep({WIZMSGHandler.emit_stabilization_ms}) → emitting result immediately")
+
                     # print('Search device:', self.mac_list)
                     self.search_result.emit(len(self.mac_list))
                     # return len(self.mac_list)
@@ -258,7 +335,7 @@ class WIZMSGHandler(QThread):
                     return self.reply
                 # sys.stdout.write("%s\r\n" % self.mac_list)
         except Exception as e:
-            self.logger.error(f'[ERROR] WIZMSGHandler error: {e}')
+            self.logger.error(f"[ERROR] WIZMSGHandler error: {e}")
 
 
 class DataRefresh(QThread):
@@ -279,7 +356,7 @@ class DataRefresh(QThread):
 
         self.iter = 0
         self.dest_mac = None
-        self.reply = ''
+        self.reply = ""
 
         self.mac_list = []
         self.rcv_list = []
@@ -292,20 +369,20 @@ class DataRefresh(QThread):
         self.size = 0
 
         for cmd in self.cmd_list:
-            self.msg[self.size:] = str.encode(cmd[0])
+            self.msg[self.size :] = str.encode(cmd[0])
             self.size += len(cmd[0])
             if cmd[0] == "MA":
                 cmd[1] = cmd[1].replace(":", "")
-                hex_string = codecs.decode(cmd[1], 'hex')
+                hex_string = codecs.decode(cmd[1], "hex")
 
-                self.msg[self.size:] = hex_string
+                self.msg[self.size :] = hex_string
                 self.dest_mac = hex_string
                 self.size += 6
             else:
-                self.msg[self.size:] = str.encode(cmd[1])
+                self.msg[self.size :] = str.encode(cmd[1])
                 self.size += len(cmd[1])
             if "\r\n" not in cmd[1]:
-                self.msg[self.size:] = str.encode("\r\n")
+                self.msg[self.size :] = str.encode("\r\n")
                 self.size += 2
 
     def sendcommands(self):
@@ -317,9 +394,9 @@ class DataRefresh(QThread):
     def run(self):
         try:
             self.makecommands()
-            if self.what_sock == 'udp':
+            if self.what_sock == "udp":
                 self.sendcommands()
-            elif self.what_sock == 'tcp':
+            elif self.what_sock == "tcp":
                 self.sendcommandsTCP()
         except Exception as e:
             self.logger.error(str(e))
@@ -331,13 +408,14 @@ class DataRefresh(QThread):
             while True:
                 self.rcv_list = []
                 readready, writeready, errorready = select.select(
-                    self.inputs, self.outputs, self.errors, 2)
+                    self.inputs, self.outputs, self.errors, 2
+                )
 
                 self.iter += 1
                 # sys.stdout.write("iter count: %r " % self.iter)
 
                 for sock in readready:
-                    self.logger.info(f'DataRefresh: {checknum}')
+                    self.logger.info(f"DataRefresh: {checknum}")
 
                     if sock == self.sock.sock:
                         data = self.sock.recvfrom()
@@ -354,4 +432,4 @@ class DataRefresh(QThread):
                     self.msleep(self.interval)
                 self.sendcommands()
         except Exception as e:
-            self.logger.error(f'[ERROR] DataRefresh error: {e}')
+            self.logger.error(f"[ERROR] DataRefresh error: {e}")

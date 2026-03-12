@@ -4,6 +4,7 @@
     - [1 Port Serial to Ethernet Module](#1-port-serial-to-ethernet-module)
     - [2 Port Serial to Ethernet Module](#2-port-serial-to-ethernet-module)
     - [Pre-programmed MCU](#pre-programmed-mcu)
+- [What's New](#whats-new)
 - [CLI Configuration Tool](#cli-configuration-tool)
 - [TroubleShooting](#troubleshooting)
   - [Report](#report)
@@ -57,6 +58,61 @@ Python interpreter based and it is platform independent. It works on python vers
 
 **Important Compatibility Note**: WIZnet-S2E-Tool-GUI version 1.5.5 requires firmware version 1.0.8 or higher to function correctly.
 
+
+# What's New
+
+## v1.5.9
+
+### New Devices Support
+
+- **W55RP20-S2E-2CH**: 2-channel variant support with dedicated command set and UI
+- **W232N / IP20**: Added device support including SSL TCP Client and MQTTS features (firmware v1.1.8+)
+- **W55RP20 high-speed baudrates**: 1M / 2M / 4M / 8M bps options for W55RP20 series
+- **WIZ750SR Modbus**: MB (Modbus) parameter support
+
+### Retry Search
+
+- Search automatically repeats up to **3 times** by default, accumulating results across rounds to minimize missed devices
+- Stops early when the expected device count is reached
+- Configure via: Search options > **Set search retry count**
+
+### Advanced Search Options
+
+YAML-based configuration system (`device_search_config.yaml`) for fine-grained control:
+
+| Setting | Description |
+|---------|-------------|
+| Phase 1 broadcast timeout | UDP broadcast wait time |
+| Phase 1 loop select timeout | Additional wait after last response |
+| Phase 3 device query timeout | Per-device info query timeout |
+| Progress bar update step | pgbar refresh granularity (%) |
+| Progress bar auto-hide delay | Delay before pgbar disappears after search (ms) |
+| Show timing in status bar | Debug: show elapsed seconds and retry count |
+| On-demand device query | Skip Phase 3 at search time; fetch info on first click instead |
+
+### Performance Improvements
+
+- **Parallel UDP queries**: Phase 3 device queries use dedicated sockets per device, all started simultaneously — total time ≈ slowest single device RTT instead of sum of all RTTs
+- **O(1) search result processing**: `getsearch_each_dev()` refactored from O(N²) full re-scan to O(1) per-packet update
+- **mn_list synchronization**: Fixed list misalignment between MAC/MN/VR/ST lists that caused incorrect device info display
+
+### Bug Fixes
+
+- Fixed blank Name column on second search: `_merge_search_results()` no longer overwrites existing model name with empty bytes from Phase 1
+- Fixed progress bar disappearing during "Querying devices..." — root cause was `SearchContext.__exit__()` scheduling an uncancellable `QTimer.singleShot(2000, pgbar.hide)` at search start, which fired during Phase 3 `processEvents()`
+- Fixed `_finalize_timer` accumulation (BUG-04): timer is now stopped and reconnected on each use instead of stacking `singleShot` callbacks
+- Fixed per-row decode errors in table display using `errors='replace'`
+- Fixed search response packet parsing to be atomic per-packet, preventing list misalignment
+- Fixed FW upload failure not updating status bar message
+- Fixed Advanced Search Options changes (pgbar auto-hide delay) not taking effect immediately due to missing in-memory sync between `device_search_config` and `timing_config` instances
+
+### Progress Bar
+
+- Shows indeterminate animation from the moment search starts (previously appeared several seconds late)
+- Maintained continuously across all retry cycles without resetting
+- Snaps to 100% on completion, then auto-hides after configurable delay
+
+---
 
 # CLI Configuration Tool
 
