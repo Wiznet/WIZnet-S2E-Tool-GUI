@@ -5,10 +5,10 @@ import socket
 
 class WIZUDPSock:
     # def __init__(self, port, peerport):
-    def __init__(self, port, peerport, ipaddr=None):
+    def __init__(self, port, peerport, ipaddr=None, localport=52000):
         self.sock = None
         # self.localport = randint(52000, 53000)
-        self.localport = 52000
+        self.localport = localport  # 0 = OS가 사용 가능한 포트 자동 할당
         self.peerport = peerport
         self.ipaddr = ipaddr
 
@@ -22,15 +22,18 @@ class WIZUDPSock:
 
         # self.sock.bind(("", self.localport))
         self.sock.bind((self.ipaddr, self.localport))
-        self.sock.setblocking(0)
+        self.sock.setblocking(False)
 
     def sendto(self, msg):
+        assert self.sock is not None, "sendto() called before open()"
         self.sock.sendto(msg, ("255.255.255.255", self.peerport))
         # self.sock.sendto(msg, ("192.168.50.255", self.peerport))
 
     def recvfrom(self):
-        data, addr = self.sock.recvfrom(2048)
+        assert self.sock is not None, "recvfrom() called before open()"
+        data, addr = self.sock.recvfrom(4096)
         return data
 
     def close(self):
+        assert self.sock is not None, "close() called before open()"
         self.sock.close()

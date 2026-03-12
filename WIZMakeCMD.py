@@ -156,6 +156,8 @@ def version_compare(version1: str, version2: str):
         version1 (str): 첫번째 버전
         version2 (str): 두번째 버전
     """
+    if not version1 or not version2:
+        return 0
     return 0 if version1 == version2 else -1 if Version(version1) < Version(version2) else 1
 
 
@@ -413,6 +415,7 @@ class WIZMakeCMD:
 
     def reset(self, mac_addr, idcode, set_pw, devname):
         self.logger.info(f'Reset: {mac_addr}')
+        cmd_list = []
         try:
             print("reset", mac_addr, idcode, set_pw, devname)
             cmd_list = self.make_header(mac_addr, idcode, devname=devname, set_pw=set_pw)
@@ -423,6 +426,7 @@ class WIZMakeCMD:
 
     def factory_reset(self, mac_addr, idcode, set_pw, devname, param):
         self.logger.info(f'Factory: {mac_addr}')
+        cmd_list = []
         try:
             cmd_list = self.make_header(mac_addr, idcode, devname=devname, set_pw=set_pw)
             cmd_list.append(["FR", param])
