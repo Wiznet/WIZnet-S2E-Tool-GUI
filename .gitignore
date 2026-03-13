@@ -122,3 +122,6 @@ config/device_search_timing.yaml
 *pem
 *.sh
 .history/
+
+# Claude AI work documents
+.claude/
