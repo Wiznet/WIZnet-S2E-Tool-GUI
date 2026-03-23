@@ -693,8 +693,12 @@ class WIZWindow(QMainWindow, main_window):
         self.textedit_privatekey.textChanged.connect(self.event_privatekey_changed)
         # self.textedit_upload_fw.textChanged.connect(self.event_uploadfw_changed)
 
-        # Init network interface
-        self.combobox_net_interface.setCurrentIndex(0)
+        # Init network interface - 첫 번째 유효한 어댑터 자동 선택
+        if self.combobox_net_interface.count() > 1:
+            self.combobox_net_interface.setCurrentIndex(1)
+            self.net_changed(1)
+        else:
+            self.combobox_net_interface.setCurrentIndex(0)
 
         self.cert_object_config()
 
@@ -907,38 +911,30 @@ class WIZWindow(QMainWindow, main_window):
                         net_ifs = ipv4_addr + ":" + adapter.nice_name
                         nice_name_lower = adapter.nice_name.lower()
 
-                        # 가상 어댑터 판별 (이름 기반)
+                        # 가상 어댑터 판별
                         virtual_keywords = [
                             'virtualbox', 'vmware', 'hyper-v', 'vethernet',
                             'docker', 'wsl', 'tap-windows', 'npcap',
                             'virtual', 'vbox', 'bridge', 'loopback'
                         ]
-                        is_virtual = any(keyword in nice_name_lower for keyword in virtual_keywords)
+                        is_virtual = any(k in nice_name_lower for k in virtual_keywords)
 
-                        # 우선순위 결정:
-                        # 0: 물리 Ethernet
-                        # 1: 물리 Wi-Fi
-                        # 2: 기타 물리 인터페이스
-                        # 3: 가상 어댑터
-                        # 4: APIPA/link-local (169.254.*)
+                        # 우선순위: 0=일반, 1=가상, 2=APIPA(169.254.*)
                         if ipv4_addr.startswith("169.254."):
-                            priority = 4  # APIPA/link-local (최하위)
+                            priority = 2
                         elif is_virtual:
-                            priority = 3  # 가상 어댑터
-                        elif 'ethernet' in nice_name_lower or 'eth' in nice_name_lower:
-                            priority = 0  # 물리 Ethernet
-                        elif 'wireless' in nice_name_lower or 'wi-fi' in nice_name_lower or 'wifi' in nice_name_lower:
-                            priority = 1  # 물리 Wi-Fi
+                            priority = 1
                         else:
-                            priority = 2  # 기타 물리 인터페이스
+                            priority = 0
 
-                        adapter_list.append((priority, net_ifs, adapter.nice_name))
+                        ip_tuple = tuple(int(p) for p in ipv4_addr.split('.'))
+                        adapter_list.append((priority, ip_tuple, net_ifs, adapter.nice_name))
 
-        # 우선순위로 정렬 (물리 어댑터 먼저, 가상 어댑터는 나중)
+        # 우선순위 → 같은 우선순위 내에서 IP 숫자 정렬
         adapter_list.sort(key=lambda x: (x[0], x[1]))
 
         # 정렬된 순서로 추가
-        for priority, net_ifs, nice_name in adapter_list:
+        for priority, ip_tuple, net_ifs, nice_name in adapter_list:
             self.net_list.append(nice_name)
             netconfig = QAction(net_ifs, self)
             self.netconfig_menu.addAction(netconfig)
@@ -950,8 +946,12 @@ class WIZWindow(QMainWindow, main_window):
         refresh_action.triggered.connect(self.on_refresh_network_adapter)
         self.netconfig_menu.addSeparator()
         self.netconfig_menu.addAction(refresh_action)
-        # Default: not selected
-        self.combobox_net_interface.setCurrentIndex(0)
+        # 첫 번째 어댑터 자동 선택 후 net_changed 직접 호출 (index 변화 없을 때 signal 미발생 방지)
+        if self.combobox_net_interface.count() > 1:
+            self.combobox_net_interface.setCurrentIndex(1)
+            self.net_changed(1)
+        else:
+            self.combobox_net_interface.setCurrentIndex(0)
         # 힌트 텍스트 설정
         # self.combobox_net_interface.setPlaceholderText('<Select Network Interface>')
 
