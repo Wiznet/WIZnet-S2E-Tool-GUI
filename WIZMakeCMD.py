@@ -50,6 +50,17 @@ cmd_ch1 = [
     "PR", "SB", "FL", "IT", "PT", "PS", "PD", "TE", "SS", "NP",
     "SP"
 ]
+# WIZ107SR / WIZ108SR 전용 커맨드 목록
+# refactored/specs/devices/WIZ107SR.yaml search_cmd_order 기준
+# cmd_ch1 대비 추가: DD(DDNS Enable), PO(Network Protocol)
+cmd_107sr = [
+    "MC", "VR", "MN", "UN", "ST", "IM", "OP", "DD", "CP", "PO", "DG",
+    "KA", "KI", "KE", "RI", "LI", "SM", "GW", "DS",
+    "PI", "PP", "DX", "DP", "DI", "DW", "DH", "LP", "RP", "RH",
+    "BR", "DB", "PR", "SB", "FL", "IT", "PT", "PS", "PD",
+    "TE", "SS", "NP", "SP"
+]
+
 cmd_wiz75xsr = ["S0", "S1"]
 cmd_added = ["SC", "TR"]  # for WIZ750SR F/W version 1.2.0 or later
 cmd_ch2 = [
@@ -218,9 +229,9 @@ class WIZMakeCMD:
         cmd_list = self.make_header(mac_addr, idcode)
 
         if devname in ONE_PORT_DEV:
-            # WIZ107SR/WIZ108SR
+            # WIZ107SR/WIZ108SR: DD(DDNS Enable), PO(Network Protocol) 포함 전용 목록
             if "WIZ107SR" in devname or "WIZ108SR" in devname:
-                for cmd in cmd_1p_default:
+                for cmd in cmd_107sr:
                     cmd_list.append([cmd, ""])
             else:
                 # WIZ750SR series / W7500(P)-S2E
@@ -336,9 +347,9 @@ class WIZMakeCMD:
 
             # Get commands
             if devname in ONE_PORT_DEV:
-                # WIZ107SR/WIZ108SR
+                # WIZ107SR/WIZ108SR: DD(DDNS Enable), PO(Network Protocol) 포함 전용 목록
                 if "WIZ107SR" in devname or "WIZ108SR" in devname:
-                    for cmd in cmd_1p_default:
+                    for cmd in cmd_107sr:
                         cmd_list.append([cmd, ""])
                 else:
                     # WIZ750SR series / W7500(P)-S2E
