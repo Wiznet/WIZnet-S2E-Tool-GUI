@@ -592,6 +592,10 @@ class WIZWindow(QMainWindow, main_window):
         self.ip_static.clicked.connect(self.event_ip_alloc)
         self.ip_pppoe.clicked.connect(self.event_ip_alloc)
 
+        # WIZ107SR/108SR: DDNS enable 토글, Network Protocol, 9-bit databit 제약
+        self.ddns_enable.stateChanged.connect(self.event_ddns_enable)
+        self.ch1_databit.currentIndexChanged.connect(self.event_ch1_databit_changed)
+
         # Event: OP mode
         self.ch1_tcpclient.clicked.connect(self.event_opmode)
         self.ch1_tcpserver.clicked.connect(self.event_opmode)
@@ -1286,11 +1290,19 @@ class WIZWindow(QMainWindow, main_window):
                 idx = self.ch1_baud.findText(current_baud)
                 if idx >= 0:
                     self.ch1_baud.setCurrentIndex(idx)
+
+            # DB 9-bit 현재 상태에 따라 PR/SB 제약 초기 적용
+            self.event_ch1_databit_changed(self.ch1_databit.currentIndex())
+            # DDNS 필드 활성화 상태 초기 적용
+            self.event_ddns_enable()
         elif "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev or "W232N" in self.curr_dev:
             # 다른 장치 선택 시 ip_pppoe 숨기고 DB 9-bit 항목 제거
             self.ip_pppoe.setVisible(False)
             if self.ch1_databit.count() > 2:
                 self.ch1_databit.removeItem(2)
+            # 9-bit 잠금 해제
+            self.ch1_parity.setEnabled(True)
+            self.ch1_stopbit.setEnabled(True)
 
             if version_compare("1.2.0", self.curr_ver) <= 0:
                 self.tcp_timeout.setEnabled(True)
@@ -1318,6 +1330,8 @@ class WIZWindow(QMainWindow, main_window):
             self.ip_pppoe.setVisible(False)
             if self.ch1_databit.count() > 2:
                 self.ch1_databit.removeItem(2)
+            self.ch1_parity.setEnabled(True)
+            self.ch1_stopbit.setEnabled(True)
             # W55RP20: 펌웨어 버전에 따라 고속 보드레이트 지원 여부 결정
             # - FW < 1.2.1: BR 0-15 (최대 921600)
             # - FW >= 1.2.1: BR 0-19 (최대 8M, 1M/2M/4M/8M 지원)
@@ -1395,6 +1409,8 @@ class WIZWindow(QMainWindow, main_window):
             self.ip_pppoe.setVisible(False)
             if self.ch1_databit.count() > 2:
                 self.ch1_databit.removeItem(2)
+            self.ch1_parity.setEnabled(True)
+            self.ch1_stopbit.setEnabled(True)
             # Baudrate configuration - get current device's BR value from dev_profile
             current_baud = self._get_current_baud_from_profile(15)  # IP20: max BR index 15 (921600)
 
@@ -1413,6 +1429,8 @@ class WIZWindow(QMainWindow, main_window):
             self.ip_pppoe.setVisible(False)
             if self.ch1_databit.count() > 2:
                 self.ch1_databit.removeItem(2)
+            self.ch1_parity.setEnabled(True)
+            self.ch1_stopbit.setEnabled(True)
             # Baudrate configuration - get current device's BR value from dev_profile
             current_baud = self._get_current_baud_from_profile(14)  # Other devices: max BR index 14 (460800)
 
@@ -1673,6 +1691,30 @@ class WIZWindow(QMainWindow, main_window):
             self.subnet.setEnabled(True)
             self.gateway.setEnabled(True)
             self.dns_addr.setEnabled(True)
+
+    def event_ddns_enable(self):
+        """WIZ107SR/108SR: DDNS Enable 체크박스 토글에 따라 DDNS 설정 필드 활성화/비활성화"""
+        enabled = self.ddns_enable.isChecked()
+        for widget in (
+            self.ddns_server_idx,
+            self.ddns_server_port,
+            self.ddns_user_id,
+            self.ddns_password,
+            self.ddns_domain,
+        ):
+            widget.setEnabled(enabled)
+
+    def event_ch1_databit_changed(self, index):
+        """WIZ107SR/108SR: 9-bit 선택 시 Parity=NONE, Stop bit=1 자동 설정 및 잠금"""
+        if not (self.curr_dev and ("WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev)):
+            return
+        # index 2 = 9-bit
+        is_9bit = (index == 2)
+        if is_9bit:
+            self.ch1_parity.setCurrentIndex(0)   # NONE
+            self.ch1_stopbit.setCurrentIndex(0)  # 1-bit
+        self.ch1_parity.setEnabled(not is_9bit)
+        self.ch1_stopbit.setEnabled(not is_9bit)
 
     def event_keepalive(self):
         if self.ch1_keepalive_enable.isChecked():
@@ -3259,8 +3301,12 @@ class WIZWindow(QMainWindow, main_window):
                 self.ddns_user_id.setText(dev_data.get("DI", "").strip())
                 self.ddns_password.setText(dev_data.get("DW", "").strip())
                 self.ddns_domain.setText(dev_data.get("DH", "").strip())
-                # Network Protocol (PO): TCP Raw(0) / Telnet(1) — Modbus UI와 독립
-                # (WIZ107SR의 PO는 Modbus가 아니므로 modbus_protocol 위젯 미사용)
+                # Network Protocol (PO): TCP Raw(0) / Telnet(1)
+                po_val = dev_data.get("PO", "0").strip()
+                self.po_telnet.setChecked(po_val == "1")
+                self.po_tcp_raw.setChecked(po_val != "1")
+                # DDNS 필드 활성화 상태 초기 적용
+                self.event_ddns_enable()
 
             # Modbus (PO/MB depending on device) — WIZ107SR/108SR 제외
             desired_key = self._modbus_param_key()
@@ -3689,8 +3735,7 @@ class WIZWindow(QMainWindow, main_window):
                 setcmd["DW"] = self.ddns_password.text() or " "
                 setcmd["DH"] = self.ddns_domain.text() or " "
                 # Network Protocol (PO): TCP Raw(0) / Telnet(1)
-                # 현재 별도 UI 없음 — 기본 TCP Raw 유지 (향후 UI 추가 가능)
-                setcmd["PO"] = "0"
+                setcmd["PO"] = "1" if self.po_telnet.isChecked() else "0"
 
             # Status pin
             if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
