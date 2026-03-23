@@ -590,6 +590,7 @@ class WIZWindow(QMainWindow, main_window):
         self.ch2_keepalive_enable.stateChanged.connect(self.event_keepalive)
         self.ip_dhcp.clicked.connect(self.event_ip_alloc)
         self.ip_static.clicked.connect(self.event_ip_alloc)
+        self.ip_pppoe.clicked.connect(self.event_ip_alloc)
 
         # Event: OP mode
         self.ch1_tcpclient.clicked.connect(self.event_opmode)
@@ -699,9 +700,11 @@ class WIZWindow(QMainWindow, main_window):
         Initial config based WIZ750SR series
         """
         # Tab information save
-        self.userio_tab_text = self.generalTab.tabText(2)
-        self.mqtt_tab_text = self.generalTab.tabText(3)
-        self.certificate_tab_text = self.generalTab.tabText(4)
+        # .ui 탭 순서: basic(0), advance(1), ddns_pppoe(2), userio(3), mqtt(4), certificate(5)
+        self.ddns_pppoe_tab_text = self.generalTab.tabText(2)
+        self.userio_tab_text = self.generalTab.tabText(3)
+        self.mqtt_tab_text = self.generalTab.tabText(4)
+        self.certificate_tab_text = self.generalTab.tabText(5)
         self.ch1_tab_text = self.channel_tab.tabText(1)
         inital_tab_count = self.generalTab.count()
         for _i in range(inital_tab_count):
@@ -714,6 +717,7 @@ class WIZWindow(QMainWindow, main_window):
                 "advance_tab": SysTabObjectText(
                     self.advance_tab, self.generalTab.tabText(1)
                 ),
+                "ddns_pppoe_tab": SysTabObjectText(self.ddns_pppoe_tab, self.ddns_pppoe_tab_text),
                 "userio_tab": SysTabObjectText(self.userio_tab, self.userio_tab_text),
                 "mqtt_tab": SysTabObjectText(self.mqtt_tab, self.mqtt_tab_text),
                 "certificate_tab": SysTabObjectText(
@@ -723,7 +727,8 @@ class WIZWindow(QMainWindow, main_window):
         except Exception as e:
             print(f"ERROR:init_ui_object:{e}")
 
-        # Initial tab
+        # Initial tab — 높은 인덱스부터 제거
+        self.generalTab.removeTab(6)
         self.generalTab.removeTab(5)
         self.generalTab.removeTab(4)
         self.generalTab.removeTab(3)
@@ -1259,9 +1264,35 @@ class WIZWindow(QMainWindow, main_window):
             self.modbus_protocol_2.setCurrentIndex(0)
             self.group_packing_14.hide()
             self.group_packing_15.hide()
-        if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev or "W232N" in self.curr_dev:
+        if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
+            # WIZ107SR / WIZ108SR 전용 처리
+            self.tcp_timeout.setEnabled(False)
+            self.ch1_ssl_tcpclient.setEnabled(False)
+            self.ch1_mqttclient.setEnabled(False)
+            self.ch1_mqtts_client.setEnabled(False)
+
+            # ip_pppoe 라디오버튼 표시 (PPPoE 지원)
+            self.ip_pppoe.setVisible(True)
+
+            # DB: 9-bit 항목 동적 추가 (기존 7/8 bit에 추가)
+            if self.ch1_databit.count() < 3:
+                self.ch1_databit.addItem("9-bit")
+
+            # Baudrate: 최대 230400 (index 0-13)
+            current_baud = self._get_current_baud_from_profile(13)
+            self.ch1_baud.clear()
+            self.ch1_baud.addItems(BAUDRATE_BASE)  # 300 ~ 230400 (14 items)
+            if current_baud:
+                idx = self.ch1_baud.findText(current_baud)
+                if idx >= 0:
+                    self.ch1_baud.setCurrentIndex(idx)
+        elif "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev or "W232N" in self.curr_dev:
+            # 다른 장치 선택 시 ip_pppoe 숨기고 DB 9-bit 항목 제거
+            self.ip_pppoe.setVisible(False)
+            if self.ch1_databit.count() > 2:
+                self.ch1_databit.removeItem(2)
+
             if version_compare("1.2.0", self.curr_ver) <= 0:
-                # setcmd['TR'] = self.tcp_timeout.text()
                 self.tcp_timeout.setEnabled(True)
             else:
                 self.tcp_timeout.setEnabled(False)
@@ -1284,6 +1315,9 @@ class WIZWindow(QMainWindow, main_window):
                 if idx >= 0:
                     self.ch1_baud.setCurrentIndex(idx)
         elif self.curr_dev in W55RP20_FAMILY:
+            self.ip_pppoe.setVisible(False)
+            if self.ch1_databit.count() > 2:
+                self.ch1_databit.removeItem(2)
             # W55RP20: 펌웨어 버전에 따라 고속 보드레이트 지원 여부 결정
             # - FW < 1.2.1: BR 0-15 (최대 921600)
             # - FW >= 1.2.1: BR 0-19 (최대 8M, 1M/2M/4M/8M 지원)
@@ -1358,6 +1392,9 @@ class WIZWindow(QMainWindow, main_window):
                     if idx >= 0:
                         self.ch2_baud.setCurrentIndex(idx)
         elif "IP20" in self.curr_dev:
+            self.ip_pppoe.setVisible(False)
+            if self.ch1_databit.count() > 2:
+                self.ch1_databit.removeItem(2)
             # Baudrate configuration - get current device's BR value from dev_profile
             current_baud = self._get_current_baud_from_profile(15)  # IP20: max BR index 15 (921600)
 
@@ -1373,6 +1410,9 @@ class WIZWindow(QMainWindow, main_window):
                 if idx >= 0:
                     self.ch1_baud.setCurrentIndex(idx)
         else:
+            self.ip_pppoe.setVisible(False)
+            if self.ch1_databit.count() > 2:
+                self.ch1_databit.removeItem(2)
             # Baudrate configuration - get current device's BR value from dev_profile
             current_baud = self._get_current_baud_from_profile(14)  # Other devices: max BR index 14 (460800)
 
@@ -1507,6 +1547,12 @@ class WIZWindow(QMainWindow, main_window):
                 if _tab.name in ExcludeTabInCommon:
                     self.generalTab.removeTab(_tab.idx)
                     list_tabs.remove(_tab)
+                # WIZ107SR/108SR이 아닌 장치에서 ddns_pppoe_tab 제거
+                elif _tab.name == "ddns_pppoe_tab" and not (
+                    "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev
+                ):
+                    self.generalTab.removeTab(_tab.idx)
+                    list_tabs.remove(_tab)
             next_tab_idx: int = len(list_tabs)
             # 넣어야할 탭 넣기
             for _new_tab in IncludeTabInCommon:
@@ -1519,6 +1565,15 @@ class WIZWindow(QMainWindow, main_window):
                     )
                     self.generalTab.setTabEnabled(next_tab_idx, True)
                     next_tab_idx += 1
+            # WIZ107SR/108SR 전용: DDNS/PPPoE 탭 추가
+            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
+                if "ddns_pppoe_tab" not in repr(list_tabs):
+                    ddns_tab_obj = self.tab_structure.get("ddns_pppoe_tab")
+                    if ddns_tab_obj is not None:
+                        self.generalTab.insertTab(
+                            next_tab_idx, ddns_tab_obj.object, ddns_tab_obj.ui_text
+                        )
+                        self.generalTab.setTabEnabled(next_tab_idx, True)
 
         # User I/O tab
         """
@@ -3039,6 +3094,10 @@ class WIZWindow(QMainWindow, main_window):
                     self.ip_static.setChecked(True)
                 elif dev_data["IM"] == "1":
                     self.ip_dhcp.setChecked(True)
+                elif dev_data["IM"] == "2" and (
+                    "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev
+                ):
+                    self.ip_pppoe.setChecked(True)
             if "LI" in dev_data:
                 self.localip.setText(dev_data["LI"])
                 self.localip_addr = dev_data["LI"]
@@ -3182,7 +3241,28 @@ class WIZWindow(QMainWindow, main_window):
                     self.status_dsr.setChecked(True)
                     self.checkbox_enable_dsr.setChecked(True)
 
-            # Modbus (PO/MB depending on device)
+            # WIZ107SR / WIZ108SR 전용: DDNS / PPPoE 탭 필드 로드
+            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
+                # PPPoE 설정 (IM=2일 때만 유효)
+                self.pppoe_id.setText(dev_data.get("PI", "").strip())
+                self.pppoe_pw.setText(dev_data.get("PP", "").strip())
+                # DDNS Enable
+                dd_val = dev_data.get("DD", "0").strip()
+                self.ddns_enable.setChecked(dd_val == "1")
+                # DDNS 서버 설정
+                dx_val = dev_data.get("DX", "0").strip()
+                try:
+                    self.ddns_server_idx.setCurrentIndex(int(dx_val))
+                except (ValueError, TypeError):
+                    self.ddns_server_idx.setCurrentIndex(0)
+                self.ddns_server_port.setText(dev_data.get("DP", "").strip())
+                self.ddns_user_id.setText(dev_data.get("DI", "").strip())
+                self.ddns_password.setText(dev_data.get("DW", "").strip())
+                self.ddns_domain.setText(dev_data.get("DH", "").strip())
+                # Network Protocol (PO): TCP Raw(0) / Telnet(1) — Modbus UI와 독립
+                # (WIZ107SR의 PO는 Modbus가 아니므로 modbus_protocol 위젯 미사용)
+
+            # Modbus (PO/MB depending on device) — WIZ107SR/108SR 제외
             desired_key = self._modbus_param_key()
             fallback_key = "MB" if desired_key == "PO" else "PO"
             for modbus_key in (desired_key, fallback_key):
@@ -3472,6 +3552,10 @@ class WIZWindow(QMainWindow, main_window):
                 setcmd["IM"] = "0"
             elif self.ip_dhcp.isChecked():
                 setcmd["IM"] = "1"
+            elif self.ip_pppoe.isChecked() and (
+                "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev
+            ):
+                setcmd["IM"] = "2"
             setcmd["DS"] = self.dns_addr.text()
             # boot 명령에 SP 도 포함되어야 함.
             # search id code: max 8 bytes
@@ -3592,6 +3676,22 @@ class WIZWindow(QMainWindow, main_window):
             setcmd["KE"] = self.ch1_keepalive_retry.text()
             # reconnection - channel 1
             setcmd["RI"] = self.ch1_reconnection.text()
+            # WIZ107SR / WIZ108SR 전용: DDNS / PPPoE 커맨드 저장
+            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
+                # PPPoE
+                setcmd["PI"] = self.pppoe_id.text() or " "
+                setcmd["PP"] = self.pppoe_pw.text() or " "
+                # DDNS Enable
+                setcmd["DD"] = "1" if self.ddns_enable.isChecked() else "0"
+                setcmd["DX"] = str(self.ddns_server_idx.currentIndex())
+                setcmd["DP"] = self.ddns_server_port.text() or " "
+                setcmd["DI"] = self.ddns_user_id.text() or " "
+                setcmd["DW"] = self.ddns_password.text() or " "
+                setcmd["DH"] = self.ddns_domain.text() or " "
+                # Network Protocol (PO): TCP Raw(0) / Telnet(1)
+                # 현재 별도 UI 없음 — 기본 TCP Raw 유지 (향후 UI 추가 가능)
+                setcmd["PO"] = "0"
+
             # Status pin
             if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
                 pass
