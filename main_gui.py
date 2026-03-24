@@ -905,7 +905,8 @@ class WIZWindow(QMainWindow, main_window):
         for adapter in adapters:
             self.logger.debug(f"Net Interface: {adapter.nice_name}")
             for ip in adapter.ips:
-                if len(ip.ip) > 6:
+                # IPv4만 처리 (ifaddr에서 IPv4는 str, IPv6는 tuple)
+                if isinstance(ip.ip, str):
                     ipv4_addr = ip.ip
                     if ipv4_addr != "127.0.0.1":
                         net_ifs = ipv4_addr + ":" + adapter.nice_name
@@ -930,7 +931,7 @@ class WIZWindow(QMainWindow, main_window):
                         ip_tuple = tuple(int(p) for p in ipv4_addr.split('.'))
                         adapter_list.append((priority, ip_tuple, net_ifs, adapter.nice_name))
 
-        # 우선순위 → 같은 우선순위 내에서 IP 숫자 정렬
+        # 우선순위 → 같은 우선순위 내에서 IP 숫자 정렬 (첫 번째 옥텟 그룹핑 자연히 포함)
         adapter_list.sort(key=lambda x: (x[0], x[1]))
 
         # 정렬된 순서로 추가
