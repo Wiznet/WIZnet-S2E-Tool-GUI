@@ -1271,7 +1271,8 @@ class WIZWindow(QMainWindow, main_window):
             self.group_packing_15.hide()
         if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
             # WIZ107SR / WIZ108SR 전용 처리
-            self.tcp_timeout.setEnabled(False)
+            self.tcp_timeout.setVisible(False)
+            self.tcp_timeout_label.setVisible(False)
             self.ch1_ssl_tcpclient.setEnabled(False)
             self.ch1_mqttclient.setEnabled(False)
             self.ch1_mqtts_client.setEnabled(False)
@@ -1304,6 +1305,10 @@ class WIZWindow(QMainWindow, main_window):
             # 9-bit 잠금 해제
             self.ch1_parity.setEnabled(True)
             self.ch1_stopbit.setEnabled(True)
+
+            # TR 필드 복원 (WIZ107/108에서 전환 시)
+            self.tcp_timeout.setVisible(True)
+            self.tcp_timeout_label.setVisible(True)
 
             if version_compare("1.2.0", self.curr_ver) <= 0:
                 self.tcp_timeout.setEnabled(True)
@@ -3765,7 +3770,7 @@ class WIZWindow(QMainWindow, main_window):
                         lower_val = "1"
                 setcmd["SC"] = upper_val + lower_val
 
-            if "WIZ752" in self.curr_dev:
+            if "WIZ752" in self.curr_dev or "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
                 pass
             else:
                 if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev:
