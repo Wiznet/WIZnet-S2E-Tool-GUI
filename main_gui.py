@@ -4035,86 +4035,130 @@ class WIZWindow(QMainWindow, main_window):
                 self.wizmsghandler.set_result.connect(self.get_setting_result)
                 self.wizmsghandler.start()
 
+    def _get_expected_min_resp_len(self, devname: str, version: str) -> int:
+        """
+        장치별 SET 응답 최소 예상 길이.
+
+        SET 패킷 말미에 SearchMsg(GET cmds) + SV + RT 가 항상 붙으며,
+        장치는 SearchMsg 에 대한 응답을 전송함.
+        각 응답 라인 최소 길이: cmd(2) + value(1) + CRLF(2) = 5 bytes
+        여기에 MA prefix(10) + PW 라인(5+) 을 더해 최소값 산출.
+
+        이 값보다 짧으면 장치가 SearchMsg 처리 전에 리부트한 것 (IM 모드 변경 등).
+        """
+        from WIZMakeCMD import (
+            cmd_107sr, cmd_1p_advanced, cmd_1p_default, cmd_2p_default,
+            cmd_security_base, cmd_wiz5xxsr_added, cmd_w55rp20_added,
+            ONE_PORT_DEV, TWO_PORT_DEV, SECURITY_DEVICE,
+            version_compare,
+        )
+        if "WIZ107SR" in devname or "WIZ108SR" in devname:
+            n = len(cmd_107sr)                          # 42
+        elif devname in TWO_PORT_DEV or "752" in devname:
+            n = len(cmd_2p_default)
+        elif devname in SECURITY_DEVICE:
+            n = len(cmd_security_base + cmd_wiz5xxsr_added)
+        elif devname in ONE_PORT_DEV:
+            if version_compare("1.2.0", version) <= 0:
+                n = len(cmd_1p_advanced)                # 44
+            else:
+                n = len(cmd_1p_default)                 # 40
+        else:
+            n = len(cmd_1p_default)
+
+        # MA prefix(10) + PW 라인(최소 5) + 커맨드 응답(최소 5 bytes/cmd)
+        return 10 + 5 + n * 5
+
     def get_setting_result(self, resp_len):
         if not self.curr_dev or not self.curr_ver:
             return
         prev_channel_tab_index = self.channel_tab.currentIndex()
         set_result = {}
 
-        if resp_len > 100:
-            self.statusbar.showMessage(" Set device complete!")
-
-            # complete pop-up
-            self.msg_set_success()
-
-            if self.isConnected and self.unicast_ip.isChecked():
-                self.logger.info("close socket")
-                if self.conf_sock is not None:
-                    self.conf_sock.close()
-
-            # get setting result
-            if self.wizmsghandler is None:
-                return
-            self.set_reponse = self.wizmsghandler.rcv_list[0]
-
-            # cmdsets = self.set_reponse.splitlines()
-            cmdsets = self.set_reponse.split(b"\r\n")
-
-            for i in range(len(cmdsets)):
-                if cmdsets[i][:2] == b"MA":
-                    pass
-                else:
-                    try:
-                        cmd = cmdsets[i][:2].decode()
-                        param = cmdsets[i][2:].decode()
-
-                        set_result[cmd] = param
-                    except Exception as e:
-                        self.logger.error(e)
-
-            try:
-                clicked_mac = self.list_device.selectedItems()[0].text()
-                self.dev_profile[clicked_mac] = set_result
-            except Exception as e:
-                self.logger.error(e)
-
-            # 장비 정보 갱신용으로 부르는 것 같은 데 이 때문에 dev_clicked 에 넣은 메시지 창이 2번 뜸
-            self.dev_clicked(call_from=sys._getframe().f_code.co_name)
-        elif resp_len == -1:
+        if resp_len == -1:
             self.logger.warning("Setting: no response from device.")
             self.statusbar.showMessage(" Setting: no response from device.")
             self.msg_set_error()
+
         elif resp_len == -3:
             self.logger.warning("Setting: wrong password")
             self.statusbar.showMessage(" Setting: wrong password.")
             self.msg_setting_pw_error()
-        elif resp_len < 50:
-            self.logger.warning(f"Warning: setting is did not well. resp_len={resp_len}")
-            # 디버깅: 실제 수신된 응답 내용 로깅
-            try:
-                if self.wizmsghandler is not None:
-                    self.logger.warning(f"[DEBUG] wizmsghandler exists: {type(self.wizmsghandler)}")
-                    if hasattr(self.wizmsghandler, 'rcv_list'):
-                        self.logger.warning(f"[DEBUG] rcv_list exists, length: {len(self.wizmsghandler.rcv_list)}")
-                        if len(self.wizmsghandler.rcv_list) > 0:
-                            raw_response = self.wizmsghandler.rcv_list[0]
-                            self.logger.warning(f"[DEBUG] Raw response (bytes): {raw_response}")
-                            self.logger.warning(f"[DEBUG] Raw response (hex): {raw_response.hex()}")
-                            try:
-                                decoded = raw_response.decode('utf-8', errors='replace')
-                                self.logger.warning(f"[DEBUG] Decoded response: {decoded}")
-                            except Exception as e:
-                                self.logger.warning(f"[DEBUG] Failed to decode response: {e}")
-                        else:
-                            self.logger.warning("[DEBUG] rcv_list is empty")
-                    else:
-                        self.logger.warning("[DEBUG] wizmsghandler has no rcv_list attribute")
-                else:
-                    self.logger.warning("[DEBUG] wizmsghandler does not exist")
-            except Exception as e:
-                self.logger.error(f"[DEBUG] Error while logging response: {e}")
-            self.statusbar.showMessage(" Warning: setting is did not well.")
-            self.msg_set_warning()
+
+        elif resp_len > 0:
+            if self.wizmsghandler is None:
+                return
+            self.set_reponse = self.wizmsghandler.rcv_list[0]
+
+            # ── 응답 파싱 (VB.NET parsingMsg() 방식) ──────────────────────
+            # MA prefix(10 bytes) 제거 후 \r\n 단위로 분리
+            payload = (self.set_reponse[10:]
+                       if len(self.set_reponse) >= 10 and self.set_reponse[:2] == b"MA"
+                       else self.set_reponse)
+            for chunk in payload.split(b"\r\n"):
+                if len(chunk) < 3 or chunk[:2] == b"MA":
+                    continue
+                try:
+                    cmd   = chunk[:2].decode("ascii")
+                    param = chunk[2:].decode("utf-8", errors="replace")
+                    set_result[cmd] = param
+                except Exception as e:
+                    self.logger.error(e)
+
+            mc = set_result.get("MC", "")
+            er = set_result.get("ER", "")
+
+            # 장치별 최소 예상 응답 길이
+            min_len = self._get_expected_min_resp_len(self.curr_dev, self.curr_ver)
+            self.logger.info(
+                f"Setting resp_len={resp_len}, expected_min={min_len}, "
+                f"MC='{mc}', ER='{er}'"
+            )
+
+            if er:
+                # 장치가 ER 필드를 반환 → 오류 내용 표시
+                self.logger.warning(f"Setting: device error response: {er}")
+                self.statusbar.showMessage(f" Setting error: {er}")
+                self.msg_set_warning()
+
+            elif len(mc) == 17:
+                # ── 정상 성공: MAC 유효 (VB.NET: nSec.MC.data.Length == 17) ──
+                self.statusbar.showMessage(" Set device complete!")
+                self.msg_set_success()
+
+                if self.isConnected and self.unicast_ip.isChecked():
+                    self.logger.info("close socket")
+                    if self.conf_sock is not None:
+                        self.conf_sock.close()
+
+                try:
+                    clicked_mac = self.list_device.selectedItems()[0].text()
+                    self.dev_profile[clicked_mac] = set_result
+                except Exception as e:
+                    self.logger.error(e)
+
+                self.dev_clicked(call_from=sys._getframe().f_code.co_name)
+
+            elif resp_len >= min_len:
+                # 응답 길이는 충분하나 MAC 파싱 실패 → 포맷 이상
+                self.logger.warning(
+                    f"Setting: resp_len={resp_len} >= min({min_len}) "
+                    "but MC field invalid. Unexpected response format."
+                )
+                self.statusbar.showMessage(" Warning: setting response format unexpected.")
+                self.msg_set_warning()
+
+            else:
+                # 응답이 min_len 미만 → IM 모드 변경 등 즉시 리부트
+                # 커맨드는 전달됐으나 SearchMsg 응답 전에 리부트
+                self.logger.info(
+                    f"Setting: short response ({resp_len} bytes < min {min_len}). "
+                    "Device rebooted before full response (e.g. IP mode change). "
+                    "Command was delivered."
+                )
+                self.statusbar.showMessage(
+                    " Setting sent. Device rebooted (IP mode change). Re-search to verify."
+                )
 
         self.object_config()
 
