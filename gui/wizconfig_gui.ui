@@ -2898,8 +2898,12 @@ Retry count</string>
                  <item row="1" column="1">
                   <widget class="QComboBox" name="ddns_server_idx">
                    <item><property name="text"><string>DynDNS</string></property></item>
-                   <item><property name="text"><string>No-IP</string></property></item>
-                   <item><property name="text"><string>Custom</string></property></item>
+                   <item><property name="text"><string>NO-IP</string></property></item>
+                   <item><property name="text"><string>Changeip</string></property></item>
+                   <item><property name="text"><string>DNS-O-MATIC</string></property></item>
+                   <item><property name="text"><string>ZoneEdit</string></property></item>
+                   <item><property name="text"><string>Namecheap</string></property></item>
+                   <item><property name="text"><string>3322.org</string></property></item>
                   </widget>
                  </item>
                  <item row="2" column="0">
