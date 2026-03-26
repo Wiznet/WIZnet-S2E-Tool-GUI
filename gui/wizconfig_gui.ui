@@ -1233,6 +1233,34 @@
                      </property>
                     </widget>
                    </item>
+                   <item row="0" column="2" alignment="Qt::AlignHCenter">
+                    <widget class="QRadioButton" name="ip_pppoe">
+                     <property name="minimumSize">
+                      <size>
+                       <width>80</width>
+                       <height>22</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>160</width>
+                       <height>45</height>
+                      </size>
+                     </property>
+                     <property name="font">
+                      <font>
+                       <family>맑은 고딕</family>
+                       <pointsize>8</pointsize>
+                      </font>
+                     </property>
+                     <property name="text">
+                      <string>PPPoE</string>
+                     </property>
+                     <property name="visible">
+                      <bool>false</bool>
+                     </property>
+                    </widget>
+                   </item>
                   </layout>
                  </item>
                  <item row="1" column="0">
@@ -2807,6 +2835,175 @@ Retry count</string>
                 <property name="frameShadow">
                  <enum>QFrame::Raised</enum>
                 </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="ddns_pppoe_tab">
+             <attribute name="title">
+              <string>DDNS/PPPoE</string>
+             </attribute>
+             <layout class="QVBoxLayout" name="verticalLayout_ddns">
+              <!-- 상단: PPPoE(좌 절반) + Network Protocol(우 절반) -->
+              <item>
+               <layout class="QHBoxLayout" name="hboxLayout_top_row">
+                <item>
+                 <widget class="QGroupBox" name="group_pppoe">
+                  <property name="title">
+                   <string>PPPoE Settings</string>
+                  </property>
+                  <layout class="QFormLayout" name="formLayout_pppoe">
+                   <item row="0" column="0">
+                    <widget class="QLabel" name="label_pppoe_id">
+                     <property name="text"><string>PPPoE ID</string></property>
+                    </widget>
+                   </item>
+                   <item row="0" column="1">
+                    <widget class="QLineEdit" name="pppoe_id">
+                     <property name="placeholderText"><string>PPPoE ID</string></property>
+                    </widget>
+                   </item>
+                   <item row="1" column="0">
+                    <widget class="QLabel" name="label_pppoe_pw">
+                     <property name="text"><string>PPPoE Password</string></property>
+                    </widget>
+                   </item>
+                   <item row="1" column="1">
+                    <widget class="QLineEdit" name="pppoe_pw">
+                     <property name="echoMode"><enum>QLineEdit::Password</enum></property>
+                     <property name="placeholderText"><string>PPPoE Password</string></property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QGroupBox" name="group_network_protocol">
+                  <property name="title">
+                   <string>Network Protocol (CH1)</string>
+                  </property>
+                  <layout class="QVBoxLayout" name="vboxLayout_netproto">
+                   <item>
+                    <layout class="QHBoxLayout" name="hboxLayout_netproto">
+                     <item>
+                      <widget class="QRadioButton" name="po_tcp_raw">
+                       <property name="text"><string>TCP Raw</string></property>
+                       <property name="checked"><bool>true</bool></property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QRadioButton" name="po_telnet">
+                       <property name="text"><string>Telnet</string></property>
+                      </widget>
+                     </item>
+                     <item>
+                      <spacer name="horizontalSpacer_netproto">
+                       <property name="orientation"><enum>Qt::Horizontal</enum></property>
+                       <property name="sizeHint" stdset="0">
+                        <size><width>40</width><height>20</height></size>
+                       </property>
+                      </spacer>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <spacer name="verticalSpacer_netproto">
+                     <property name="orientation"><enum>Qt::Vertical</enum></property>
+                     <property name="sizeHint" stdset="0">
+                      <size><width>20</width><height>40</height></size>
+                     </property>
+                    </spacer>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <!-- 하단: DDNS Settings (스크롤 영역) -->
+              <item>
+               <widget class="QGroupBox" name="group_ddns">
+                <property name="title">
+                 <string>DDNS Settings</string>
+                </property>
+                <layout class="QVBoxLayout" name="vboxLayout_ddns">
+                 <item>
+                  <widget class="QScrollArea" name="scrollArea_ddns">
+                   <property name="widgetResizable"><bool>true</bool></property>
+                   <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+                   <widget class="QWidget" name="scrollAreaWidgetContents_ddns">
+                    <layout class="QFormLayout" name="formLayout_ddns">
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="label_ddns_enable">
+                       <property name="text"><string>DDNS Enable</string></property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QCheckBox" name="ddns_enable">
+                       <property name="text"><string>Enable</string></property>
+                      </widget>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QLabel" name="label_ddns_server_idx">
+                       <property name="text"><string>Server Index</string></property>
+                      </widget>
+                     </item>
+                     <item row="1" column="1">
+                      <widget class="QComboBox" name="ddns_server_idx">
+                       <item><property name="text"><string>DynDNS</string></property></item>
+                       <item><property name="text"><string>NO-IP</string></property></item>
+                       <item><property name="text"><string>Changeip</string></property></item>
+                       <item><property name="text"><string>DNS-O-MATIC</string></property></item>
+                       <item><property name="text"><string>ZoneEdit</string></property></item>
+                       <item><property name="text"><string>Namecheap</string></property></item>
+                       <item><property name="text"><string>3322.org</string></property></item>
+                      </widget>
+                     </item>
+                     <item row="2" column="0">
+                      <widget class="QLabel" name="label_ddns_server_port">
+                       <property name="text"><string>Server Port</string></property>
+                      </widget>
+                     </item>
+                     <item row="2" column="1">
+                      <widget class="QLineEdit" name="ddns_server_port">
+                       <property name="placeholderText"><string>Port number</string></property>
+                      </widget>
+                     </item>
+                     <item row="3" column="0">
+                      <widget class="QLabel" name="label_ddns_user_id">
+                       <property name="text"><string>User ID</string></property>
+                      </widget>
+                     </item>
+                     <item row="3" column="1">
+                      <widget class="QLineEdit" name="ddns_user_id">
+                       <property name="placeholderText"><string>DDNS User ID</string></property>
+                      </widget>
+                     </item>
+                     <item row="4" column="0">
+                      <widget class="QLabel" name="label_ddns_password">
+                       <property name="text"><string>Password</string></property>
+                      </widget>
+                     </item>
+                     <item row="4" column="1">
+                      <widget class="QLineEdit" name="ddns_password">
+                       <property name="echoMode"><enum>QLineEdit::Password</enum></property>
+                       <property name="placeholderText"><string>DDNS Password</string></property>
+                      </widget>
+                     </item>
+                     <item row="5" column="0">
+                      <widget class="QLabel" name="label_ddns_domain">
+                       <property name="text"><string>Domain Host</string></property>
+                      </widget>
+                     </item>
+                     <item row="5" column="1">
+                      <widget class="QLineEdit" name="ddns_domain">
+                       <property name="placeholderText"><string>yourdomain.ddns.net</string></property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </widget>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
              </layout>

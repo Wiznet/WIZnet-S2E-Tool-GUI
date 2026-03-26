@@ -590,6 +590,11 @@ class WIZWindow(QMainWindow, main_window):
         self.ch2_keepalive_enable.stateChanged.connect(self.event_keepalive)
         self.ip_dhcp.clicked.connect(self.event_ip_alloc)
         self.ip_static.clicked.connect(self.event_ip_alloc)
+        self.ip_pppoe.clicked.connect(self.event_ip_alloc)
+
+        # WIZ107SR/108SR: DDNS enable 토글, Network Protocol, 9-bit databit 제약
+        self.ddns_enable.stateChanged.connect(self.event_ddns_enable)
+        self.ch1_databit.currentIndexChanged.connect(self.event_ch1_databit_changed)
 
         # Event: OP mode
         self.ch1_tcpclient.clicked.connect(self.event_opmode)
@@ -688,8 +693,12 @@ class WIZWindow(QMainWindow, main_window):
         self.textedit_privatekey.textChanged.connect(self.event_privatekey_changed)
         # self.textedit_upload_fw.textChanged.connect(self.event_uploadfw_changed)
 
-        # Init network interface
-        self.combobox_net_interface.setCurrentIndex(0)
+        # Init network interface - 첫 번째 유효한 어댑터 자동 선택
+        if self.combobox_net_interface.count() > 1:
+            self.combobox_net_interface.setCurrentIndex(1)
+            self.net_changed(1)
+        else:
+            self.combobox_net_interface.setCurrentIndex(0)
 
         self.cert_object_config()
 
@@ -699,9 +708,11 @@ class WIZWindow(QMainWindow, main_window):
         Initial config based WIZ750SR series
         """
         # Tab information save
-        self.userio_tab_text = self.generalTab.tabText(2)
-        self.mqtt_tab_text = self.generalTab.tabText(3)
-        self.certificate_tab_text = self.generalTab.tabText(4)
+        # .ui 탭 순서: basic(0), advance(1), ddns_pppoe(2), userio(3), mqtt(4), certificate(5)
+        self.ddns_pppoe_tab_text = self.generalTab.tabText(2)
+        self.userio_tab_text = self.generalTab.tabText(3)
+        self.mqtt_tab_text = self.generalTab.tabText(4)
+        self.certificate_tab_text = self.generalTab.tabText(5)
         self.ch1_tab_text = self.channel_tab.tabText(1)
         inital_tab_count = self.generalTab.count()
         for _i in range(inital_tab_count):
@@ -714,6 +725,7 @@ class WIZWindow(QMainWindow, main_window):
                 "advance_tab": SysTabObjectText(
                     self.advance_tab, self.generalTab.tabText(1)
                 ),
+                "ddns_pppoe_tab": SysTabObjectText(self.ddns_pppoe_tab, self.ddns_pppoe_tab_text),
                 "userio_tab": SysTabObjectText(self.userio_tab, self.userio_tab_text),
                 "mqtt_tab": SysTabObjectText(self.mqtt_tab, self.mqtt_tab_text),
                 "certificate_tab": SysTabObjectText(
@@ -723,7 +735,8 @@ class WIZWindow(QMainWindow, main_window):
         except Exception as e:
             print(f"ERROR:init_ui_object:{e}")
 
-        # Initial tab
+        # Initial tab — 높은 인덱스부터 제거
+        self.generalTab.removeTab(6)
         self.generalTab.removeTab(5)
         self.generalTab.removeTab(4)
         self.generalTab.removeTab(3)
@@ -892,44 +905,37 @@ class WIZWindow(QMainWindow, main_window):
         for adapter in adapters:
             self.logger.debug(f"Net Interface: {adapter.nice_name}")
             for ip in adapter.ips:
-                if len(ip.ip) > 6:
+                # IPv4만 처리 (ifaddr에서 IPv4는 str, IPv6는 tuple)
+                if isinstance(ip.ip, str):
                     ipv4_addr = ip.ip
                     if ipv4_addr != "127.0.0.1":
                         net_ifs = ipv4_addr + ":" + adapter.nice_name
                         nice_name_lower = adapter.nice_name.lower()
 
-                        # 가상 어댑터 판별 (이름 기반)
+                        # 가상 어댑터 판별
                         virtual_keywords = [
                             'virtualbox', 'vmware', 'hyper-v', 'vethernet',
                             'docker', 'wsl', 'tap-windows', 'npcap',
                             'virtual', 'vbox', 'bridge', 'loopback'
                         ]
-                        is_virtual = any(keyword in nice_name_lower for keyword in virtual_keywords)
+                        is_virtual = any(k in nice_name_lower for k in virtual_keywords)
 
-                        # 우선순위 결정:
-                        # 0: 물리 Ethernet
-                        # 1: 물리 Wi-Fi
-                        # 2: 기타 물리 인터페이스
-                        # 3: 가상 어댑터
-                        # 4: APIPA/link-local (169.254.*)
+                        # 우선순위: 0=일반, 1=가상, 2=APIPA(169.254.*)
                         if ipv4_addr.startswith("169.254."):
-                            priority = 4  # APIPA/link-local (최하위)
+                            priority = 2
                         elif is_virtual:
-                            priority = 3  # 가상 어댑터
-                        elif 'ethernet' in nice_name_lower or 'eth' in nice_name_lower:
-                            priority = 0  # 물리 Ethernet
-                        elif 'wireless' in nice_name_lower or 'wi-fi' in nice_name_lower or 'wifi' in nice_name_lower:
-                            priority = 1  # 물리 Wi-Fi
+                            priority = 1
                         else:
-                            priority = 2  # 기타 물리 인터페이스
+                            priority = 0
 
-                        adapter_list.append((priority, net_ifs, adapter.nice_name))
+                        ip_tuple = tuple(int(p) for p in ipv4_addr.split('.'))
+                        adapter_list.append((priority, ip_tuple, net_ifs, adapter.nice_name))
 
-        # 우선순위로 정렬 (물리 어댑터 먼저, 가상 어댑터는 나중)
+        # 우선순위 → 같은 우선순위 내에서 IP 숫자 정렬 (첫 번째 옥텟 그룹핑 자연히 포함)
         adapter_list.sort(key=lambda x: (x[0], x[1]))
 
         # 정렬된 순서로 추가
-        for priority, net_ifs, nice_name in adapter_list:
+        for priority, ip_tuple, net_ifs, nice_name in adapter_list:
             self.net_list.append(nice_name)
             netconfig = QAction(net_ifs, self)
             self.netconfig_menu.addAction(netconfig)
@@ -941,8 +947,12 @@ class WIZWindow(QMainWindow, main_window):
         refresh_action.triggered.connect(self.on_refresh_network_adapter)
         self.netconfig_menu.addSeparator()
         self.netconfig_menu.addAction(refresh_action)
-        # Default: not selected
-        self.combobox_net_interface.setCurrentIndex(0)
+        # 첫 번째 어댑터 자동 선택 후 net_changed 직접 호출 (index 변화 없을 때 signal 미발생 방지)
+        if self.combobox_net_interface.count() > 1:
+            self.combobox_net_interface.setCurrentIndex(1)
+            self.net_changed(1)
+        else:
+            self.combobox_net_interface.setCurrentIndex(0)
         # 힌트 텍스트 설정
         # self.combobox_net_interface.setPlaceholderText('<Select Network Interface>')
 
@@ -1259,9 +1269,48 @@ class WIZWindow(QMainWindow, main_window):
             self.modbus_protocol_2.setCurrentIndex(0)
             self.group_packing_14.hide()
             self.group_packing_15.hide()
-        if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev or "W232N" in self.curr_dev:
+        if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
+            # WIZ107SR / WIZ108SR 전용 처리
+            self.tcp_timeout.setVisible(False)
+            self.tcp_timeout_label.setVisible(False)
+            self.ch1_ssl_tcpclient.setEnabled(False)
+            self.ch1_mqttclient.setEnabled(False)
+            self.ch1_mqtts_client.setEnabled(False)
+
+            # ip_pppoe 라디오버튼 표시 (PPPoE 지원)
+            self.ip_pppoe.setVisible(True)
+
+            # DB: 9-bit 항목 동적 추가 (기존 7/8 bit에 추가)
+            if self.ch1_databit.count() < 3:
+                self.ch1_databit.addItem("9-bit")
+
+            # Baudrate: 최대 230400 (index 0-13)
+            current_baud = self._get_current_baud_from_profile(13)
+            self.ch1_baud.clear()
+            self.ch1_baud.addItems(BAUDRATE_BASE)  # 300 ~ 230400 (14 items)
+            if current_baud:
+                idx = self.ch1_baud.findText(current_baud)
+                if idx >= 0:
+                    self.ch1_baud.setCurrentIndex(idx)
+
+            # DB 9-bit 현재 상태에 따라 PR/SB 제약 초기 적용
+            self.event_ch1_databit_changed(self.ch1_databit.currentIndex())
+            # DDNS 필드 활성화 상태 초기 적용
+            self.event_ddns_enable()
+        elif "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev or "W232N" in self.curr_dev:
+            # 다른 장치 선택 시 ip_pppoe 숨기고 DB 9-bit 항목 제거
+            self.ip_pppoe.setVisible(False)
+            if self.ch1_databit.count() > 2:
+                self.ch1_databit.removeItem(2)
+            # 9-bit 잠금 해제
+            self.ch1_parity.setEnabled(True)
+            self.ch1_stopbit.setEnabled(True)
+
+            # TR 필드 복원 (WIZ107/108에서 전환 시)
+            self.tcp_timeout.setVisible(True)
+            self.tcp_timeout_label.setVisible(True)
+
             if version_compare("1.2.0", self.curr_ver) <= 0:
-                # setcmd['TR'] = self.tcp_timeout.text()
                 self.tcp_timeout.setEnabled(True)
             else:
                 self.tcp_timeout.setEnabled(False)
@@ -1284,6 +1333,11 @@ class WIZWindow(QMainWindow, main_window):
                 if idx >= 0:
                     self.ch1_baud.setCurrentIndex(idx)
         elif self.curr_dev in W55RP20_FAMILY:
+            self.ip_pppoe.setVisible(False)
+            if self.ch1_databit.count() > 2:
+                self.ch1_databit.removeItem(2)
+            self.ch1_parity.setEnabled(True)
+            self.ch1_stopbit.setEnabled(True)
             # W55RP20: 펌웨어 버전에 따라 고속 보드레이트 지원 여부 결정
             # - FW < 1.2.1: BR 0-15 (최대 921600)
             # - FW >= 1.2.1: BR 0-19 (최대 8M, 1M/2M/4M/8M 지원)
@@ -1358,6 +1412,11 @@ class WIZWindow(QMainWindow, main_window):
                     if idx >= 0:
                         self.ch2_baud.setCurrentIndex(idx)
         elif "IP20" in self.curr_dev:
+            self.ip_pppoe.setVisible(False)
+            if self.ch1_databit.count() > 2:
+                self.ch1_databit.removeItem(2)
+            self.ch1_parity.setEnabled(True)
+            self.ch1_stopbit.setEnabled(True)
             # Baudrate configuration - get current device's BR value from dev_profile
             current_baud = self._get_current_baud_from_profile(15)  # IP20: max BR index 15 (921600)
 
@@ -1373,6 +1432,11 @@ class WIZWindow(QMainWindow, main_window):
                 if idx >= 0:
                     self.ch1_baud.setCurrentIndex(idx)
         else:
+            self.ip_pppoe.setVisible(False)
+            if self.ch1_databit.count() > 2:
+                self.ch1_databit.removeItem(2)
+            self.ch1_parity.setEnabled(True)
+            self.ch1_stopbit.setEnabled(True)
             # Baudrate configuration - get current device's BR value from dev_profile
             current_baud = self._get_current_baud_from_profile(14)  # Other devices: max BR index 14 (460800)
 
@@ -1507,6 +1571,12 @@ class WIZWindow(QMainWindow, main_window):
                 if _tab.name in ExcludeTabInCommon:
                     self.generalTab.removeTab(_tab.idx)
                     list_tabs.remove(_tab)
+                # WIZ107SR/108SR이 아닌 장치에서 ddns_pppoe_tab 제거
+                elif _tab.name == "ddns_pppoe_tab" and not (
+                    "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev
+                ):
+                    self.generalTab.removeTab(_tab.idx)
+                    list_tabs.remove(_tab)
             next_tab_idx: int = len(list_tabs)
             # 넣어야할 탭 넣기
             for _new_tab in IncludeTabInCommon:
@@ -1519,6 +1589,15 @@ class WIZWindow(QMainWindow, main_window):
                     )
                     self.generalTab.setTabEnabled(next_tab_idx, True)
                     next_tab_idx += 1
+            # WIZ107SR/108SR 전용: DDNS/PPPoE 탭 추가
+            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
+                if "ddns_pppoe_tab" not in repr(list_tabs):
+                    ddns_tab_obj = self.tab_structure.get("ddns_pppoe_tab")
+                    if ddns_tab_obj is not None:
+                        self.generalTab.insertTab(
+                            next_tab_idx, ddns_tab_obj.object, ddns_tab_obj.ui_text
+                        )
+                        self.generalTab.setTabEnabled(next_tab_idx, True)
 
         # User I/O tab
         """
@@ -1618,6 +1697,30 @@ class WIZWindow(QMainWindow, main_window):
             self.subnet.setEnabled(True)
             self.gateway.setEnabled(True)
             self.dns_addr.setEnabled(True)
+
+    def event_ddns_enable(self):
+        """WIZ107SR/108SR: DDNS Enable 체크박스 토글에 따라 DDNS 설정 필드 활성화/비활성화"""
+        enabled = self.ddns_enable.isChecked()
+        for widget in (
+            self.ddns_server_idx,
+            self.ddns_server_port,
+            self.ddns_user_id,
+            self.ddns_password,
+            self.ddns_domain,
+        ):
+            widget.setEnabled(enabled)
+
+    def event_ch1_databit_changed(self, index):
+        """WIZ107SR/108SR: 9-bit 선택 시 Parity=NONE, Stop bit=1 자동 설정 및 잠금"""
+        if not (self.curr_dev and ("WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev)):
+            return
+        # index 2 = 9-bit
+        is_9bit = (index == 2)
+        if is_9bit:
+            self.ch1_parity.setCurrentIndex(0)   # NONE
+            self.ch1_stopbit.setCurrentIndex(0)  # 1-bit
+        self.ch1_parity.setEnabled(not is_9bit)
+        self.ch1_stopbit.setEnabled(not is_9bit)
 
     def event_keepalive(self):
         if self.ch1_keepalive_enable.isChecked():
@@ -3039,6 +3142,10 @@ class WIZWindow(QMainWindow, main_window):
                     self.ip_static.setChecked(True)
                 elif dev_data["IM"] == "1":
                     self.ip_dhcp.setChecked(True)
+                elif dev_data["IM"] == "2" and (
+                    "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev
+                ):
+                    self.ip_pppoe.setChecked(True)
             if "LI" in dev_data:
                 self.localip.setText(dev_data["LI"])
                 self.localip_addr = dev_data["LI"]
@@ -3182,7 +3289,32 @@ class WIZWindow(QMainWindow, main_window):
                     self.status_dsr.setChecked(True)
                     self.checkbox_enable_dsr.setChecked(True)
 
-            # Modbus (PO/MB depending on device)
+            # WIZ107SR / WIZ108SR 전용: DDNS / PPPoE 탭 필드 로드
+            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
+                # PPPoE 설정 (IM=2일 때만 유효)
+                self.pppoe_id.setText(dev_data.get("PI", "").strip())
+                self.pppoe_pw.setText(dev_data.get("PP", "").strip())
+                # DDNS Enable
+                dd_val = dev_data.get("DD", "0").strip()
+                self.ddns_enable.setChecked(dd_val == "1")
+                # DDNS 서버 설정
+                dx_val = dev_data.get("DX", "0").strip()
+                try:
+                    self.ddns_server_idx.setCurrentIndex(int(dx_val))
+                except (ValueError, TypeError):
+                    self.ddns_server_idx.setCurrentIndex(0)
+                self.ddns_server_port.setText(dev_data.get("DP", "").strip())
+                self.ddns_user_id.setText(dev_data.get("DI", "").strip())
+                self.ddns_password.setText(dev_data.get("DW", "").strip())
+                self.ddns_domain.setText(dev_data.get("DH", "").strip())
+                # Network Protocol (PO): TCP Raw(0) / Telnet(1)
+                po_val = dev_data.get("PO", "0").strip()
+                self.po_telnet.setChecked(po_val == "1")
+                self.po_tcp_raw.setChecked(po_val != "1")
+                # DDNS 필드 활성화 상태 초기 적용
+                self.event_ddns_enable()
+
+            # Modbus (PO/MB depending on device) — WIZ107SR/108SR 제외
             desired_key = self._modbus_param_key()
             fallback_key = "MB" if desired_key == "PO" else "PO"
             for modbus_key in (desired_key, fallback_key):
@@ -3472,6 +3604,10 @@ class WIZWindow(QMainWindow, main_window):
                 setcmd["IM"] = "0"
             elif self.ip_dhcp.isChecked():
                 setcmd["IM"] = "1"
+            elif self.ip_pppoe.isChecked() and (
+                "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev
+            ):
+                setcmd["IM"] = "2"
             setcmd["DS"] = self.dns_addr.text()
             # boot 명령에 SP 도 포함되어야 함.
             # search id code: max 8 bytes
@@ -3592,6 +3728,21 @@ class WIZWindow(QMainWindow, main_window):
             setcmd["KE"] = self.ch1_keepalive_retry.text()
             # reconnection - channel 1
             setcmd["RI"] = self.ch1_reconnection.text()
+            # WIZ107SR / WIZ108SR 전용: DDNS / PPPoE 커맨드 저장
+            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
+                # PPPoE
+                setcmd["PI"] = self.pppoe_id.text() or " "
+                setcmd["PP"] = self.pppoe_pw.text() or " "
+                # DDNS Enable
+                setcmd["DD"] = "1" if self.ddns_enable.isChecked() else "0"
+                setcmd["DX"] = str(self.ddns_server_idx.currentIndex())
+                setcmd["DP"] = self.ddns_server_port.text() or " "
+                setcmd["DI"] = self.ddns_user_id.text() or " "
+                setcmd["DW"] = self.ddns_password.text() or " "
+                setcmd["DH"] = self.ddns_domain.text() or " "
+                # Network Protocol (PO): TCP Raw(0) / Telnet(1)
+                setcmd["PO"] = "1" if self.po_telnet.isChecked() else "0"
+
             # Status pin
             if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
                 pass
@@ -3619,7 +3770,7 @@ class WIZWindow(QMainWindow, main_window):
                         lower_val = "1"
                 setcmd["SC"] = upper_val + lower_val
 
-            if "WIZ752" in self.curr_dev:
+            if "WIZ752" in self.curr_dev or "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
                 pass
             else:
                 if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev:
@@ -3889,86 +4040,130 @@ class WIZWindow(QMainWindow, main_window):
                 self.wizmsghandler.set_result.connect(self.get_setting_result)
                 self.wizmsghandler.start()
 
+    def _get_expected_min_resp_len(self, devname: str, version: str) -> int:
+        """
+        장치별 SET 응답 최소 예상 길이.
+
+        SET 패킷 말미에 SearchMsg(GET cmds) + SV + RT 가 항상 붙으며,
+        장치는 SearchMsg 에 대한 응답을 전송함.
+        각 응답 라인 최소 길이: cmd(2) + value(1) + CRLF(2) = 5 bytes
+        여기에 MA prefix(10) + PW 라인(5+) 을 더해 최소값 산출.
+
+        이 값보다 짧으면 장치가 SearchMsg 처리 전에 리부트한 것 (IM 모드 변경 등).
+        """
+        from WIZMakeCMD import (
+            cmd_107sr, cmd_1p_advanced, cmd_1p_default, cmd_2p_default,
+            cmd_security_base, cmd_wiz5xxsr_added, cmd_w55rp20_added,
+            ONE_PORT_DEV, TWO_PORT_DEV, SECURITY_DEVICE,
+            version_compare,
+        )
+        if "WIZ107SR" in devname or "WIZ108SR" in devname:
+            n = len(cmd_107sr)                          # 42
+        elif devname in TWO_PORT_DEV or "752" in devname:
+            n = len(cmd_2p_default)
+        elif devname in SECURITY_DEVICE:
+            n = len(cmd_security_base + cmd_wiz5xxsr_added)
+        elif devname in ONE_PORT_DEV:
+            if version_compare("1.2.0", version) <= 0:
+                n = len(cmd_1p_advanced)                # 44
+            else:
+                n = len(cmd_1p_default)                 # 40
+        else:
+            n = len(cmd_1p_default)
+
+        # MA prefix(10) + PW 라인(최소 5) + 커맨드 응답(최소 5 bytes/cmd)
+        return 10 + 5 + n * 5
+
     def get_setting_result(self, resp_len):
         if not self.curr_dev or not self.curr_ver:
             return
         prev_channel_tab_index = self.channel_tab.currentIndex()
         set_result = {}
 
-        if resp_len > 100:
-            self.statusbar.showMessage(" Set device complete!")
-
-            # complete pop-up
-            self.msg_set_success()
-
-            if self.isConnected and self.unicast_ip.isChecked():
-                self.logger.info("close socket")
-                if self.conf_sock is not None:
-                    self.conf_sock.close()
-
-            # get setting result
-            if self.wizmsghandler is None:
-                return
-            self.set_reponse = self.wizmsghandler.rcv_list[0]
-
-            # cmdsets = self.set_reponse.splitlines()
-            cmdsets = self.set_reponse.split(b"\r\n")
-
-            for i in range(len(cmdsets)):
-                if cmdsets[i][:2] == b"MA":
-                    pass
-                else:
-                    try:
-                        cmd = cmdsets[i][:2].decode()
-                        param = cmdsets[i][2:].decode()
-
-                        set_result[cmd] = param
-                    except Exception as e:
-                        self.logger.error(e)
-
-            try:
-                clicked_mac = self.list_device.selectedItems()[0].text()
-                self.dev_profile[clicked_mac] = set_result
-            except Exception as e:
-                self.logger.error(e)
-
-            # 장비 정보 갱신용으로 부르는 것 같은 데 이 때문에 dev_clicked 에 넣은 메시지 창이 2번 뜸
-            self.dev_clicked(call_from=sys._getframe().f_code.co_name)
-        elif resp_len == -1:
+        if resp_len == -1:
             self.logger.warning("Setting: no response from device.")
             self.statusbar.showMessage(" Setting: no response from device.")
             self.msg_set_error()
+
         elif resp_len == -3:
             self.logger.warning("Setting: wrong password")
             self.statusbar.showMessage(" Setting: wrong password.")
             self.msg_setting_pw_error()
-        elif resp_len < 50:
-            self.logger.warning(f"Warning: setting is did not well. resp_len={resp_len}")
-            # 디버깅: 실제 수신된 응답 내용 로깅
-            try:
-                if self.wizmsghandler is not None:
-                    self.logger.warning(f"[DEBUG] wizmsghandler exists: {type(self.wizmsghandler)}")
-                    if hasattr(self.wizmsghandler, 'rcv_list'):
-                        self.logger.warning(f"[DEBUG] rcv_list exists, length: {len(self.wizmsghandler.rcv_list)}")
-                        if len(self.wizmsghandler.rcv_list) > 0:
-                            raw_response = self.wizmsghandler.rcv_list[0]
-                            self.logger.warning(f"[DEBUG] Raw response (bytes): {raw_response}")
-                            self.logger.warning(f"[DEBUG] Raw response (hex): {raw_response.hex()}")
-                            try:
-                                decoded = raw_response.decode('utf-8', errors='replace')
-                                self.logger.warning(f"[DEBUG] Decoded response: {decoded}")
-                            except Exception as e:
-                                self.logger.warning(f"[DEBUG] Failed to decode response: {e}")
-                        else:
-                            self.logger.warning("[DEBUG] rcv_list is empty")
-                    else:
-                        self.logger.warning("[DEBUG] wizmsghandler has no rcv_list attribute")
-                else:
-                    self.logger.warning("[DEBUG] wizmsghandler does not exist")
-            except Exception as e:
-                self.logger.error(f"[DEBUG] Error while logging response: {e}")
-            self.statusbar.showMessage(" Warning: setting is did not well.")
-            self.msg_set_warning()
+
+        elif resp_len > 0:
+            if self.wizmsghandler is None:
+                return
+            self.set_reponse = self.wizmsghandler.rcv_list[0]
+
+            # ── 응답 파싱 (VB.NET parsingMsg() 방식) ──────────────────────
+            # MA prefix(10 bytes) 제거 후 \r\n 단위로 분리
+            payload = (self.set_reponse[10:]
+                       if len(self.set_reponse) >= 10 and self.set_reponse[:2] == b"MA"
+                       else self.set_reponse)
+            for chunk in payload.split(b"\r\n"):
+                if len(chunk) < 3 or chunk[:2] == b"MA":
+                    continue
+                try:
+                    cmd   = chunk[:2].decode("ascii")
+                    param = chunk[2:].decode("utf-8", errors="replace")
+                    set_result[cmd] = param
+                except Exception as e:
+                    self.logger.error(e)
+
+            mc = set_result.get("MC", "")
+            er = set_result.get("ER", "")
+
+            # 장치별 최소 예상 응답 길이
+            min_len = self._get_expected_min_resp_len(self.curr_dev, self.curr_ver)
+            self.logger.info(
+                f"Setting resp_len={resp_len}, expected_min={min_len}, "
+                f"MC='{mc}', ER='{er}'"
+            )
+
+            if er:
+                # 장치가 ER 필드를 반환 → 오류 내용 표시
+                self.logger.warning(f"Setting: device error response: {er}")
+                self.statusbar.showMessage(f" Setting error: {er}")
+                self.msg_set_warning()
+
+            elif len(mc) == 17:
+                # ── 정상 성공: MAC 유효 (VB.NET: nSec.MC.data.Length == 17) ──
+                self.statusbar.showMessage(" Set device complete!")
+                self.msg_set_success()
+
+                if self.isConnected and self.unicast_ip.isChecked():
+                    self.logger.info("close socket")
+                    if self.conf_sock is not None:
+                        self.conf_sock.close()
+
+                try:
+                    clicked_mac = self.list_device.selectedItems()[0].text()
+                    self.dev_profile[clicked_mac] = set_result
+                except Exception as e:
+                    self.logger.error(e)
+
+                self.dev_clicked(call_from=sys._getframe().f_code.co_name)
+
+            elif resp_len >= min_len:
+                # 응답 길이는 충분하나 MAC 파싱 실패 → 포맷 이상
+                self.logger.warning(
+                    f"Setting: resp_len={resp_len} >= min({min_len}) "
+                    "but MC field invalid. Unexpected response format."
+                )
+                self.statusbar.showMessage(" Warning: setting response format unexpected.")
+                self.msg_set_warning()
+
+            else:
+                # 응답이 min_len 미만 → IM 모드 변경 등 즉시 리부트
+                # 커맨드는 전달됐으나 SearchMsg 응답 전에 리부트
+                self.logger.info(
+                    f"Setting: short response ({resp_len} bytes < min {min_len}). "
+                    "Device rebooted before full response (e.g. IP mode change). "
+                    "Command was delivered."
+                )
+                self.statusbar.showMessage(
+                    " Setting sent. Device rebooted (IP mode change). Re-search to verify."
+                )
 
         self.object_config()
 
