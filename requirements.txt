@@ -9,7 +9,7 @@ PyQt5==5.15.11
 PyQt5-Qt5==5.15.2
 pyqt5-sip==12.17.2
 ifaddr==0.2.0
-requests==2.32.5
+requests==2.33.0
 pyyaml==6.0.3
 packaging==26.0
 
