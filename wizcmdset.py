@@ -255,6 +255,38 @@ W55RP20_2CH_CMDSET = {
     "EE": ["Channel 1 Ethernet Connected Data", "^.{0,30}$", {}, "RW"],
 }
 
+# ==================== WIZ107SR / WIZ108SR CMDSET ====================
+# 적용 장치: WIZ107SR, WIZ108SR
+# 특징:
+#   - PPPoE 지원 (IM=2), PI/PP 커맨드
+#   - DDNS 지원, DD/DX/DP/DI/DW/DH 커맨드
+#   - Network Protocol 선택 (PO: 0=TCP Raw, 1=Telnet)
+#   - 9-bit 데이터비트 (DB=2)
+#   - BR 최대 index 13 (230400 bps)
+# 소스: ConfigTool107_source_v1.4.4.1 (VB.NET) 기준
+WIZ107SR_CMDSET = {
+    **common_cmdset,
+    # BR: 최대 230400 (index 0-13), 460800 이상 미지원
+    "BR": ["UART Baud rate", "^([0-9]|1[0-3])$", baudrate_option, "RW"],
+    # DB: 9-bit 지원 (index 2)
+    "DB": ["UART Data bit length", "^[0-2]$", {"0": "7-bit", "1": "8-bit", "2": "9-bit"}, "RW"],
+    # IM: PPPoE 지원 (index 2)
+    "IM": ["IP address Allocation Mode", "^[0-2]$",
+           {"0": "Static IP", "1": "DHCP", "2": "PPPoE"}, "RW"],
+    # PPPoE 커맨드
+    "PI": ["PPPoE ID", "", {}, "RW"],
+    "PP": ["PPPoE Password", "", {}, "RW"],
+    # DDNS 커맨드
+    "DD": ["DDNS Enable", "^[0-1]$", {"0": "Disabled", "1": "Enabled"}, "RW"],
+    "DX": ["DDNS Server Index", "^[0-9]$", {}, "RW"],
+    "DP": ["DDNS Server Port", port_pattern, {}, "RW"],
+    "DI": ["DDNS User ID", "", {}, "RW"],
+    "DW": ["DDNS Password", "", {}, "RW"],
+    "DH": ["DDNS Domain Host", "", {}, "RW"],
+    # Network Protocol: TCP Raw(0) or Telnet(1)
+    "PO": ["Network Protocol", "^[0-1]$", {"0": "TCP Raw", "1": "Telnet"}, "RW"],
+}
+
 # boot mode
 BOOT_CMDSET = {
     "MC": common_cmdset["MC"],
@@ -335,8 +367,13 @@ class Wizcmdset():
 
         # ==================== 장치별 CMDSET 매핑 ====================
         if name in ONE_PORT_DEV:
-            logger.debug('One port device')
-            self.cmdset = WIZ75X_CMDSET.copy()
+            # WIZ107SR / WIZ108SR: PPPoE, DDNS, Telnet, 9-bit DB 지원
+            if "WIZ107SR" in name or "WIZ108SR" in name:
+                logger.debug('WIZ107SR/108SR device')
+                self.cmdset = WIZ107SR_CMDSET.copy()
+            else:
+                logger.debug('One port device')
+                self.cmdset = WIZ75X_CMDSET.copy()
         elif name in SECURITY_DEVICE:
             if mode_str != "BOOT":
                 # W55RP20 Family: 고속 Baudrate 지원
