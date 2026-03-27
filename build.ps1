@@ -1,11 +1,11 @@
 # build.ps1
 # 사용법:
-#   .\build.ps1              → 빌드만 (서명 없음)
-#   .\build.ps1 -Sign        → 빌드 + 자체 서명 (파일명에 _signed 추가)
-#   .\build.ps1 -Sign -PfxPath "C:\my.pfx" -PfxPassword "pw"  → 커스텀 PFX
+#   .\build.ps1                → 빌드 + 서명 둘 다 생성 (기본)
+#   .\build.ps1 -NoSign        → 빌드만 (서명 건너뜀)
+#   .\build.ps1 -PfxPath "C:\my.pfx"  → 커스텀 PFX로 서명
 
 param(
-    [switch]$Sign,
+    [switch]$NoSign,
     [string]$PfxPath        = "C:\Users\user\wiznet_codesign.pfx",
     [SecureString]$PfxPassword,
     [string]$SignTool       = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe"
@@ -19,7 +19,7 @@ Write-Output "$target_bin_name"
 # Run build via uv to use the .venv environment
 uv run python -m PyInstaller -w -F -n $target_bin_name --add-data ".\\gui\\*;.\\gui" --add-data ".\\version;.\\" --add-data ".\\config\\*.yaml;.\\config" .\main_gui.py
 
-if (-not $Sign) {
+if ($NoSign) {
     Write-Output "Build complete (unsigned): dist\$target_bin_name.exe"
     exit 0
 }
