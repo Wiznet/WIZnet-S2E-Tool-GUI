@@ -1687,7 +1687,8 @@ class WIZWindow(QMainWindow, main_window):
             self.ch1_localport.setEnabled(True)
 
     def event_ip_alloc(self):
-        if self.ip_dhcp.isChecked():
+        # DHCP / PPPoE: IP 주소 필드 비활성화 (서버에서 자동 할당)
+        if self.ip_dhcp.isChecked() or self.ip_pppoe.isChecked():
             self.localip.setEnabled(False)
             self.subnet.setEnabled(False)
             self.gateway.setEnabled(False)
