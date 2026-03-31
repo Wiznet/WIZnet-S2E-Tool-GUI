@@ -4125,7 +4125,7 @@ class WIZWindow(QMainWindow, main_window):
                 # 장치가 ER 필드를 반환 → 오류 내용 표시
                 self.logger.warning(f"Setting: device error response: {er}")
                 self.statusbar.showMessage(f" Setting error: {er}")
-                self.msg_set_warning()
+                self.msg_set_warning(er)
 
             elif len(mc) == 17:
                 # ── 정상 성공: MAC 유효 (VB.NET: nSec.MC.data.Length == 17) ──
@@ -4783,13 +4783,19 @@ class WIZWindow(QMainWindow, main_window):
     #     msgbox.setText("Device is not selected.")
     #     msgbox.exec_()
 
-    def msg_set_warning(self):
+    def msg_set_warning(self, device_error=None):
         msgbox = QMessageBox(self)
         msgbox.setIcon(QMessageBox.Warning)
         msgbox.setWindowTitle("Warning: Setting")
-        msgbox.setText(
-            "Setting did not well.\nPlease check the device or check the firmware version."
-        )
+        if device_error:
+            msgbox.setText(
+                f"Device returned an error:\n{device_error}\n\n"
+                "Please check the parameter or the firmware version."
+            )
+        else:
+            msgbox.setText(
+                "Setting did not well.\nPlease check the device or check the firmware version."
+            )
         msgbox.exec_()
 
     def msg_set_error(self):
