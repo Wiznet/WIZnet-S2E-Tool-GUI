@@ -15,6 +15,10 @@ $_version = $_version.Trim()
 $target_bin_name = "wizconfig_s2e_tool_$_version"
 Write-Output "$target_bin_name"
 
+# 구버전 .spec 파일 정리 (현재 버전 제외)
+Get-ChildItem .\*.spec | Where-Object { $_.Name -ne "$target_bin_name.spec" } | Remove-Item -Force
+Write-Output "Cleaned up old .spec files"
+
 # Run build via uv to use the .venv environment
 uv run python -m PyInstaller -w -F -n $target_bin_name --add-data ".\\gui\\*;.\\gui" --add-data ".\\version;.\\" --add-data ".\\config\\*.yaml;.\\config" .\main_gui.py
 
