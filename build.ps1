@@ -7,7 +7,6 @@
 param(
     [switch]$NoSign,
     [string]$PfxPath        = "C:\Users\user\wiznet_codesign.pfx",
-    [SecureString]$PfxPassword,
     [string]$SignTool       = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe"
 )
 
@@ -41,22 +40,11 @@ if (-not (Test-Path $SignTool)) {
     exit 1
 }
 
-# PfxPassword 미입력 시 대화형 입력
-if (-not $PfxPassword) {
-    $PfxPassword = Read-Host "PFX password" -AsSecureString
-}
-
-# SecureString → 평문 (signtool /p 인자용, 호출 후 즉시 해제)
-$bstr      = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($PfxPassword)
-$plainPwd  = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
-[Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
-
 # 서명용 복사본 생성
 Copy-Item $unsigned $signed
 
 & $SignTool sign `
     /f $PfxPath `
-    /p $plainPwd `
     /fd SHA256 `
     /tr http://timestamp.digicert.com `
     /td sha256 `
@@ -64,7 +52,6 @@ Copy-Item $unsigned $signed
     /du "https://github.com/Wiznet/WIZnet-S2E-Tool-GUI" `
     $signed
 
-$plainPwd = $null  # 평문 비밀번호 즉시 해제
 
 if ($LASTEXITCODE -eq 0) {
     Write-Output "Signed build: $signed"
