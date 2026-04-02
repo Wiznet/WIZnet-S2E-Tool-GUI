@@ -2294,10 +2294,12 @@ class WIZWindow(QMainWindow, main_window):
         if not results:
             return
         self.logger.info(f"[WIZ1x0] 병합: {len(results)}개")
-        for mac_str, board_dict in results:
-            if mac_str in self.mac_list_str():
-                self.logger.debug(f"[WIZ1x0] 중복 MAC 스킵: {mac_str}")
-                continue
+        existing_macs = self.mac_list_str()
+        new_results = [(mac, d) for mac, d in results if mac not in existing_macs]
+        if not new_results:
+            self.logger.debug("[WIZ1x0] 신규 장치 없음 (모두 중복)")
+            return
+        for mac_str, board_dict in new_results:
             self.mac_list.append(mac_str.encode())
             self.mn_list.append("WIZ1x0SR")
             ver = board_dict.get('appver_str', '0.0')
@@ -2305,22 +2307,15 @@ class WIZWindow(QMainWindow, main_window):
             self.st_list.append(b'normal')
             self.mode_list.append(b'0')
             self.detected_list.append(True)
-            # Phase 3 skip용 프로파일 직접 저장
             self.dev_profile[mac_str] = board_dict
-        # 테이블 갱신: searched_devnum 업데이트 후 테이블 행 추가
         self.searched_devnum = len(self.mac_list)
         self.searched_num.setText(str(self.searched_devnum))
-        for mac_str, board_dict in results:
-            if mac_str in [m.decode('utf-8', errors='replace') for m in self.mac_list[:-len(results)]]:
-                continue
+        for mac_str, board_dict in new_results:
             row = self.list_device.rowCount()
             self.list_device.insertRow(row)
-            mac_item = QTableWidgetItem(mac_str)
-            self.list_device.setItem(row, 0, mac_item)
-            name_item = QTableWidgetItem("WIZ1x0SR")
-            self.list_device.setItem(row, 1, name_item)
-            detected_item = QTableWidgetItem("✓")
-            self.list_device.setItem(row, 2, detected_item)
+            self.list_device.setItem(row, 0, QTableWidgetItem(mac_str))
+            self.list_device.setItem(row, 1, QTableWidgetItem("WIZ1x0SR"))
+            self.list_device.setItem(row, 2, QTableWidgetItem("✓"))
         QApplication.processEvents()
 
     def mac_list_str(self):
@@ -3214,9 +3209,10 @@ class WIZWindow(QMainWindow, main_window):
         # 읽기전용 정보
         self.dev_type.setText("WIZ1x0SR")
         self.fw_version.setText(d.get('appver_str', ''))
-        self.ch1_status.setText(d.get('connect', ''))
+        # connect 필드는 TCP 연결 상태(0/1 정수), 직접 표시 불가 → 빈 문자열
+        self.ch1_status.setText('')
 
-        # IP 할당 방식
+        # IP 할당 방식 — 먼저 라디오버튼 세팅 후 event_ip_alloc() 호출로 필드 활성/비활성 적용
         ip_alloc = d.get('ip_alloc', 'Static')
         if ip_alloc == 'Static':
             self.ip_static.setChecked(True)
@@ -3224,6 +3220,7 @@ class WIZWindow(QMainWindow, main_window):
             self.ip_dhcp.setChecked(True)
         elif ip_alloc == 'PPPoE':
             self.ip_pppoe.setChecked(True)
+        self.event_ip_alloc()  # PPPoE/DHCP 시 IP 필드 비활성화 적용
 
         # Network
         self.localip.setText(d.get('ip', ''))
@@ -3237,24 +3234,26 @@ class WIZWindow(QMainWindow, main_window):
         self.dns_addr.setText(d.get('dns_ip', ''))
 
         # PPPoE
-        if hasattr(self, 'pppoe_id'):
-            self.pppoe_id.setText(d.get('pppoe_id', ''))
-        if hasattr(self, 'pppoe_pw'):
-            self.pppoe_pw.setText(d.get('pppoe_pass', ''))
+        self.pppoe_id.setText(d.get('pppoe_id', ''))
+        self.pppoe_pw.setText(d.get('pppoe_pass', ''))
 
         # 동작 모드 (WIZ1x0: 0=Client, 1=Mixed, 2=Server — WIZ107/108과 역전)
-        op = d.get('bserver', 0)
-        if op == 0:
-            self.ch1_tcpclient.setChecked(True)   # Client
-        elif op == 1:
-            self.ch1_tcpmixed.setChecked(True)    # Mixed (1=Mixed !)
-        elif op == 2:
-            self.ch1_tcpserver.setChecked(True)   # Server (2=Server !)
-        # UDP 모드는 별도 체크박스
-        if hasattr(self, 'chk_udp_mode_1x0'):
-            self.chk_udp_mode_1x0.setChecked(bool(d.get('udp', 0)))
+        # UDP 플래그(udp=1)가 ON이면 UDP 라디오버튼 선택, 아니면 bserver 값 사용
+        if d.get('udp', 0):
+            self.ch1_udp.setChecked(True)
+        else:
+            op = d.get('bserver', 0)
+            if op == 0:
+                self.ch1_tcpclient.setChecked(True)   # Client
+            elif op == 1:
+                self.ch1_tcpmixed.setChecked(True)    # Mixed (1=Mixed, WIZ107/108과 역전!)
+            elif op == 2:
+                self.ch1_tcpserver.setChecked(True)   # Server (2=Server, WIZ107/108과 역전!)
+            else:
+                self.ch1_tcpclient.setChecked(True)
 
         # Serial — Baud Rate 콤보박스 항목 교체 (9개, HW 레지스터 기반)
+        # 다른 장치로 전환 시 object_config()가 BAUDRATE_BASE로 복원하므로 여기서는 1x0용으로만 설정
         self.ch1_baud.blockSignals(True)
         self.ch1_baud.clear()
         for bps in SPEED_BPS_LIST:
@@ -3264,13 +3263,16 @@ class WIZWindow(QMainWindow, main_window):
         self.ch1_baud.setCurrentIndex(idx)
         self.ch1_baud.blockSignals(False)
 
-        # DataBit (실제값 7/8 → 인덱스 0/1)
+        # DataBit (실제값 7/8 → 인덱스 0/1; 9-bit 항목이 있으면 먼저 제거)
+        if self.ch1_databit.count() > 2:
+            self.ch1_databit.removeItem(2)
         databit = d.get('databit', 8)
         self.ch1_databit.setCurrentIndex(0 if databit == 7 else 1)
 
         # Parity
         parity_map = {'None': 0, 'Odd': 1, 'Even': 2}
         self.ch1_parity.setCurrentIndex(parity_map.get(d.get('parity_str', 'None'), 0))
+        self.ch1_parity.setEnabled(True)
 
         # StopBit — 1bit 고정 (2bit 없음)
         self.ch1_stopbit.setCurrentIndex(0)
@@ -3335,16 +3337,24 @@ class WIZWindow(QMainWindow, main_window):
         d['peerip']   = self.ch1_remoteip.text()
         d['peerport'] = int(self.ch1_remoteport.text() or 0)
         d['dns_ip']   = self.dns_addr.text()
-        d['pppoe_id']   = self.pppoe_id.text() if hasattr(self, 'pppoe_id') else ''
-        d['pppoe_pass'] = self.pppoe_pw.text() if hasattr(self, 'pppoe_pw') else ''
+        d['pppoe_id']   = self.pppoe_id.text()
+        d['pppoe_pass'] = self.pppoe_pw.text()
 
-        # 동작 모드 (WIZ1x0: Client=0, Mixed=1, Server=2)
-        if self.ch1_tcpclient.isChecked():
-            d['op_mode'] = 'Client'
-        elif self.ch1_tcpserver.isChecked():
-            d['op_mode'] = 'Server'
-        elif self.ch1_tcpmixed.isChecked():
-            d['op_mode'] = 'Mixed'
+        # 동작 모드 + UDP 플래그 (WIZ1x0: Client=0, Mixed=1, Server=2)
+        # UDP 라디오버튼이 선택된 경우 udp=1로 처리 (bserver는 원래 값 유지)
+        if self.ch1_udp.isChecked():
+            d['udp'] = 1
+            # op_mode는 기존 프로파일 값 유지 (udp=1이면 bserver 무시됨)
+        else:
+            d['udp'] = 0
+            if self.ch1_tcpclient.isChecked():
+                d['op_mode'] = 'Client'
+            elif self.ch1_tcpserver.isChecked():
+                d['op_mode'] = 'Server'
+            elif self.ch1_tcpmixed.isChecked():
+                d['op_mode'] = 'Mixed'
+
+        # dns_flag: 전용 위젯 없음 → 기존 프로파일 값 유지 (d에 이미 포함)
 
         # Baud Rate (콤보 인덱스 → bps)
         idx = self.ch1_baud.currentIndex()
@@ -3399,13 +3409,28 @@ class WIZWindow(QMainWindow, main_window):
         if reply != QMessageBox.Ok:
             return
 
+        self._last_1x0_board_dict = d   # 프로파일 폴백용 보관
         self.setter_1x0 = WIZ1x0Setter(target_ip, d)
         self.setter_1x0.set_done.connect(self._on_1x0_set_done)
         self.setter_1x0.start()
         self.statusbar.showMessage(" Applying WIZ1x0SR settings...")
 
-    def _on_1x0_set_done(self, success: bool):
+    def _on_1x0_set_done(self, success: bool, response_data: bytes):
         if success:
+            mac = self.curr_mac
+            # SETC 응답이 완전한 167바이트면 파싱해서 프로파일 갱신
+            updated = False
+            if response_data and mac in self.dev_profile:
+                from WIZ1x0Profile import parse_imin, BOARD_INFO_SIZE
+                if len(response_data) >= 4 + BOARD_INFO_SIZE:
+                    imin_data = b'IMIN' + response_data[4:]
+                    parsed = parse_imin(imin_data)
+                    if parsed:
+                        self.dev_profile[mac] = parsed
+                        updated = True
+            # SETC 응답 없거나 파싱 실패 시 → 전송한 값으로 프로파일 갱신
+            if not updated and hasattr(self, '_last_1x0_board_dict') and mac in self.dev_profile:
+                self.dev_profile[mac].update(self._last_1x0_board_dict)
             self.statusbar.showMessage(" WIZ1x0SR 설정 완료 (장치 재시작 중...)")
         else:
             self.show_msgbox("Error", "WIZ1x0SR 설정 실패 — 응답 없음", QMessageBox.Warning)

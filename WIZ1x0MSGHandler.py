@@ -119,7 +119,7 @@ class WIZ1x0Setter(QThread):
 
     ※ SETT 전송 즉시 장치가 저장+리부트됨.
     """
-    set_done = pyqtSignal(bool)
+    set_done = pyqtSignal(bool, bytes)  # (성공 여부, SETC 응답 바이너리 or b'')
 
     def __init__(self, target_ip: str, board_dict: dict, timeout: float = 3.0):
         super().__init__()
@@ -131,6 +131,7 @@ class WIZ1x0Setter(QThread):
     def run(self):
         sock = None
         success = False
+        response = b''
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -147,6 +148,7 @@ class WIZ1x0Setter(QThread):
                 if len(data) >= 4 and data[:4] == b'SETC':
                     self.logger.info("[WIZ1x0] SETC 응답 수신 → 설정 성공")
                     success = True
+                    response = data
                 else:
                     self.logger.warning(f"[WIZ1x0] 예상치 않은 응답: {data[:4]}")
             else:
@@ -161,4 +163,4 @@ class WIZ1x0Setter(QThread):
                 except OSError:
                     pass
 
-        self.set_done.emit(success)
+        self.set_done.emit(success, response)
