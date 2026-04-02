@@ -1063,9 +1063,15 @@ class WIZWindow(QMainWindow, main_window):
 
     # Button click events
     def event_setting_clicked(self):
+        if self.curr_dev == 'WIZ1x0SR':
+            self.apply_1x0()
+            return
         self.do_setting()
 
     def event_reset_clicked(self):
+        if self.curr_dev == 'WIZ1x0SR':
+            self.show_msgbox("Info", "WIZ1x0SR은 Apply 시 자동으로 재시작됩니다.", QMessageBox.Information)
+            return
         self.do_reset()
 
     def event_factory_setting(self):
@@ -1086,6 +1092,9 @@ class WIZWindow(QMainWindow, main_window):
             self.event_factory_firmware()
 
     def event_upload_clicked(self):
+        if self.curr_dev == 'WIZ1x0SR':
+            self.show_msgbox("Info", "WIZ1x0SR 펌웨어 업로드는 지원되지 않습니다.", QMessageBox.Information)
+            return
         if self.localip_addr is not None:
             self.update_btn_clicked()
         else:
