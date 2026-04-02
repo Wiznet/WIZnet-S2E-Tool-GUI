@@ -795,6 +795,9 @@ class WIZWindow(QMainWindow, main_window):
 
         # WIZ1x0SR 검색 스레드 (FIND/IMIN, UDP:1460)
         self.wiz1x0_searcher = None
+        # WIZ1x0SR 전용 패널: 초기 hidden, 시그널 연결
+        self.wiz1x0_tab.setVisible(False)
+        self._connect_wiz1x0_signals()
 
         # 디버깅 편의를 위한 기본값 설정 (Search method 라디오 버튼만)
         self.broadcast.setChecked(True)  # UDP Broadcast 검색 선택
@@ -3098,8 +3101,12 @@ class WIZWindow(QMainWindow, main_window):
         if self.dev_profile.get(macaddr, {}).get('_proto') == 'wiz1x0':
             self.curr_mac = macaddr
             self.curr_dev = 'WIZ1x0SR'
+            self._show_wiz1x0_panel(True)
             self.fill_devinfo_1x0(self.dev_profile[macaddr])
             return
+
+        # 표준 장치: wiz1x0 패널 숨기고 기존 UI 복원
+        self._show_wiz1x0_panel(False)
 
         try:
             self.object_config()
@@ -3202,194 +3209,189 @@ class WIZWindow(QMainWindow, main_window):
     # WIZ1x0SR 전용 UI (바이너리 프로토콜, 완전 분리)
     # ──────────────────────────────────────────────────────────────
 
+    def _show_wiz1x0_panel(self, show: bool):
+        """WIZ1x0SR 전용 패널 ↔ 기존 generalTab 전환."""
+        self.wiz1x0_tab.setVisible(show)
+        self.generalTab.setVisible(not show)
+        self.channel_tab.setVisible(not show)
+        self.btn_setting.setEnabled(show)
+
+    def _wiz1x0_ip_alloc_changed(self):
+        """WIZ1x0SR: IP 할당 방식에 따라 IP 필드 활성/비활성."""
+        is_manual = self.wiz1x0_ip_static.isChecked()
+        for w in (self.wiz1x0_localip, self.wiz1x0_subnet, self.wiz1x0_gw, self.wiz1x0_dns_ip):
+            w.setEnabled(is_manual)
+        is_pppoe = self.wiz1x0_ip_pppoe.isChecked()
+        self.wiz1x0_pppoe_id.setEnabled(is_pppoe)
+        self.wiz1x0_pppoe_pw.setEnabled(is_pppoe)
+
+    def _wiz1x0_dns_enable_changed(self, state):
+        """WIZ1x0SR: DNS 사용 여부에 따라 DNS IP / Domain 필드 활성/비활성."""
+        enabled = bool(state)
+        self.wiz1x0_dns_ip.setEnabled(enabled and self.wiz1x0_ip_static.isChecked())
+        self.wiz1x0_domain.setEnabled(enabled)
+
+    def _wiz1x0_scfg_enable_changed(self, state):
+        """WIZ1x0SR: Serial Config Trigger 활성/비활성."""
+        enabled = bool(state)
+        for w in (self.wiz1x0_scfg1, self.wiz1x0_scfg2, self.wiz1x0_scfg3):
+            w.setEnabled(enabled)
+
+    def _wiz1x0_tcppass_enable_changed(self, state):
+        """WIZ1x0SR: TCP Password 활성/비활성."""
+        self.wiz1x0_tcppass.setEnabled(bool(state))
+
+    def _connect_wiz1x0_signals(self):
+        """WIZ1x0SR 전용 위젯 시그널 연결 (초기화 시 한 번만 호출)."""
+        for rb in (self.wiz1x0_ip_static, self.wiz1x0_ip_dhcp, self.wiz1x0_ip_pppoe):
+            rb.clicked.connect(self._wiz1x0_ip_alloc_changed)
+        self.wiz1x0_dns_enable.stateChanged.connect(self._wiz1x0_dns_enable_changed)
+        self.wiz1x0_scfg_enable.stateChanged.connect(self._wiz1x0_scfg_enable_changed)
+        self.wiz1x0_en_tcppass.stateChanged.connect(self._wiz1x0_tcppass_enable_changed)
+
     def fill_devinfo_1x0(self, d: dict):
-        """WIZ1x0SR board_dict → UI 위젯 채우기."""
-        from WIZ1x0Profile import SPEED_BPS_LIST
-
-        # 읽기전용 정보
-        self.dev_type.setText("WIZ1x0SR")
-        self.fw_version.setText(d.get('appver_str', ''))
-        # connect 필드는 TCP 연결 상태(0/1 정수), 직접 표시 불가 → 빈 문자열
-        self.ch1_status.setText('')
-
-        # IP 할당 방식 — 먼저 라디오버튼 세팅 후 event_ip_alloc() 호출로 필드 활성/비활성 적용
+        """WIZ1x0SR board_dict → wiz1x0_tab 전용 위젯 채우기."""
+        # ── Network 탭 ──────────────────────────────────────────────
         ip_alloc = d.get('ip_alloc', 'Static')
-        if ip_alloc == 'Static':
-            self.ip_static.setChecked(True)
-        elif ip_alloc == 'DHCP':
-            self.ip_dhcp.setChecked(True)
-        elif ip_alloc == 'PPPoE':
-            self.ip_pppoe.setChecked(True)
-        self.event_ip_alloc()  # PPPoE/DHCP 시 IP 필드 비활성화 적용
+        self.wiz1x0_ip_static.setChecked(ip_alloc == 'Static')
+        self.wiz1x0_ip_dhcp.setChecked(ip_alloc == 'DHCP')
+        self.wiz1x0_ip_pppoe.setChecked(ip_alloc == 'PPPoE')
 
-        # Network
-        self.localip.setText(d.get('ip', ''))
-        self.subnet.setText(d.get('subnet', ''))
-        self.gateway.setText(d.get('gw', ''))
-        self.ch1_localport.setText(str(d.get('myport', '')))
-        self.ch1_remoteip.setText(d.get('peerip', ''))
-        self.ch1_remoteport.setText(str(d.get('peerport', '')))
+        self.wiz1x0_localip.setText(d.get('ip', ''))
+        self.wiz1x0_subnet.setText(d.get('subnet', ''))
+        self.wiz1x0_gw.setText(d.get('gw', ''))
+        self.wiz1x0_myport.setText(str(d.get('myport', 0)))
+        self.wiz1x0_peerip.setText(d.get('peerip', ''))
+        self.wiz1x0_peerport.setText(str(d.get('peerport', 0)))
+        self.wiz1x0_pppoe_id.setText(d.get('pppoe_id', ''))
+        self.wiz1x0_pppoe_pw.setText(d.get('pppoe_pass', ''))
+
+        # 동작 모드 (WIZ1x0: bserver 0=Client, 1=Mixed, 2=Server)
+        udp_on = bool(d.get('udp', 0))
+        self.wiz1x0_udp.setChecked(udp_on)
+        op = d.get('bserver', 0)
+        self.wiz1x0_op_client.setChecked(op == 0)
+        self.wiz1x0_op_mixed.setChecked(op == 1)   # 1=Mixed (WIZ107/108과 역전!)
+        self.wiz1x0_op_server.setChecked(op == 2)  # 2=Server (WIZ107/108과 역전!)
 
         # DNS
-        self.dns_addr.setText(d.get('dns_ip', ''))
+        dns_on = bool(d.get('dns_flag', 0))
+        self.wiz1x0_dns_enable.setChecked(dns_on)
+        self.wiz1x0_dns_ip.setText(d.get('dns_ip', ''))
+        self.wiz1x0_domain.setText(d.get('domain', ''))
 
-        # PPPoE
-        self.pppoe_id.setText(d.get('pppoe_id', ''))
-        self.pppoe_pw.setText(d.get('pppoe_pass', ''))
+        # 필드 활성/비활성 초기 적용
+        self._wiz1x0_ip_alloc_changed()
+        self._wiz1x0_dns_enable_changed(dns_on)
 
-        # 동작 모드 (WIZ1x0: 0=Client, 1=Mixed, 2=Server — WIZ107/108과 역전)
-        # UDP 플래그(udp=1)가 ON이면 UDP 라디오버튼 선택, 아니면 bserver 값 사용
-        if d.get('udp', 0):
-            self.ch1_udp.setChecked(True)
-        else:
-            op = d.get('bserver', 0)
-            if op == 0:
-                self.ch1_tcpclient.setChecked(True)   # Client
-            elif op == 1:
-                self.ch1_tcpmixed.setChecked(True)    # Mixed (1=Mixed, WIZ107/108과 역전!)
-            elif op == 2:
-                self.ch1_tcpserver.setChecked(True)   # Server (2=Server, WIZ107/108과 역전!)
-            else:
-                self.ch1_tcpclient.setChecked(True)
-
-        # Serial — Baud Rate 콤보박스 항목 교체 (9개, HW 레지스터 기반)
-        # 다른 장치로 전환 시 object_config()가 BAUDRATE_BASE로 복원하므로 여기서는 1x0용으로만 설정
-        self.ch1_baud.blockSignals(True)
-        self.ch1_baud.clear()
-        for bps in SPEED_BPS_LIST:
-            self.ch1_baud.addItem(str(bps))
+        # ── Serial 탭 ───────────────────────────────────────────────
+        from WIZ1x0Profile import SPEED_BPS_LIST
         speed_bps = d.get('speed_bps', 9600)
         idx = SPEED_BPS_LIST.index(speed_bps) if speed_bps in SPEED_BPS_LIST else 3
-        self.ch1_baud.setCurrentIndex(idx)
-        self.ch1_baud.blockSignals(False)
+        self.wiz1x0_baud.setCurrentIndex(idx)
 
-        # DataBit (실제값 7/8 → 인덱스 0/1; 9-bit 항목이 있으면 먼저 제거)
-        if self.ch1_databit.count() > 2:
-            self.ch1_databit.removeItem(2)
         databit = d.get('databit', 8)
-        self.ch1_databit.setCurrentIndex(0 if databit == 7 else 1)
+        self.wiz1x0_databit.setCurrentIndex(0 if databit == 7 else 1)
 
-        # Parity
         parity_map = {'None': 0, 'Odd': 1, 'Even': 2}
-        self.ch1_parity.setCurrentIndex(parity_map.get(d.get('parity_str', 'None'), 0))
-        self.ch1_parity.setEnabled(True)
+        self.wiz1x0_parity.setCurrentIndex(parity_map.get(d.get('parity_str', 'None'), 0))
 
-        # StopBit — 1bit 고정 (2bit 없음)
-        self.ch1_stopbit.setCurrentIndex(0)
-        self.ch1_stopbit.setEnabled(False)
-
-        # Flow Control
         flow_map = {'None': 0, 'Xon/Xoff': 1, 'CTS/RTS': 2}
-        self.ch1_flowctrl.setCurrentIndex(flow_map.get(d.get('flow_str', 'None'), 0))
+        self.wiz1x0_flow.setCurrentIndex(flow_map.get(d.get('flow_str', 'None'), 0))
 
-        # Option
-        self.ch1_inactivity.setText(str(d.get('I_time', 0)))
-        self.ch1_pack_time.setText(str(d.get('D_time', 0)))
-        self.ch1_pack_size.setText(str(d.get('D_size', 0)))
-        pack_char = d.get('D_ch', 0)
-        self.ch1_pack_char.setText(f'{pack_char:02X}')
+        # ── Option 탭 ───────────────────────────────────────────────
+        self.wiz1x0_version.setText(d.get('appver_str', ''))
+        self.wiz1x0_debug.setChecked(d.get('debug_on', False))
 
-        # Debug (역전: debug_on=True → 체크)
-        if hasattr(self, 'serial_debug'):
-            self.serial_debug.setCurrentIndex(1 if d.get('debug_on', False) else 0)
+        self.wiz1x0_inactivity.setText(str(d.get('I_time', 0)))
+        self.wiz1x0_pack_time.setText(str(d.get('D_time', 0)))
+        self.wiz1x0_pack_size.setText(str(d.get('D_size', 0)))
+        self.wiz1x0_pack_char.setText(f"{d.get('D_ch', 0):02X}")
 
-        # Serial Trigger (펌웨어 v1.2 이상만)
+        en_tcppass = bool(d.get('en_tcppass', 0))
+        self.wiz1x0_en_tcppass.setChecked(en_tcppass)
+        self.wiz1x0_tcppass.setText(d.get('tcppass', ''))
+        self._wiz1x0_tcppass_enable_changed(en_tcppass)
+
+        # Serial Trigger (펌웨어 v1.2 이상만 활성)
         appver = d.get('appver', b'\x00\x00')
         fw_major = appver[0] if len(appver) >= 1 else 0
         fw_minor = appver[1] if len(appver) >= 2 else 0
-        scfg_enabled = (fw_major > 1) or (fw_major == 1 and fw_minor >= 2)
-        self.at_enable.setChecked(bool(d.get('scfg', 0)))
-        self.at_enable.setEnabled(scfg_enabled)
+        scfg_supported = (fw_major > 1) or (fw_major == 1 and fw_minor >= 2)
+        scfg_on = bool(d.get('scfg', 0)) and scfg_supported
+        self.wiz1x0_scfg_enable.setChecked(scfg_on)
+        self.wiz1x0_scfg_enable.setEnabled(scfg_supported)
         scfg_hex = d.get('scfg_str', '000000').zfill(6)
-        self.at_hex1.setText(scfg_hex[0:2])
-        self.at_hex2.setText(scfg_hex[2:4])
-        self.at_hex3.setText(scfg_hex[4:6])
-        self.at_hex1.setEnabled(scfg_enabled)
-        self.at_hex2.setEnabled(scfg_enabled)
-        self.at_hex3.setEnabled(scfg_enabled)
+        self.wiz1x0_scfg1.setText(scfg_hex[0:2])
+        self.wiz1x0_scfg2.setText(scfg_hex[2:4])
+        self.wiz1x0_scfg3.setText(scfg_hex[4:6])
+        self._wiz1x0_scfg_enable_changed(scfg_on)
 
-        # TCP Password
-        self.enable_connect_pw.setChecked(bool(d.get('en_tcppass', 0)))
-        self.connect_pw.setText(d.get('tcppass', ''))
-
-        # Apply 버튼 활성화
-        self.btn_setting.setEnabled(True)
-        self.statusbar.showMessage(f" WIZ1x0SR [{d.get('mac','')}] — FW {d.get('appver_str','')}")
+        self.statusbar.showMessage(f" WIZ1x0SR [{d.get('mac', '')}]  FW {d.get('appver_str', '')}")
 
     def fill_setinfo_1x0(self) -> dict:
-        """UI 위젯 → WIZ1x0SR board_dict 수집 (Apply 버튼 핸들러용)."""
-        from WIZ1x0Profile import SPEED_BPS_LIST, SPEED_BPS_TO_HW
+        """wiz1x0_tab 전용 위젯 → WIZ1x0SR board_dict 수집 (Apply 핸들러용)."""
+        from WIZ1x0Profile import SPEED_BPS_LIST
 
         d = dict(self.dev_profile.get(self.curr_mac, {}))  # 기존 값 베이스
 
-        # IP 할당
-        if self.ip_static.isChecked():
+        # ── Network ─────────────────────────────────────────────────
+        if self.wiz1x0_ip_static.isChecked():
             d['ip_alloc'] = 'Static'
-        elif self.ip_dhcp.isChecked():
+        elif self.wiz1x0_ip_dhcp.isChecked():
             d['ip_alloc'] = 'DHCP'
-        elif self.ip_pppoe.isChecked():
+        else:
             d['ip_alloc'] = 'PPPoE'
 
-        d['ip']       = self.localip.text()
-        d['subnet']   = self.subnet.text()
-        d['gw']       = self.gateway.text()
-        d['myport']   = int(self.ch1_localport.text() or 0)
-        d['peerip']   = self.ch1_remoteip.text()
-        d['peerport'] = int(self.ch1_remoteport.text() or 0)
-        d['dns_ip']   = self.dns_addr.text()
-        d['pppoe_id']   = self.pppoe_id.text()
-        d['pppoe_pass'] = self.pppoe_pw.text()
+        d['ip']         = self.wiz1x0_localip.text()
+        d['subnet']     = self.wiz1x0_subnet.text()
+        d['gw']         = self.wiz1x0_gw.text()
+        d['myport']     = int(self.wiz1x0_myport.text() or 0)
+        d['peerip']     = self.wiz1x0_peerip.text()
+        d['peerport']   = int(self.wiz1x0_peerport.text() or 0)
+        d['pppoe_id']   = self.wiz1x0_pppoe_id.text()
+        d['pppoe_pass'] = self.wiz1x0_pppoe_pw.text()
 
-        # 동작 모드 + UDP 플래그 (WIZ1x0: Client=0, Mixed=1, Server=2)
-        # UDP 라디오버튼이 선택된 경우 udp=1로 처리 (bserver는 원래 값 유지)
-        if self.ch1_udp.isChecked():
-            d['udp'] = 1
-            # op_mode는 기존 프로파일 값 유지 (udp=1이면 bserver 무시됨)
-        else:
-            d['udp'] = 0
-            if self.ch1_tcpclient.isChecked():
-                d['op_mode'] = 'Client'
-            elif self.ch1_tcpserver.isChecked():
-                d['op_mode'] = 'Server'
-            elif self.ch1_tcpmixed.isChecked():
-                d['op_mode'] = 'Mixed'
+        # 동작 모드 (WIZ1x0: Client=0, Mixed=1, Server=2 — WIZ107/108과 역전!)
+        d['udp'] = 1 if self.wiz1x0_udp.isChecked() else 0
+        if self.wiz1x0_op_client.isChecked():
+            d['op_mode'] = 'Client'
+        elif self.wiz1x0_op_server.isChecked():
+            d['op_mode'] = 'Server'
+        elif self.wiz1x0_op_mixed.isChecked():
+            d['op_mode'] = 'Mixed'
 
-        # dns_flag: 전용 위젯 없음 → 기존 프로파일 값 유지 (d에 이미 포함)
+        # DNS
+        d['dns_flag'] = 1 if self.wiz1x0_dns_enable.isChecked() else 0
+        d['dns_ip']   = self.wiz1x0_dns_ip.text()
+        d['domain']   = self.wiz1x0_domain.text()
 
-        # Baud Rate (콤보 인덱스 → bps)
-        idx = self.ch1_baud.currentIndex()
+        # ── Serial ──────────────────────────────────────────────────
+        idx = self.wiz1x0_baud.currentIndex()
         d['speed_bps'] = SPEED_BPS_LIST[idx] if idx < len(SPEED_BPS_LIST) else 9600
+        d['databit']   = 7 if self.wiz1x0_databit.currentIndex() == 0 else 8
+        parity_list    = ['None', 'Odd', 'Even']
+        d['parity_str'] = parity_list[self.wiz1x0_parity.currentIndex()]
+        d['stopbit']   = 1  # 1-bit 고정
+        flow_list      = ['None', 'Xon/Xoff', 'CTS/RTS']
+        d['flow_str']  = flow_list[self.wiz1x0_flow.currentIndex()]
 
-        # DataBit (인덱스 0=7, 1=8)
-        d['databit'] = 7 if self.ch1_databit.currentIndex() == 0 else 8
+        # ── Option ──────────────────────────────────────────────────
+        d['debug_on'] = self.wiz1x0_debug.isChecked()
+        d['I_time']   = int(self.wiz1x0_inactivity.text() or 0)
+        d['D_time']   = int(self.wiz1x0_pack_time.text() or 0)
+        d['D_size']   = int(self.wiz1x0_pack_size.text() or 0)
+        d['D_ch']     = int(self.wiz1x0_pack_char.text() or '0', 16)
 
-        # Parity
-        parity_list = ['None', 'Odd', 'Even']
-        d['parity_str'] = parity_list[self.ch1_parity.currentIndex()]
+        d['en_tcppass'] = 1 if self.wiz1x0_en_tcppass.isChecked() else 0
+        d['tcppass']    = self.wiz1x0_tcppass.text()
 
-        # StopBit 고정 1
-        d['stopbit'] = 1
-
-        # Flow
-        flow_list = ['None', 'Xon/Xoff', 'CTS/RTS']
-        d['flow_str'] = flow_list[self.ch1_flowctrl.currentIndex()]
-
-        # Option
-        d['I_time'] = int(self.ch1_inactivity.text() or 0)
-        d['D_time']  = int(self.ch1_pack_time.text() or 0)
-        d['D_size']  = int(self.ch1_pack_size.text() or 0)
-        d['D_ch']    = int(self.ch1_pack_char.text() or '0', 16)
-
-        # Debug (역전: index=1 → debug_on=True)
-        d['debug_on'] = (self.serial_debug.currentIndex() == 1) if hasattr(self, 'serial_debug') else False
-
-        # Serial Trigger
-        d['scfg']     = 1 if self.at_enable.isChecked() else 0
-        d['scfg_str'] = self.at_hex1.text() + self.at_hex2.text() + self.at_hex3.text()
-
-        # TCP Password
-        d['en_tcppass'] = 1 if self.enable_connect_pw.isChecked() else 0
-        d['tcppass']    = self.connect_pw.text()
+        d['scfg']     = 1 if self.wiz1x0_scfg_enable.isChecked() else 0
+        d['scfg_str'] = (
+            self.wiz1x0_scfg1.text().zfill(2) +
+            self.wiz1x0_scfg2.text().zfill(2) +
+            self.wiz1x0_scfg3.text().zfill(2)
+        )
 
         return d
 
