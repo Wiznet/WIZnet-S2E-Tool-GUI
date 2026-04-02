@@ -587,6 +587,28 @@
                </item>
               </layout>
              </item>
+             <item row="2" column="0">
+              <widget class="QCheckBox" name="chk_wiz1x0_search">
+               <property name="minimumSize">
+                <size>
+                 <width>150</width>
+                 <height>22</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <family>맑은 고딕</family>
+                 <pointsize>9</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>WIZ1x0SR (UDP:1460)</string>
+               </property>
+               <property name="checked">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
             </layout>
            </widget>
           </item>
