@@ -795,6 +795,8 @@ class WIZWindow(QMainWindow, main_window):
 
         # WIZ1x0SR 검색 스레드 (FIND/IMIN, UDP:1460)
         self.wiz1x0_searcher = None
+        self._wiz1x0_search_pending = False  # WIZ1x0Searcher 완료 대기 중 플래그
+        self._search_phase3_done = False      # search_each_dev() 완료 플래그
         # WIZ1x0SR 전용 패널: 초기 hidden, 시그널 연결
         self.wiz1x0_tab.setVisible(False)
         self._connect_wiz1x0_signals()
@@ -2282,7 +2284,10 @@ class WIZWindow(QMainWindow, main_window):
                     self.logger.info(f"[TIMING] {self._T()} wizmsghandler.start() 완료 → search_pre() 종료")
 
                 # WIZ1x0SR 검색 (체크박스 ON 시)
+                self._wiz1x0_search_pending = False
+                self._search_phase3_done = False
                 if self.chk_wiz1x0_search.isChecked():
+                    self._wiz1x0_search_pending = True
                     self.wiz1x0_searcher = WIZ1x0Searcher(
                         iface_ip=self.selected_eth if self.selected_eth else "",
                         repeat=3,
@@ -2294,32 +2299,44 @@ class WIZWindow(QMainWindow, main_window):
 
     def _merge_wiz1x0_results(self, results: list):
         """WIZ1x0Searcher 완료 콜백 — 결과를 기존 device list에 병합."""
-        if not results:
-            return
-        self.logger.info(f"[WIZ1x0] 병합: {len(results)}개")
+        self._wiz1x0_search_pending = False
+        self.logger.info(f"[WIZ1x0] 검색 완료: {len(results)}개")
+
         existing_macs = self.mac_list_str()
         new_results = [(mac, d) for mac, d in results if mac not in existing_macs]
-        if not new_results:
-            self.logger.debug("[WIZ1x0] 신규 장치 없음 (모두 중복)")
-            return
-        for mac_str, board_dict in new_results:
-            self.mac_list.append(mac_str.encode())
-            self.mn_list.append("WIZ1x0SR")
-            ver = board_dict.get('appver_str', '0.0')
-            self.vr_list.append(ver.encode())
-            self.st_list.append(b'normal')
-            self.mode_list.append(b'0')
-            self.detected_list.append(True)
-            self.dev_profile[mac_str] = board_dict
-        self.searched_devnum = len(self.mac_list)
-        self.searched_num.setText(str(self.searched_devnum))
-        for mac_str, board_dict in new_results:
-            row = self.list_device.rowCount()
-            self.list_device.insertRow(row)
-            self.list_device.setItem(row, 0, QTableWidgetItem(mac_str))
-            self.list_device.setItem(row, 1, QTableWidgetItem("WIZ1x0SR"))
-            self.list_device.setItem(row, 2, QTableWidgetItem("✓"))
-        QApplication.processEvents()
+        if new_results:
+            for mac_str, board_dict in new_results:
+                self.mac_list.append(mac_str.encode())
+                self.mn_list.append("WIZ1x0SR")
+                ver = board_dict.get('appver_str', '0.0')
+                self.vr_list.append(ver.encode())
+                self.st_list.append(b'normal')
+                self.mode_list.append(b'0')
+                self.detected_list.append(True)
+                self.dev_profile[mac_str] = board_dict
+            self.searched_devnum = len(self.mac_list)
+            self.searched_num.setText(str(self.searched_devnum))
+            for mac_str, board_dict in new_results:
+                row = self.list_device.rowCount()
+                self.list_device.insertRow(row)
+                self.list_device.setItem(row, 0, QTableWidgetItem(mac_str))
+                self.list_device.setItem(row, 1, QTableWidgetItem("WIZ1x0SR"))
+                self.list_device.setItem(row, 2, QTableWidgetItem("✓"))
+            QApplication.processEvents()
+        else:
+            self.logger.debug("[WIZ1x0] 신규 장치 없음 (모두 중복 또는 결과 없음)")
+
+        # Phase 3가 이미 끝난 경우 → Done 메시지를 최종 총수로 갱신
+        if self._search_phase3_done:
+            total = len(self.mac_list)
+            import re
+            base = getattr(self, 'final_status_message', f" Done. {total} devices found")
+            # 숫자 부분만 갱신 (타이밍 등 뒤 문자열 보존)
+            updated = re.sub(r'\d+(?= device)', str(total), base, count=1)
+            # "WIZ1x0SR 검색 중..." 잔재 제거
+            updated = re.sub(r'\s*\+\s*WIZ1x0SR \(UDP:1460\) 검색 중\.\.\.', '', updated)
+            self.final_status_message = updated
+            self.statusbar.showMessage(self.final_status_message)
 
     def mac_list_str(self):
         """self.mac_list를 str 집합으로 반환 (중복 체크용)."""
@@ -2474,9 +2491,18 @@ class WIZWindow(QMainWindow, main_window):
                     msg += f" (System {final_system_time:.2f} seconds)"
                 self.final_status_message = msg
 
+        # Phase 3 완료 마킹 — _merge_wiz1x0_results()에서 Done 지연 여부 판단에 사용
+        self._search_phase3_done = True
+
         # Done 메시지 즉시 표시 (auto_hide_delay 전)
+        # WIZ1x0SR 검색이 아직 진행 중이면 대기 메시지로 대체
         if hasattr(self, 'final_status_message'):
-            self.statusbar.showMessage(self.final_status_message)
+            if self._wiz1x0_search_pending:
+                self.statusbar.showMessage(
+                    self.final_status_message.rstrip() + "  +  WIZ1x0SR (UDP:1460) 검색 중..."
+                )
+            else:
+                self.statusbar.showMessage(self.final_status_message)
 
         # 완료: indeterminate → determinate 전환 후 100%
         self.pgbar.setRange(0, 100)
@@ -2794,7 +2820,12 @@ class WIZWindow(QMainWindow, main_window):
 
                     # 상태바 메시지 업데이트 (진행바는 텍스트 없이 바만 표시)
                     self.final_status_message = status_msg
-                    self.statusbar.showMessage(self.final_status_message)
+                    if self._wiz1x0_search_pending:
+                        self.statusbar.showMessage(
+                            self.final_status_message.rstrip() + "  +  WIZ1x0SR (UDP:1460) 검색 중..."
+                        )
+                    else:
+                        self.statusbar.showMessage(self.final_status_message)
 
                     # 카운터 리셋
                     self.retry_search_current = 0
@@ -2810,7 +2841,12 @@ class WIZWindow(QMainWindow, main_window):
                 if self.search_start_time is not None:
                     self.search_start_time = None  # Reset for next search
 
-                self.statusbar.showMessage(self.final_status_message)
+                if self._wiz1x0_search_pending:
+                    self.statusbar.showMessage(
+                        self.final_status_message.rstrip() + "  +  WIZ1x0SR (UDP:1460) 검색 중..."
+                    )
+                else:
+                    self.statusbar.showMessage(self.final_status_message)
 
             QtCore.QTimer.singleShot(0, self.get_dev_list)
         else:
