@@ -448,8 +448,7 @@ class MainWindow(QMainWindow):
         self._chk_dd.toggled.connect(self._on_ddns_changed)
         g.addWidget(self._chk_dd, 0, 0, 1, 2)
 
-        ddns_servers = ["DynDNS", "NO-IP", "Changeip", "DNS-O-MATIC",
-                        "ZoneEdit", "Namecheap", "3322.org"]
+        ddns_servers = ["dyndns.com"]
         g.addWidget(QLabel("DDNS Server:"), 1, 0)
         self._cmb_dx = QComboBox()
         self._cmb_dx.addItems(ddns_servers)
