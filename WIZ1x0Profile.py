@@ -62,9 +62,10 @@ STRUCT_FORMAT = (
     '32s'      # PPPoE_Pass[32]
     'B'        # EnTCPPass
     '8s'       # TCPPass[8]
-    '4s'       # padding
+    # padding 없음 — VB6 typeBoardInfo 실제 크기 = 159바이트
+    # (BoardInfoSize_3_4=163은 헤더 4바이트 포함 전체 패킷 크기)
 )
-BOARD_INFO_SIZE = 163
+BOARD_INFO_SIZE = 159  # VB6 Len(BoardInfo) = 159, 총 패킷 = 4 + 159 = 163
 assert struct.calcsize(STRUCT_FORMAT) == BOARD_INFO_SIZE, \
     f"구조체 크기 오류: {struct.calcsize(STRUCT_FORMAT)} != {BOARD_INFO_SIZE}"
 
@@ -187,8 +188,7 @@ def parse_imin(data: bytes) -> dict | None:
      dhcp, udp, connect, dns_flag, dns_ip, d_sip,
      scfg, scfg_str,
      pppoe_id, pppoe_pass,
-     en_tcppass, tcppass,
-     _padding) = fields
+     en_tcppass, tcppass) = fields
 
     speed_bps = SPEED_HW_TO_BPS.get(speed, 9600)
 
@@ -286,7 +286,6 @@ def build_sett(d: dict) -> bytes:
 
     en_tcppass = int(d.get('en_tcppass', 0))
     tcppass_b  = str_to_cstr(d.get('tcppass', ''), 8)
-    padding    = b'\x00' * 4
 
     raw = struct.pack(
         STRUCT_FORMAT,
@@ -297,7 +296,7 @@ def build_sett(d: dict) -> bytes:
         dhcp, udp, connect, dns_flag, dns_ip_b, d_sip_b,
         scfg, scfg_b,
         pppoe_id_b, pppoe_pass_b,
-        en_tcppass, tcppass_b, padding,
+        en_tcppass, tcppass_b,
     )
     assert len(raw) == BOARD_INFO_SIZE
     return b'SETT' + raw
