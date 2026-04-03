@@ -2333,6 +2333,7 @@ class WIZWindow(QMainWindow, main_window):
                     item = QTableWidgetItem(text)
                     item.setBackground(_wiz1x0_bg)
                     self.list_device.setItem(row, col, item)
+            self.list_device.resizeRowsToContents()
             QApplication.processEvents()
         else:
             self.logger.debug("[WIZ1x0] 신규 장치 없음 (모두 중복 또는 결과 없음)")
