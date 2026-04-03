@@ -123,10 +123,11 @@ class WIZ1x0Setter(QThread):
     """
     set_done = pyqtSignal(bool, bytes)  # (성공 여부, SETC 응답 바이너리 or b'')
 
-    def __init__(self, target_ip: str, board_dict: dict, timeout: float = 3.0):
+    def __init__(self, target_ip: str, board_dict: dict, iface_ip: str = "", timeout: float = 3.0):
         super().__init__()
         self.target_ip  = target_ip
         self.board_dict = board_dict
+        self.iface_ip   = iface_ip
         self.timeout    = timeout
         self.logger     = logger
 
@@ -138,9 +139,11 @@ class WIZ1x0Setter(QThread):
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            # VB6 원본: LocalPort=5001 고정 + RemoteHost=255.255.255.255
-            # 장치는 SETC를 src_port(5001)로 돌려보냄 → 같은 포트로 수신해야 함
-            sock.bind(('', WIZ1X0_SEARCH_SPORT))
+            # iface_ip로 바인드: SETT 소스 IP = iface_ip → 장치가 SETC를 iface_ip:5001로 돌려보냄
+            # 장치는 자신의 서브넷 기준 라우팅 → iface_ip가 같은 서브넷이어야 SETC 도달 가능
+            bind_ip = self.iface_ip if self.iface_ip else ''
+            sock.bind((bind_ip, WIZ1X0_SEARCH_SPORT))
+            self.logger.info(f"[WIZ1x0] Setter bind {bind_ip or 'INADDR_ANY'}:{WIZ1X0_SEARCH_SPORT}")
 
             sett_pkt = build_sett(self.board_dict)
             # VB6: WinsockUDP.RemoteHost="255.255.255.255", RemotePort=1460

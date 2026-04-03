@@ -3457,7 +3457,7 @@ class WIZWindow(QMainWindow, main_window):
             return
 
         self._last_1x0_board_dict = d   # 프로파일 폴백용 보관
-        self.setter_1x0 = WIZ1x0Setter(target_ip, d)
+        self.setter_1x0 = WIZ1x0Setter(target_ip, d, iface_ip=self.selected_eth or "")
         self.setter_1x0.set_done.connect(self._on_1x0_set_done)
         self.setter_1x0.start()
         self.statusbar.showMessage(" Applying WIZ1x0SR settings...")
@@ -3480,6 +3480,7 @@ class WIZWindow(QMainWindow, main_window):
                 self.dev_profile[mac].update(self._last_1x0_board_dict)
             self.statusbar.showMessage(" WIZ1x0SR 설정 완료 (장치 재시작 중...)")
         else:
+            self.statusbar.showMessage(" WIZ1x0SR 설정 실패 — 응답 없음 (SETC 타임아웃)")
             self.show_msgbox("Error", "WIZ1x0SR 설정 실패 — 응답 없음", QMessageBox.Warning)
 
     # ──────────────────────────────────────────────────────────────
