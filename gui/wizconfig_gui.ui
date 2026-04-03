@@ -4919,6 +4919,9 @@ Analog input: Read only</string>
                 <property name="title">
                  <string>IP Configuration Method</string>
                 </property>
+                <property name="maximumSize">
+                 <size><width>16777215</width><height>55</height></size>
+                </property>
                 <layout class="QHBoxLayout" name="hbox_wiz1x0_ipmode">
                  <item>
                   <widget class="QRadioButton" name="wiz1x0_ip_static">
@@ -5005,6 +5008,9 @@ Analog input: Read only</string>
               <item row="7" column="0" colspan="4">
                <widget class="QGroupBox" name="grp_wiz1x0_opmode">
                 <property name="title"><string>Operation Mode</string></property>
+                <property name="maximumSize">
+                 <size><width>16777215</width><height>55</height></size>
+                </property>
                 <layout class="QHBoxLayout" name="hbox_wiz1x0_opmode">
                  <item>
                   <widget class="QRadioButton" name="wiz1x0_op_client">
@@ -5054,6 +5060,13 @@ Analog input: Read only</string>
               </item>
               <item row="9" column="1" colspan="3">
                <widget class="QLineEdit" name="wiz1x0_domain"/>
+              </item>
+              <!-- 남는 수직 공간 흡수 -->
+              <item row="10" column="0" colspan="4">
+               <spacer>
+                <property name="orientation"><enum>Qt::Vertical</enum></property>
+                <property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property>
+               </spacer>
               </item>
              </layout>
             </widget>
