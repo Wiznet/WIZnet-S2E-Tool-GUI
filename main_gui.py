@@ -2335,7 +2335,7 @@ class WIZWindow(QMainWindow, main_window):
         else:
             self.logger.debug("[WIZ1x0] 신규 장치 없음 (모두 중복 또는 결과 없음)")
 
-        # Phase 3가 이미 끝난 경우 → Done 메시지를 최종 총수로 갱신
+        # Phase 3가 이미 끝난 경우 → Done 메시지를 최종 총수로 갱신 + pgbar 숨김
         if self._search_phase3_done:
             total = len(self.mac_list)
             import re
@@ -2346,6 +2346,8 @@ class WIZWindow(QMainWindow, main_window):
             updated = re.sub(r'\s*\+\s*WIZ1x0SR \(UDP:1460\) 검색 중\.\.\.', '', updated)
             self.final_status_message = updated
             self.statusbar.showMessage(self.final_status_message)
+            # Phase 3 완료 후 pgbar hide가 pending 상태였으면 이제 숨김
+            self.pgbar.hide()
 
     def mac_list_str(self):
         """self.mac_list를 str 집합으로 반환 (중복 체크용)."""
@@ -2518,8 +2520,10 @@ class WIZWindow(QMainWindow, main_window):
         self.pgbar.setFormat(" ")
         self.pgbar.setValue(100)
 
-        # _finalize_search: pgbar.hide()만 담당 (System time은 위에서 이미 계산 완료)
+        # _finalize_search: pgbar.hide()만 담당 (WIZ1x0SR 검색 중이면 대기)
         def _finalize_search():
+            if self._wiz1x0_search_pending:
+                return  # WIZ1x0SR 완료 후 _merge_wiz1x0_results에서 hide() 호출
             self.pgbar.hide()
 
         # cancellable QTimer: 이전 타이머를 stop()한 뒤 재시작

@@ -5170,6 +5170,9 @@ Analog input: Read only</string>
               <item row="2" column="0" colspan="4">
                <widget class="QGroupBox" name="grp_wiz1x0_packing">
                 <property name="title"><string>Data Packing Condition</string></property>
+                <property name="maximumSize">
+                 <size><width>16777215</width><height>110</height></size>
+                </property>
                 <layout class="QGridLayout" name="gridLayout_wiz1x0_pack">
                  <item row="0" column="0"><widget class="QLabel" name="lbl_wiz1x0_pack_time"><property name="text"><string>Time</string></property></widget></item>
                  <item row="0" column="1"><widget class="QLineEdit" name="wiz1x0_pack_time"/></item>
@@ -5187,6 +5190,9 @@ Analog input: Read only</string>
               <item row="3" column="0" colspan="4">
                <widget class="QGroupBox" name="grp_wiz1x0_tcppass">
                 <property name="title"><string>Password (TCP Server)</string></property>
+                <property name="maximumSize">
+                 <size><width>16777215</width><height>55</height></size>
+                </property>
                 <layout class="QHBoxLayout" name="hbox_wiz1x0_tcppass">
                  <item>
                   <widget class="QCheckBox" name="wiz1x0_en_tcppass">
@@ -5218,6 +5224,9 @@ Analog input: Read only</string>
               <item row="4" column="0" colspan="4">
                <widget class="QGroupBox" name="grp_wiz1x0_scfg">
                 <property name="title"><string>Serial Configuration</string></property>
+                <property name="maximumSize">
+                 <size><width>16777215</width><height>55</height></size>
+                </property>
                 <layout class="QHBoxLayout" name="hbox_wiz1x0_scfg">
                  <item>
                   <widget class="QCheckBox" name="wiz1x0_scfg_enable">
@@ -5256,6 +5265,13 @@ Analog input: Read only</string>
                  </item>
                 </layout>
                </widget>
+              </item>
+              <!-- 남는 수직 공간 흡수 -->
+              <item row="5" column="0" colspan="4">
+               <spacer>
+                <property name="orientation"><enum>Qt::Vertical</enum></property>
+                <property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property>
+               </spacer>
               </item>
              </layout>
             </widget>
