@@ -2325,12 +2325,15 @@ class WIZWindow(QMainWindow, main_window):
                 self.dev_profile[mac_str] = board_dict
             self.searched_devnum = len(self.mac_list)
             self.searched_num.setText(str(self.searched_devnum))
+            _wiz1x0_bg = QtGui.QColor(0xE0, 0xF4, 0xFF)  # 연한 하늘색 배경
             for mac_str, board_dict in new_results:
                 row = self.list_device.rowCount()
                 self.list_device.insertRow(row)
-                self.list_device.setItem(row, 0, QTableWidgetItem(mac_str))
-                self.list_device.setItem(row, 1, QTableWidgetItem("WIZ1x0SR"))
-                self.list_device.setItem(row, 2, QTableWidgetItem("✓"))
+                for col, text in [(0, mac_str), (1, "WIZ1x0SR"), (2, "✓")]:
+                    item = QTableWidgetItem(text)
+                    item.setFont(self.midfont)
+                    item.setBackground(_wiz1x0_bg)
+                    self.list_device.setItem(row, col, item)
             QApplication.processEvents()
         else:
             self.logger.debug("[WIZ1x0] 신규 장치 없음 (모두 중복 또는 결과 없음)")
