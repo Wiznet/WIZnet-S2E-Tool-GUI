@@ -3478,7 +3478,7 @@ class WIZWindow(QMainWindow, main_window):
             # SETC 응답 없거나 파싱 실패 시 → 전송한 값으로 프로파일 갱신
             if not updated and hasattr(self, '_last_1x0_board_dict') and mac in self.dev_profile:
                 self.dev_profile[mac].update(self._last_1x0_board_dict)
-            self.statusbar.showMessage(" WIZ1x0SR 설정 완료 (장치 재시작 중...)")
+            self.statusbar.showMessage(" WIZ1x0SR 설정 완료 — 장치 재시작 후 Device Search를 다시 실행하세요")
         else:
             self.statusbar.showMessage(" WIZ1x0SR 설정 실패 — 응답 없음 (SETC 타임아웃)")
             self.show_msgbox("Error", "WIZ1x0SR 설정 실패 — 응답 없음", QMessageBox.Warning)
