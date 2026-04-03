@@ -55,15 +55,10 @@ class WIZ1x0Searcher(QThread):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
-            # 로컬 IP 바인딩 (NIC 선택)
-            # 10048: 이전 Searcher 스레드가 아직 5001을 점유 중인 경우 발생
-            # → search_pre()에서 isRunning() 체크로 방지하므로 여기까지 오면 정상 케이스
-            bind_ip = self.iface_ip if self.iface_ip else ''
-            try:
-                sock.bind((bind_ip, WIZ1X0_SEARCH_SPORT))
-            except OSError as e:
-                self.logger.warning(f"[WIZ1x0] bind({bind_ip!r}:{WIZ1X0_SEARCH_SPORT}) 실패: {e} → INADDR_ANY 재시도")
-                sock.bind(('', WIZ1X0_SEARCH_SPORT))
+            # 수신은 항상 INADDR_ANY:5001 — VB6 원본과 동일
+            # VB6: LocalHostAddr 미지정 → INADDR_ANY → 모든 인터페이스에서 수신
+            # iface_ip로 특정 NIC bind 시 해당 서브넷 외 장치 응답을 수신 못함
+            sock.bind(('', WIZ1X0_SEARCH_SPORT))
 
             find_pkt = build_find()
 
