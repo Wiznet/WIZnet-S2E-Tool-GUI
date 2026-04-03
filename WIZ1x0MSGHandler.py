@@ -133,11 +133,15 @@ class WIZ1x0Setter(QThread):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind(('', 0))  # OS 자동 포트
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            # VB6 원본: LocalPort=5001 고정 + RemoteHost=255.255.255.255
+            # 장치는 SETC를 src_port(5001)로 돌려보냄 → 같은 포트로 수신해야 함
+            sock.bind(('', WIZ1X0_SEARCH_SPORT))
 
             sett_pkt = build_sett(self.board_dict)
-            self.logger.info(f"[WIZ1x0] SETT → {self.target_ip}:{WIZ1X0_SEARCH_PORT}")
-            sock.sendto(sett_pkt, (self.target_ip, WIZ1X0_SEARCH_PORT))
+            # VB6: WinsockUDP.RemoteHost="255.255.255.255", RemotePort=1460
+            self.logger.info(f"[WIZ1x0] SETT → 255.255.255.255:{WIZ1X0_SEARCH_PORT} (target={self.target_ip})")
+            sock.sendto(sett_pkt, ('255.255.255.255', WIZ1X0_SEARCH_PORT))
 
             # SETC 응답 대기
             ready, _, _ = select.select([sock], [], [], self.timeout)
