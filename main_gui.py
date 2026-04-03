@@ -1963,13 +1963,16 @@ class WIZWindow(QMainWindow, main_window):
         try:
             # Broadcast
             if self.broadcast.isChecked():
-                if self.selected_eth is None:
+                bind_ip = self.selected_eth or ""
+                self.conf_sock = WIZUDPSock(5000, 50001, bind_ip)
+                self.logger.debug(f"socket_config: bind_ip={bind_ip!r}")
+                try:
+                    self.conf_sock.open()
+                except OSError as e:
+                    # selected_eth IP가 소멸(장치 재부팅/IP 변경 등)된 경우 INADDR_ANY로 재시도
+                    self.logger.warning(f"socket_config: bind({bind_ip!r}) 실패({e}) → INADDR_ANY로 재시도")
                     self.conf_sock = WIZUDPSock(5000, 50001, "")
-                else:
-                    self.conf_sock = WIZUDPSock(5000, 50001, self.selected_eth)
-                    self.logger.debug(self.selected_eth)
-
-                self.conf_sock.open()
+                    self.conf_sock.open()
 
             # TCP unicast
             elif self.unicast_ip.isChecked():
@@ -2284,18 +2287,24 @@ class WIZWindow(QMainWindow, main_window):
                     self.logger.info(f"[TIMING] {self._T()} wizmsghandler.start() 완료 → search_pre() 종료")
 
                 # WIZ1x0SR 검색 (체크박스 ON 시)
-                self._wiz1x0_search_pending = False
+                # 이전 searcher가 아직 실행 중이면 새로 시작하지 않음
+                # → 반복 검색 retry마다 bind(5001) 시도 → WinError 10048 방지
                 self._search_phase3_done = False
                 if self.chk_wiz1x0_search.isChecked():
-                    self._wiz1x0_search_pending = True
-                    self.wiz1x0_searcher = WIZ1x0Searcher(
-                        iface_ip=self.selected_eth if self.selected_eth else "",
-                        repeat=3,
-                        timeout=self.search_pre_wait_time,
-                    )
-                    self.wiz1x0_searcher.search_done.connect(self._merge_wiz1x0_results)
-                    self.wiz1x0_searcher.start()
-                    self.logger.info(f"[TIMING] {self._T()} WIZ1x0Searcher.start() 완료")
+                    if self.wiz1x0_searcher is None or not self.wiz1x0_searcher.isRunning():
+                        self._wiz1x0_search_pending = True
+                        self.wiz1x0_searcher = WIZ1x0Searcher(
+                            iface_ip=self.selected_eth if self.selected_eth else "",
+                            repeat=3,
+                            timeout=self.search_pre_wait_time,
+                        )
+                        self.wiz1x0_searcher.search_done.connect(self._merge_wiz1x0_results)
+                        self.wiz1x0_searcher.start()
+                        self.logger.info(f"[TIMING] {self._T()} WIZ1x0Searcher.start() 완료")
+                    else:
+                        self.logger.info(f"[TIMING] {self._T()} WIZ1x0Searcher 이미 실행 중 — skip")
+                else:
+                    self._wiz1x0_search_pending = False
 
     def _merge_wiz1x0_results(self, results: list):
         """WIZ1x0Searcher 완료 콜백 — 결과를 기존 device list에 병합."""
