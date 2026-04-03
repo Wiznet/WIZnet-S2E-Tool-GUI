@@ -55,10 +55,14 @@ class WIZ1x0Searcher(QThread):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
-            # 수신은 항상 INADDR_ANY:5001 — VB6 원본과 동일
-            # VB6: LocalHostAddr 미지정 → INADDR_ANY → 모든 인터페이스에서 수신
-            # iface_ip로 특정 NIC bind 시 해당 서브넷 외 장치 응답을 수신 못함
-            sock.bind(('', WIZ1X0_SEARCH_SPORT))
+            # iface_ip 지정 시 해당 IP로 바인드:
+            #   - FIND 브로드캐스트가 반드시 해당 NIC으로 송출됨
+            #   - 장치가 IMIN을 src_ip(iface_ip):5001로 돌려보내므로 수신 가능
+            # iface_ip 미지정(INADDR_ANY) 시 Windows 라우팅 테이블에 따라
+            #   다른 NIC IP가 소스가 될 수 있어 IMIN을 못 받는 경우 있음
+            bind_ip = self.iface_ip if self.iface_ip else ''
+            sock.bind((bind_ip, WIZ1X0_SEARCH_SPORT))
+            self.logger.info(f"[WIZ1x0] bind {bind_ip or 'INADDR_ANY'}:{WIZ1X0_SEARCH_SPORT}")
 
             find_pkt = build_find()
 
