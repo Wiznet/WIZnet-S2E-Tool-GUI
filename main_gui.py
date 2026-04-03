@@ -2331,7 +2331,6 @@ class WIZWindow(QMainWindow, main_window):
                 self.list_device.insertRow(row)
                 for col, text in [(0, mac_str), (1, "WIZ1x0SR"), (2, "✓")]:
                     item = QTableWidgetItem(text)
-                    item.setFont(self.midfont)
                     item.setBackground(_wiz1x0_bg)
                     self.list_device.setItem(row, col, item)
             QApplication.processEvents()
