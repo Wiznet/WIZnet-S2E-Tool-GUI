@@ -4509,7 +4509,10 @@ class WIZWindow(QMainWindow, main_window):
 
                 try:
                     clicked_mac = self.list_device.selectedItems()[0].text()
-                    self.dev_profile[clicked_mac] = set_result
+                    if clicked_mac in self.dev_profile:
+                        self.dev_profile[clicked_mac].update(set_result)
+                    else:
+                        self.dev_profile[clicked_mac] = set_result
                 except Exception as e:
                     self.logger.error(e)
 
