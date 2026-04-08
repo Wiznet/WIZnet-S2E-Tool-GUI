@@ -637,6 +637,13 @@ class WIZWindow(QMainWindow, main_window):
         self.list_device.itemSelectionChanged.connect(self.dev_selected)
 
         # Menu event - File
+        self.actionDeviceSearch = QAction("Device Search", self)
+        self.actionDeviceSearch.setShortcut(QtGui.QKeySequence("F5"))
+        self.actionDeviceSearch.setShortcutContext(Qt.WindowShortcut)
+        self.actionDeviceSearch.triggered.connect(self._on_search_button_clicked)
+        self.menuFile.insertAction(self.actionExit, self.actionDeviceSearch)
+        self.menuFile.insertSeparator(self.actionExit)
+
         self.actionSave.triggered.connect(self.dialog_save_file)
         self.actionLoad.triggered.connect(self.dialog_load_file)
         self.actionSaveSearchResults.triggered.connect(self.save_searched_results_to_csv)
@@ -3306,6 +3313,7 @@ class WIZWindow(QMainWindow, main_window):
         """샘플 문자열 기준으로 위젯 폭을 계산해 고정."""
         width = max(widget.minimumSizeHint().width(), widget.fontMetrics().horizontalAdvance(sample_text) + extra_px)
         widget.setMaximumWidth(width)
+        return width
 
     def _remove_layout_spacers(self, layout):
         """WIZ1x0SR compact 배치를 위해 불필요한 spacer를 제거."""
@@ -3338,6 +3346,7 @@ class WIZWindow(QMainWindow, main_window):
 
         self.vbox_wiz1x0_net.setAlignment(self.grp_wiz1x0_ipmode, Qt.AlignLeft)
         self.vbox_wiz1x0_net.setAlignment(self.gridLayout_wiz1x0_ipfields, Qt.AlignLeft)
+        self.vbox_wiz1x0_outer.setAlignment(self.wiz1x0_meta, Qt.AlignLeft)
         self.vbox_wiz1x0_mid.setAlignment(self.grp_wiz1x0_opmode, Qt.AlignLeft)
         self.vbox_wiz1x0_mid.setAlignment(self.gridLayout_wiz1x0_dns, Qt.AlignLeft)
         self.vbox_wiz1x0_mid.setAlignment(self.grp_wiz1x0_serial_params, Qt.AlignLeft)
@@ -3349,6 +3358,39 @@ class WIZWindow(QMainWindow, main_window):
         for layout in (self.gridLayout_wiz1x0_ipfields, self.gridLayout_wiz1x0_dns, self.gridLayout_wiz1x0_misc, self.gridLayout_wiz1x0_pack):
             layout.setHorizontalSpacing(8)
             layout.setVerticalSpacing(4)
+            layout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
+
+        for widget in (
+            self.wiz1x0_localip,
+            self.wiz1x0_myport,
+            self.wiz1x0_subnet,
+            self.wiz1x0_gw,
+            self.wiz1x0_pppoe_id,
+            self.wiz1x0_pppoe_pw,
+            self.wiz1x0_peerip,
+            self.wiz1x0_peerport,
+        ):
+            self.gridLayout_wiz1x0_ipfields.setAlignment(widget, Qt.AlignLeft)
+
+        for widget in (
+            self.wiz1x0_dns_enable,
+            self.lbl_wiz1x0_dns_ip,
+            self.wiz1x0_dns_ip,
+            self.lbl_wiz1x0_domain,
+            self.wiz1x0_domain,
+        ):
+            self.gridLayout_wiz1x0_dns.setAlignment(widget, Qt.AlignLeft)
+
+        for widget in (
+            self.wiz1x0_inactivity,
+            self.wiz1x0_pack_time,
+            self.wiz1x0_pack_size,
+            self.wiz1x0_pack_char,
+        ):
+            if widget in (self.wiz1x0_inactivity,):
+                self.gridLayout_wiz1x0_misc.setAlignment(widget, Qt.AlignLeft)
+            else:
+                self.gridLayout_wiz1x0_pack.setAlignment(widget, Qt.AlignLeft)
 
     def _apply_wiz1x0_field_widths(self):
         """WIZ1x0SR 필드 폭을 최대 예상 값 기준으로 조정."""
@@ -3358,9 +3400,9 @@ class WIZWindow(QMainWindow, main_window):
             self.wiz1x0_gw: "999.999.999.999",
             self.wiz1x0_dns_ip: "999.999.999.999",
             self.wiz1x0_peerip: "999.999.999.999",
-            self.wiz1x0_domain: "device-name.example.com",
-            self.wiz1x0_pppoe_id: "wiznet-user-123456",
-            self.wiz1x0_pppoe_pw: "1234567890abcdef",
+            self.wiz1x0_domain: "X" * 40,
+            self.wiz1x0_pppoe_id: "X" * 40,
+            self.wiz1x0_pppoe_pw: "X" * 40,
             self.wiz1x0_myport: "65535",
             self.wiz1x0_peerport: "65535",
             self.wiz1x0_version: "V9.9.9",
@@ -3374,7 +3416,9 @@ class WIZWindow(QMainWindow, main_window):
             self.wiz1x0_scfg3: "FF",
         }
         for widget, sample in line_edit_samples.items():
-            self._set_widget_width_from_sample(widget, sample)
+            width = self._set_widget_width_from_sample(widget, sample)
+            if widget in (self.wiz1x0_domain, self.wiz1x0_pppoe_id, self.wiz1x0_pppoe_pw):
+                widget.setMinimumWidth(width)
 
         combo_samples = {
             self.wiz1x0_baud: "230400",

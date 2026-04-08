@@ -4927,9 +4927,9 @@ Analog input: Read only</string>
              <property name="topMargin"><number>4</number></property>
              <property name="rightMargin"><number>6</number></property>
              <property name="bottomMargin"><number>4</number></property>
-             <!-- ── 헤더: 탭 네비게이션 + 토글 버튼 ── -->
+             <!-- ── 헤더: 탭 네비게이션 ── -->
              <item>
-              <widget class="QWidget" name="wiz1x0_header">
+             <widget class="QWidget" name="wiz1x0_header">
                <property name="maximumSize"><size><width>16777215</width><height>28</height></size></property>
                <layout class="QHBoxLayout" name="hbox_wiz1x0_header">
                 <property name="leftMargin"><number>0</number></property>
@@ -4953,18 +4953,94 @@ Analog input: Read only</string>
                  </widget>
                 </item>
                 <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
-                <item>
-                 <widget class="QPushButton" name="btn_wiz1x0_toggle">
-                  <property name="text"><string>☰ Full</string></property>
-                  <property name="checkable"><bool>true</bool></property>
-                  <property name="maximumSize"><size><width>72</width><height>24</height></size></property>
-                 </widget>
-                </item>
-               </layout>
-              </widget>
-             </item>
-             <!-- ── 콘텐츠 ── -->
-             <item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QWidget" name="wiz1x0_meta">
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>28</height>
+               </size>
+              </property>
+              <layout class="QHBoxLayout" name="hbox_wiz1x0_meta">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <property name="spacing">
+                <number>8</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="lbl_wiz1x0_ver">
+                 <property name="text">
+                  <string>Version</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="wiz1x0_version">
+                 <property name="maximumSize">
+                  <size>
+                   <width>110</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="wiz1x0_debug">
+                 <property name="text">
+                  <string>Enable Serial Debug Mode</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="btn_wiz1x0_toggle">
+                 <property name="text">
+                  <string>☰ Full</string>
+                 </property>
+                 <property name="checkable">
+                  <bool>true</bool>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>72</width>
+                   <height>24</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer>
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <!-- ── 콘텐츠 ── -->
+            <item>
               <widget class="QTabWidget" name="wiz1x0_tabwidget">
                <widget class="QWidget" name="wiz1x0_col_net">
                 <attribute name="title"><string>Network</string></attribute>
@@ -4994,9 +5070,9 @@ Analog input: Read only</string>
                  <item row="2" column="0"><widget class="QLabel" name="lbl_wiz1x0_gw"><property name="text"><string>Gateway</string></property></widget></item>
                  <item row="2" column="1" colspan="3"><widget class="QLineEdit" name="wiz1x0_gw"/></item>
                  <item row="3" column="0"><widget class="QLabel" name="lbl_wiz1x0_pppoe_id"><property name="text"><string>PPPoE ID</string></property></widget></item>
-                 <item row="3" column="1" colspan="3"><widget class="QLineEdit" name="wiz1x0_pppoe_id"/></item>
+                 <item row="3" column="1" colspan="3"><widget class="QLineEdit" name="wiz1x0_pppoe_id"><property name="maxLength"><number>32</number></property></widget></item>
                  <item row="4" column="0"><widget class="QLabel" name="lbl_wiz1x0_pppoe_pw"><property name="text"><string>Password</string></property></widget></item>
-                 <item row="4" column="1" colspan="3"><widget class="QLineEdit" name="wiz1x0_pppoe_pw"><property name="echoMode"><enum>QLineEdit::Password</enum></property></widget></item>
+                 <item row="4" column="1" colspan="3"><widget class="QLineEdit" name="wiz1x0_pppoe_pw"><property name="maxLength"><number>32</number></property><property name="echoMode"><enum>QLineEdit::Password</enum></property></widget></item>
                  <item row="5" column="0"><widget class="QLabel" name="lbl_wiz1x0_peerip"><property name="text"><string>Server IP</string></property></widget></item>
                  <item row="5" column="1"><widget class="QLineEdit" name="wiz1x0_peerip"/></item>
                  <item row="5" column="2"><widget class="QLabel" name="lbl_wiz1x0_peerport"><property name="text"><string>Port</string></property></widget></item>
@@ -5024,13 +5100,13 @@ Analog input: Read only</string>
                 </widget>
                </item>
                <item>
-                <layout class="QGridLayout" name="gridLayout_wiz1x0_dns">
+               <layout class="QGridLayout" name="gridLayout_wiz1x0_dns">
                  <property name="verticalSpacing"><number>4</number></property>
                  <item row="0" column="0"><widget class="QCheckBox" name="wiz1x0_dns_enable"><property name="text"><string>Use DNS</string></property></widget></item>
-                 <item row="0" column="1"><widget class="QLabel" name="lbl_wiz1x0_dns_ip"><property name="text"><string>DNS Server IP</string></property></widget></item>
-                 <item row="0" column="2"><widget class="QLineEdit" name="wiz1x0_dns_ip"/></item>
-                 <item row="1" column="0"><widget class="QLabel" name="lbl_wiz1x0_domain"><property name="text"><string>Domain Name</string></property></widget></item>
-                 <item row="1" column="1" colspan="2"><widget class="QLineEdit" name="wiz1x0_domain"/></item>
+                 <item row="1" column="0"><widget class="QLabel" name="lbl_wiz1x0_dns_ip"><property name="text"><string>DNS Server IP</string></property></widget></item>
+                 <item row="1" column="1"><widget class="QLineEdit" name="wiz1x0_dns_ip"/></item>
+                 <item row="2" column="0"><widget class="QLabel" name="lbl_wiz1x0_domain"><property name="text"><string>Domain Name</string></property></widget></item>
+                 <item row="2" column="1"><widget class="QLineEdit" name="wiz1x0_domain"/></item>
                 </layout>
                </item>
                <item>
@@ -5092,25 +5168,10 @@ Analog input: Read only</string>
                <layout class="QVBoxLayout" name="vbox_wiz1x0_opt">
                <property name="spacing"><number>4</number></property>
                <item>
-                <layout class="QGridLayout" name="gridLayout_wiz1x0_misc">
+               <layout class="QGridLayout" name="gridLayout_wiz1x0_misc">
                  <property name="verticalSpacing"><number>4</number></property>
-                 <item row="0" column="0"><widget class="QLabel" name="lbl_wiz1x0_ver"><property name="text"><string>Version</string></property></widget></item>
+                 <item row="0" column="0"><widget class="QLabel" name="lbl_wiz1x0_inactivity"><property name="text"><string>Inactivity time</string></property></widget></item>
                  <item row="0" column="1">
-                  <widget class="QLineEdit" name="wiz1x0_version">
-                   <property name="maximumSize">
-                    <size>
-                     <width>110</width>
-                     <height>16777215</height>
-                    </size>
-                   </property>
-                   <property name="readOnly">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="2"><widget class="QCheckBox" name="wiz1x0_debug"><property name="text"><string>Serial Debug</string></property></widget></item>
-                 <item row="1" column="0"><widget class="QLabel" name="lbl_wiz1x0_inactivity"><property name="text"><string>Inactivity time</string></property></widget></item>
-                 <item row="1" column="1">
                   <widget class="QLineEdit" name="wiz1x0_inactivity">
                    <property name="maximumSize">
                     <size>
@@ -5120,7 +5181,7 @@ Analog input: Read only</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="1" column="2"><widget class="QLabel" name="lbl_wiz1x0_inactivity_unit"><property name="text"><string>(0~65535 sec)</string></property></widget></item>
+                 <item row="0" column="2"><widget class="QLabel" name="lbl_wiz1x0_inactivity_unit"><property name="text"><string>(0~65535 sec)</string></property></widget></item>
                 </layout>
                </item>
                <item>
