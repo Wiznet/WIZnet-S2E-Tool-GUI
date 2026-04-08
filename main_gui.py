@@ -198,7 +198,7 @@ class SearchErrorCollector:
         if not self.has_errors():
             return ""
 
-        html = "<h3>검색 중 오류 발생</h3><ul>"
+        html = "<h3>Errors occurred during search</h3><ul>"
         for err in self.errors:
             html += f"""
             <li>
@@ -593,6 +593,13 @@ class WIZWindow(QMainWindow, main_window):
         self.ip_static.clicked.connect(self.event_ip_alloc)
         self.ip_pppoe.clicked.connect(self.event_ip_alloc)
 
+        # WIZ1x0SR 검색 체크박스 → 경고 레이블 show/hide
+        self.chk_wiz1x0_search.stateChanged.connect(
+            lambda state: self.lbl_wiz1x0_search_warn.setStyleSheet(
+                "color: #e08000;" if state == Qt.Checked else "color: transparent;"
+            )
+        )
+
         # WIZ107SR/108SR: DDNS enable 토글, Network Protocol, 9-bit databit 제약
         self.ddns_enable.stateChanged.connect(self.event_ddns_enable)
         self.ch1_databit.currentIndexChanged.connect(self.event_ch1_databit_changed)
@@ -800,6 +807,8 @@ class WIZWindow(QMainWindow, main_window):
         # WIZ1x0SR 전용 패널: 초기 hidden, 시그널 연결
         self.wiz1x0_tab.setVisible(False)
         self._connect_wiz1x0_signals()
+        self._apply_wiz1x0_compact_layout()
+        self._apply_wiz1x0_field_widths()
 
         # 디버깅 편의를 위한 기본값 설정 (Search method 라디오 버튼만)
         self.broadcast.setChecked(True)  # UDP Broadcast 검색 선택
@@ -2345,8 +2354,8 @@ class WIZWindow(QMainWindow, main_window):
             base = getattr(self, 'final_status_message', f" Done. {total} devices found")
             # 숫자 부분만 갱신 (타이밍 등 뒤 문자열 보존)
             updated = re.sub(r'\d+(?= device)', str(total), base, count=1)
-            # "WIZ1x0SR 검색 중..." 잔재 제거
-            updated = re.sub(r'\s*\+\s*WIZ1x0SR \(UDP:1460\) 검색 중\.\.\.', '', updated)
+            # "WIZ1x0SR (UDP:1460) Searching..." 잔재 제거
+            updated = re.sub(r'\s*\+\s*WIZ1x0SR \(UDP:1460\) Searching\.\.\.', '', updated)
             self.final_status_message = updated
             self.statusbar.showMessage(self.final_status_message)
             # Phase 3 완료 후 pgbar hide가 pending 상태였으면 이제 숨김
@@ -2513,7 +2522,7 @@ class WIZWindow(QMainWindow, main_window):
         if hasattr(self, 'final_status_message'):
             if self._wiz1x0_search_pending:
                 self.statusbar.showMessage(
-                    self.final_status_message.rstrip() + "  +  WIZ1x0SR (UDP:1460) 검색 중..."
+                    self.final_status_message.rstrip() + "  +  WIZ1x0SR (UDP:1460) Searching..."
                 )
             else:
                 self.statusbar.showMessage(self.final_status_message)
@@ -2838,7 +2847,7 @@ class WIZWindow(QMainWindow, main_window):
                     self.final_status_message = status_msg
                     if self._wiz1x0_search_pending:
                         self.statusbar.showMessage(
-                            self.final_status_message.rstrip() + "  +  WIZ1x0SR (UDP:1460) 검색 중..."
+                            self.final_status_message.rstrip() + "  +  WIZ1x0SR (UDP:1460) Searching..."
                         )
                     else:
                         self.statusbar.showMessage(self.final_status_message)
@@ -2859,7 +2868,7 @@ class WIZWindow(QMainWindow, main_window):
 
                 if self._wiz1x0_search_pending:
                     self.statusbar.showMessage(
-                        self.final_status_message.rstrip() + "  +  WIZ1x0SR (UDP:1460) 검색 중..."
+                        self.final_status_message.rstrip() + "  +  WIZ1x0SR (UDP:1460) Searching..."
                     )
                 else:
                     self.statusbar.showMessage(self.final_status_message)
@@ -2887,7 +2896,7 @@ class WIZWindow(QMainWindow, main_window):
             QMessageBox.critical(
                 self,
                 "반복 검색 오류",
-                f"반복 검색 중 오류가 발생했습니다:\n{str(e)}\n\n검색을 중단합니다."
+                f"An error occurred during repeated search:\n{str(e)}\n\nSearch will be stopped."
             )
 
     # =========================================================================
@@ -3293,6 +3302,100 @@ class WIZWindow(QMainWindow, main_window):
         """WIZ1x0SR: TCP Password 활성/비활성."""
         self.wiz1x0_tcppass.setEnabled(bool(state))
 
+    def _set_widget_width_from_sample(self, widget, sample_text: str, extra_px: int = 24):
+        """샘플 문자열 기준으로 위젯 폭을 계산해 고정."""
+        width = max(widget.minimumSizeHint().width(), widget.fontMetrics().horizontalAdvance(sample_text) + extra_px)
+        widget.setMaximumWidth(width)
+
+    def _remove_layout_spacers(self, layout):
+        """WIZ1x0SR compact 배치를 위해 불필요한 spacer를 제거."""
+        for index in reversed(range(layout.count())):
+            item = layout.itemAt(index)
+            if item.spacerItem() is not None:
+                layout.takeAt(index)
+
+    def _apply_wiz1x0_compact_layout(self):
+        """WIZ1x0SR UI를 내용 길이 기준의 compact layout으로 정리."""
+        compact_groups = (
+            self.grp_wiz1x0_ipmode,
+            self.grp_wiz1x0_opmode,
+            self.grp_wiz1x0_serial_params,
+            self.grp_wiz1x0_packing,
+            self.grp_wiz1x0_tcppass,
+            self.grp_wiz1x0_scfg,
+        )
+        for widget in compact_groups:
+            widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Preferred)
+
+        for layout in (
+            self.hbox_wiz1x0_ipmode,
+            self.hbox_wiz1x0_opmode,
+            self.hbox_wiz1x0_tcppass,
+            self.hbox_wiz1x0_scfg,
+        ):
+            self._remove_layout_spacers(layout)
+            layout.setSpacing(8)
+
+        self.vbox_wiz1x0_net.setAlignment(self.grp_wiz1x0_ipmode, Qt.AlignLeft)
+        self.vbox_wiz1x0_net.setAlignment(self.gridLayout_wiz1x0_ipfields, Qt.AlignLeft)
+        self.vbox_wiz1x0_mid.setAlignment(self.grp_wiz1x0_opmode, Qt.AlignLeft)
+        self.vbox_wiz1x0_mid.setAlignment(self.gridLayout_wiz1x0_dns, Qt.AlignLeft)
+        self.vbox_wiz1x0_mid.setAlignment(self.grp_wiz1x0_serial_params, Qt.AlignLeft)
+        self.vbox_wiz1x0_opt.setAlignment(self.gridLayout_wiz1x0_misc, Qt.AlignLeft)
+        self.vbox_wiz1x0_opt.setAlignment(self.grp_wiz1x0_packing, Qt.AlignLeft)
+        self.vbox_wiz1x0_opt.setAlignment(self.grp_wiz1x0_tcppass, Qt.AlignLeft)
+        self.vbox_wiz1x0_opt.setAlignment(self.grp_wiz1x0_scfg, Qt.AlignLeft)
+
+        for layout in (self.gridLayout_wiz1x0_ipfields, self.gridLayout_wiz1x0_dns, self.gridLayout_wiz1x0_misc, self.gridLayout_wiz1x0_pack):
+            layout.setHorizontalSpacing(8)
+            layout.setVerticalSpacing(4)
+
+    def _apply_wiz1x0_field_widths(self):
+        """WIZ1x0SR 필드 폭을 최대 예상 값 기준으로 조정."""
+        line_edit_samples = {
+            self.wiz1x0_localip: "999.999.999.999",
+            self.wiz1x0_subnet: "999.999.999.999",
+            self.wiz1x0_gw: "999.999.999.999",
+            self.wiz1x0_dns_ip: "999.999.999.999",
+            self.wiz1x0_peerip: "999.999.999.999",
+            self.wiz1x0_domain: "device-name.example.com",
+            self.wiz1x0_pppoe_id: "wiznet-user-123456",
+            self.wiz1x0_pppoe_pw: "1234567890abcdef",
+            self.wiz1x0_myport: "65535",
+            self.wiz1x0_peerport: "65535",
+            self.wiz1x0_version: "V9.9.9",
+            self.wiz1x0_inactivity: "65535",
+            self.wiz1x0_pack_time: "65535",
+            self.wiz1x0_pack_size: "255",
+            self.wiz1x0_pack_char: "FF",
+            self.wiz1x0_tcppass: "12345678",
+            self.wiz1x0_scfg1: "FF",
+            self.wiz1x0_scfg2: "FF",
+            self.wiz1x0_scfg3: "FF",
+        }
+        for widget, sample in line_edit_samples.items():
+            self._set_widget_width_from_sample(widget, sample)
+
+        combo_samples = {
+            self.wiz1x0_baud: "230400",
+            self.wiz1x0_databit: "8-bit",
+            self.wiz1x0_parity: "None",
+            self.wiz1x0_stopbit: "1-bit",
+            self.wiz1x0_flow: "Xon/Xoff",
+        }
+        for widget, sample in combo_samples.items():
+            self._set_widget_width_from_sample(widget, sample, extra_px=40)
+
+        self.gridLayout_wiz1x0_ipfields.setColumnStretch(1, 0)
+        self.gridLayout_wiz1x0_ipfields.setColumnStretch(2, 0)
+        self.gridLayout_wiz1x0_ipfields.setColumnStretch(3, 0)
+        self.gridLayout_wiz1x0_dns.setColumnStretch(1, 0)
+        self.gridLayout_wiz1x0_dns.setColumnStretch(2, 0)
+        self.gridLayout_wiz1x0_misc.setColumnStretch(1, 0)
+        self.gridLayout_wiz1x0_misc.setColumnStretch(2, 0)
+        self.gridLayout_wiz1x0_pack.setColumnStretch(1, 0)
+        self.gridLayout_wiz1x0_pack.setColumnStretch(2, 0)
+
     def _connect_wiz1x0_signals(self):
         """WIZ1x0SR 전용 위젯 시그널 연결 (초기화 시 한 번만 호출)."""
         for rb in (self.wiz1x0_ip_static, self.wiz1x0_ip_dhcp, self.wiz1x0_ip_pppoe):
@@ -3300,6 +3403,29 @@ class WIZWindow(QMainWindow, main_window):
         self.wiz1x0_dns_enable.stateChanged.connect(self._wiz1x0_dns_enable_changed)
         self.wiz1x0_scfg_enable.stateChanged.connect(self._wiz1x0_scfg_enable_changed)
         self.wiz1x0_en_tcppass.stateChanged.connect(self._wiz1x0_tcppass_enable_changed)
+        self.btn_wiz1x0_toggle.toggled.connect(self._toggle_wiz1x0_view)
+
+    def _toggle_wiz1x0_view(self, full_mode: bool):
+        """WIZ1x0SR: Full 세로 모드(checked=True) ↔ 탭 모드 전환."""
+        self.btn_wiz1x0_toggle.setText("⊟ Tabs" if full_mode else "☰ Full")
+        if full_mode:
+            # Tab → Full: 탭에서 꺼내 세로 스크롤 영역에 배치
+            while self.wiz1x0_tabwidget.count():
+                self.wiz1x0_tabwidget.removeTab(0)
+            for w in (self.wiz1x0_col_net, self.wiz1x0_col_mid, self.wiz1x0_col_opt):
+                self.vbox_wiz1x0_full.addWidget(w)
+                w.setVisible(True)
+            self.wiz1x0_tabwidget.setVisible(False)
+            self.wiz1x0_fullscroll.setVisible(True)
+        else:
+            # Full → Tab: col 위젯들을 QTabWidget 탭으로 이동
+            for w in (self.wiz1x0_col_net, self.wiz1x0_col_mid, self.wiz1x0_col_opt):
+                self.vbox_wiz1x0_full.removeWidget(w)
+            self.wiz1x0_tabwidget.addTab(self.wiz1x0_col_net, "Network")
+            self.wiz1x0_tabwidget.addTab(self.wiz1x0_col_mid, "Mode && Serial")
+            self.wiz1x0_tabwidget.addTab(self.wiz1x0_col_opt, "Options")
+            self.wiz1x0_fullscroll.setVisible(False)
+            self.wiz1x0_tabwidget.setVisible(True)
 
     def fill_devinfo_1x0(self, d: dict):
         """WIZ1x0SR board_dict → wiz1x0_tab 전용 위젯 채우기."""
