@@ -115,6 +115,11 @@ gui/wizconfig_gui-bak.ui
 
 # User configuration files (exclude user overrides, keep defaults)
 config/device_search_timing.yaml
+tmp/
+refactored/
+CLAUDE.md
+.mcp.json
+_workspace/
 
 *old*
 *.crt
