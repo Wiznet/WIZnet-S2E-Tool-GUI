@@ -9,8 +9,25 @@ from constants import Opcode, SockState
 from utils import logger
 
 import binascii
+import ipaddress
 import time
 import threading
+
+
+def _parse_fw_response(resp: bytes):
+    """FW 명령 응답 "IP:PORT" 파싱. 실패 시 None 반환."""
+    try:
+        text = resp.decode('utf-8').strip()
+        ip_str, port_str = text.rsplit(':', 1)
+        ipaddress.ip_address(ip_str)   # 유효하지 않으면 ValueError
+        port = int(port_str)
+        if not (1 <= port <= 65535):
+            raise ValueError(f"포트 범위 오류: {port}")
+        return ip_str, port
+    except Exception as e:
+        logger.error(f'[FW-2] FW 응답 파싱 실패: {resp!r} → {e}')
+        return None
+
 
 idle_state = 1
 datasent_state = 2
@@ -59,10 +76,9 @@ class FWUploadThread(QThread):
         self.tcp_sock = None
 
     def setparam(self):
-        self.fd = open(self.bin_filename, "rb")
-        self.data = self.fd.read(-1)
+        with open(self.bin_filename, "rb") as f:
+            self.data = f.read()
         self.curr_ptr = 0
-        self.fd.close()
 
     def myTimer(self):
         self.logger.info('timer1 timeout')
@@ -150,24 +166,25 @@ class FWUploadThread(QThread):
 
         self.sendCmd('FW')
 
+        parsed = None
         if isinstance(self.resp, bytes) and self.resp != b'':
-            resp = self.resp.decode('utf-8')
-            # print('resp', resp)
-            params = resp.split(':')
-            self.logger.info(f'[FW-2] FW 응답 파싱: IP={params[0]}, Port={int(params[1])}')
-            self.serverip = params[0]
-            self.serverport = int(params[1])
-
-            self.uploading_size.emit(3)
+            parsed = _parse_fw_response(self.resp)
+            if parsed is not None:
+                self.serverip, self.serverport = parsed
+                self.logger.info(f'[FW-2] FW 응답 파싱: IP={self.serverip}, Port={self.serverport}')
+                self.uploading_size.emit(3)
+            else:
+                self.logger.error('[FW-2] FAIL: FW 응답 파싱 실패 → 펌웨어 업로드 중단')
+                self.error_flag.emit(-1)
+                self.error_noresponse = -1
         else:
-            params = None
             self.logger.warning('[FW-2] FAIL: FW 명령 4회 시도 모두 응답 없음 → 장치가 펌웨어 모드로 진입하지 않았을 가능성')
             self.error_flag.emit(-1)
             self.error_noresponse = -1
         try:
-            if params is not None:
-                self.logger.info(f'[FW-3] TCPClient 생성: {params[0]}:{params[1]}')
-                self.client = TCPClient(2, params[0], int(params[1]))
+            if parsed is not None:
+                self.logger.info(f'[FW-3] TCPClient 생성: {self.serverip}:{self.serverport}')
+                self.client = TCPClient(2, self.serverip, self.serverport)
         except Exception as e:
             self.logger.error(f'[FW-3] TCPClient 생성 실패: {e}')
             self.error_noresponse = -1
