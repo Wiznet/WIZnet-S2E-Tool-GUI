@@ -15,6 +15,7 @@ exitflag = 0
 # PACKET_SIZE = 1024
 # PACKET_SIZE = 2048
 PACKET_SIZE = 4096
+MAX_REPLY_CHUNKS = 200  # HIGH-03: 비정상 응답 truncation 상한
 
 
 def _sanitize_device_name(raw: bytes) -> str:
@@ -219,6 +220,9 @@ class WIZMSGHandler(QThread):
                         self.searched_data.emit(data)
                         # replylists = data.splitlines()
                         replylists = data.split(b"\r\n")
+                        if len(replylists) > MAX_REPLY_CHUNKS:
+                            self.logger.warning(f"[WIZMsg] 비정상 응답 truncate: {len(replylists)} → {MAX_REPLY_CHUNKS}")
+                            replylists = replylists[:MAX_REPLY_CHUNKS]
                         # print('replylists', replylists)
                         self.getreply = replylists
             else:
@@ -241,6 +245,9 @@ class WIZMSGHandler(QThread):
                                 self.rcv_list.append(data)  # received data backup
                                 # replylists = data.splitlines()
                                 replylists = data.split(b"\r\n")
+                                if len(replylists) > MAX_REPLY_CHUNKS:
+                                    self.logger.warning(f"[WIZMsg] 비정상 응답 truncate: {len(replylists)} → {MAX_REPLY_CHUNKS}")
+                                    replylists = replylists[:MAX_REPLY_CHUNKS]
 
                                 # print('replylists', replylists)
                                 self.getreply = replylists
