@@ -4903,6 +4903,15 @@ class WIZWindow(QMainWindow, main_window):
         )
 
         if fname:
+            basename = fname.split('/')[-1]
+            if 'BOOT' in basename.upper():
+                self.show_msgbox(
+                    "Warning",
+                    f"Cannot upload BOOT firmware file.\n\nSelected file: {basename}\n\nPlease select an APP firmware file only.",
+                    QMessageBox.Warning,
+                )
+                return
+
             self.fw_filename = fname
 
             # get file size
@@ -4951,12 +4960,12 @@ class WIZWindow(QMainWindow, main_window):
         serverip = dst_ip
         # do_ping = subprocess.Popen("ping " + ("-n 1 " if sys.platform.lower()=="win32" else "-c 1 ") + serverip,
         do_ping = subprocess.Popen(
-            "ping "
-            + ("-n 1 " if "win" in sys.platform.lower() else "-c 1 ")
-            + serverip,
+            ["ping", "-n", "1", serverip]
+            if sys.platform == "win32"
+            else ["ping", "-c", "1", serverip],
             stdout=None,
             stderr=None,
-            shell=True,
+            shell=False,
         )
         ping_response = do_ping.wait()
         self.logger.info(ping_response)
@@ -6677,6 +6686,7 @@ class ThreadProgress(QtCore.QThread):
 if __name__ == "__main__":
     # High DPI mode
     # PyQt5 High DPI (일부 환경에서 속성 없을 수 있음)
+    print(f"sys.paltform={sys.platform}")
     if hasattr(Qt, 'AA_EnableHighDpiScaling'):
         QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)  # type: ignore[attr-defined]
     if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
