@@ -15,7 +15,8 @@ exitflag = 0
 # PACKET_SIZE = 1024
 # PACKET_SIZE = 2048
 PACKET_SIZE = 4096
-MAX_REPLY_CHUNKS = 200  # HIGH-03: 비정상 응답 truncation 상한
+MAX_REPLY_CHUNKS = 200      # HIGH-03: 비정상 응답 truncation 상한
+EACH_DEV_LOOP_TIMEOUT = 0.15  # Strategy B: 개별 장치 멀티패킷 수집 루프 타임아웃
 
 
 def _sanitize_device_name(raw: bytes) -> str:
@@ -212,30 +213,42 @@ class WIZMSGHandler(QThread):
             # print('readready value: ', len(readready), readready)
 
             if self.opcode == Opcode.OP_SEARCHALL and not self.presearch:
-                # Search each device
-                for sock in readready:
-                    if sock == self.sock.sock:
-                        data = self.sock.recvfrom()
-                        self.logger.debug(f"Each-search recv: {data}")
-                        self.searched_data.emit(data)
-                        # replylists = data.splitlines()
-                        replylists = data.split(b"\r\n")
-                        if len(replylists) > MAX_REPLY_CHUNKS:
-                            self.logger.warning(f"[WIZMsg] 비정상 응답 truncate: {len(replylists)} → {MAX_REPLY_CHUNKS}")
-                            replylists = replylists[:MAX_REPLY_CHUNKS]
-                        # print('replylists', replylists)
-                        self.getreply = replylists
+                # Strategy A+B: 멀티패킷 장치 지원 — 모든 패킷 누적 후 1회 emit
+                accumulated = b""
+                seen = set()
+                while readready:
+                    for sock in readready:
+                        if sock == self.sock.sock:
+                            data, _ = self.sock.recvfrom()
+                            self.logger.debug(f"Each-search recv: {len(data)}B")
+                            h = hash(data)
+                            if h not in seen:
+                                seen.add(h)
+                                accumulated += data
+                    readready, _, _ = select.select(
+                        self.inputs, self.outputs, self.errors,
+                        EACH_DEV_LOOP_TIMEOUT
+                    )
+                if accumulated:
+                    self.searched_data.emit(accumulated)
+                    replylists = accumulated.split(b"\r\n")
+                    if len(replylists) > MAX_REPLY_CHUNKS:
+                        self.logger.warning(f"[WIZMsg] 비정상 응답 truncate: {len(replylists)} → {MAX_REPLY_CHUNKS}")
+                        replylists = replylists[:MAX_REPLY_CHUNKS]
+                    self.getreply = replylists
             else:
                 # Pre search
+                per_addr_buf = {}   # Strategy C: addr → accumulated bytes
+                per_addr_seen = {}  # Strategy C: addr → hash set (per-source dedup)
                 while True:
                     self.iter += 1
                     # sys.stdout.write("iter count: %r " % self.iter)
                     for sock in readready:
                         if sock == self.sock.sock:
-                            data = self.sock.recvfrom()
+                            data, addr = self.sock.recvfrom()
                             if t_send is not None:
                                 self.logger.info(f"[TIMING] iter={self.iter} recv #{len(self.rcv_list)+1} at +{time.time()-t_send:.3f}s")
-                            self.logger.debug(f"Pre-search recv: {data}")
+                            self.logger.debug(f"Pre-search recv: {len(data)}B from {addr}")
                             # self.searched_data.emit(data)
 
                             # check if data reduplication
@@ -243,42 +256,21 @@ class WIZMSGHandler(QThread):
                                 replylists = []
                             else:
                                 self.rcv_list.append(data)  # received data backup
-                                # replylists = data.splitlines()
                                 replylists = data.split(b"\r\n")
                                 if len(replylists) > MAX_REPLY_CHUNKS:
                                     self.logger.warning(f"[WIZMsg] 비정상 응답 truncate: {len(replylists)} → {MAX_REPLY_CHUNKS}")
                                     replylists = replylists[:MAX_REPLY_CHUNKS]
-
-                                # print('replylists', replylists)
                                 self.getreply = replylists
 
                             if self.opcode == Opcode.OP_SEARCHALL:
-                                try:
-                                    # Parse one device's packet into a dict first,
-                                    # then append all fields atomically to keep lists aligned.
-                                    pkt = {}
-                                    for i in range(0, len(replylists)):
-                                        line = replylists[i]
-                                        if len(line) < 2:
-                                            continue
-                                        if line[:2] == b"MA":
-                                            continue  # raw binary MAC – skip
-                                        try:
-                                            cmd = line[:2].decode('ascii')
-                                        except Exception:
-                                            continue
-                                        pkt[cmd] = line[2:]
-
-                                    if 'MC' in pkt and self.check_parameter(b"MC" + pkt['MC']):
-                                        self.mac_list.append(pkt['MC'])
-                                        self.mn_list.append(_sanitize_device_name(pkt.get('MN', b'')))
-                                        self.vr_list.append(pkt.get('VR', b''))
-                                        self.mode_list.append(pkt.get('OP', b''))
-                                        self.st_list.append(pkt.get('ST', b''))
-                                except Exception as e:
-                                    self.logger.error(
-                                        "[ERROR] WIZMSGHandler OP_SEARCHALL: %r" % e
-                                    )
+                                # Strategy C: per-addr 누적 — 파싱은 루프 종료 후 일괄 처리
+                                h = hash(data)
+                                if addr not in per_addr_buf:
+                                    per_addr_buf[addr] = b""
+                                    per_addr_seen[addr] = set()
+                                if h not in per_addr_seen[addr]:
+                                    per_addr_seen[addr].add(h)
+                                    per_addr_buf[addr] += data
                             elif self.opcode == Opcode.OP_FWUP:
                                 for i in range(0, len(replylists)):
                                     if b"MA" in replylists[i][:2]:
@@ -312,6 +304,33 @@ class WIZMSGHandler(QThread):
                         break
 
                 if self.opcode == Opcode.OP_SEARCHALL:
+                    # Strategy C: 루프 종료 후 addr별 누적 데이터 파싱 → mac_list 구성
+                    for _addr, _accumulated in per_addr_buf.items():
+                        try:
+                            _replylists = _accumulated.split(b"\r\n")
+                            if len(_replylists) > MAX_REPLY_CHUNKS:
+                                self.logger.warning(f"[WIZMsg] 비정상 응답 truncate: {len(_replylists)} → {MAX_REPLY_CHUNKS}")
+                                _replylists = _replylists[:MAX_REPLY_CHUNKS]
+                            pkt = {}
+                            for line in _replylists:
+                                if len(line) < 2:
+                                    continue
+                                if line[:2] == b"MA":
+                                    continue
+                                try:
+                                    cmd = line[:2].decode('ascii')
+                                except Exception:
+                                    continue
+                                pkt[cmd] = line[2:]
+                            if 'MC' in pkt and self.check_parameter(b"MC" + pkt['MC']):
+                                self.mac_list.append(pkt['MC'])
+                                self.mn_list.append(_sanitize_device_name(pkt.get('MN', b'')))
+                                self.vr_list.append(pkt.get('VR', b''))
+                                self.mode_list.append(pkt.get('OP', b''))
+                                self.st_list.append(pkt.get('ST', b''))
+                        except Exception as e:
+                            self.logger.error("[ERROR] WIZMSGHandler OP_SEARCHALL: %r" % e)
+
                     if t_send is not None:
                         t_loop_break = time.time()
                         self.logger.info(f"[TIMING] loop broke at +{t_loop_break-t_send:.3f}s, {len(self.mac_list)} devices found")
@@ -326,9 +345,7 @@ class WIZMSGHandler(QThread):
                         if t_send is not None:
                             self.logger.warning(f"[TIMING] EXPERIMENTAL: skipped msleep({WIZMSGHandler.emit_stabilization_ms}) → emitting result immediately")
 
-                    # print('Search device:', self.mac_list)
                     self.search_result.emit(len(self.mac_list))
-                    # return len(self.mac_list)
                 if self.opcode == Opcode.OP_SETCOMMAND:
                     self.msleep(500)
                     if len(self.rcv_list) > 0:
@@ -425,7 +442,7 @@ class DataRefresh(QThread):
                     self.logger.info(f"DataRefresh: {checknum}")
 
                     if sock == self.sock.sock:
-                        data = self.sock.recvfrom()
+                        data, _ = self.sock.recvfrom()
                         self.rcv_list.append(data)  # 수신 데이터 저장
                         # replylists = data.splitlines()
                         # replylists = data.split(b"\r\n")

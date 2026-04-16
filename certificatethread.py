@@ -236,7 +236,7 @@ class certificatethread(QtCore.QThread):
 
                         for sock in readready:
                             if sock == self.sock.sock:
-                                data = self.sock.recvfrom()
+                                data, _ = self.sock.recvfrom()
                                 self.msleep(10)
                                 replylists = data.split(DELIMITER.encode())
                                 if len(replylists) > MAX_REPLY_CHUNKS:
