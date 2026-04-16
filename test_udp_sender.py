@@ -84,6 +84,26 @@ CERT_CMDS = (
 
 FULL_RESPONSE = BASE_CMDS + MQTT_CMDS + CERT_CMDS
 
+# 시나리오 5용: Device B (WIZ750SR, 소형, 단일 패킷, 다른 MAC)
+BASE_CMDS_B = (
+    b"MA\x00\x08\xdc\xaa\xbb\xcc\r\n"
+    b"MC00:08:DC:AA:BB:CC\r\n"
+    b"MN WIZ750SR\r\n"
+    b"VR 1.5.0\r\n"
+    b"ST 0\r\n"
+    b"OP 0\r\n"
+    b"IM 0\r\n"
+    b"LI 192.168.1.200\r\n"
+    b"SM 255.255.255.0\r\n"
+    b"GW 192.168.1.1\r\n"
+    b"LP 5000\r\n"
+    b"BR 9\r\n"
+    b"DB 0\r\n"
+    b"PR 0\r\n"
+    b"SB 0\r\n"
+    b"FL 0\r\n"
+)
+
 
 def send_chunks(sock, data, label=""):
     """데이터를 PACKET_LIMIT 크기로 분할 전송. 각 청크의 SHA256 출력."""
@@ -129,15 +149,58 @@ def scenario_3(sock):
 
 
 def scenario_4(sock):
-    """시나리오 4: DoS 패킷 — \r\n 구분자 폭탄 (HIGH-03)"""
-    print("\n━━ 시나리오 4: DoS 패킷 — \\r\\n 구분자 폭탄 ━━")
-    # recvfrom(4096) 캡핑 → 최대 4096B → 최대 ~2048 청크
-    # MAX_REPLY_CHUNKS=200 이면 truncation 로그 출력되어야 함
-    dos_payload = b"\r\n" * 2000  # 4000B, 2000개 구분자
-    print(f"  크기: {len(dos_payload)}B, 예상 split 결과: ~2001개 항목")
+    """시나리오 4: DoS 패킷 — 더미 커맨드 폭탄 (HIGH-03)
+    300개 커맨드 라인을 한 패킷에 담아 전송.
+    MAX_REPLY_CHUNKS=200 이면 truncation 로그 출력되어야 함.
+    """
+    print("\n━━ 시나리오 4: DoS 패킷 — 더미 커맨드 폭탄 ━━")
+    # 'XX00000\r\n' (9B) × 300 = 2700B, split 결과 301개 항목 → MAX_REPLY_CHUNKS(200) 초과
+    line = b"ZZ00000\r\n"
+    dos_payload = line * 300
+    chunks = dos_payload.split(b"\r\n")
+    print(f"  크기: {len(dos_payload)}B  커맨드 라인: 300개  split 항목: {len(chunks)}개")
     print(f"  → MAX_REPLY_CHUNKS=200 이면 truncation 경고 기대")
-    sock.sendto(dos_payload, DEST)
+    sent = sock.sendto(dos_payload, DEST)
+    print(f"  전송: {sent}B")
     return dos_payload
+
+
+def scenario_5(_sock):
+    """시나리오 5: 멀티 장치 브로드캐스트 — 인터리빙 응답
+    Device A (WIZ510SSL, 대형): FULL_RESPONSE → 2패킷
+    Device B (WIZ750SR, 소형): BASE_CMDS_B  → 1패킷
+    전송 순서: A1 → B1 → A2  (실제 네트워크 인터리빙 시뮬레이션)
+    두 소켓 = 두 개의 출처 포트 → 수신 측에서 addr로 장치 구별 가능
+    """
+    print("\n━━ 시나리오 5: 멀티 장치 브로드캐스트 응답 (인터리빙) ━━")
+    sock_a = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock_b = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        chunks_a = [FULL_RESPONSE[i:i+PACKET_LIMIT]
+                    for i in range(0, len(FULL_RESPONSE), PACKET_LIMIT)]
+        print(f"  Device A (WIZ510SSL) FULL_RESPONSE={len(FULL_RESPONSE)}B → {len(chunks_a)}패킷")
+        print(f"  Device B (WIZ750SR)  BASE_CMDS_B={len(BASE_CMDS_B)}B → 1패킷")
+        print(f"  전송 순서: A1 → B1 → A2  (인터리빙)")
+
+        h = hashlib.md5(chunks_a[0]).hexdigest()[:8]
+        print(f"  [A 패킷 1/{len(chunks_a)}] {len(chunks_a[0])}B  md5={h}")
+        sock_a.sendto(chunks_a[0], DEST)
+        time.sleep(INTER_PACKET_DELAY)
+
+        h = hashlib.md5(BASE_CMDS_B).hexdigest()[:8]
+        print(f"  [B 패킷 1/1] {len(BASE_CMDS_B)}B  md5={h}")
+        sock_b.sendto(BASE_CMDS_B, DEST)
+        time.sleep(INTER_PACKET_DELAY)
+
+        h = hashlib.md5(chunks_a[1]).hexdigest()[:8]
+        print(f"  [A 패킷 2/{len(chunks_a)}] {len(chunks_a[1])}B  md5={h}")
+        sock_a.sendto(chunks_a[1], DEST)
+
+        print("  전송 완료")
+    finally:
+        time.sleep(0.1)
+        sock_a.close()
+        sock_b.close()
 
 
 # ── 메인 ────────────────────────────────────────────────────────
@@ -156,14 +219,17 @@ def main():
             scenario_3(sock)
         elif mode == "4":
             scenario_4(sock)
+        elif mode == "5":
+            scenario_5(sock)
         elif mode == "all":
-            for fn in [scenario_1, scenario_2, scenario_3, scenario_4]:
+            for fn in [scenario_1, scenario_2, scenario_3, scenario_4, scenario_5]:
                 fn(sock)
                 print("  (다음 시나리오까지 1.5초 대기)")
                 time.sleep(1.5)
         else:
             print(f"알 수 없는 시나리오: {mode}")
     finally:
+        time.sleep(0.1)  # Windows UDP 플러시 대기 (단일 패킷 즉시 close 시 유실 방지)
         sock.close()
 
     print("\n[송신] 완료")
