@@ -5301,8 +5301,7 @@ class WIZWindow(QMainWindow, main_window):
         """)
         layout.addWidget(browser)
 
-        # 버전 상태 레이블
-        ver_label = QLabel("버전 확인 중...")
+        ver_label = QLabel("Checking for updates...")
         ver_label.setStyleSheet("color: gray; font-size: 12px; padding: 2px 0;")
         layout.addWidget(ver_label)
 
@@ -5310,21 +5309,20 @@ class WIZWindow(QMainWindow, main_window):
         buttons.accepted.connect(dialog.accept)
         layout.addWidget(buttons)
 
-        # 백그라운드 버전 체크
         self._ver_thread = VersionCheckThread()
 
         def _on_version(latest):
             if not latest:
-                ver_label.setText("버전 확인 실패 (네트워크 오류)")
+                ver_label.setText("Version check failed (network error)")
                 ver_label.setStyleSheet("color: gray; font-size: 12px;")
             elif latest.lstrip('vV') == VERSION.lstrip('vV'):
-                ver_label.setText("✓ 최신 버전입니다")
+                ver_label.setText("✓ You are up to date")
                 ver_label.setStyleSheet("color: green; font-size: 12px;")
             else:
                 ver_label.setText(
-                    f"새 버전 {latest} 사용 가능 → "
+                    f"{latest} is available. "
                     f"<a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/releases'>"
-                    f"릴리즈 페이지</a>"
+                    f"Download</a>"
                 )
                 ver_label.setTextFormat(QtCore.Qt.RichText)
                 ver_label.setOpenExternalLinks(True)
