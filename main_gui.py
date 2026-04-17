@@ -5266,40 +5266,74 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.error(e)
 
     def about_info(self):
-        msgbox = QMessageBox(self)
-        msgbox.setTextFormat(QtCore.Qt.TextFormat.RichText)
-        text = f"""
-        <html>
-        <head>
-        <style>
-            body {{
-                'font-family': 'Arial, sans-serif';
-                'font-size': '14px';
-            }}
-            p {{
-                "font-size": "16px";
-                "font-size": "black";
-            }}
-            {{
-                "margin-bottom": "4px";
-            }}
-        </style>
-        </head>
-        <body>
-            <h2>About WIZnet-S2E-Tool-GUI</h2>
-            <p>This is Configuration Tool for WIZnet serial to ethernet devices.</p>
+        from PyQt5.QtWidgets import QDialog, QVBoxLayout, QTextBrowser, QDialogButtonBox, QLabel
+        from PyQt5.QtCore import QUrl
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("About WIZnet-S2E-Tool-GUI")
+        dialog.setFixedWidth(420)
+
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(20, 16, 20, 12)
+
+        browser = QTextBrowser()
+        browser.setOpenExternalLinks(True)
+        browser.setFrameShape(QtWidgets.QFrame.NoFrame)
+        browser.setReadOnly(True)
+        browser.setHtml(f"""
+        <html><body style="font-family:Arial,sans-serif; font-size:13px;">
+            <h2 style="margin-bottom:4px;">About WIZnet-S2E-Tool-GUI</h2>
+            <p>Configuration Tool for WIZnet serial to ethernet devices.</p>
             <p>Version: <b>{VERSION}</b></p>
             <p>Author: WIZnet</p>
-            <p>Github: <a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI'>Github repository</a></p>
-            <h3>Web site</h3>
+            <p>Github:&nbsp;
+                <a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI'>Repository</a>
+                &nbsp;|&nbsp;
+                <a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/releases'>Release</a>
+            </p>
+            <h3 style="margin-bottom:2px;">Web site</h3>
             <p><a href='http://www.wiznet.io/'>WIZnet Official homepage</a></p>
             <p><a href='https://forum.wiznet.io/'>WIZnet Forum</a></p>
             <p><a href='https://docs.wiznet.io/'>WIZnet Document</a></p>
-            <br><br>{datetime.datetime.now().year} WIZnet Co., Ltd.</font><br>
-        </body>
-        </html>
-        """
-        msgbox.about(self, "About WIZnet-S2E-Tool-GUI", text)
+            <br><small>{datetime.datetime.now().year} WIZnet Co., Ltd.</small>
+        </body></html>
+        """)
+        layout.addWidget(browser)
+
+        # 버전 상태 레이블
+        ver_label = QLabel("버전 확인 중...")
+        ver_label.setStyleSheet("color: gray; font-size: 12px; padding: 2px 0;")
+        layout.addWidget(ver_label)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok)
+        buttons.accepted.connect(dialog.accept)
+        layout.addWidget(buttons)
+
+        # 백그라운드 버전 체크
+        self._ver_thread = VersionCheckThread()
+
+        def _on_version(latest):
+            if not latest:
+                ver_label.setText("버전 확인 실패 (네트워크 오류)")
+                ver_label.setStyleSheet("color: gray; font-size: 12px;")
+            elif latest.lstrip('vV') == VERSION.lstrip('vV'):
+                ver_label.setText("✓ 최신 버전입니다")
+                ver_label.setStyleSheet("color: green; font-size: 12px;")
+            else:
+                ver_label.setText(
+                    f"새 버전 {latest} 사용 가능 → "
+                    f"<a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/releases'>"
+                    f"릴리즈 페이지</a>"
+                )
+                ver_label.setTextFormat(QtCore.Qt.RichText)
+                ver_label.setOpenExternalLinks(True)
+                ver_label.setStyleSheet("color: #c07000; font-size: 12px;")
+
+        self._ver_thread.finished.connect(_on_version)
+        self._ver_thread.start()
+
+        dialog.exec_()
+        self._ver_thread.quit()
 
     def menu_document(self):
         self.logger.info("Menu: documentation")
@@ -6668,6 +6702,17 @@ class WIZWindow(QMainWindow, main_window):
             if hasattr(self, 'detected_list') and i < len(self.detected_list):
                 detected_item = QTableWidgetItem("Yes" if self.detected_list[i] else "No")
                 self.list_device.setItem(i, 4, detected_item)
+
+
+class VersionCheckThread(QtCore.QThread):
+    finished = QtCore.pyqtSignal(str)
+
+    def run(self):
+        try:
+            latest = get_latest_release_version("Wiznet", "WIZnet-S2E-Tool-GUI")
+            self.finished.emit(latest or "")
+        except Exception:
+            self.finished.emit("")
 
 
 class ThreadProgress(QtCore.QThread):
