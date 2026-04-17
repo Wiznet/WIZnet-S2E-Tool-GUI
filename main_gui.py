@@ -6358,6 +6358,13 @@ class WIZWindow(QMainWindow, main_window):
 
     # ========== CSV 저장/불러오기 ==========
 
+    @staticmethod
+    def _csv_safe(value: str) -> str:
+        s = str(value).strip()
+        if s and s[0] in ('=', '+', '-', '@', '\t', '\r', '\n'):
+            return "'" + s
+        return s
+
     def save_searched_results_to_csv(self):
         """검색 결과를 CSV 파일로 저장"""
         # 검색 결과 확인
@@ -6417,10 +6424,10 @@ class WIZWindow(QMainWindow, main_window):
                     ip_mode = 'DHCP' if profile.get('IM', '0') == '1' else 'Static'
                     local_port = profile.get('LP', '')
 
-                    writer.writerow([
+                    writer.writerow([self._csv_safe(x) for x in [
                         mac, name, version, status, op_mode, detected,
                         ip_addr, subnet, gateway, dns, ip_mode, local_port
-                    ])
+                    ]])
 
             # 저장 성공 시 MRU 업데이트 (Save: 초기화)
             self.csv_mru_manager.add_saved_file(file_path, memo="")

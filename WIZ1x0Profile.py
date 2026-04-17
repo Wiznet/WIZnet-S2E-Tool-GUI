@@ -285,7 +285,11 @@ def build_sett(d: dict) -> bytes:
 
     scfg      = int(d.get('scfg', 0))
     scfg_hex  = d.get('scfg_str', '000000')
-    scfg_b    = bytes.fromhex(scfg_hex.zfill(6))[:3]
+    try:
+        scfg_b = bytes.fromhex(scfg_hex.zfill(6))[:3]
+    except ValueError:
+        logger.warning(f"[build_sett] scfg_str 오류: {scfg_hex!r}, 기본값 사용")
+        scfg_b = b'\x00\x00\x00'
 
     pppoe_id_b   = str_to_cstr(d.get('pppoe_id', ''), 32)
     pppoe_pass_b = str_to_cstr(d.get('pppoe_pass', ''), 32)
