@@ -5281,7 +5281,9 @@ class WIZWindow(QMainWindow, main_window):
         browser.setOpenExternalLinks(True)
         browser.setFrameShape(QtWidgets.QFrame.NoFrame)
         browser.setReadOnly(True)
-        browser.setStyleSheet("background: transparent;")
+        browser.setStyleSheet(
+            "background: white; border: 1px solid #c0c0c0; border-radius: 4px; padding: 8px;"
+        )
         browser.document().setDocumentMargin(0)
         gh = "https://github.com/Wiznet/WIZnet-S2E-Tool-GUI"
         browser.setHtml(
