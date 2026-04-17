@@ -5274,31 +5274,31 @@ class WIZWindow(QMainWindow, main_window):
         dialog.setFixedWidth(420)
 
         layout = QVBoxLayout(dialog)
-        layout.setContentsMargins(20, 16, 20, 12)
+        layout.setContentsMargins(20, 14, 20, 10)
+        layout.setSpacing(6)
 
         browser = QTextBrowser()
         browser.setOpenExternalLinks(True)
         browser.setFrameShape(QtWidgets.QFrame.NoFrame)
         browser.setReadOnly(True)
         browser.setStyleSheet("background: transparent;")
-        browser.setHtml(f"""
-        <html><body style="font-family:Arial,sans-serif; font-size:13px;">
-            <h2 style="margin-bottom:4px;">About WIZnet-S2E-Tool-GUI</h2>
-            <p>Configuration Tool for WIZnet serial to ethernet devices.</p>
-            <p>Version: <b>{VERSION}</b></p>
-            <p>Author: WIZnet</p>
-            <p>Github:&nbsp;
-                <a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI'>Repository</a>
-                &nbsp;|&nbsp;
-                <a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/releases'>Release</a>
-            </p>
-            <h3 style="margin-bottom:2px;">Web site</h3>
-            <p><a href='http://www.wiznet.io/'>WIZnet Official homepage</a></p>
-            <p><a href='https://forum.wiznet.io/'>WIZnet Forum</a></p>
-            <p><a href='https://docs.wiznet.io/'>WIZnet Document</a></p>
-            <br><small>{datetime.datetime.now().year} WIZnet Co., Ltd.</small>
-        </body></html>
-        """)
+        browser.document().setDocumentMargin(0)
+        gh = "https://github.com/Wiznet/WIZnet-S2E-Tool-GUI"
+        browser.setHtml(
+            f"<html><body style='font-family:Arial,sans-serif;font-size:13px;margin:0;padding:0;'>"
+            f"<h2 style='margin:0 0 6px 0;'>About WIZnet-S2E-Tool-GUI</h2>"
+            f"<p style='margin:2px 0;'>Configuration Tool for WIZnet serial to ethernet devices.</p>"
+            f"<p style='margin:2px 0;'>Version: <b>{VERSION}</b></p>"
+            f"<p style='margin:2px 0;'>Author: WIZnet</p>"
+            f"<p style='margin:2px 0;'>Github: <a href='{gh}'>Repository</a>"
+            f" &nbsp;|&nbsp; <a href='{gh}/releases'>Release</a></p>"
+            f"<p style='margin:8px 0 2px 0;'><b>Web site</b></p>"
+            f"<p style='margin:2px 0;'><a href='http://www.wiznet.io/'>WIZnet Official homepage</a></p>"
+            f"<p style='margin:2px 0;'><a href='https://forum.wiznet.io/'>WIZnet Forum</a></p>"
+            f"<p style='margin:2px 0;'><a href='https://docs.wiznet.io/'>WIZnet Document</a></p>"
+            f"<p style='margin:8px 0 0 0;'><small>{datetime.datetime.now().year} WIZnet Co., Ltd.</small></p>"
+            f"</body></html>"
+        )
         layout.addWidget(browser)
 
         ver_label = QLabel("Checking for updates...")
