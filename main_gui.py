@@ -70,6 +70,9 @@ import ifaddr
 # CSV MRU Manager
 from csv_mru_manager import CSVMRUManager
 
+# Terminal utility
+from terminal.terminal_panel import TerminalPanel
+
 
 SECURITY_TWO_PORT_DEV = ("W55RP20-S2E-2CH",)
 W55RP20_FAMILY = ("W55RP20-S2E", "W55RP20-S2E-2CH")
@@ -716,6 +719,26 @@ class WIZWindow(QMainWindow, main_window):
             self.combobox_net_interface.setCurrentIndex(0)
 
         self.cert_object_config()
+
+        # ── 터미널 패널 초기화 ──────────────────────────────────
+        self._terminal_panel = TerminalPanel(self)
+        self.addDockWidget(Qt.RightDockWidgetArea, self._terminal_panel)
+        self._terminal_panel.hide()
+
+        # 툴바 버튼 (터미널 토글)
+        self._toolbar = self.addToolBar('터미널')
+        self._toolbar.setMovable(False)
+        self._act_terminal = QAction('🖥 터미널', self)
+        self._act_terminal.setCheckable(True)
+        self._act_terminal.setToolTip('터미널 패널 열기/닫기')
+        self._act_terminal.triggered.connect(self._toggle_terminal)
+        self._toolbar.addAction(self._act_terminal)
+
+        # 장치 목록 우클릭 메뉴
+        self.list_device.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.list_device.customContextMenuRequested.connect(
+            self._device_list_context_menu
+        )
 
     @funclog(logger)
     def init_ui_object(self):
@@ -6703,6 +6726,108 @@ class WIZWindow(QMainWindow, main_window):
             if hasattr(self, 'detected_list') and i < len(self.detected_list):
                 detected_item = QTableWidgetItem("Yes" if self.detected_list[i] else "No")
                 self.list_device.setItem(i, 4, detected_item)
+
+    # ── 터미널 패널 ─────────────────────────────────────────────
+
+    def _toggle_terminal(self, checked: bool):
+        if checked:
+            self._terminal_panel.show()
+        else:
+            self._terminal_panel.hide()
+
+    def _device_list_context_menu(self, pos):
+        items = self.list_device.selectedItems()
+        if not items:
+            return
+        menu = QMenu(self)
+        act_terminal = menu.addAction('🖥 터미널로 열기')
+        action = menu.exec_(self.list_device.viewport().mapToGlobal(pos))
+        if action == act_terminal:
+            self._open_device_in_terminal()
+
+    def _open_device_in_terminal(self):
+        mac_item = next(
+            (item for item in self.list_device.selectedItems() if item.column() == 0),
+            None,
+        )
+        if not mac_item:
+            return
+        mac = mac_item.text()
+        profile = self.dev_profile.get(mac, {})
+        if not profile:
+            return
+        device_info = self._get_device_info_for_terminal(profile)
+        active = [t for t in (
+            self._terminal_panel.tab_udp,
+            self._terminal_panel.tab_tcpc,
+            self._terminal_panel.tab_tcps,
+            self._terminal_panel.tab_serial,
+        ) if t._connected]
+        if active:
+            QMessageBox.information(
+                self, '터미널',
+                '연결 중인 탭이 있어 자동 채우기가 생략됩니다.\n'
+                '연결 해제 후 다시 시도하세요.',
+            )
+        else:
+            self._terminal_panel.fill_from_device(device_info)
+        self._terminal_panel.show()
+        self._act_terminal.setChecked(True)
+
+    def _get_device_info_for_terminal(self, profile: dict) -> dict:
+        """dev_profile 항목 → terminal fill_from_device() 용 dict 변환."""
+        PARITY_IDX = {0: 'None', 1: 'Odd', 2: 'Even'}
+        STOPBITS_IDX = {0: '1', 1: '2'}
+        OP_MODE_MAP = {
+            '0': 'TCP Client',
+            '1': 'TCP Server',
+            '2': 'TCP Client',   # Mixed → Client 로 처리
+            '3': 'UDP',
+        }
+
+        if profile.get('_proto') == 'wiz1x0':
+            udp_on = bool(profile.get('udp', 0))
+            bserver = profile.get('bserver', 0)
+            if udp_on:
+                op_mode = 'UDP'
+            elif bserver == 2:
+                op_mode = 'TCP Server'
+            else:
+                op_mode = 'TCP Client'
+            return {
+                'ip':       profile.get('ip', ''),
+                'port':     profile.get('myport', 5000),
+                'op_mode':  op_mode,
+                'baudrate': profile.get('speed_bps', 9600),
+                'databits': profile.get('databit', 8),
+                'parity':   profile.get('parity_str', 'None'),
+                'stopbits': '1',
+            }
+
+        op_str = profile.get('OP', '1')
+        op_mode = OP_MODE_MAP.get(op_str, 'TCP Server')
+
+        br_idx = int(profile.get('BR', 6))
+        baudrate_str = BAUDRATE_BASE[br_idx] if br_idx < len(BAUDRATE_BASE) else '9600'
+
+        db_idx = int(profile.get('DB', 1) if profile.get('DB', '1') else 1)
+        databits = 7 if db_idx == 0 else 8
+
+        pr_idx = int(profile.get('PR', 0) if profile.get('PR', '0') else 0)
+        parity = PARITY_IDX.get(pr_idx, 'None')
+
+        sb_idx = int(profile.get('SB', 0) if profile.get('SB', '0') else 0)
+        stopbits = STOPBITS_IDX.get(sb_idx, '1')
+
+        return {
+            'ip':       profile.get('LI', ''),
+            'port':     int(profile.get('LP', 5000) or 5000),
+            'op_mode':  op_mode,
+            'baudrate': int(baudrate_str),
+            'databits': databits,
+            'parity':   parity,
+            'stopbits': stopbits,
+        }
 
 
 class VersionCheckThread(QtCore.QThread):
