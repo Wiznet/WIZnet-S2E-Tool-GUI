@@ -1,15 +1,16 @@
 """
 terminal/protocol_tabs.py
-4개 프로토콜 탭 위젯: UDP / TCP Client / TCP Server / Serial.
-각 탭은 연결 설정 + ReceiveDisplay + 송신 영역 으로 구성된다.
+Protocol tab widgets: UDP / TCP Client / TCP Server / Serial.
+Each tab has connection settings + ReceiveDisplay + send area.
 """
 
 from collections import deque
+import socket
 
-from PyQt5.QtCore import QTimer, Qt, pyqtSignal
+from PyQt5.QtCore import QTimer, pyqtSignal
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import (
-    QCheckBox, QComboBox, QFormLayout, QGroupBox, QHBoxLayout,
+    QCheckBox, QComboBox, QGroupBox, QHBoxLayout,
     QLabel, QLineEdit, QMessageBox, QPushButton, QShortcut,
     QSizePolicy, QSpinBox, QTextEdit, QVBoxLayout, QWidget,
 )
@@ -23,8 +24,8 @@ from .receive_display import ReceiveDisplay
 LINE_ENDINGS = ['None', '\\r', '\\n', '\\r\\n']
 LINE_ENDING_BYTES = {
     'None': b'',
-    '\\r':  b'\r',
-    '\\n':  b'\n',
+    '\\r': b'\r',
+    '\\n': b'\n',
     '\\r\\n': b'\r\n',
 }
 
@@ -33,14 +34,10 @@ QUICK_CONN_MAX = 5
 
 
 # ──────────────────────────────────────────────────────────────
-# 공통 송신 위젯
+# Send widget
 # ──────────────────────────────────────────────────────────────
 
 class SendWidget(QWidget):
-    """
-    송신 입력창 + Escape 토글 + Line Ending + 주기 전송 + 히스토리.
-    send_data(bytes) 시그널로 상위에 전달.
-    """
     send_data = pyqtSignal(bytes)
 
     def __init__(self, parent=None):
@@ -56,30 +53,28 @@ class SendWidget(QWidget):
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.setSpacing(2)
 
-        # 입력창
         self.input = QTextEdit()
         self.input.setFixedHeight(56)
-        self.input.setPlaceholderText('메시지 입력 — Ctrl+Enter: 전송, Ctrl+↑/↓: 히스토리')
+        self.input.setPlaceholderText('Input — Ctrl+Enter: Send, Ctrl+↑/↓: History')
         self.input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         vbox.addWidget(self.input)
 
-        # 옵션 행
         opts = QHBoxLayout()
         opts.setSpacing(6)
 
-        self.chk_escape = QCheckBox('Escape 해석')
+        self.chk_escape = QCheckBox('Escape')
         self.chk_escape.setChecked(True)
-        self.chk_escape.setToolTip(r'\\r\\n \\xHH 등을 실제 바이트로 변환')
+        self.chk_escape.setToolTip(r'Interpret \\r \\n \\xHH escape sequences')
         opts.addWidget(self.chk_escape)
 
-        opts.addWidget(QLabel('줄 끝:'))
+        opts.addWidget(QLabel('Line End:'))
         self.cmb_le = QComboBox()
         self.cmb_le.addItems(LINE_ENDINGS)
         self.cmb_le.setCurrentText('\\r\\n')
         self.cmb_le.setFixedWidth(70)
         opts.addWidget(self.cmb_le)
 
-        self.chk_periodic = QCheckBox('주기 전송')
+        self.chk_periodic = QCheckBox('Periodic')
         self.chk_periodic.toggled.connect(self._on_periodic_toggled)
         opts.addWidget(self.chk_periodic)
 
@@ -93,16 +88,16 @@ class SendWidget(QWidget):
 
         opts.addStretch()
 
-        self.btn_send = QPushButton('전송 [Ctrl+↵]')
-        self.btn_send.setFixedWidth(100)
+        self.btn_send = QPushButton('Send')
+        self.btn_send.setFixedWidth(70)
+        self.btn_send.setToolTip('Send (Ctrl+Enter)')
         self.btn_send.clicked.connect(self._send_once)
         opts.addWidget(self.btn_send)
 
         vbox.addLayout(opts)
 
-        # 단축키
         QShortcut(QKeySequence('Ctrl+Return'), self, self._send_once)
-        QShortcut(QKeySequence('Ctrl+Up'),   self, self._history_prev)
+        QShortcut(QKeySequence('Ctrl+Up'), self, self._history_prev)
         QShortcut(QKeySequence('Ctrl+Down'), self, self._history_next)
 
     def _build_payload(self) -> bytes:
@@ -156,7 +151,7 @@ class SendWidget(QWidget):
 
 
 # ──────────────────────────────────────────────────────────────
-# 기본 탭 (공통 구조)
+# Base tab
 # ──────────────────────────────────────────────────────────────
 
 class BaseProtocolTab(QWidget):
@@ -174,16 +169,16 @@ class BaseProtocolTab(QWidget):
         self._vbox.setContentsMargins(4, 4, 4, 4)
         self._vbox.setSpacing(4)
 
-        # 연결 설정 그룹 (서브클래스가 채움)
-        self._conn_group = QGroupBox('연결 설정')
-        self._conn_form = QFormLayout(self._conn_group)
+        self._conn_group = QGroupBox('Connection')
+        self._conn_group.setMaximumHeight(100)
+        self._conn_vbox = QVBoxLayout(self._conn_group)
+        self._conn_vbox.setContentsMargins(6, 4, 6, 4)
+        self._conn_vbox.setSpacing(3)
         self._vbox.addWidget(self._conn_group)
 
-        # 수신 표시
         self.display = ReceiveDisplay()
         self._vbox.addWidget(self.display, stretch=1)
 
-        # 송신
         self.send_widget = SendWidget()
         self.send_widget.send_data.connect(self._on_send)
         self._vbox.addWidget(self.send_widget)
@@ -210,37 +205,40 @@ class BaseProtocolTab(QWidget):
 
 
 # ──────────────────────────────────────────────────────────────
-# UDP 탭
+# UDP tab
 # ──────────────────────────────────────────────────────────────
 
 class UDPTab(BaseProtocolTab):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._conn_group.setTitle('UDP 설정')
+        self._conn_group.setTitle('UDP')
         self._add_fields()
-        self._add_conn_buttons()
 
     def _add_fields(self):
+        row = QHBoxLayout()
+        row.setSpacing(6)
+        row.addWidget(QLabel('Remote IP/Port:'))
         self.inp_remote_ip = QLineEdit('192.168.0.100')
-        self._conn_form.addRow('Remote IP:', self.inp_remote_ip)
-
+        self.inp_remote_ip.setFixedWidth(130)
+        row.addWidget(self.inp_remote_ip)
+        row.addWidget(QLabel(':'))
         self.spn_remote_port = QSpinBox()
         self.spn_remote_port.setRange(1, 65535)
         self.spn_remote_port.setValue(5000)
-        self._conn_form.addRow('Remote Port:', self.spn_remote_port)
-
+        self.spn_remote_port.setFixedWidth(72)
+        row.addWidget(self.spn_remote_port)
+        row.addWidget(QLabel('Local:'))
         self.spn_local_port = QSpinBox()
         self.spn_local_port.setRange(0, 65535)
         self.spn_local_port.setValue(0)
-        self.spn_local_port.setSpecialValueText('자동')
-        self._conn_form.addRow('Local Port (수신):', self.spn_local_port)
-
-    def _add_conn_buttons(self):
-        row = QHBoxLayout()
-        self.btn_conn = QPushButton('Bind & Open [Ctrl+K]')
+        self.spn_local_port.setSpecialValueText('auto')
+        self.spn_local_port.setFixedWidth(72)
+        row.addWidget(self.spn_local_port)
+        self.btn_conn = QPushButton('Bind & Open')
+        self.btn_conn.setToolTip('Bind & Open (Ctrl+K)')
         self.btn_conn.clicked.connect(self._toggle_connection)
         row.addWidget(self.btn_conn)
-        self._conn_form.addRow('', row.parentWidget() if False else self.btn_conn)
+        self._conn_vbox.addLayout(row)
         QShortcut(QKeySequence('Ctrl+K'), self, self._toggle_connection)
 
     def _toggle_connection(self):
@@ -255,12 +253,8 @@ class UDPTab(BaseProtocolTab):
             self.spn_remote_port.value(),
             self.spn_local_port.value(),
         )
-        h.data_received.connect(
-            lambda data, ip, port: self.display.append_rx(data)
-        )
-        h.error_occurred.connect(
-            lambda e: self.display.append_event(f'오류: {e}')
-        )
+        h.data_received.connect(lambda data, ip, port: self.display.append_rx(data))
+        h.error_occurred.connect(lambda e: self.display.append_event(f'Error: {e}'))
         h.status_changed.connect(self._on_status)
         h.stats_updated.connect(self.display.update_stats)
         self._handler = h
@@ -268,12 +262,12 @@ class UDPTab(BaseProtocolTab):
 
     def _on_status(self, status: str):
         if status == 'bound':
-            self.btn_conn.setText('Close [Ctrl+K]')
+            self.btn_conn.setText('Close')
             lbl = f'{self.inp_remote_ip.text()}:{self.spn_remote_port.value()}'
             self.display.append_event(f'UDP Bound → {lbl}')
             self._set_connected(lbl)
         elif status in ('closed', 'error'):
-            self.btn_conn.setText('Bind & Open [Ctrl+K]')
+            self.btn_conn.setText('Bind & Open')
             self.display.append_event('UDP Closed')
             self._set_disconnected()
 
@@ -287,44 +281,43 @@ class UDPTab(BaseProtocolTab):
 
 
 # ──────────────────────────────────────────────────────────────
-# TCP Client 탭
+# TCP Client tab
 # ──────────────────────────────────────────────────────────────
 
 class TCPClientTab(BaseProtocolTab):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._conn_group.setTitle('TCP Client 설정')
+        self._conn_group.setTitle('TCP Client')
         self._add_fields()
-        self._add_conn_buttons()
 
     def _add_fields(self):
+        row = QHBoxLayout()
+        row.setSpacing(6)
+        row.addWidget(QLabel('Remote IP/Port:'))
         self.inp_ip = QLineEdit('192.168.0.100')
-        self._conn_form.addRow('Remote IP:', self.inp_ip)
-
+        self.inp_ip.setFixedWidth(130)
+        row.addWidget(self.inp_ip)
+        row.addWidget(QLabel(':'))
         self.spn_port = QSpinBox()
         self.spn_port.setRange(1, 65535)
         self.spn_port.setValue(5000)
-        self._conn_form.addRow('Remote Port:', self.spn_port)
-
-        reconnect_row = QHBoxLayout()
-        self.chk_reconnect = QCheckBox('자동 재연결')
+        self.spn_port.setFixedWidth(72)
+        row.addWidget(self.spn_port)
+        self.btn_conn = QPushButton('Connect')
+        self.btn_conn.setToolTip('Connect (Ctrl+K)')
+        self.btn_conn.clicked.connect(self._toggle_connection)
+        row.addWidget(self.btn_conn)
+        self.chk_reconnect = QCheckBox('Auto Reconnect')
+        row.addWidget(self.chk_reconnect)
         self.spn_reconnect = QSpinBox()
         self.spn_reconnect.setRange(1, 60)
         self.spn_reconnect.setValue(5)
-        self.spn_reconnect.setSuffix(' 초')
+        self.spn_reconnect.setSuffix(' s')
+        self.spn_reconnect.setFixedWidth(55)
         self.spn_reconnect.setEnabled(False)
         self.chk_reconnect.toggled.connect(self.spn_reconnect.setEnabled)
-        reconnect_row.addWidget(self.chk_reconnect)
-        reconnect_row.addWidget(self.spn_reconnect)
-        reconnect_row.addStretch()
-        rw = QWidget()
-        rw.setLayout(reconnect_row)
-        self._conn_form.addRow('재연결:', rw)
-
-    def _add_conn_buttons(self):
-        self.btn_conn = QPushButton('Connect [Ctrl+K]')
-        self.btn_conn.clicked.connect(self._toggle_connection)
-        self._conn_form.addRow('', self.btn_conn)
+        row.addWidget(self.spn_reconnect)
+        self._conn_vbox.addLayout(row)
         QShortcut(QKeySequence('Ctrl+K'), self, self._toggle_connection)
 
     def _toggle_connection(self):
@@ -343,24 +336,24 @@ class TCPClientTab(BaseProtocolTab):
         h.data_received.connect(self.display.append_rx)
         h.connected.connect(self._on_connected)
         h.disconnected.connect(self._on_disconnected)
-        h.error_occurred.connect(lambda e: self.display.append_event(f'오류: {e}'))
+        h.error_occurred.connect(lambda e: self.display.append_event(f'Error: {e}'))
         h.stats_updated.connect(self.display.update_stats)
         self._handler = h
-        self.btn_conn.setText('연결 중...')
+        self.btn_conn.setText('Connecting...')
         self.btn_conn.setEnabled(False)
         h.start()
 
     def _on_connected(self):
-        self.btn_conn.setText('Disconnect [Ctrl+K]')
+        self.btn_conn.setText('Disconnect')
         self.btn_conn.setEnabled(True)
         lbl = f'{self.inp_ip.text()}:{self.spn_port.value()}'
-        self.display.append_event(f'TCP 연결됨 → {lbl}')
+        self.display.append_event(f'TCP Connected → {lbl}')
         self._set_connected(lbl)
 
     def _on_disconnected(self, reason: str):
-        self.btn_conn.setText('Connect [Ctrl+K]')
+        self.btn_conn.setText('Connect')
         self.btn_conn.setEnabled(True)
-        self.display.append_event(f'TCP 연결 끊김: {reason}')
+        self.display.append_event(f'TCP Disconnected: {reason}')
         self._set_disconnected()
 
     def _do_disconnect(self):
@@ -373,30 +366,48 @@ class TCPClientTab(BaseProtocolTab):
 
 
 # ──────────────────────────────────────────────────────────────
-# TCP Server 탭
+# TCP Server tab
 # ──────────────────────────────────────────────────────────────
 
 class TCPServerTab(BaseProtocolTab):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._conn_group.setTitle('TCP Server 설정')
+        self._conn_group.setTitle('TCP Server')
         self._add_fields()
-        self._add_conn_buttons()
 
     def _add_fields(self):
+        local_ip = self._get_local_ip()
+        row = QHBoxLayout()
+        row.setSpacing(6)
+        row.addWidget(QLabel('Local IP/Port:'))
+        lbl_ip = QLabel(local_ip)
+        lbl_ip.setStyleSheet('color:#606060;')
+        row.addWidget(lbl_ip)
+        row.addWidget(QLabel(':'))
         self.spn_port = QSpinBox()
         self.spn_port.setRange(1, 65535)
         self.spn_port.setValue(5000)
-        self._conn_form.addRow('Local Port:', self.spn_port)
-
-    def _add_conn_buttons(self):
-        self.btn_listen = QPushButton('Listen [Ctrl+K]')
+        self.spn_port.setFixedWidth(72)
+        row.addWidget(self.spn_port)
+        self.btn_listen = QPushButton('Listen')
+        self.btn_listen.setToolTip('Listen (Ctrl+K)')
         self.btn_listen.clicked.connect(self._toggle_listen)
-        self._conn_form.addRow('', self.btn_listen)
-        self.lbl_client = QLabel('클라이언트 없음')
+        row.addWidget(self.btn_listen)
+        self.lbl_client = QLabel('Client: None')
         self.lbl_client.setStyleSheet('color:#808080; font-size:9px;')
-        self._conn_form.addRow('클라이언트:', self.lbl_client)
+        row.addWidget(self.lbl_client)
+        row.addStretch()
+        self._conn_vbox.addLayout(row)
         QShortcut(QKeySequence('Ctrl+K'), self, self._toggle_listen)
+
+    @staticmethod
+    def _get_local_ip() -> str:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.connect(('8.8.8.8', 80))
+                return s.getsockname()[0]
+        except OSError:
+            return '0.0.0.0'
 
     def _toggle_listen(self):
         if self._connected:
@@ -406,13 +417,11 @@ class TCPServerTab(BaseProtocolTab):
 
     def _do_listen(self):
         h = TCPServerHandler(self.spn_port.value())
-        h.data_received.connect(
-            lambda data, ip, port: self.display.append_rx(data)
-        )
+        h.data_received.connect(lambda data, ip, port: self.display.append_rx(data))
         h.client_connected.connect(self._on_client_connected)
         h.client_disconnected.connect(self._on_client_disconnected)
         h.new_client_request.connect(self._on_new_client_request)
-        h.error_occurred.connect(lambda e: self.display.append_event(f'오류: {e}'))
+        h.error_occurred.connect(lambda e: self.display.append_event(f'Error: {e}'))
         h.status_changed.connect(self._on_status_changed)
         h.stats_updated.connect(self.display.update_stats)
         self._handler = h
@@ -420,28 +429,28 @@ class TCPServerTab(BaseProtocolTab):
 
     def _on_status_changed(self, status: str):
         if status == 'listening':
-            self.btn_listen.setText('Stop [Ctrl+K]')
+            self.btn_listen.setText('Stop')
             self.display.append_event(f'Listening on port {self.spn_port.value()}')
             self._set_connected(f':{self.spn_port.value()}')
         elif status in ('closed', 'error'):
-            self.btn_listen.setText('Listen [Ctrl+K]')
-            self.lbl_client.setText('클라이언트 없음')
+            self.btn_listen.setText('Listen')
+            self.lbl_client.setText('Client: None')
             self.display.append_event('Server Stopped')
             self._set_disconnected()
 
     def _on_client_connected(self, ip: str, port: int):
-        self.lbl_client.setText(f'{ip}:{port}')
-        self.display.append_event(f'클라이언트 연결: {ip}:{port}')
+        self.lbl_client.setText(f'Client: {ip}:{port}')
+        self.display.append_event(f'Client connected: {ip}:{port}')
 
     def _on_client_disconnected(self, ip: str, port: int):
-        self.lbl_client.setText('클라이언트 없음')
-        self.display.append_event(f'클라이언트 연결 끊김: {ip}:{port}')
+        self.lbl_client.setText('Client: None')
+        self.display.append_event(f'Client disconnected: {ip}:{port}')
 
     def _on_new_client_request(self, ip: str, port: int):
         reply = QMessageBox.question(
-            self, '새 클라이언트 요청',
-            f'{ip}:{port} 에서 연결 요청이 들어왔습니다.\n'
-            '기존 연결을 끊고 새 연결을 수락할까요?',
+            self, 'New Client Request',
+            f'Connection request from {ip}:{port}.\n'
+            'Disconnect current client and accept?',
             QMessageBox.Yes | QMessageBox.No,
         )
         if self._handler:
@@ -459,67 +468,76 @@ class TCPServerTab(BaseProtocolTab):
 
 
 # ──────────────────────────────────────────────────────────────
-# Serial 탭
+# Serial tab
 # ──────────────────────────────────────────────────────────────
 
 BAUDRATES = [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600]
-PARITIES  = ['None', 'Even', 'Odd', 'Mark', 'Space']
-STOPBITS  = ['1', '1.5', '2']
-DATABITS  = [5, 6, 7, 8]
+PARITIES = ['None', 'Even', 'Odd', 'Mark', 'Space']
+STOPBITS = ['1', '1.5', '2']
+DATABITS = [5, 6, 7, 8]
 
 
 class SerialTab(BaseProtocolTab):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._conn_group.setTitle('Serial 설정')
+        self._conn_group.setTitle('Serial')
+        self._conn_group.setMaximumHeight(120)
         self._add_fields()
-        self._add_conn_buttons()
         self._refresh_ports()
 
     def _add_fields(self):
-        # 포트 선택
-        port_row = QHBoxLayout()
+        row1 = QHBoxLayout()
+        row1.setSpacing(6)
+        row1.addWidget(QLabel('Port:'))
         self.cmb_port = QComboBox()
-        self.cmb_port.setMinimumWidth(100)
-        port_row.addWidget(self.cmb_port)
+        self.cmb_port.setMinimumWidth(90)
+        row1.addWidget(self.cmb_port)
         btn_refresh = QPushButton('🔄')
         btn_refresh.setFixedWidth(28)
-        btn_refresh.setToolTip('포트 목록 새로고침')
+        btn_refresh.setToolTip('Refresh port list')
         btn_refresh.clicked.connect(self._refresh_ports)
-        port_row.addWidget(btn_refresh)
-        port_row.addStretch()
-        pw = QWidget(); pw.setLayout(port_row)
-        self._conn_form.addRow('Port:', pw)
-
+        row1.addWidget(btn_refresh)
+        row1.addWidget(QLabel('Baud:'))
         self.cmb_baud = QComboBox()
         self.cmb_baud.addItems([str(b) for b in BAUDRATES])
         self.cmb_baud.setCurrentText('115200')
-        self._conn_form.addRow('Baud Rate:', self.cmb_baud)
+        self.cmb_baud.setFixedWidth(85)
+        row1.addWidget(self.cmb_baud)
+        self.btn_conn = QPushButton('Open')
+        self.btn_conn.setToolTip('Open (Ctrl+K)')
+        self.btn_conn.clicked.connect(self._toggle_connection)
+        row1.addWidget(self.btn_conn)
+        row1.addStretch()
+        self._conn_vbox.addLayout(row1)
 
+        row2 = QHBoxLayout()
+        row2.setSpacing(6)
+        row2.addWidget(QLabel('Data:'))
         self.cmb_data = QComboBox()
         self.cmb_data.addItems([str(d) for d in DATABITS])
         self.cmb_data.setCurrentText('8')
-        self._conn_form.addRow('Data Bits:', self.cmb_data)
-
+        self.cmb_data.setFixedWidth(50)
+        row2.addWidget(self.cmb_data)
+        row2.addWidget(QLabel('Parity:'))
         self.cmb_parity = QComboBox()
         self.cmb_parity.addItems(PARITIES)
-        self._conn_form.addRow('Parity:', self.cmb_parity)
-
+        self.cmb_parity.setFixedWidth(70)
+        row2.addWidget(self.cmb_parity)
+        row2.addWidget(QLabel('Stop:'))
         self.cmb_stop = QComboBox()
         self.cmb_stop.addItems(STOPBITS)
-        self._conn_form.addRow('Stop Bits:', self.cmb_stop)
+        self.cmb_stop.setFixedWidth(50)
+        row2.addWidget(self.cmb_stop)
+        row2.addStretch()
+        self._conn_vbox.addLayout(row2)
 
-    def _add_conn_buttons(self):
-        self.btn_conn = QPushButton('Open [Ctrl+K]')
-        self.btn_conn.clicked.connect(self._toggle_connection)
-        self._conn_form.addRow('', self.btn_conn)
         QShortcut(QKeySequence('Ctrl+K'), self, self._toggle_connection)
 
     def _refresh_ports(self):
         current = self.cmb_port.currentText()
         self.cmb_port.clear()
         ports = list_serial_ports()
-        self.cmb_port.addItems(ports if ports else ['(없음)'])
+        self.cmb_port.addItems(ports if ports else ['(none)'])
         if current in ports:
             self.cmb_port.setCurrentText(current)
 
@@ -531,8 +549,8 @@ class SerialTab(BaseProtocolTab):
 
     def _do_connect(self):
         port = self.cmb_port.currentText()
-        if not port or port == '(없음)':
-            QMessageBox.warning(self, '오류', '유효한 포트를 선택하세요.')
+        if not port or port == '(none)':
+            QMessageBox.warning(self, 'Error', 'Select a valid port.')
             return
         h = SerialHandler(
             port=port,
@@ -544,25 +562,25 @@ class SerialTab(BaseProtocolTab):
         h.data_received.connect(self.display.append_rx)
         h.connected.connect(self._on_connected)
         h.disconnected.connect(self._on_disconnected)
-        h.error_occurred.connect(lambda e: self.display.append_event(f'오류: {e}'))
+        h.error_occurred.connect(lambda e: self.display.append_event(f'Error: {e}'))
         h.stats_updated.connect(self.display.update_stats)
         self._handler = h
-        self.btn_conn.setText('연결 중...')
+        self.btn_conn.setText('Opening...')
         self.btn_conn.setEnabled(False)
         h.start()
 
     def _on_connected(self):
-        self.btn_conn.setText('Close [Ctrl+K]')
+        self.btn_conn.setText('Close')
         self.btn_conn.setEnabled(True)
         port = self.cmb_port.currentText()
         baud = self.cmb_baud.currentText()
-        self.display.append_event(f'Serial 열림: {port} @ {baud}')
+        self.display.append_event(f'Serial opened: {port} @ {baud}')
         self._set_connected(f'{port}@{baud}')
 
     def _on_disconnected(self, reason: str):
-        self.btn_conn.setText('Open [Ctrl+K]')
+        self.btn_conn.setText('Open')
         self.btn_conn.setEnabled(True)
-        self.display.append_event(f'Serial 닫힘: {reason}')
+        self.display.append_event(f'Serial closed: {reason}')
         self._set_disconnected()
 
     def _do_disconnect(self):
@@ -572,7 +590,6 @@ class SerialTab(BaseProtocolTab):
     def fill_from_device(self, baudrate: int = 115200,
                          databits: int = 8, parity: str = 'None',
                          stopbits: str = '1', **_):
-        """Config Tool의 Serial 설정을 자동 채움. COM 포트는 알 수 없으므로 제외."""
         self.cmb_baud.setCurrentText(str(baudrate))
         self.cmb_data.setCurrentText(str(databits))
         self.cmb_parity.setCurrentText(parity)
