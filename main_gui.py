@@ -722,8 +722,9 @@ class WIZWindow(QMainWindow, main_window):
 
         # ── 터미널 패널 초기화 ──────────────────────────────────
         self._terminal_panel = TerminalPanel(self)
-        self.addDockWidget(Qt.RightDockWidgetArea, self._terminal_panel)
-        self._terminal_panel.hide()
+        self._terminal_panel.panel_hidden.connect(
+            lambda: self._act_terminal.setChecked(False)
+        )
 
         # 툴바 버튼 (터미널 토글)
         self._toolbar = self.addToolBar('터미널')
@@ -6731,9 +6732,18 @@ class WIZWindow(QMainWindow, main_window):
 
     def _toggle_terminal(self, checked: bool):
         if checked:
+            self._terminal_panel.snap_to()
             self._terminal_panel.show()
         else:
             self._terminal_panel.hide()
+
+    def moveEvent(self, event):
+        super().moveEvent(event)
+        self._terminal_panel.follow_main()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._terminal_panel.follow_main()
 
     def _device_list_context_menu(self, pos):
         items = self.list_device.selectedItems()
