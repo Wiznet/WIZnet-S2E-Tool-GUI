@@ -60,6 +60,7 @@ from PyQt5.QtWidgets import (
     QLabel,
     # QGridLayout,
     QToolTip,
+    QPushButton,
     # QRadioButton,
     # QComboBox,
     # QCheckBox,
@@ -722,18 +723,22 @@ class WIZWindow(QMainWindow, main_window):
 
         # ── 터미널 패널 초기화 ──────────────────────────────────
         self._terminal_panel = TerminalPanel(self)
-        self._terminal_panel.panel_hidden.connect(
-            lambda: self._act_terminal.setChecked(False)
-        )
 
-        # 툴바 버튼 (터미널 토글)
-        self._toolbar = self.addToolBar('터미널')
-        self._toolbar.setMovable(False)
-        self._act_terminal = QAction('🖥 터미널', self)
-        self._act_terminal.setCheckable(True)
-        self._act_terminal.setToolTip('터미널 패널 열기/닫기')
-        self._act_terminal.triggered.connect(self._toggle_terminal)
-        self._toolbar.addAction(self._act_terminal)
+        # 메인 툴바(gridLayout_102)에 터미널 버튼 삽입 — btn_exit 왼쪽
+        # btn_exit: row=0, col=4 in gridLayout_102
+        _grid = self.gridLayout_102
+        _grid.removeWidget(self.btn_exit)
+
+        self._btn_terminal = QPushButton('🖥\n터미널')
+        self._btn_terminal.setCheckable(True)
+        self._btn_terminal.setMinimumSize(110, 55)
+        self._btn_terminal.setMaximumSize(240, 100)
+        self._btn_terminal.setToolTip('터미널 패널 열기/닫기')
+        self._btn_terminal.clicked.connect(self._toggle_terminal)
+        _grid.addWidget(self._btn_terminal, 0, 4)
+        _grid.addWidget(self.btn_exit, 0, 5)
+
+        self._terminal_panel.panel_hidden.connect(self._on_terminal_panel_hidden)
 
         # 장치 목록 우클릭 메뉴
         self.list_device.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -6736,6 +6741,21 @@ class WIZWindow(QMainWindow, main_window):
             self._terminal_panel.show()
         else:
             self._terminal_panel.hide()
+            self._center_main_window()
+
+    def _on_terminal_panel_hidden(self):
+        self._btn_terminal.setChecked(False)
+        self._center_main_window()
+
+    def _center_main_window(self):
+        from PyQt5.QtWidgets import QApplication
+        screen = QApplication.screenAt(self.pos()) or QApplication.primaryScreen()
+        avail = screen.availableGeometry()
+        geo = self.frameGeometry()
+        self.move(
+            avail.x() + max(0, (avail.width() - geo.width()) // 2),
+            avail.y() + max(0, (avail.height() - geo.height()) // 2),
+        )
 
     def moveEvent(self, event):
         super().moveEvent(event)
@@ -6782,7 +6802,7 @@ class WIZWindow(QMainWindow, main_window):
         else:
             self._terminal_panel.fill_from_device(device_info)
         self._terminal_panel.show()
-        self._act_terminal.setChecked(True)
+        self._btn_terminal.setChecked(True)
 
     def _get_device_info_for_terminal(self, profile: dict) -> dict:
         """dev_profile 항목 → terminal fill_from_device() 용 dict 변환."""

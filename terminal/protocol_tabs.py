@@ -74,16 +74,17 @@ class SendWidget(QWidget):
         self.cmb_le.setFixedWidth(70)
         opts.addWidget(self.cmb_le)
 
-        self.chk_periodic = QCheckBox('Periodic')
-        self.chk_periodic.toggled.connect(self._on_periodic_toggled)
-        opts.addWidget(self.chk_periodic)
+        self.btn_periodic = QPushButton('Periodic')
+        self.btn_periodic.setCheckable(True)
+        self.btn_periodic.setFixedWidth(65)
+        self.btn_periodic.toggled.connect(self._on_periodic_toggled)
+        opts.addWidget(self.btn_periodic)
 
         self.spn_interval = QSpinBox()
         self.spn_interval.setRange(10, 60000)
         self.spn_interval.setValue(1000)
         self.spn_interval.setSuffix(' ms')
         self.spn_interval.setFixedWidth(80)
-        self.spn_interval.setEnabled(False)
         opts.addWidget(self.spn_interval)
 
         opts.addStretch()
@@ -122,14 +123,16 @@ class SendWidget(QWidget):
             self.send_data.emit(payload)
 
     def _on_periodic_toggled(self, checked: bool):
-        self.spn_interval.setEnabled(checked)
+        self.btn_periodic.setText('Stop' if checked else 'Periodic')
         if checked:
+            self.spn_interval.valueChanged.connect(self._periodic_timer.setInterval)
             self._periodic_timer.start(self.spn_interval.value())
         else:
+            try:
+                self.spn_interval.valueChanged.disconnect(self._periodic_timer.setInterval)
+            except TypeError:
+                pass
             self._periodic_timer.stop()
-        self.spn_interval.valueChanged.connect(
-            lambda v: self._periodic_timer.setInterval(v) if checked else None
-        )
 
     def _history_prev(self):
         if not self._history:
