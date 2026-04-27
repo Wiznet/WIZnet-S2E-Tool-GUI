@@ -10,7 +10,7 @@ F1~F12 macro/sequence panel.
 import json
 
 from PyQt5.QtCore import QThread, Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QKeySequence, QPen
+from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import (
     QAbstractItemView, QFileDialog, QHBoxLayout, QHeaderView,
     QLabel, QLineEdit, QListWidget, QMenu, QMessageBox, QPushButton,
@@ -62,26 +62,6 @@ class MacroRunner(QThread):
 
 
 # ──────────────────────────────────────────────────────────────
-# Header with guaranteed bottom border line
-# ──────────────────────────────────────────────────────────────
-
-class _BottomLineHeader(QHeaderView):
-    """각 섹션 paint 후 하단에 선을 강제로 그린다 (QSS 무시 대응)."""
-
-    _LINE_COLOR = QColor('#888888')
-
-    def __init__(self, parent=None):
-        super().__init__(Qt.Horizontal, parent)
-
-    def paintSection(self, painter, rect, logicalIndex):
-        super().paintSection(painter, rect, logicalIndex)
-        painter.save()
-        painter.setPen(QPen(self._LINE_COLOR, 1))
-        painter.drawLine(rect.left(), rect.bottom(), rect.right(), rect.bottom())
-        painter.restore()
-
-
-# ──────────────────────────────────────────────────────────────
 # Sequence table
 # ──────────────────────────────────────────────────────────────
 
@@ -90,7 +70,6 @@ class MacroSequenceTable(QTableWidget):
 
     def __init__(self, parent=None):
         super().__init__(0, 2, parent)
-        self.setHorizontalHeader(_BottomLineHeader(self))
         self.setHorizontalHeaderLabels(['Message', 'Delay (ms)'])
         self.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.horizontalHeader().setSectionResizeMode(1, QHeaderView.Fixed)
