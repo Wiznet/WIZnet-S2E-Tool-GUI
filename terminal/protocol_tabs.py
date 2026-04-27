@@ -53,12 +53,25 @@ class SendWidget(QWidget):
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.setSpacing(2)
 
+        # Row 1: input + Send (same line)
+        input_row = QHBoxLayout()
+        input_row.setSpacing(4)
+
         self.input = QTextEdit()
-        self.input.setFixedHeight(56)
+        self.input.setFixedHeight(48)
         self.input.setPlaceholderText('Input — Ctrl+Enter: Send, Ctrl+↑/↓: History')
         self.input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        vbox.addWidget(self.input)
+        input_row.addWidget(self.input)
 
+        self.btn_send = QPushButton('Send')
+        self.btn_send.setFixedSize(60, 48)
+        self.btn_send.setToolTip('Send (Ctrl+Enter)')
+        self.btn_send.clicked.connect(self._send_once)
+        input_row.addWidget(self.btn_send)
+
+        vbox.addLayout(input_row)
+
+        # Row 2: options
         opts = QHBoxLayout()
         opts.setSpacing(6)
 
@@ -88,12 +101,6 @@ class SendWidget(QWidget):
         opts.addWidget(self.spn_interval)
 
         opts.addStretch()
-
-        self.btn_send = QPushButton('Send')
-        self.btn_send.setFixedWidth(70)
-        self.btn_send.setToolTip('Send (Ctrl+Enter)')
-        self.btn_send.clicked.connect(self._send_once)
-        opts.addWidget(self.btn_send)
 
         vbox.addLayout(opts)
 
