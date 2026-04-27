@@ -79,7 +79,11 @@ class MacroSequenceTable(QTableWidget):
             QAbstractItemView.DoubleClicked | QAbstractItemView.SelectedClicked
         )
         self.verticalHeader().setVisible(False)
-        self.setStyleSheet('QTableWidget { gridline-color: #888; border: 1px solid #888; }')
+        self.setStyleSheet('QTableWidget { gridline-color: #888; }')
+        from PyQt5.QtWidgets import QFrame
+        self.setFrameShape(QFrame.Box)
+        self.setFrameShadow(QFrame.Plain)
+        self.setLineWidth(1)
         self._add_empty_row()
         self.cellChanged.connect(self._on_cell_changed)
 
