@@ -10,9 +10,9 @@ F1~F12 macro/sequence panel.
 import json
 
 from PyQt5.QtCore import QThread, Qt, pyqtSignal
-from PyQt5.QtGui import QKeySequence
+from PyQt5.QtGui import QColor, QKeySequence, QPen
 from PyQt5.QtWidgets import (
-    QAbstractItemView, QFileDialog, QFrame, QHBoxLayout, QHeaderView,
+    QAbstractItemView, QFileDialog, QHBoxLayout, QHeaderView,
     QLabel, QLineEdit, QListWidget, QMenu, QMessageBox, QPushButton,
     QShortcut, QSplitter, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget,
@@ -62,6 +62,26 @@ class MacroRunner(QThread):
 
 
 # ──────────────────────────────────────────────────────────────
+# Header with guaranteed bottom border line
+# ──────────────────────────────────────────────────────────────
+
+class _BottomLineHeader(QHeaderView):
+    """각 섹션 paint 후 하단에 선을 강제로 그린다 (QSS 무시 대응)."""
+
+    _LINE_COLOR = QColor('#888888')
+
+    def __init__(self, parent=None):
+        super().__init__(Qt.Horizontal, parent)
+
+    def paintSection(self, painter, rect, logicalIndex):
+        super().paintSection(painter, rect, logicalIndex)
+        painter.save()
+        painter.setPen(QPen(self._LINE_COLOR, 1))
+        painter.drawLine(rect.left(), rect.bottom(), rect.right(), rect.bottom())
+        painter.restore()
+
+
+# ──────────────────────────────────────────────────────────────
 # Sequence table
 # ──────────────────────────────────────────────────────────────
 
@@ -70,6 +90,7 @@ class MacroSequenceTable(QTableWidget):
 
     def __init__(self, parent=None):
         super().__init__(0, 2, parent)
+        self.setHorizontalHeader(_BottomLineHeader(self))
         self.setHorizontalHeaderLabels(['Message', 'Delay (ms)'])
         self.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.horizontalHeader().setSectionResizeMode(1, QHeaderView.Fixed)
@@ -79,10 +100,7 @@ class MacroSequenceTable(QTableWidget):
             QAbstractItemView.DoubleClicked | QAbstractItemView.SelectedClicked
         )
         self.verticalHeader().setVisible(False)
-        self.setFrameShape(QFrame.NoFrame)
         self.setStyleSheet('QTableWidget { gridline-color: #888; }')
-        self.setSizeAdjustPolicy(self.AdjustToContents)
-        self.setMaximumHeight(180)
         self._add_empty_row()
         self.cellChanged.connect(self._on_cell_changed)
 
@@ -253,17 +271,8 @@ class MacroPanel(QWidget):
         ctrl.setMaximumHeight(32)
         right_vbox.addWidget(ctrl)
 
-        _tbl_wrap = QFrame()
-        _tbl_wrap.setFrameShape(QFrame.Box)
-        _tbl_wrap.setFrameShadow(QFrame.Plain)
-        _tbl_wrap.setLineWidth(1)
-        _tw_vbox = QVBoxLayout(_tbl_wrap)
-        _tw_vbox.setContentsMargins(0, 0, 0, 0)
-        _tw_vbox.setSpacing(0)
         self.table = MacroSequenceTable()
-        _tw_vbox.addWidget(self.table)
-        right_vbox.addWidget(_tbl_wrap)
-        right_vbox.addStretch(1)
+        right_vbox.addWidget(self.table, 1)
 
         splitter.addWidget(right)
         splitter.setSizes([120, 280])
