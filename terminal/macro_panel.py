@@ -79,7 +79,16 @@ class MacroSequenceTable(QTableWidget):
             QAbstractItemView.DoubleClicked | QAbstractItemView.SelectedClicked
         )
         self.verticalHeader().setVisible(False)
-        self.setStyleSheet('QTableWidget { gridline-color: #888; }')
+        self.setStyleSheet("""
+            QTableWidget { gridline-color: #888; }
+            QHeaderView::section {
+                background-color: palette(button);
+                border: none;
+                border-right: 1px solid #888;
+                border-bottom: 1px solid #888;
+                padding: 2px 4px;
+            }
+        """)
         self._add_empty_row()
         self.cellChanged.connect(self._on_cell_changed)
 
