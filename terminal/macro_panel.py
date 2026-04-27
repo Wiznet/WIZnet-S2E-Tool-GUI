@@ -81,6 +81,8 @@ class MacroSequenceTable(QTableWidget):
         self.verticalHeader().setVisible(False)
         self.setFrameShape(QFrame.NoFrame)
         self.setStyleSheet('QTableWidget { gridline-color: #888; }')
+        self.setSizeAdjustPolicy(self.AdjustToContents)
+        self.setMaximumHeight(180)
         self._add_empty_row()
         self.cellChanged.connect(self._on_cell_changed)
 
@@ -260,7 +262,8 @@ class MacroPanel(QWidget):
         _tw_vbox.setSpacing(0)
         self.table = MacroSequenceTable()
         _tw_vbox.addWidget(self.table)
-        right_vbox.addWidget(_tbl_wrap, 1)
+        right_vbox.addWidget(_tbl_wrap)
+        right_vbox.addStretch(1)
 
         splitter.addWidget(right)
         splitter.setSizes([120, 280])
