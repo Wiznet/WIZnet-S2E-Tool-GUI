@@ -11,7 +11,7 @@ terminal/terminal_panel.py
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
     QComboBox, QHBoxLayout, QLabel,
-    QMessageBox, QPushButton, QSplitter, QTabWidget,
+    QMessageBox, QPushButton, QTabWidget,
     QVBoxLayout, QWidget,
 )
 
@@ -31,9 +31,9 @@ class TerminalPanel(QWidget):
 
     panel_hidden = pyqtSignal()   # 닫기·숨기기 시 발생 → 툴바 버튼 동기화
 
-    TAB_UDP    = 0
-    TAB_TCPC   = 1
-    TAB_TCPS   = 2
+    TAB_UDP = 0
+    TAB_TCPC = 1
+    TAB_TCPS = 2
     TAB_SERIAL = 3
 
     _SNAP_THRESHOLD = 40   # 이 픽셀 이상 이동하면 분리 판정
@@ -41,7 +41,7 @@ class TerminalPanel(QWidget):
     def __init__(self, main_window):
         # Qt.Tool: 부모 창 위에 표시, 태스크바/Alt+Tab 은 부모와 통합
         super().__init__(main_window, Qt.Tool)
-        self.setWindowTitle('터미널')
+        self.setWindowTitle('Terminal')
         self.setMinimumWidth(400)
         self._main = main_window
         self._snapped = False
@@ -54,11 +54,21 @@ class TerminalPanel(QWidget):
     # ── 붙이기 / 따라가기 ──────────────────────────────────────
 
     def snap_to(self):
-        """메인 창 오른쪽에 딱 붙이기."""
-        geo = self._main.frameGeometry()
+        """Snap to the right of the main window, centering both on screen."""
+        from PyQt5.QtWidgets import QApplication
+        term_w = max(480, self.minimumSizeHint().width())
+        main_geo = self._main.frameGeometry()
+        total_w = main_geo.width() + term_w + 2
+
+        screen = QApplication.screenAt(self._main.pos()) or QApplication.primaryScreen()
+        avail = screen.availableGeometry()
+        new_x = avail.x() + max(0, (avail.width() - total_w) // 2)
+        new_y = avail.y() + max(0, (avail.height() - main_geo.height()) // 2)
+
         self._following = True
-        self.move(geo.right() + 2, geo.top())
-        self.resize(480, geo.height())
+        self._main.move(new_x, new_y)
+        self.move(new_x + main_geo.width() + 2, new_y)
+        self.resize(term_w, main_geo.height())
         self._following = False
         self._snapped = True
 
@@ -99,31 +109,25 @@ class TerminalPanel(QWidget):
 
         vbox.addWidget(self._make_toolbar())
 
-        splitter = QSplitter(Qt.Horizontal)
-
         self.tabs = QTabWidget()
         self.tabs.setTabPosition(QTabWidget.North)
 
-        self.tab_udp    = UDPTab()
-        self.tab_tcpc   = TCPClientTab()
-        self.tab_tcps   = TCPServerTab()
+        self.tab_udp = UDPTab()
+        self.tab_tcpc = TCPClientTab()
+        self.tab_tcps = TCPServerTab()
         self.tab_serial = SerialTab()
 
-        self.tabs.addTab(self.tab_udp,    'UDP')
-        self.tabs.addTab(self.tab_tcpc,   'TCP Client')
-        self.tabs.addTab(self.tab_tcps,   'TCP Server')
+        self.tabs.addTab(self.tab_udp, 'UDP')
+        self.tabs.addTab(self.tab_tcpc, 'TCP Client')
+        self.tabs.addTab(self.tab_tcps, 'TCP Server')
         self.tabs.addTab(self.tab_serial, 'Serial')
 
-        splitter.addWidget(self.tabs)
+        vbox.addWidget(self.tabs, 1)   # stretch=1: 데이터 영역 최대
 
         self.macro_panel = MacroPanel()
-        self.macro_panel.setMinimumWidth(200)
-        self.macro_panel.setMaximumWidth(300)
-        splitter.addWidget(self.macro_panel)
-
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 1)
-        vbox.addWidget(splitter)
+        self.macro_panel.setMinimumHeight(120)
+        self.macro_panel.setMaximumHeight(240)
+        vbox.addWidget(self.macro_panel)
 
     def _make_toolbar(self) -> QWidget:
         toolbar = QWidget()
@@ -131,11 +135,11 @@ class TerminalPanel(QWidget):
         hbox.setContentsMargins(2, 0, 2, 0)
         hbox.setSpacing(4)
 
-        hbox.addWidget(QLabel('터미널'))
+        hbox.addWidget(QLabel('Terminal'))
 
-        hbox.addWidget(QLabel('줄 끝(전역):'))
+        hbox.addWidget(QLabel('Line End:'))
         self.cmb_global_le = QComboBox()
-        self.cmb_global_le.addItem('(개별 설정)')
+        self.cmb_global_le.addItem('Per Tab')
         self.cmb_global_le.addItems(LINE_ENDINGS)
         self.cmb_global_le.setFixedWidth(100)
         self.cmb_global_le.currentTextChanged.connect(self._on_global_le_changed)
@@ -156,25 +160,26 @@ class TerminalPanel(QWidget):
         # 붙이기 (분리 상태에서 다시 메인 창에 붙이기)
         btn_snap = QPushButton('📌')
         btn_snap.setFixedWidth(28)
-        btn_snap.setToolTip('메인 창에 붙이기')
+        btn_snap.setToolTip('Snap to main window')
         btn_snap.clicked.connect(self.snap_to)
         hbox.addWidget(btn_snap)
 
         btn_close = QPushButton('✕')
         btn_close.setFixedWidth(24)
-        btn_close.setToolTip('터미널 닫기')
+        btn_close.setToolTip('Close Terminal')
         btn_close.clicked.connect(self.hide)
         hbox.addWidget(btn_close)
 
+        toolbar.setMaximumHeight(32)
         return toolbar
 
     # ── 시그널 연결 ─────────────────────────────────────────────
 
     def _connect_signals(self):
         tabs_info = [
-            (self.TAB_UDP,    self.tab_udp,    'UDP'),
-            (self.TAB_TCPC,   self.tab_tcpc,   'TCP Client'),
-            (self.TAB_TCPS,   self.tab_tcps,   'TCP Server'),
+            (self.TAB_UDP, self.tab_udp, 'UDP'),
+            (self.TAB_TCPC, self.tab_tcpc, 'TCP Client'),
+            (self.TAB_TCPS, self.tab_tcps, 'TCP Server'),
             (self.TAB_SERIAL, self.tab_serial, 'Serial'),
         ]
         for idx, tab, name in tabs_info:
@@ -196,9 +201,9 @@ class TerminalPanel(QWidget):
     def _dispatch_send(self, data: bytes):
         idx = self.tabs.currentIndex()
         tab_map = {
-            self.TAB_UDP:    self.tab_udp,
-            self.TAB_TCPC:   self.tab_tcpc,
-            self.TAB_TCPS:   self.tab_tcps,
+            self.TAB_UDP: self.tab_udp,
+            self.TAB_TCPC: self.tab_tcpc,
+            self.TAB_TCPS: self.tab_tcps,
             self.TAB_SERIAL: self.tab_serial,
         }
         tab = tab_map.get(idx)
@@ -211,15 +216,15 @@ class TerminalPanel(QWidget):
         tcps_on = self.tab_tcps._connected
         if tcpc_on and tcps_on:
             QMessageBox.warning(
-                self, '연결 충돌',
-                'TCP Client 와 TCP Server 는 동시에 연결할 수 없습니다.\n'
-                '현재 연결된 TCP 탭을 먼저 해제하세요.'
+                self, 'Connection Conflict',
+                'TCP Client and TCP Server cannot be connected simultaneously.\n'
+                'Disconnect the active TCP tab first.'
             )
 
     # ── 전역 Line Ending ────────────────────────────────────────
 
     def _on_global_le_changed(self, text: str):
-        if text == '(개별 설정)':
+        if text == 'Per Tab':
             return
         for tab in (self.tab_udp, self.tab_tcpc, self.tab_tcps, self.tab_serial):
             tab.send_widget.set_line_ending(text)
@@ -232,7 +237,7 @@ class TerminalPanel(QWidget):
         if active:
             return
 
-        ip   = device_info.get('ip', '')
+        ip = device_info.get('ip', '')
         port = device_info.get('port', 5000)
         mode = device_info.get('op_mode', '')
 
@@ -249,7 +254,7 @@ class TerminalPanel(QWidget):
         mode_map = {
             'TCP Server': self.TAB_TCPC,
             'TCP Client': self.TAB_TCPS,
-            'UDP':        self.TAB_UDP,
+            'UDP': self.TAB_UDP,
         }
         if mode in mode_map:
             self.tabs.setCurrentIndex(mode_map[mode])
@@ -260,7 +265,7 @@ class TerminalPanel(QWidget):
         import json
         from PyQt5.QtWidgets import QFileDialog
         path, _ = QFileDialog.getSaveFileName(
-            self, '전체 설정 내보내기', 'terminal_config.json', 'JSON (*.json)'
+            self, 'Export All Settings', 'terminal_config.json', 'JSON (*.json)'
         )
         if not path:
             return
@@ -272,13 +277,13 @@ class TerminalPanel(QWidget):
             with open(path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
         except OSError as e:
-            QMessageBox.warning(self, '내보내기 실패', str(e))
+            QMessageBox.warning(self, 'Export Failed', str(e))
 
     def _import_all(self):
         import json
         from PyQt5.QtWidgets import QFileDialog, QMessageBox
         path, _ = QFileDialog.getOpenFileName(
-            self, '전체 설정 가져오기', '', 'JSON (*.json)'
+            self, 'Import All Settings', '', 'JSON (*.json)'
         )
         if not path:
             return
@@ -292,7 +297,7 @@ class TerminalPanel(QWidget):
                 if idx >= 0:
                     self.cmb_global_le.setCurrentIndex(idx)
         except (OSError, json.JSONDecodeError) as e:
-            QMessageBox.warning(self, '가져오기 실패', str(e))
+            QMessageBox.warning(self, 'Import Failed', str(e))
 
     # ── 상태 저장/복원 ───────────────────────────────────────────
 

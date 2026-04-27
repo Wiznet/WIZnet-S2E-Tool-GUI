@@ -12,7 +12,7 @@ import json
 from PyQt5.QtCore import QThread, Qt, pyqtSignal
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import (
-    QAbstractItemView, QFileDialog, QHBoxLayout, QHeaderView,
+    QAbstractItemView, QFileDialog, QFrame, QHBoxLayout, QHeaderView,
     QLabel, QLineEdit, QListWidget, QMenu, QMessageBox, QPushButton,
     QShortcut, QSplitter, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget,
@@ -79,11 +79,8 @@ class MacroSequenceTable(QTableWidget):
             QAbstractItemView.DoubleClicked | QAbstractItemView.SelectedClicked
         )
         self.verticalHeader().setVisible(False)
+        self.setFrameShape(QFrame.NoFrame)
         self.setStyleSheet('QTableWidget { gridline-color: #888; }')
-        from PyQt5.QtWidgets import QFrame
-        self.setFrameShape(QFrame.Box)
-        self.setFrameShadow(QFrame.Plain)
-        self.setLineWidth(1)
         self._add_empty_row()
         self.cellChanged.connect(self._on_cell_changed)
 
@@ -254,8 +251,16 @@ class MacroPanel(QWidget):
         ctrl.setMaximumHeight(32)
         right_vbox.addWidget(ctrl)
 
+        _tbl_wrap = QFrame()
+        _tbl_wrap.setFrameShape(QFrame.Box)
+        _tbl_wrap.setFrameShadow(QFrame.Plain)
+        _tbl_wrap.setLineWidth(1)
+        _tw_vbox = QVBoxLayout(_tbl_wrap)
+        _tw_vbox.setContentsMargins(0, 0, 0, 0)
+        _tw_vbox.setSpacing(0)
         self.table = MacroSequenceTable()
-        right_vbox.addWidget(self.table, 1)
+        _tw_vbox.addWidget(self.table)
+        right_vbox.addWidget(_tbl_wrap, 1)
 
         splitter.addWidget(right)
         splitter.setSizes([120, 280])

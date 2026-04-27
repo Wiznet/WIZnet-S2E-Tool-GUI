@@ -237,7 +237,7 @@ def simulate_path1(packets: list[tuple]):
         log(f"  dev_profile['{mc}'] 키: {list(profile_old.keys())}")
         cert_keys = [k for k in profile_old if k in ("CA", "CC", "CK")]
         mqtt_keys = [k for k in profile_old if k.startswith("Q")]
-        log(f"    기본 커맨드 : {[k for k in profile_old if k not in ('CA','CC','CK') and not k.startswith('Q')]}")
+        log(f"    기본 커맨드 : {[k for k in profile_old if k not in ('CA', 'CC', 'CK') and not k.startswith('Q')]}")
         log(f"    MQTT 커맨드 : {mqtt_keys}  {'❌ 없음' if not mqtt_keys else '✅'}")
         log(f"    인증서 커맨드: {cert_keys}  {'❌ 없음' if not cert_keys else '✅'}")
     else:
@@ -279,7 +279,7 @@ def simulate_path1(packets: list[tuple]):
         cert_keys = [k for k in profile_new if k in ("CA", "CC", "CK")]
         mqtt_keys = [k for k in profile_new if k.startswith("Q")]
         log(f"  dev_profile['{mc_new}'] 키: {list(profile_new.keys())}")
-        log(f"    기본 커맨드 : {[k for k in profile_new if k not in ('CA','CC','CK') and not k.startswith('Q')]}")
+        log(f"    기본 커맨드 : {[k for k in profile_new if k not in ('CA', 'CC', 'CK') and not k.startswith('Q')]}")
         log(f"    MQTT 커맨드 : {mqtt_keys}  {'✅' if mqtt_keys else '❌ 없음'}")
         log(f"    인증서 커맨드: {cert_keys}  {'✅' if cert_keys else '❌ 없음'}")
     else:
@@ -292,7 +292,7 @@ def simulate_path1(packets: list[tuple]):
     gained = sorted(set(profile_new.keys()) - set(profile_old.keys()))
     if gained:
         log(f"  ✅ 전략 A+B로 추가 복구되는 필드: {gained}")
-        log(f"  → fill_devinfo()에서 MQTT/인증서 탭이 정상 표시됨")
+        log("  → fill_devinfo()에서 MQTT/인증서 탭이 정상 표시됨")
     else:
         log("  → 단일 패킷 응답 — 전략 A+B 적용 전후 차이 없음")
 
@@ -393,7 +393,7 @@ def simulate_per_addr_grouping(packets: list[tuple]):
     log("[D] 결론")
     if len(unique_addrs) > 1:
         log(f"  ✅ per-addr 그룹핑으로 {len(unique_addrs)}개 장치 완전 분리")
-        log(f"  ✅ 각 장치 dev_profile 독립 구성 — 데이터 뒤섞임 없음")
+        log("  ✅ 각 장치 dev_profile 독립 구성 — 데이터 뒤섞임 없음")
         log(f"  ✅ 등록된 장치: {list(dev_profiles.keys())}")
         naive_mc_count = len({profile_naive.get('MC', '')} - {''})
         log(f"  비교: [D-현재] 장치 {naive_mc_count}개만 인식 vs "
