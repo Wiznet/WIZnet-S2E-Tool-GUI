@@ -301,7 +301,8 @@ class MacroPanel(QWidget):
     def _switch_to(self, idx: int):
         if idx < 0 or idx >= self._count:
             return
-        self._save_current()
+        if idx != self._current:
+            self._save_current()
         self._current = idx
         data = self._slot_data[idx]
         self._lbl_fkey.setText(f'F{idx + 1}')
