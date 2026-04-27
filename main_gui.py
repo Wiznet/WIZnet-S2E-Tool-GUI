@@ -647,6 +647,8 @@ class WIZWindow(QMainWindow, main_window):
         self.actionDeviceSearch.triggered.connect(self._on_search_button_clicked)
         self.menuFile.insertAction(self.actionExit, self.actionDeviceSearch)
         self.menuFile.insertSeparator(self.actionExit)
+        self.actionExit.setShortcut(QtGui.QKeySequence("Ctrl+Q"))
+        self.actionExit.setShortcutContext(Qt.ApplicationShortcut)
 
         self._action_terminal = QAction("Terminal", self)
         self._action_terminal.setCheckable(True)
