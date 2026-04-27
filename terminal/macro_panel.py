@@ -315,6 +315,7 @@ class MacroPanel(QWidget):
         self._list.blockSignals(True)
         self._list.setCurrentRow(idx)
         self._list.blockSignals(False)
+        self._btn_run.setFocus()
 
     def _add_slot(self):
         if self._count >= MAX_MACROS:
