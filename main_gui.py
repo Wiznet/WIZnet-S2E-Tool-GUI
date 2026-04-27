@@ -5671,7 +5671,6 @@ class WIZWindow(QMainWindow, main_window):
         self.menuFile.setFont(self.midfont)
         self.menuOption.setFont(self.midfont)
         self.menuHelp.setFont(self.midfont)
-        self._action_terminal.setFont(self.midfont)
         self.action_set_wait_time.setFont(self.midfont)
         self.action_retry_search.setFont(self.midfont)
         self.tcp_timeout_label.setFont(self.smallfont)
