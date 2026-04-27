@@ -648,6 +648,14 @@ class WIZWindow(QMainWindow, main_window):
         self.menuFile.insertAction(self.actionExit, self.actionDeviceSearch)
         self.menuFile.insertSeparator(self.actionExit)
 
+        self._action_terminal = QAction("Terminal", self)
+        self._action_terminal.setCheckable(True)
+        self._action_terminal.setShortcut(QtGui.QKeySequence("Ctrl+T"))
+        self._action_terminal.setShortcutContext(Qt.ApplicationShortcut)
+        self._action_terminal.triggered.connect(self._toggle_terminal)
+        self.menuOption.addSeparator()
+        self.menuOption.addAction(self._action_terminal)
+
         self.actionSave.triggered.connect(self.dialog_save_file)
         self.actionLoad.triggered.connect(self.dialog_load_file)
         self.actionSaveSearchResults.triggered.connect(self.save_searched_results_to_csv)
@@ -5663,6 +5671,7 @@ class WIZWindow(QMainWindow, main_window):
         self.menuFile.setFont(self.midfont)
         self.menuOption.setFont(self.midfont)
         self.menuHelp.setFont(self.midfont)
+        self._action_terminal.setFont(self.midfont)
         self.action_set_wait_time.setFont(self.midfont)
         self.action_retry_search.setFont(self.midfont)
         self.tcp_timeout_label.setFont(self.smallfont)
@@ -6736,6 +6745,10 @@ class WIZWindow(QMainWindow, main_window):
     # ── 터미널 패널 ─────────────────────────────────────────────
 
     def _toggle_terminal(self, checked: bool):
+        for ctrl in (self._btn_terminal, self._action_terminal):
+            ctrl.blockSignals(True)
+            ctrl.setChecked(checked)
+            ctrl.blockSignals(False)
         if checked:
             self._terminal_panel.snap_to()
             self._terminal_panel.show()
@@ -6744,8 +6757,7 @@ class WIZWindow(QMainWindow, main_window):
             self._center_main_window()
 
     def _on_terminal_panel_hidden(self):
-        self._btn_terminal.setChecked(False)
-        self._center_main_window()
+        self._toggle_terminal(False)
 
     def _center_main_window(self):
         from PyQt5.QtWidgets import QApplication
