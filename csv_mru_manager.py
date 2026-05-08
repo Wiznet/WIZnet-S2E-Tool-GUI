@@ -11,6 +11,7 @@ import json
 import datetime
 import logging
 from dataclasses import dataclass, asdict
+from pathlib import Path
 from typing import List, Dict, Optional
 
 
@@ -44,9 +45,11 @@ class CSVMRUEntry:
         self._validate_datetime_format()
 
     def _validate_path(self):
-        """path 검증: 비어있지 않아야 함"""
+        """path 검증: 비어있지 않아야 하며 .csv 확장자여야 함"""
         if not self.path or not self.path.strip():
             raise ValueError("path cannot be empty")
+        if Path(self.path).suffix.lower() != '.csv':
+            raise ValueError(f"CSV 파일이 아님: {self.path!r}")
 
     def _validate_access_count(self):
         """access_count 검증: 1 이상이어야 함"""

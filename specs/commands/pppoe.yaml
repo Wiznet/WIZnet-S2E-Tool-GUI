@@ -1,0 +1,36 @@
+# pppoe.yaml
+# PPPoE 관련 커맨드
+# 지원 장비: WIZ107SR, WIZ108SR (IM=2)
+# 소스 기준: frmMain.vb DisplayValue() IM=2 블록, CalcSetMsg() rbPPP 블록
+#
+# 주의: IM 커맨드 자체는 base.yaml에 정의되어 있으나,
+# PPPoE 장비에서는 device 스펙 overrides로 IM regex="^[0-2]$", values에 "2":"PPPoE" 추가
+
+PI:
+  description: "PPPoE ID"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: pppoe
+    widget: lineedit
+    label: "PPPoE ID"
+    order: 1
+    span: 2
+    depends_on: {IM: "2"}
+
+PP:
+  description: "PPPoE Password"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: pppoe
+    widget: lineedit
+    label: "PPPoE Password"
+    order: 2
+    span: 2
+    password: true
+    depends_on: {IM: "2"}

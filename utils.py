@@ -28,15 +28,13 @@ def get_logger(logger_name, path, filename):
     logger = logging.getLogger(logger_name)
     logger.setLevel(LOG_LEVEL)
 
-    logging.handlers.RotatingFileHandler(log_path, maxBytes=LOG_MAX_SIZE, backupCount=LOG_FILE_CNT)
-
     # log format
     if LOG_LEVEL == logging.DEBUG:
         fileformatter = logging.Formatter('[%(asctime)s|%(levelname)s|%(filename)s|(%(funcName)s)]-%(message)s')
     else:
         fileformatter = logging.Formatter('[%(asctime)s|%(levelname)s]-%(message)s')
 
-    fileHandler = logging.FileHandler(log_path, encoding='utf-8')
+    fileHandler = logging.handlers.RotatingFileHandler(log_path, maxBytes=LOG_MAX_SIZE, backupCount=LOG_FILE_CNT, encoding='utf-8')
     fileHandler.setFormatter(fileformatter)
 
     streamHandler = logging.StreamHandler()
@@ -65,6 +63,7 @@ def funclog(logger):
                 return result
             except Exception as e:
                 logger.error(f"Error in {func.__qualname__.split('.')[0]} {func.__name__}: {e}")
+                raise
         return wrapper
     return decorator
 

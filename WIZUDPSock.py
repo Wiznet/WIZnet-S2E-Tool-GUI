@@ -32,7 +32,7 @@ class WIZUDPSock:
     def recvfrom(self):
         assert self.sock is not None, "recvfrom() called before open()"
         data, addr = self.sock.recvfrom(4096)
-        return data
+        return data, addr
 
     def close(self):
         assert self.sock is not None, "close() called before open()"

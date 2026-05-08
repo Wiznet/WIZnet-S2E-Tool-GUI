@@ -1,0 +1,124 @@
+# WIZ510SSL.yaml
+# SSL/TLS 지원 보안 S2E 장비
+# 소스 기준: WIZMakeCMD.py SECURITY_DEVICE, wizcmdset.py WIZ5XX_RP_CMDSET
+
+name: WIZ510SSL
+display_name: "WIZ510SSL"
+aliases:
+  - "WIZ510SSL"
+family: security
+channels: 1
+search_cmd_order:
+  - MC
+  - VR
+  - MN
+  - IM
+  - OP
+  - CP
+  - DG
+  - KA
+  - KI
+  - KE
+  - RI
+  - LI
+  - SM
+  - GW
+  - DS
+  - DH
+  - LP
+  - RP
+  - RH
+  - BR
+  - DB
+  - PR
+  - SB
+  - FL
+  - IT
+  - PT
+  - PS
+  - PD
+  - TE
+  - SS
+  - NP
+  - SP
+  - UN
+  - ST
+  - EC
+  - SC
+  - TR
+  - QU
+  - QP
+  - QC
+  - QK
+  - PU
+  - U0
+  - U1
+  - U2
+  - QO
+  - RC
+  - CE
+
+command_groups:
+  - base
+  - retransmit
+  - security
+
+overrides:
+  # SSL/MQTT 지원하는 OP 확장
+  OP:
+    regex: "^[0-6]$"
+    values:
+      "0": "TCP Client mode"
+      "1": "TCP Server mode"
+      "2": "TCP Mixed mode"
+      "3": "UDP mode"
+      "4": "SSL TCP Client mode"
+      "5": "MQTT Client"
+      "6": "MQTTS Client"
+
+fw_constraints:
+  upload_supported: true
+  config_port: 50001
+
+ui:
+  widget_overrides:
+    # 이전 기준: 'WIZ5XXSR' in curr_dev or curr_dev in W55RP20_FAMILY or 'W232N' in curr_dev or 'IP20' in curr_dev
+    # → 해당 목록에 없는 WIZ510SSL만 groupbox_ch1_timeout 숨김
+    groupbox_ch1_timeout:
+      visible: false
+    # 이전 기준: SECURITY_DEVICE이면서 WIZ5XXSR/W55RP20/W232N/IP20 제외 → WIZ510SSL만 표시
+    group_current_bank:
+      visible: true
+  tabs:
+    - id: network
+      label: "Network"
+      groups:
+        - device_info
+        - ip_mode
+        - op_mode
+        - conn_password
+        - ssl_options
+    - id: serial
+      label: "Serial"
+      groups:
+        - serial_info
+        - serial_params
+        - data_packing
+    - id: options
+      label: "Options"
+      groups:
+        - inactivity
+        - keepalive
+        - trigger
+        - search_password
+        - tcp_options
+    - id: mqtt
+      label: "MQTT"
+      groups:
+        - mqtt_options
+        - mqtt_topics
+    - id: certificate
+      label: "Certificate"
+      groups:
+        - cert_options
+        - cert_upload

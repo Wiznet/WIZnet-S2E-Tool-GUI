@@ -1,0 +1,88 @@
+# ddns.yaml
+# DDNS (Dynamic DNS) 관련 커맨드
+# 지원 장비: WIZ107SR, WIZ108SR
+# 소스 기준: frmMain.vb CalcSetMsg() DDNS 블록, clsSEC.vb
+
+DD:
+  description: "DDNS Enable"
+  regex: "^[0-1]$"
+  values:
+    "0": "Disabled"
+    "1": "Enabled"
+  access: RW
+  ui:
+    tab: network
+    group: ddns
+    widget: checkbox
+    label: "Enable DDNS"
+    order: 1
+
+DX:
+  description: "DDNS Server Index"
+  regex: "^[0-9]+$"
+  values:
+    "0": "dyndns.com"
+  access: RW
+  ui:
+    tab: network
+    group: ddns
+    widget: combobox
+    label: "DDNS Server"
+    order: 2
+    depends_on: {DD: "1"}
+
+DP:
+  description: "DDNS Server Port"
+  regex: "^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: ddns
+    widget: port
+    label: "Server Port"
+    order: 3
+    depends_on: {DD: "1"}
+
+DI:
+  description: "DDNS ID (Username)"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: ddns
+    widget: lineedit
+    label: "DDNS ID"
+    order: 4
+    span: 2
+    depends_on: {DD: "1"}
+
+DW:
+  description: "DDNS Password"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: ddns
+    widget: lineedit
+    label: "DDNS Password"
+    order: 5
+    span: 2
+    password: true
+    depends_on: {DD: "1"}
+
+DH:
+  description: "DDNS Domain Host"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: ddns
+    widget: lineedit
+    label: "Domain Name"
+    order: 6
+    span: 2
+    depends_on: {DD: "1"}

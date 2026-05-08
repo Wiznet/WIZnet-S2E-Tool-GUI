@@ -1,0 +1,85 @@
+# W232N.yaml
+# 소스 기준: WIZMakeCMD.py SECURITY_DEVICE
+
+name: W232N
+display_name: "W232N"
+aliases:
+  - "W232N"
+family: security
+channels: 1
+
+command_groups:
+  - base
+  - retransmit
+  - security
+  - w55rp20_ext
+
+overrides:
+  # BR: W232N 최대 230400 (index 0-13, WIZ750 브랜치와 동일)
+  BR:
+    regex: "^([0-9]|1[0-3])$"
+    values:
+      "0": "300"
+      "1": "600"
+      "2": "1200"
+      "3": "1800"
+      "4": "2400"
+      "5": "4800"
+      "6": "9600"
+      "7": "14400"
+      "8": "19200"
+      "9": "28800"
+      "10": "38400"
+      "11": "57600"
+      "12": "115200"
+      "13": "230400"
+  OP:
+    regex: "^[0-6]$"
+    values:
+      "0": "TCP Client mode"
+      "1": "TCP Server mode"
+      "2": "TCP Mixed mode"
+      "3": "UDP mode"
+      "4": "SSL TCP Client mode"
+      "5": "MQTT Client"
+      "6": "MQTTS Client"
+
+fw_constraints:
+  upload_supported: true
+  config_port: 50001
+
+ui:
+  tabs:
+    - id: network
+      label: "Network"
+      groups:
+        - device_info
+        - ip_mode
+        - op_mode
+        - conn_password
+        - ssl_options
+    - id: serial
+      label: "Serial"
+      groups:
+        - serial_info
+        - serial_params
+        - data_packing
+    - id: options
+      label: "Options"
+      groups:
+        - inactivity
+        - keepalive
+        - trigger
+        - search_password
+        - tcp_options
+        - connection_events
+    - id: mqtt
+      label: "MQTT"
+      groups:
+        - mqtt_options
+        - mqtt_topics
+    - id: certificate
+      label: "Certificate"
+      groups:
+        - cert_options
+        - cert_upload

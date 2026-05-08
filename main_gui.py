@@ -33,6 +33,7 @@ import sys
 import time
 import re
 import os
+import json
 import subprocess
 import webbrowser
 import logging
@@ -60,6 +61,9 @@ from PyQt5.QtWidgets import (
     QLabel,
     # QGridLayout,
     QToolTip,
+    QPushButton,
+    QToolButton,
+    QStyle,
     # QRadioButton,
     # QComboBox,
     # QCheckBox,
@@ -69,6 +73,9 @@ import ifaddr
 
 # CSV MRU Manager
 from csv_mru_manager import CSVMRUManager
+
+# Terminal utility
+from terminal.terminal_panel import TerminalPanel
 
 
 SECURITY_TWO_PORT_DEV = ("W55RP20-S2E-2CH",)
@@ -198,7 +205,7 @@ class SearchErrorCollector:
         if not self.has_errors():
             return ""
 
-        html = "<h3>검색 중 오류 발생</h3><ul>"
+        html = "<h3>Errors occurred during search</h3><ul>"
         for err in self.errors:
             html += f"""
             <li>
@@ -379,23 +386,23 @@ class ClickableInfoLabel(QLabel):
         - hideText() + 딜레이 + showText() 패턴이 안정적으로 동작
         - 호버 툴팁과 클릭 툴팁이 충돌하지 않도록 조정
         """
-        print("[DEBUG] ClickableInfoLabel.mousePressEvent called")
+        logger.debug("ClickableInfoLabel.mousePressEvent called")
         if ev and ev.button() == QtCore.Qt.MouseButton(1):  # 왼쪽 버튼만
             tooltip_text = self.toolTip()
-            print(f"[DEBUG] Tooltip text: {tooltip_text}")
+            logger.debug(f"Tooltip text: {tooltip_text}")
             if tooltip_text:
                 # 1단계: 기존 툴팁 숨기기 (호버 툴팁 제거)
                 QToolTip.hideText()
-                print("[DEBUG] hideText() called")
+                logger.debug("hideText() called")
 
                 # 2단계: 클릭 위치 계산 (글로벌 좌표계)
                 pos = self.mapToGlobal(ev.pos())
-                print(f"[DEBUG] Tooltip position: {pos}")
+                logger.debug(f"Tooltip position: {pos}")
 
                 # 3단계: 100ms 딜레이 후 툴팁 표시
                 # → Qt 내부에서 hideText() 처리 완료 대기
                 QtCore.QTimer.singleShot(100, lambda: self._show_tooltip_delayed(pos, tooltip_text))
-                print("[DEBUG] Timer scheduled for delayed tooltip")
+                logger.debug("Timer scheduled for delayed tooltip")
 
         # 부모 클래스의 이벤트 처리도 실행 (이벤트 전파)
         super().mousePressEvent(ev)
@@ -411,14 +418,13 @@ class ClickableInfoLabel(QLabel):
             - QTimer.singleShot()에서 호출됨
             - hideText() 이후 충분한 시간 경과 후 실행
         """
-        print("[DEBUG] _show_tooltip_delayed called")
+        logger.debug("_show_tooltip_delayed called")
         QToolTip.showText(pos, text, self, self.rect(), UITooltipSettings.TOOLTIP_DURATION_MS)
-        print(f"[DEBUG] showText() executed with duration={UITooltipSettings.TOOLTIP_DURATION_MS}ms")
+        logger.debug(f"showText() executed with duration={UITooltipSettings.TOOLTIP_DURATION_MS}ms")
 
 
 # VERSION = 'V1.5.5.1'  # github 이슈 #36 수정
 VERSION = f'V{Path(resource_path("version")).read_text().strip()}'
-print(f"VERSION={VERSION}")
 
 
 # Load ui files
@@ -483,6 +489,15 @@ class WIZWindow(QMainWindow, main_window):
         self.csv_mru_manager = CSVMRUManager()
         # CSV 경로 기억 (Save/Load Searched Results) - config/ui_state.json에서 로드
         self.last_csv_directory = self.csv_mru_manager.get_last_directory()
+
+        # FW from Git
+        try:
+            from fw_git_fetcher import FWGitFetcher
+            self._fw_fetcher = FWGitFetcher(resource_path("config/fw_sources.json"))
+        except Exception as e:
+            self.logger.warning(f"FWGitFetcher init failed: {e}")
+            self._fw_fetcher = None
+        self._fw_download_path = self._load_fw_download_path()
 
         # check if use setting password
         self.use_setting_pw = False
@@ -576,7 +591,7 @@ class WIZWindow(QMainWindow, main_window):
             self.btn_loadconfig.clicked.connect(self.dialog_load_file)
 
             # self.btn_upload.clicked.connect(self.update_btn_clicked)
-            self.btn_upload.clicked.connect(self.event_upload_clicked)
+            # btn_upload uses setMenu() in init_ui_object() — clicked handled by menu actions
             self.btn_exit.clicked.connect(self.msg_exit)
         except Exception as e:
             self.logger.error(f"button event register error: {e}")
@@ -592,6 +607,13 @@ class WIZWindow(QMainWindow, main_window):
         self.ip_dhcp.clicked.connect(self.event_ip_alloc)
         self.ip_static.clicked.connect(self.event_ip_alloc)
         self.ip_pppoe.clicked.connect(self.event_ip_alloc)
+
+        # WIZ1x0SR 검색 체크박스 → 경고 레이블 show/hide
+        self.chk_wiz1x0_search.stateChanged.connect(
+            lambda state: self.lbl_wiz1x0_search_warn.setStyleSheet(
+                "color: #e08000;" if state == Qt.Checked else "color: transparent;"
+            )
+        )
 
         # WIZ107SR/108SR: DDNS enable 토글, Network Protocol, 9-bit databit 제약
         self.ddns_enable.stateChanged.connect(self.event_ddns_enable)
@@ -612,9 +634,12 @@ class WIZWindow(QMainWindow, main_window):
         self.ch2_udp.clicked.connect(self.event_opmode)
 
         # Event: Search method
-        self.broadcast.clicked.connect(self.event_search_method)
-        self.unicast_ip.clicked.connect(self.event_search_method)
+        self.broadcast.clicked.connect(self._on_broadcast_selected)
+        self.unicast_ip.clicked.connect(self._on_unicast_selected)
         # self.unicast_mac.clicked.connect(self.event_search_method)
+        self.localip.textChanged.connect(
+            lambda text: self.search_ipaddr.setText(text) if text and self.unicast_ip.isChecked() else None
+        )
 
         # Event: modbus
         # self.unicast_mac.clicked.connect(self.event_search_method)
@@ -630,6 +655,27 @@ class WIZWindow(QMainWindow, main_window):
         self.list_device.itemSelectionChanged.connect(self.dev_selected)
 
         # Menu event - File
+        self.actionDeviceSearch = QAction("Device Search", self)
+        self.actionDeviceSearch.setShortcut(QtGui.QKeySequence("F5"))
+        self.actionDeviceSearch.setShortcutContext(Qt.WindowShortcut)
+        self.actionDeviceSearch.triggered.connect(self._on_search_button_clicked)
+        self.menuFile.insertAction(self.actionExit, self.actionDeviceSearch)
+        self.menuFile.insertSeparator(self.actionExit)
+        self.actionExit.setShortcut(QtGui.QKeySequence("Ctrl+Q"))
+        self.actionExit.setShortcutContext(Qt.ApplicationShortcut)
+
+        self._action_terminal = QAction("Terminal", self)
+        self._action_terminal.setCheckable(True)
+        self._action_terminal.setShortcut(QtGui.QKeySequence("Ctrl+T"))
+        self._action_terminal.setShortcutContext(Qt.ApplicationShortcut)
+        self._action_terminal.triggered.connect(self._toggle_terminal)
+        self.menuOption.addSeparator()
+        self.menuOption.addAction(self._action_terminal)
+
+        self._action_fw_dl_path = QAction("FW 다운로드 경로...", self)
+        self._action_fw_dl_path.triggered.connect(self.event_set_fw_download_path)
+        self.menuOption.addAction(self._action_fw_dl_path)
+
         self.actionSave.triggered.connect(self.dialog_save_file)
         self.actionLoad.triggered.connect(self.dialog_load_file)
         self.actionSaveSearchResults.triggered.connect(self.save_searched_results_to_csv)
@@ -703,6 +749,41 @@ class WIZWindow(QMainWindow, main_window):
 
         self.cert_object_config()
 
+        # ── 터미널 패널 초기화 ──────────────────────────────────
+        self._terminal_panel = TerminalPanel(self)
+
+        # 메인 툴바(gridLayout_102)에 터미널 버튼 삽입 — btn_exit 왼쪽
+        # btn_exit: row=0, col=4 in gridLayout_102
+        _grid = self.gridLayout_102
+        _grid.removeWidget(self.btn_exit)
+
+        self._btn_terminal = QToolButton()
+        self._btn_terminal.setIcon(QApplication.style().standardIcon(QStyle.SP_ComputerIcon))
+        self._btn_terminal.setText('Terminal')
+        self._btn_terminal.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self._btn_terminal.setSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed
+        )
+        self._btn_terminal.setCheckable(True)
+        self._btn_terminal.setMinimumSize(85, 68)
+        self._btn_terminal.setMaximumSize(240, 100)
+        self._btn_terminal.setIconSize(QtCore.QSize(32, 32))
+        self._btn_terminal.setFont(self.midfont)
+        self._btn_terminal.setToolTip('터미널 패널 열기/닫기')
+        self._btn_terminal.clicked.connect(self._toggle_terminal)
+        _grid.addWidget(self._btn_terminal, 0, 4)
+        _grid.addWidget(self.btn_exit, 0, 5)
+
+        self._sync_toolbar_stretch(_grid)
+
+        self._terminal_panel.panel_hidden.connect(self._on_terminal_panel_hidden)
+
+        # 장치 목록 우클릭 메뉴
+        self.list_device.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.list_device.customContextMenuRequested.connect(
+            self._device_list_context_menu
+        )
+
     @funclog(logger)
     def init_ui_object(self):
         """
@@ -734,7 +815,7 @@ class WIZWindow(QMainWindow, main_window):
                 ),
             }
         except Exception as e:
-            print(f"ERROR:init_ui_object:{e}")
+            self.logger.error(f"init_ui_object: {e}")
 
         # Initial tab — 높은 인덱스부터 제거
         self.generalTab.removeTab(6)
@@ -800,6 +881,8 @@ class WIZWindow(QMainWindow, main_window):
         # WIZ1x0SR 전용 패널: 초기 hidden, 시그널 연결
         self.wiz1x0_tab.setVisible(False)
         self._connect_wiz1x0_signals()
+        self._apply_wiz1x0_compact_layout()
+        self._apply_wiz1x0_field_widths()
 
         # 디버깅 편의를 위한 기본값 설정 (Search method 라디오 버튼만)
         self.broadcast.setChecked(True)  # UDP Broadcast 검색 선택
@@ -811,6 +894,37 @@ class WIZWindow(QMainWindow, main_window):
         #     lineedit_subtopic = getattr(self, f'lineedit_mqtt_subtopic_{i}')
         #     # lineedit_subtopic.hide()
         #     lineedit_subtopic.setEnabled(False)
+
+        # btn_upload → 드롭다운 메뉴 (FW from local PC / FW from Git)
+        upload_menu = QMenu(self)
+        self._act_fw_local = upload_menu.addAction("FW from local PC")
+        self._act_fw_git   = upload_menu.addAction("FW from Git")
+        self.btn_upload.setMenu(upload_menu)
+        self._act_fw_local.triggered.connect(self.event_upload_clicked)
+        self._act_fw_git.triggered.connect(self.event_fw_from_git)
+
+    def _sync_toolbar_stretch(self, grid):
+        """툴바 gridLayout의 컬럼별 버튼 수를 세어 columnStretch를 자동 배분.
+        버튼이 추가·제거될 때 다시 호출하면 비율이 자동 갱신된다."""
+        col_count = {}
+        for i in range(grid.count()):
+            item = grid.itemAt(i)
+            if item is None:
+                continue
+            _, col, _, _ = grid.getItemPosition(i)
+            widget = item.widget()
+            layout = item.layout()
+            if isinstance(widget, (QPushButton, QToolButton)):
+                col_count[col] = col_count.get(col, 0) + 1
+            elif layout is not None:
+                n = sum(
+                    1 for j in range(layout.count())
+                    if isinstance(layout.itemAt(j).widget(), (QPushButton, QToolButton))
+                )
+                if n:
+                    col_count[col] = col_count.get(col, 0) + n
+        for col, n in col_count.items():
+            grid.setColumnStretch(col, n)
 
     def init_btn_factory(self):
         # factory_option = ['Factory default settings', 'Factory default firmware']
@@ -990,7 +1104,7 @@ class WIZWindow(QMainWindow, main_window):
         self.btn_loadconfig.setEnabled(False)
 
         self.generalTab.setEnabled(False)
-        print("disable_object::channel_tab set tab disabled")
+        self.logger.debug("disable_object::channel_tab set tab disabled")
         self.channel_tab.setEnabled(False)
 
     def object_config(self):
@@ -1019,10 +1133,10 @@ class WIZWindow(QMainWindow, main_window):
         self.exp_gpio.setEnabled(True)
 
         if self.curr_st not in DeviceStatusMinimum:
-            print("object_config::channel_tab set tab enabled")
+            self.logger.debug("object_config::channel_tab set tab enabled")
             self.channel_tab.setEnabled(True)
         else:
-            print("object_config::channel_tab set tab disabled")
+            self.logger.debug("object_config::channel_tab set tab disabled")
             self.channel_tab.setEnabled(False)
         self.event_passwd_enable()
 
@@ -1031,7 +1145,6 @@ class WIZWindow(QMainWindow, main_window):
         self.load_config.setEnabled(True)
 
         self.event_opmode()
-        self.event_search_method()
         self.event_ip_alloc()
         self.event_atmode()
         self.event_keepalive()
@@ -1221,17 +1334,8 @@ class WIZWindow(QMainWindow, main_window):
     def object_config_for_device(self):
         if not self.curr_dev or not self.curr_ver:
             return
-        # IP20도 Certificate manager 탭 표시 (SSL/MQTTS 지원)
-        # if self.curr_dev == "IP20":
-        #     # certificate_tab_text는 init_ui_object에서 저장됨
-        #     n_tabs = self.generalTab.count()
-        #     for idx in range(n_tabs):
-        #         if self.generalTab.tabText(idx) == self.certificate_tab_text:
-        #             self.generalTab.removeTab(idx)
-        #             break
 
         # W55RP20-S2E, W232N, IP20인 경우에만 group_packing_12 표시 (SD/DD 기능)
-        # 버전이 1.1.8 이상인 경우에만 표시
         if self.curr_dev in (W55RP20_FAMILY + ("W232N", "IP20")) and version_compare(self.curr_ver, "1.1.8") >= 0:
             self.group_packing_12.show()
             self.group_packing_13.show()
@@ -1239,21 +1343,18 @@ class WIZWindow(QMainWindow, main_window):
             self.group_packing_12.hide()
             self.group_packing_13.hide()
 
-        # ...existing code...
         is_security_two_port = self.curr_dev in SECURITY_TWO_PORT_DEV
         is_legacy_two_port = (
             (self.curr_dev in TWO_PORT_DEV or "WIZ752" in self.curr_dev)
             and not is_security_two_port
         )
 
-        # Channel #0 Modbus option is hidden on legacy two-port models that reuse the UI
         if is_legacy_two_port:
             self.group_modubs_option.hide()
             self.modbus_protocol.setCurrentIndex(0)
         else:
             self.group_modubs_option.show()
 
-        # Channel #1 timeout widgets are only applicable to security two-port devices
         if is_security_two_port:
             self.groupbox_ch1_timeout_2.show()
             self.groupbox_ch1_timeout_2.setEnabled(True)
@@ -1261,12 +1362,10 @@ class WIZWindow(QMainWindow, main_window):
             self.groupbox_ch1_timeout_2.hide()
             self.groupbox_ch1_timeout_2.setEnabled(False)
 
-        # WIZ5XX 가 아니면 modbus 는 사용 불가 #36
-        print(
+        self.logger.debug(
             f"model={self.curr_dev},ver={self.curr_ver},version compare={version_compare(self.curr_ver, '1.0.8')},status={self.curr_st}"
         )
         if self.curr_st in DeviceStatusMinimum:
-            # Ensure Modbus option is not left enabled when device is in BOOT/UPGRADE
             self.modbus_protocol.setEnabled(False)
             self.modbus_protocol.setCurrentIndex(0)
             self.group_modubs_option_2.hide()
@@ -1287,245 +1386,188 @@ class WIZWindow(QMainWindow, main_window):
             self.modbus_protocol_2.setCurrentIndex(0)
             self.group_packing_14.hide()
             self.group_packing_15.hide()
-        if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
-            # WIZ107SR / WIZ108SR 전용 처리
-            self.tcp_timeout.setVisible(False)
-            self.tcp_timeout_label.setVisible(False)
-            self.ch1_ssl_tcpclient.setEnabled(False)
-            self.ch1_mqttclient.setEnabled(False)
-            self.ch1_mqtts_client.setEnabled(False)
 
-            # ip_pppoe 라디오버튼 표시 (PPPoE 지원)
-            self.ip_pppoe.setVisible(True)
+        self._config_serial_for_device()
+        self._config_status_pin_for_device()
+        self._config_security_options()
 
-            # DB: 9-bit 항목 동적 추가 (기존 7/8 bit에 추가)
-            if self.ch1_databit.count() < 3:
-                self.ch1_databit.addItem("9-bit")
-
-            # Baudrate: 최대 230400 (index 0-13)
-            current_baud = self._get_current_baud_from_profile(13)
+    def _apply_serial_from_spec(self, spec) -> None:
+        """DeviceSpec 기반으로 시리얼 포트 UI 설정."""
+        # 1. ch1_baud
+        br_entry = spec.cmdset.get('BR')
+        if br_entry:
+            sorted_br = sorted(br_entry.values.items(), key=lambda x: int(x[0]))
+            br_strings = [v for _, v in sorted_br]
+            current_br = None
+            if self.curr_mac in self.dev_profile:
+                br_raw = self.dev_profile[self.curr_mac].get('BR')
+                if br_raw is not None:
+                    try:
+                        current_br = br_entry.values.get(str(int(br_raw)))
+                    except (ValueError, TypeError):
+                        pass
             self.ch1_baud.clear()
-            self.ch1_baud.addItems(BAUDRATE_BASE)  # 300 ~ 230400 (14 items)
-            if current_baud:
-                idx = self.ch1_baud.findText(current_baud)
+            self.ch1_baud.addItems(br_strings)
+            if current_br:
+                idx = self.ch1_baud.findText(current_br)
                 if idx >= 0:
                     self.ch1_baud.setCurrentIndex(idx)
 
-            # DB 9-bit 현재 상태에 따라 PR/SB 제약 초기 적용
-            self.event_ch1_databit_changed(self.ch1_databit.currentIndex())
-            # DDNS 필드 활성화 상태 초기 적용
-            self.event_ddns_enable()
-        elif "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev or "W232N" in self.curr_dev:
-            # 다른 장치 선택 시 ip_pppoe 숨기고 DB 9-bit 항목 제거
-            self.ip_pppoe.setVisible(False)
-            if self.ch1_databit.count() > 2:
-                self.ch1_databit.removeItem(2)
-            # 9-bit 잠금 해제
-            self.ch1_parity.setEnabled(True)
-            self.ch1_stopbit.setEnabled(True)
-
-            # TR 필드 복원 (WIZ107/108에서 전환 시)
-            self.tcp_timeout.setVisible(True)
-            self.tcp_timeout_label.setVisible(True)
-
-            if version_compare("1.2.0", self.curr_ver) <= 0:
-                self.tcp_timeout.setEnabled(True)
-            else:
-                self.tcp_timeout.setEnabled(False)
-
-            # 'OP' option
-            self.ch1_ssl_tcpclient.setEnabled(False)
-            self.ch1_mqttclient.setEnabled(False)
-            self.ch1_mqtts_client.setEnabled(False)
-
-            # Baudrate configuration - get current device's BR value from dev_profile
-            current_baud = self._get_current_baud_from_profile(13)  # WIZ750SR/W232N: max BR index 13 (230400)
-
-            # Baudrate configuration for WIZ750SR/W232N (max 230400)
-            self.ch1_baud.clear()
-            self.ch1_baud.addItems(BAUDRATE_BASE)  # 300 ~ 230400 (14 items)
-
-            # Restore current device's selection
-            if current_baud:
-                idx = self.ch1_baud.findText(current_baud)
-                if idx >= 0:
-                    self.ch1_baud.setCurrentIndex(idx)
-        elif self.curr_dev in W55RP20_FAMILY:
-            self.ip_pppoe.setVisible(False)
-            if self.ch1_databit.count() > 2:
-                self.ch1_databit.removeItem(2)
-            self.ch1_parity.setEnabled(True)
-            self.ch1_stopbit.setEnabled(True)
-            # W55RP20: 펌웨어 버전에 따라 고속 보드레이트 지원 여부 결정
-            # - FW < 1.2.1: BR 0-15 (최대 921600)
-            # - FW >= 1.2.1: BR 0-19 (최대 8M, 1M/2M/4M/8M 지원)
-            supports_high_speed = False
-            if hasattr(self, 'curr_ver') and self.curr_ver:
-                supports_high_speed = version_compare(self.curr_ver, "1.2.1") >= 0
-
-            # Baudrate configuration - get current device's BR value from dev_profile
-            max_br_index = 19 if supports_high_speed else 15
-            current_baud = self._get_current_baud_from_profile(max_br_index)
-
-            # Baudrate configuration for W55RP20
-            self.ch1_baud.clear()
-            self.ch1_baud.addItems(BAUDRATE_BASE)  # 300 ~ 230400 (14 items)
-            self.ch1_baud.addItem("460800")  # Add 460800 (index 14)
-            self.ch1_baud.addItem("921600")  # Add 921600 (index 15)
-
-            # 펌웨어 1.2.1 이상에서만 고속 보드레이트 추가
-            if supports_high_speed:
-                self.ch1_baud.addItem("1M")  # Add 1M (index 16)
-                self.ch1_baud.addItem("2M")  # Add 2M (index 17)
-                self.ch1_baud.addItem("4M")  # Add 4M (index 18)
-                self.ch1_baud.addItem("8M")  # Add 8M (index 19)
-
-            # Restore current device's selection
-            if current_baud:
-                idx = self.ch1_baud.findText(current_baud)
-                if idx >= 0:
-                    self.ch1_baud.setCurrentIndex(idx)
-
-            # 2CH device: ch2_baud도 ch1_baud와 동일하게 구성 (버전에 따라)
-            if self.curr_dev in SECURITY_TWO_PORT_DEV:
-                # ch2_baud의 현재 EB 값 가져오기
-                current_ch2_baud = None
+        # 2. ch2_baud (2채널 장치)
+        if spec.channels == 2:
+            eb_entry = spec.cmdset.get('EB')
+            if eb_entry:
+                sorted_eb = sorted(eb_entry.values.items(), key=lambda x: int(x[0]))
+                eb_strings = [v for _, v in sorted_eb]
+                current_eb = None
                 if self.curr_mac in self.dev_profile:
-                    dev_data = self.dev_profile[self.curr_mac]
-                    if "EB" in dev_data:
+                    eb_raw = self.dev_profile[self.curr_mac].get('EB')
+                    if eb_raw is not None:
                         try:
-                            eb_index = int(dev_data["EB"])
-                            if 0 <= eb_index <= max_br_index:
-                                if eb_index < len(BAUDRATE_BASE):
-                                    current_ch2_baud = BAUDRATE_BASE[eb_index]
-                                elif eb_index == 14:
-                                    current_ch2_baud = "460800"
-                                elif eb_index == 15:
-                                    current_ch2_baud = "921600"
-                                elif eb_index == 16:
-                                    current_ch2_baud = "1M"
-                                elif eb_index == 17:
-                                    current_ch2_baud = "2M"
-                                elif eb_index == 18:
-                                    current_ch2_baud = "4M"
-                                elif eb_index == 19:
-                                    current_ch2_baud = "8M"
+                            current_eb = eb_entry.values.get(str(int(eb_raw)))
                         except (ValueError, TypeError):
                             pass
-
-                # ch2_baud를 ch1_baud와 동일하게 구성
                 self.ch2_baud.clear()
-                self.ch2_baud.addItems(BAUDRATE_BASE)  # 0-13
-                self.ch2_baud.addItem("460800")  # 14
-                self.ch2_baud.addItem("921600")  # 15
-                if supports_high_speed:
-                    self.ch2_baud.addItem("1M")   # 16
-                    self.ch2_baud.addItem("2M")   # 17
-                    self.ch2_baud.addItem("4M")   # 18
-                    self.ch2_baud.addItem("8M")   # 19
-
-                # ch2_baud 현재 선택값 복원
-                if current_ch2_baud:
-                    idx = self.ch2_baud.findText(current_ch2_baud)
+                self.ch2_baud.addItems(eb_strings)
+                if current_eb:
+                    idx = self.ch2_baud.findText(current_eb)
                     if idx >= 0:
                         self.ch2_baud.setCurrentIndex(idx)
-        elif "IP20" in self.curr_dev:
-            self.ip_pppoe.setVisible(False)
+
+        # 3. ip_pppoe — IM['2'] 존재 여부
+        im_entry = spec.cmdset.get('IM')
+        has_pppoe = im_entry is not None and '2' in im_entry.values
+        self.ip_pppoe.setVisible(has_pppoe)
+
+        # 4. DB 9-bit 항목
+        db_entry = spec.cmdset.get('DB')
+        has_9bit = db_entry is not None and '2' in db_entry.values
+        if has_9bit:
+            if self.ch1_databit.count() < 3:
+                self.ch1_databit.addItem("9-bit")
+        else:
             if self.ch1_databit.count() > 2:
                 self.ch1_databit.removeItem(2)
             self.ch1_parity.setEnabled(True)
             self.ch1_stopbit.setEnabled(True)
-            # Baudrate configuration - get current device's BR value from dev_profile
-            current_baud = self._get_current_baud_from_profile(15)  # IP20: max BR index 15 (921600)
 
-            # Baudrate configuration for IP20 (max 921600)
-            self.ch1_baud.clear()
-            self.ch1_baud.addItems(BAUDRATE_BASE)  # 300 ~ 230400 (14 items)
-            self.ch1_baud.addItem("460800")  # Add 460800 (index 14)
-            self.ch1_baud.addItem("921600")  # Add 921600 (index 15)
+        # 5. tcp_timeout — TR in search_cmd_list + widget_override
+        tr_in_spec = 'TR' in spec.search_cmd_list
+        wo = spec.ui_config.widget_overrides.get('tcp_timeout')
+        visible = wo.visible if (wo and wo.visible is not None) else tr_in_spec
+        enabled = wo.enabled if (wo and wo.enabled is not None) else tr_in_spec
+        self.tcp_timeout.setVisible(visible)
+        self.tcp_timeout_label.setVisible(visible)
+        self.tcp_timeout.setEnabled(enabled)
+        tip = (wo.tooltip or "") if (wo and not enabled) else ""
+        self.tcp_timeout.setToolTip(tip)
+        self.tcp_timeout_label.setToolTip(tip)
+        self.tcp_timeout.setAttribute(Qt.WA_AlwaysShowToolTips, bool(tip))
 
-            # Restore current device's selection
-            if current_baud:
-                idx = self.ch1_baud.findText(current_baud)
-                if idx >= 0:
-                    self.ch1_baud.setCurrentIndex(idx)
+        # 6. 콜백
+        if has_9bit:
+            self.event_ch1_databit_changed(self.ch1_databit.currentIndex())
+        if 'DD' in spec.cmdset:
+            self.event_ddns_enable()
+
+    def _config_serial_for_device(self):
+        """장치별 보드레이트/시리얼 포트 설정."""
+        from device_spec_loader import load_device, detect_device
+        if not self.curr_dev:
+            return
+        spec_name = detect_device(self.curr_dev) or self.curr_dev
+        try:
+            spec = load_device(spec_name, self.curr_ver)
+        except FileNotFoundError:
+            self.logger.warning(f"_config_serial_for_device: spec not found for {spec_name!r}")
+            return
+        self._apply_serial_from_spec(spec)
+
+    def _config_status_pin_for_device(self):
+        """SC 상태 핀 옵션 설정."""
+        from device_spec_loader import load_device, detect_device
+        if not self.curr_dev:
+            return
+        spec_name = detect_device(self.curr_dev) or self.curr_dev
+        try:
+            spec = load_device(spec_name, self.curr_ver)
+        except FileNotFoundError:
+            self.logger.warning(f"_config_status_pin_for_device: spec not found for {spec_name!r}")
+            return
+
+        # 이전 기준: curr_dev in SECURITY_DEVICE
+        is_security = spec.family in ("security", "security_two_port")
+        # 이전 기준: "WIZ107" in curr_dev or "WIZ108" in curr_dev → early return(no-op)
+        # 신규: SC 없는 non-security → 명시적 hide (이전 장치 상태 잔류 방지)
+        has_sc = 'SC' in spec.cmdset
+
+        if is_security:
+            self.radiobtn_group_s0.hide()
+            self.radiobtn_group_s1.hide()
+            self.group_dtrdsr.show()
+            # 이전 기준: 'WIZ5XXSR' in curr_dev or curr_dev in W55RP20_FAMILY
+            #             or 'W232N' in curr_dev or 'IP20' in curr_dev
+            # 신규: security 기본값 True, 예외(WIZ510SSL)만 widget_override로 선언
+            wo = spec.ui_config.widget_overrides.get('groupbox_ch1_timeout')
+            ch1_to_vis = wo.visible if (wo and wo.visible is not None) else True
+            self.groupbox_ch1_timeout.setVisible(ch1_to_vis)
+            self.groupbox_ch1_timeout.setEnabled(ch1_to_vis)
+        elif has_sc:
+            self.radiobtn_group_s0.show()
+            self.radiobtn_group_s1.show()
+            self.group_dtrdsr.hide()
+            self.groupbox_ch1_timeout.hide()
+            self.groupbox_ch1_timeout.setEnabled(False)
         else:
-            self.ip_pppoe.setVisible(False)
-            if self.ch1_databit.count() > 2:
-                self.ch1_databit.removeItem(2)
-            self.ch1_parity.setEnabled(True)
-            self.ch1_stopbit.setEnabled(True)
-            # Baudrate configuration - get current device's BR value from dev_profile
-            current_baud = self._get_current_baud_from_profile(14)  # Other devices: max BR index 14 (460800)
+            # SC 없는 non-security (WIZ107SR/108SR)
+            self.radiobtn_group_s0.hide()
+            self.radiobtn_group_s1.hide()
+            self.group_dtrdsr.hide()
+            self.groupbox_ch1_timeout.hide()
+            self.groupbox_ch1_timeout.setEnabled(False)
 
-            # Baudrate configuration for other devices (max 460800)
-            self.ch1_baud.clear()
-            self.ch1_baud.addItems(BAUDRATE_BASE)  # 300 ~ 230400 (14 items)
-            self.ch1_baud.addItem("460800")  # Add 460800 (index 14)
+    def _config_security_options(self):
+        """SECURITY_DEVICE 관련 옵션 및 ch2 공통 옵션 설정."""
+        from device_spec_loader import load_device, detect_device
+        if not self.curr_dev:
+            return
+        spec_name = detect_device(self.curr_dev) or self.curr_dev
+        try:
+            spec = load_device(spec_name, self.curr_ver)
+        except FileNotFoundError:
+            self.logger.warning(f"_config_security_options: spec not found for {spec_name!r}")
+            return
 
-            # Restore current device's selection
-            if current_baud:
-                idx = self.ch1_baud.findText(current_baud)
-                if idx >= 0:
-                    self.ch1_baud.setCurrentIndex(idx)
+        # 이전 기준: curr_dev in SECURITY_DEVICE
+        is_security = spec.family in ("security", "security_two_port")
 
-            # TODO: ch2_baud (EB) 관리 개선 필요 - 2채널 baudrate 목록 관리 로직 검토 및 리팩토링
-            # Remove 921600 from ch2 if exists
-            idx_921 = self.ch2_baud.findText("921600")
-            if idx_921 != -1:
-                self.ch2_baud.removeItem(idx_921)
+        # tcp_timeout: 이전에는 SECURITY_DEVICE에서 setEnabled(True) 강제 호출
+        # 신규: _apply_serial_from_spec()에서 TR in search_cmd_list 기반으로 이미 처리 → 제거
 
-        # SC: Status pin option
-        if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
-            pass
-        else:
-            if self.curr_dev in SECURITY_DEVICE:
-                self.radiobtn_group_s0.hide()
-                self.radiobtn_group_s1.hide()
-                self.group_dtrdsr.show()
-                if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in W55RP20_FAMILY or 'W232N' in self.curr_dev or 'IP20' in self.curr_dev:
-                    self.groupbox_ch1_timeout.show()
-                    self.groupbox_ch1_timeout.setEnabled(True)
-                else:
-                    self.groupbox_ch1_timeout.hide()
-                    self.groupbox_ch1_timeout.setEnabled(False)
-            else:
-                self.radiobtn_group_s0.show()
-                self.radiobtn_group_s1.show()
-                self.group_dtrdsr.hide()
-                self.groupbox_ch1_timeout.hide()
+        # factory_setting: 항상 활성 (이전과 동일)
+        if self.factory_setting_action is not None:
+            self.factory_setting_action.setEnabled(True)
+        # factory_firmware: 이전 기준: SECURITY_DEVICE 여부 / 신규: spec.family 기반
+        if self.factory_firmware_action is not None:
+            self.factory_firmware_action.setEnabled(is_security)
 
-        if self.curr_dev in SECURITY_DEVICE:
-            self.tcp_timeout.setEnabled(True)
-            if self.factory_setting_action is not None:
-                self.factory_setting_action.setEnabled(True)
-            if self.factory_firmware_action is not None:
-                self.factory_firmware_action.setEnabled(True)
-            # 'OP' option
-            # IP20도 SSL, MQTTs 지원
-            self.ch1_ssl_tcpclient.setEnabled(True)
-            self.ch1_mqtts_client.setEnabled(True)
-            self.ch1_mqttclient.setEnabled(True)
-            # Current bank (RO)
-            self.group_current_bank.show()
-            if 'WIZ5XXSR' in self.curr_dev or self.curr_dev in W55RP20_FAMILY or 'W232N' in self.curr_dev or 'IP20' in self.curr_dev:
-                self.group_current_bank.hide()
-                # self.combobox_current_bank.setEnabled(True)
-            else:
-                self.combobox_current_bank.setEnabled(False)
-        else:
-            if self.factory_setting_action is not None:
-                self.factory_setting_action.setEnabled(True)
-            if self.factory_firmware_action is not None:
-                self.factory_firmware_action.setEnabled(False)
-            # 'OP' option
-            self.ch1_ssl_tcpclient.setEnabled(False)
-            self.ch1_mqttclient.setEnabled(False)
-            self.ch1_mqtts_client.setEnabled(False)
-            # Current bank (RO)
-            self.group_current_bank.hide()
+        # ssl/mqtt: 이전 기준: SECURITY_DEVICE 여부
+        # 신규: OP.values에 해당 인덱스 존재 여부 (결과 동일 — OP 4/5/6 보유 장치 = SECURITY_DEVICE)
+        op_entry = spec.cmdset.get('OP')
+        op_vals = op_entry.values if op_entry else {}
+        self.ch1_ssl_tcpclient.setEnabled('4' in op_vals)
+        self.ch1_mqttclient.setEnabled('5' in op_vals)
+        self.ch1_mqtts_client.setEnabled('6' in op_vals)
 
-        # op channel#2 option
+        # group_current_bank: 이전 기준: SECURITY_DEVICE이면서 WIZ5XXSR/W55RP20/W232N/IP20 제외
+        # = 사실상 WIZ510SSL만 표시. 신규: widget_override visible: true (WIZ510SSL.yaml에만 선언)
+        wo_bank = spec.ui_config.widget_overrides.get('group_current_bank')
+        bank_visible = wo_bank.visible if (wo_bank and wo_bank.visible is not None) else False
+        self.group_current_bank.setVisible(bank_visible)
+        if bank_visible:
+            self.combobox_current_bank.setEnabled(False)
+
+        # ch2 ssl/mqtt: 항상 비활성 (이전과 동일)
         self.ch2_ssl_tcpclient.setEnabled(False)
         self.ch2_mqttclient.setEnabled(False)
         self.ch2_mqtts_client.setEnabled(False)
@@ -1540,13 +1582,13 @@ class WIZWindow(QMainWindow, main_window):
             return
         # General tab ui setup by device
         n_tabs: int = self.generalTab.count()
-        print(f"n_tabs={n_tabs}")
+        self.logger.debug(f"n_tabs={n_tabs}")
         # 탭 인덱스(순서)와 이름을 구해 역순으로 정렬
         list_tabs: list = []
         for _i, _t in enumerate(range(n_tabs)):
             list_tabs.append(SysTabIndex(_i, self.generalTab.widget(_t).objectName()))
         list_tabs.sort(reverse=True)
-        print("list_tabs=", list_tabs)
+        self.logger.debug(f"list_tabs={list_tabs}")
         if self.curr_dev in SECURITY_DEVICE:
             # print(f"tabs in generalTab({self.generalTab}) has {self.generalTab.count()} tabs")
             # self.generalTab.count() 가 탭 추가/삭제하는 과정에서 신뢰불가.
@@ -1567,7 +1609,7 @@ class WIZWindow(QMainWindow, main_window):
                 for _new_tab in ExcludeTabInMinimum:
                     if _new_tab not in repr(list_tabs):
                         _new_tab_object = self.tab_structure.get(_new_tab)
-                        print(f"_new_tab={_new_tab},_new_tab_object={_new_tab_object}")
+                        self.logger.debug(f"_new_tab={_new_tab},_new_tab_object={_new_tab_object}")
                         if _new_tab_object is None:
                             continue
                         self.generalTab.insertTab(
@@ -1583,9 +1625,9 @@ class WIZWindow(QMainWindow, main_window):
             #     print(f"tab({_t}): name={self.generalTab.widget(_t).objectName()},obj={self.generalTab.widget(_t)}")
         else:
             # 빼야할 탭 빼기
-            print("list_tabs=", list_tabs)
+            self.logger.debug(f"list_tabs={list_tabs}")
             for _tab in list_tabs:
-                print("tab=", _tab)
+                self.logger.debug(f"tab={_tab}")
                 if _tab.name in ExcludeTabInCommon:
                     self.generalTab.removeTab(_tab.idx)
                     list_tabs.remove(_tab)
@@ -1671,7 +1713,7 @@ class WIZWindow(QMainWindow, main_window):
         if not self.curr_dev:
             return
         # channel tab config
-        print("channel_tab_config::curr_st=", self.curr_st)
+        self.logger.debug(f"channel_tab_config::curr_st={self.curr_st}")
         if self.curr_st in DeviceStatusMinimum:
             n_tabs = self.channel_tab.count()
             for i in reversed(range(1, n_tabs + 1)):
@@ -1685,16 +1727,16 @@ class WIZWindow(QMainWindow, main_window):
         ):
             if self.curr_dev in SECURITY_TWO_PORT_DEV:
                 self.channel_tab.insertTab(1, self.tab_ch1, self.ch1_tab_text)
-                print("channel_tab_config::channel_tab set tab enabled security 2port")
+                self.logger.debug("channel_tab_config::channel_tab set tab enabled security 2port")
                 self.channel_tab.setTabEnabled(0, True)
                 self.channel_tab.setTabEnabled(1, True)
                 return
             self.channel_tab.removeTab(1)
-            print("channel_tab_config::channel_tab set tab enabled 1port")
+            self.logger.debug("channel_tab_config::channel_tab set tab enabled 1port")
             self.channel_tab.setTabEnabled(0, True)
         elif self.curr_dev in TWO_PORT_DEV or "WIZ752" in self.curr_dev:
             self.channel_tab.insertTab(1, self.tab_ch1, self.ch1_tab_text)
-            print("channel_tab_config::channel_tab set tab enabled 2port")
+            self.logger.debug("channel_tab_config::channel_tab set tab enabled 2port")
             self.channel_tab.setTabEnabled(0, True)
             self.channel_tab.setTabEnabled(1, True)
 
@@ -1890,22 +1932,19 @@ class WIZWindow(QMainWindow, main_window):
                 self.group_modubs_option.setEnabled(False)
                 self.modbus_protocol.setCurrentIndex(0)
 
-    def event_search_method(self):
-        self.logger.info(f"localip.text()={self.localip.text()}")
+    def _on_broadcast_selected(self):
+        self.search_ipaddr.setEnabled(False)
+        self.search_port.setEnabled(False)
+        self._reset_retry_counter()
+
+    def _on_unicast_selected(self):
         if self.localip.text():
             self.search_ipaddr.setText(self.localip.text())
+        self.search_ipaddr.setEnabled(True)
+        self.search_port.setEnabled(True)
+        self._reset_retry_counter()
 
-        # UDP Broadcast - disable all input fields
-        if self.broadcast.isChecked():
-            self.search_ipaddr.setEnabled(False)
-            self.search_port.setEnabled(False)
-
-        # TCP Unicast - enable IP and port
-        elif self.unicast_ip.isChecked():
-            self.search_ipaddr.setEnabled(True)
-            self.search_port.setEnabled(True)
-
-        # 검색 방법 변경 시 반복 검색 카운터 리셋
+    def _reset_retry_counter(self):
         if self.retry_search_current > 0:
             self.logger.info(f"검색 방법 변경: 반복 검색 카운터 리셋 ({self.retry_search_current} → 0)")
             self.retry_search_current = 0
@@ -2345,8 +2384,8 @@ class WIZWindow(QMainWindow, main_window):
             base = getattr(self, 'final_status_message', f" Done. {total} devices found")
             # 숫자 부분만 갱신 (타이밍 등 뒤 문자열 보존)
             updated = re.sub(r'\d+(?= device)', str(total), base, count=1)
-            # "WIZ1x0SR 검색 중..." 잔재 제거
-            updated = re.sub(r'\s*\+\s*WIZ1x0SR \(UDP:1460\) 검색 중\.\.\.', '', updated)
+            # "WIZ1x0SR (UDP:1460) Searching..." 잔재 제거
+            updated = re.sub(r'\s*\+\s*WIZ1x0SR \(UDP:1460\) Searching\.\.\.', '', updated)
             self.final_status_message = updated
             self.statusbar.showMessage(self.final_status_message)
             # Phase 3 완료 후 pgbar hide가 pending 상태였으면 이제 숨김
@@ -2513,7 +2552,7 @@ class WIZWindow(QMainWindow, main_window):
         if hasattr(self, 'final_status_message'):
             if self._wiz1x0_search_pending:
                 self.statusbar.showMessage(
-                    self.final_status_message.rstrip() + "  +  WIZ1x0SR (UDP:1460) 검색 중..."
+                    self.final_status_message.rstrip() + "  +  WIZ1x0SR (UDP:1460) Searching..."
                 )
             else:
                 self.statusbar.showMessage(self.final_status_message)
@@ -2838,7 +2877,7 @@ class WIZWindow(QMainWindow, main_window):
                     self.final_status_message = status_msg
                     if self._wiz1x0_search_pending:
                         self.statusbar.showMessage(
-                            self.final_status_message.rstrip() + "  +  WIZ1x0SR (UDP:1460) 검색 중..."
+                            self.final_status_message.rstrip() + "  +  WIZ1x0SR (UDP:1460) Searching..."
                         )
                     else:
                         self.statusbar.showMessage(self.final_status_message)
@@ -2859,7 +2898,7 @@ class WIZWindow(QMainWindow, main_window):
 
                 if self._wiz1x0_search_pending:
                     self.statusbar.showMessage(
-                        self.final_status_message.rstrip() + "  +  WIZ1x0SR (UDP:1460) 검색 중..."
+                        self.final_status_message.rstrip() + "  +  WIZ1x0SR (UDP:1460) Searching..."
                     )
                 else:
                     self.statusbar.showMessage(self.final_status_message)
@@ -2887,7 +2926,7 @@ class WIZWindow(QMainWindow, main_window):
             QMessageBox.critical(
                 self,
                 "반복 검색 오류",
-                f"반복 검색 중 오류가 발생했습니다:\n{str(e)}\n\n검색을 중단합니다."
+                f"An error occurred during repeated search:\n{str(e)}\n\nSearch will be stopped."
             )
 
     # =========================================================================
@@ -3163,7 +3202,7 @@ class WIZWindow(QMainWindow, main_window):
         try:
             self.object_config()
         except Exception as e:
-            print(f"ERROR:::get_clicked_devinfo:object_config:{e}")
+            self.logger.error(f"get_clicked_devinfo:object_config:{e}")
 
         # print(f"2nd caller={call_from}")
         if self.curr_st == DeviceStatus.upgrade and call_from is None:
@@ -3175,26 +3214,24 @@ class WIZWindow(QMainWindow, main_window):
         # device profile(json format)
         if macaddr in self.dev_profile:
             dev_data = self.dev_profile[macaddr]
-            print("clicked device information:", dev_data)
-            print(f"[DEBUG] SD in dev_data: {'SD' in dev_data}")
+            self.logger.debug(f"clicked device information: {dev_data}")
+            self.logger.debug(f"SD in dev_data: {'SD' in dev_data}")
             if 'SD' in dev_data:
-                print(f"[DEBUG] SD value: '{dev_data['SD']}'")
+                self.logger.debug(f"SD value: '{dev_data['SD']}'")
             else:
-                print("[DEBUG] SD not found in dev_data")
+                self.logger.debug("SD not found in dev_data")
             if "ST" in dev_data and dev_data["ST"] in DeviceStatusMinimum:
-                print("get_clicked_devinfo::I'm in!!")
-                print(f"ch1_status={self.ch1_status}")
-                print("get_clicked_devinfo::channel_tab set tab disabled")
+                self.logger.debug("get_clicked_devinfo::channel_tab set tab disabled")
                 self.channel_tab.setEnabled(False)
 
             else:
-                print("get_clicked_devinfo::NOT IN!! channel_tab set tab enabled")
+                self.logger.debug("get_clicked_devinfo::channel_tab set tab enabled")
                 self.channel_tab.setEnabled(True)
 
             try:
                 self.fill_devinfo(dev_data)
             except Exception as e:
-                print(f"ERROR:::get_clicked_devinfo:fill_devinfo:{e}")
+                self.logger.error(f"get_clicked_devinfo:fill_devinfo:{e}")
         else:
             if len(self.dev_profile) != self.searched_devnum:
                 self.logger.info(
@@ -3293,6 +3330,137 @@ class WIZWindow(QMainWindow, main_window):
         """WIZ1x0SR: TCP Password 활성/비활성."""
         self.wiz1x0_tcppass.setEnabled(bool(state))
 
+    def _set_widget_width_from_sample(self, widget, sample_text: str, extra_px: int = 24):
+        """샘플 문자열 기준으로 위젯 폭을 계산해 고정."""
+        width = max(widget.minimumSizeHint().width(), widget.fontMetrics().horizontalAdvance(sample_text) + extra_px)
+        widget.setMaximumWidth(width)
+        return width
+
+    def _remove_layout_spacers(self, layout):
+        """WIZ1x0SR compact 배치를 위해 불필요한 spacer를 제거."""
+        for index in reversed(range(layout.count())):
+            item = layout.itemAt(index)
+            if item.spacerItem() is not None:
+                layout.takeAt(index)
+
+    def _apply_wiz1x0_compact_layout(self):
+        """WIZ1x0SR UI를 내용 길이 기준의 compact layout으로 정리."""
+        compact_groups = (
+            self.grp_wiz1x0_ipmode,
+            self.grp_wiz1x0_opmode,
+            self.grp_wiz1x0_serial_params,
+            self.grp_wiz1x0_packing,
+            self.grp_wiz1x0_tcppass,
+            self.grp_wiz1x0_scfg,
+        )
+        for widget in compact_groups:
+            widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Preferred)
+
+        for layout in (
+            self.hbox_wiz1x0_ipmode,
+            self.hbox_wiz1x0_opmode,
+            self.hbox_wiz1x0_tcppass,
+            self.hbox_wiz1x0_scfg,
+        ):
+            self._remove_layout_spacers(layout)
+            layout.setSpacing(8)
+
+        self.vbox_wiz1x0_net.setAlignment(self.grp_wiz1x0_ipmode, Qt.AlignLeft)
+        self.vbox_wiz1x0_net.setAlignment(self.gridLayout_wiz1x0_ipfields, Qt.AlignLeft)
+        self.vbox_wiz1x0_outer.setAlignment(self.wiz1x0_meta, Qt.AlignLeft)
+        self.vbox_wiz1x0_mid.setAlignment(self.grp_wiz1x0_opmode, Qt.AlignLeft)
+        self.vbox_wiz1x0_mid.setAlignment(self.gridLayout_wiz1x0_dns, Qt.AlignLeft)
+        self.vbox_wiz1x0_mid.setAlignment(self.grp_wiz1x0_serial_params, Qt.AlignLeft)
+        self.vbox_wiz1x0_opt.setAlignment(self.gridLayout_wiz1x0_misc, Qt.AlignLeft)
+        self.vbox_wiz1x0_opt.setAlignment(self.grp_wiz1x0_packing, Qt.AlignLeft)
+        self.vbox_wiz1x0_opt.setAlignment(self.grp_wiz1x0_tcppass, Qt.AlignLeft)
+        self.vbox_wiz1x0_opt.setAlignment(self.grp_wiz1x0_scfg, Qt.AlignLeft)
+
+        for layout in (self.gridLayout_wiz1x0_ipfields, self.gridLayout_wiz1x0_dns, self.gridLayout_wiz1x0_misc, self.gridLayout_wiz1x0_pack):
+            layout.setHorizontalSpacing(8)
+            layout.setVerticalSpacing(4)
+            layout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
+
+        for widget in (
+            self.wiz1x0_localip,
+            self.wiz1x0_myport,
+            self.wiz1x0_subnet,
+            self.wiz1x0_gw,
+            self.wiz1x0_pppoe_id,
+            self.wiz1x0_pppoe_pw,
+            self.wiz1x0_peerip,
+            self.wiz1x0_peerport,
+        ):
+            self.gridLayout_wiz1x0_ipfields.setAlignment(widget, Qt.AlignLeft)
+
+        for widget in (
+            self.wiz1x0_dns_enable,
+            self.lbl_wiz1x0_dns_ip,
+            self.wiz1x0_dns_ip,
+            self.lbl_wiz1x0_domain,
+            self.wiz1x0_domain,
+        ):
+            self.gridLayout_wiz1x0_dns.setAlignment(widget, Qt.AlignLeft)
+
+        for widget in (
+            self.wiz1x0_inactivity,
+            self.wiz1x0_pack_time,
+            self.wiz1x0_pack_size,
+            self.wiz1x0_pack_char,
+        ):
+            if widget in (self.wiz1x0_inactivity,):
+                self.gridLayout_wiz1x0_misc.setAlignment(widget, Qt.AlignLeft)
+            else:
+                self.gridLayout_wiz1x0_pack.setAlignment(widget, Qt.AlignLeft)
+
+    def _apply_wiz1x0_field_widths(self):
+        """WIZ1x0SR 필드 폭을 최대 예상 값 기준으로 조정."""
+        line_edit_samples = {
+            self.wiz1x0_localip: "999.999.999.999",
+            self.wiz1x0_subnet: "999.999.999.999",
+            self.wiz1x0_gw: "999.999.999.999",
+            self.wiz1x0_dns_ip: "999.999.999.999",
+            self.wiz1x0_peerip: "999.999.999.999",
+            self.wiz1x0_domain: "X" * 40,
+            self.wiz1x0_pppoe_id: "X" * 40,
+            self.wiz1x0_pppoe_pw: "X" * 40,
+            self.wiz1x0_myport: "65535",
+            self.wiz1x0_peerport: "65535",
+            self.wiz1x0_version: "V9.9.9",
+            self.wiz1x0_inactivity: "65535",
+            self.wiz1x0_pack_time: "65535",
+            self.wiz1x0_pack_size: "255",
+            self.wiz1x0_pack_char: "FF",
+            self.wiz1x0_tcppass: "12345678",
+            self.wiz1x0_scfg1: "FF",
+            self.wiz1x0_scfg2: "FF",
+            self.wiz1x0_scfg3: "FF",
+        }
+        for widget, sample in line_edit_samples.items():
+            width = self._set_widget_width_from_sample(widget, sample)
+            if widget in (self.wiz1x0_domain, self.wiz1x0_pppoe_id, self.wiz1x0_pppoe_pw):
+                widget.setMinimumWidth(width)
+
+        combo_samples = {
+            self.wiz1x0_baud: "230400",
+            self.wiz1x0_databit: "8-bit",
+            self.wiz1x0_parity: "None",
+            self.wiz1x0_stopbit: "1-bit",
+            self.wiz1x0_flow: "Xon/Xoff",
+        }
+        for widget, sample in combo_samples.items():
+            self._set_widget_width_from_sample(widget, sample, extra_px=40)
+
+        self.gridLayout_wiz1x0_ipfields.setColumnStretch(1, 0)
+        self.gridLayout_wiz1x0_ipfields.setColumnStretch(2, 0)
+        self.gridLayout_wiz1x0_ipfields.setColumnStretch(3, 0)
+        self.gridLayout_wiz1x0_dns.setColumnStretch(1, 0)
+        self.gridLayout_wiz1x0_dns.setColumnStretch(2, 0)
+        self.gridLayout_wiz1x0_misc.setColumnStretch(1, 0)
+        self.gridLayout_wiz1x0_misc.setColumnStretch(2, 0)
+        self.gridLayout_wiz1x0_pack.setColumnStretch(1, 0)
+        self.gridLayout_wiz1x0_pack.setColumnStretch(2, 0)
+
     def _connect_wiz1x0_signals(self):
         """WIZ1x0SR 전용 위젯 시그널 연결 (초기화 시 한 번만 호출)."""
         for rb in (self.wiz1x0_ip_static, self.wiz1x0_ip_dhcp, self.wiz1x0_ip_pppoe):
@@ -3300,6 +3468,29 @@ class WIZWindow(QMainWindow, main_window):
         self.wiz1x0_dns_enable.stateChanged.connect(self._wiz1x0_dns_enable_changed)
         self.wiz1x0_scfg_enable.stateChanged.connect(self._wiz1x0_scfg_enable_changed)
         self.wiz1x0_en_tcppass.stateChanged.connect(self._wiz1x0_tcppass_enable_changed)
+        self.btn_wiz1x0_toggle.toggled.connect(self._toggle_wiz1x0_view)
+
+    def _toggle_wiz1x0_view(self, full_mode: bool):
+        """WIZ1x0SR: Full 세로 모드(checked=True) ↔ 탭 모드 전환."""
+        self.btn_wiz1x0_toggle.setText("⊟ Tabs" if full_mode else "☰ Full")
+        if full_mode:
+            # Tab → Full: 탭에서 꺼내 세로 스크롤 영역에 배치
+            while self.wiz1x0_tabwidget.count():
+                self.wiz1x0_tabwidget.removeTab(0)
+            for w in (self.wiz1x0_col_net, self.wiz1x0_col_mid, self.wiz1x0_col_opt):
+                self.vbox_wiz1x0_full.addWidget(w)
+                w.setVisible(True)
+            self.wiz1x0_tabwidget.setVisible(False)
+            self.wiz1x0_fullscroll.setVisible(True)
+        else:
+            # Full → Tab: col 위젯들을 QTabWidget 탭으로 이동
+            for w in (self.wiz1x0_col_net, self.wiz1x0_col_mid, self.wiz1x0_col_opt):
+                self.vbox_wiz1x0_full.removeWidget(w)
+            self.wiz1x0_tabwidget.addTab(self.wiz1x0_col_net, "Network")
+            self.wiz1x0_tabwidget.addTab(self.wiz1x0_col_mid, "Mode && Serial")
+            self.wiz1x0_tabwidget.addTab(self.wiz1x0_col_opt, "Options")
+            self.wiz1x0_fullscroll.setVisible(False)
+            self.wiz1x0_tabwidget.setVisible(True)
 
     def fill_devinfo_1x0(self, d: dict):
         """WIZ1x0SR board_dict → wiz1x0_tab 전용 위젯 채우기."""
@@ -3495,7 +3686,7 @@ class WIZWindow(QMainWindow, main_window):
     def fill_devinfo(self, dev_data):
         if not self.curr_dev or not self.curr_ver:
             return
-        print("fill_devinfo", type(dev_data), dev_data)
+        self.logger.debug(f"fill_devinfo type={type(dev_data)}")
         try:
             # device info (RO)
             if "MN" in dev_data:
@@ -3606,7 +3797,7 @@ class WIZWindow(QMainWindow, main_window):
                 self.ch1_pack_char.setText(dev_data["PD"])
             # Send Data at Connection - W55RP20-S2E only (버전 1.1.8 이상)
             if "SD" in dev_data and self.curr_dev in (W55RP20_FAMILY + ("W232N", "IP20")) and version_compare(self.curr_ver, "1.1.8") >= 0:
-                print(f"[DEBUG] Loading SD data: '{dev_data['SD']}'")
+                self.logger.debug(f"Loading SD data: '{dev_data['SD']}'")
                 # 공백(" ")인 경우 빈 문자열로 표시
                 if dev_data["SD"] == " ":
                     self.ch1_pack_char_3.clear()
@@ -3614,7 +3805,7 @@ class WIZWindow(QMainWindow, main_window):
                     self.ch1_pack_char_3.setText(dev_data["SD"])
             # Send Data at Disconnection - W55RP20-S2E only (버전 1.1.8 이상)
             if "DD" in dev_data and self.curr_dev in (W55RP20_FAMILY + ("W232N", "IP20")) and version_compare(self.curr_ver, "1.1.8") >= 0:
-                print(f"[DEBUG] Loading DD data: '{dev_data['DD']}'")
+                self.logger.debug(f"Loading DD data: '{dev_data['DD']}'")
                 # 공백(" ")인 경우 빈 문자열로 표시
                 if dev_data["DD"] == " ":
                     self.ch1_pack_char_4.clear()
@@ -3622,7 +3813,7 @@ class WIZWindow(QMainWindow, main_window):
                     self.ch1_pack_char_4.setText(dev_data["DD"])
             # Ethernet Data Connection Condition - W55RP20-S2E, W232N, IP20 (버전 1.1.8 이상)
             if "SE" in dev_data and self.curr_dev in (W55RP20_FAMILY + ("W232N", "IP20")) and version_compare(self.curr_ver, "1.1.8") >= 0:
-                print(f"[DEBUG] Loading SE data: '{dev_data['SE']}'")
+                self.logger.debug(f"Loading SE data: '{dev_data['SE']}'")
                 # 공백(" ")인 경우 빈 문자열로 표시
                 if dev_data["SE"] == " ":
                     self.ch1_pack_char_5.clear()
@@ -4048,7 +4239,7 @@ class WIZWindow(QMainWindow, main_window):
             # 문맥으로 보면 modbus_protocol.isEnabled() 로 처리하는게 맞지만 항상 False 가 나와서 모델&버전 비교로 대체 #36
             if self._modbus_supported():
                 modbus_key = self._modbus_param_key()
-                print(
+                self.logger.debug(
                     f"set {modbus_key} valid, self.curr_dev={self.curr_dev}, self.curr_ver={self.curr_ver}"
                 )
                 setcmd[modbus_key] = str(self.modbus_protocol.currentIndex())
@@ -4064,7 +4255,7 @@ class WIZWindow(QMainWindow, main_window):
                     sd_data = sd_data[:30]
                     self.ch1_pack_char_3.setText(sd_data)  # UI도 업데이트
                 # 빈 문자열인 경우 공백 전송 (MQTT와 동일한 방식)
-                print(f"[DEBUG] Saving SD data: '{sd_data}'")
+                self.logger.debug(f"Saving SD data: '{sd_data}'")
                 setcmd["SD"] = sd_data if sd_data else " "
 
                 # Send Data at Disconnection - W55RP20-S2E, W232N, IP20
@@ -4074,7 +4265,7 @@ class WIZWindow(QMainWindow, main_window):
                     dd_data = dd_data[:30]
                     self.ch1_pack_char_4.setText(dd_data)  # UI도 업데이트
                 # 빈 문자열인 경우 공백 전송 (MQTT와 동일한 방식)
-                print(f"[DEBUG] Saving DD data: '{dd_data}'")
+                self.logger.debug(f"Saving DD data: '{dd_data}'")
                 setcmd["DD"] = dd_data if dd_data else " "
 
                 # Ethernet Data Connection Condition - W55RP20-S2E, W232N, IP20
@@ -4084,7 +4275,7 @@ class WIZWindow(QMainWindow, main_window):
                     se_data = se_data[:30]
                     self.ch1_pack_char_5.setText(se_data)  # UI도 업데이트
                 # 빈 문자열인 경우 공백 전송 (MQTT와 동일한 방식)
-                print(f"[DEBUG] Saving SE data: '{se_data}'")
+                self.logger.debug(f"Saving SE data: '{se_data}'")
                 setcmd["SE"] = se_data if se_data else " "
             # Inactive timer - channel 1
             setcmd["IT"] = self.ch1_inact_timer.text()
@@ -4362,7 +4553,7 @@ class WIZWindow(QMainWindow, main_window):
             # Parameter validity check
             invalid_flag = 0
             setcmd_cmd = list(setcmd.keys())
-            print(f"do_setting::setcmd={setcmd}")
+            self.logger.debug(f"do_setting::setcmd={setcmd}")
             for i in range(len(setcmd)):
                 if (
                     self.cmdset.isvalidparameter(
@@ -4509,7 +4700,10 @@ class WIZWindow(QMainWindow, main_window):
 
                 try:
                     clicked_mac = self.list_device.selectedItems()[0].text()
-                    self.dev_profile[clicked_mac] = set_result
+                    if clicked_mac in self.dev_profile:
+                        self.dev_profile[clicked_mac].update(set_result)
+                    else:
+                        self.dev_profile[clicked_mac] = set_result
                 except Exception as e:
                     self.logger.error(e)
 
@@ -4661,6 +4855,120 @@ class WIZWindow(QMainWindow, main_window):
         elif error == -3:
             self.statusbar.showMessage(" Certificate update error.")
 
+    # ── FW from Git ───────────────────────────────────────────────────────────
+    def _load_fw_download_path(self) -> str:
+        try:
+            cfg = os.path.join("config", "ui_state.json")
+            if os.path.exists(cfg):
+                with open(cfg, encoding="utf-8") as f:
+                    state = json.load(f)
+                p = state.get("fw", {}).get("download_path", "")
+                if p:
+                    return p
+        except Exception:
+            pass
+        from pathlib import Path
+        return str(Path.home() / "Downloads")
+
+    def _save_fw_download_path(self, path: str):
+        cfg = os.path.join("config", "ui_state.json")
+        try:
+            state = {}
+            if os.path.exists(cfg):
+                with open(cfg, encoding="utf-8") as f:
+                    state = json.load(f)
+            state.setdefault("fw", {})["download_path"] = path
+            os.makedirs("config", exist_ok=True)
+            with open(cfg, "w", encoding="utf-8") as f:
+                json.dump(state, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            self.logger.error(f"FW download path save failed: {e}")
+
+    def event_set_fw_download_path(self):
+        path = QFileDialog.getExistingDirectory(
+            self, "FW 다운로드 경로 선택", self._fw_download_path
+        )
+        if path:
+            self._fw_download_path = path
+            self._save_fw_download_path(path)
+
+    def event_fw_from_git(self):
+        if not self.curr_dev:
+            self.show_msgbox("Warning", "장치를 먼저 선택하세요.", QMessageBox.Warning)
+            return
+        if self._fw_fetcher is None:
+            self.show_msgbox(
+                "Warning",
+                "FW from Git 설정 파일(fw_sources.json)을 불러오지 못했습니다.",
+                QMessageBox.Warning,
+            )
+            return
+
+        family, device_spec = self._fw_fetcher.find_device(self.curr_dev)
+        # TODO: 테스트용 — 미지원 장치 체크 임시 비활성화
+        # if family is None:
+        #     supported = "\n".join(
+        #         f"  • {p}" for p in self._fw_fetcher.supported_devices()
+        #     )
+        #     self.show_msgbox(
+        #         "Warning",
+        #         f"'{self.curr_dev}'는 FW from Git 미지원 장치입니다.\n\n지원 장치:\n{supported}",
+        #         QMessageBox.Warning,
+        #     )
+        #     return
+        if family is None:
+            # 테스트 폴백: 패턴 접두사로 가장 유사한 장치 선택
+            # 예) W55RP20-S2E-2CH → W55RP20-S2E 패턴이 부분 일치
+            dn = self.curr_dev.upper()
+            sources = self._fw_fetcher._sources
+            best_fam = sources["families"][0]
+            best_dev = best_fam["devices"][0]
+            for fam in sources["families"]:
+                for dev in fam["devices"]:
+                    base = dev["name_pattern"].rstrip("?*").upper()
+                    if base and dn.startswith(base):
+                        best_fam, best_dev = fam, dev
+                        break
+                else:
+                    continue
+                break
+            family, device_spec = best_fam, best_dev
+
+        from fw_git_dialog import FWGitDialog
+        dlg = FWGitDialog(
+            self, self.curr_dev, family, device_spec,
+            self._fw_fetcher, self._fw_download_path
+        )
+        dlg.firmware_ready.connect(self._on_fw_git_ready)
+        dlg.exec_()
+
+    def _on_fw_git_ready(self, filepath: str, filesize: int):
+        if self.localip_addr is None:
+            self.show_msgbox(
+                "Warning",
+                "Local IP information could not be found. Check the Network configuration.",
+                QMessageBox.Warning,
+            )
+            return
+        # WIZ107/108SR 특수 케이스 (firmware_file_open()과 동일)
+        if self.curr_dev and (
+            "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev
+        ):
+            filesize = 51 * 1024
+        self.firmware_update(filepath, filesize)
+        if self.t_fwup is not None:
+            _path = filepath
+            self.t_fwup.upload_result.connect(
+                lambda _, p=_path: self._cleanup_fw_git_file(p)
+            )
+
+    def _cleanup_fw_git_file(self, path: str):
+        if path and os.path.isfile(path):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+
     # 'FW': firmware upload
     def firmware_update(self, filename, filesize):
         self.sock_close()
@@ -4730,6 +5038,15 @@ class WIZWindow(QMainWindow, main_window):
         )
 
         if fname:
+            basename = fname.split('/')[-1]
+            if 'BOOT' in basename.upper():
+                self.show_msgbox(
+                    "Warning",
+                    f"Cannot upload BOOT firmware file.\n\nSelected file: {basename}\n\nPlease select an APP firmware file only.",
+                    QMessageBox.Warning,
+                )
+                return
+
             self.fw_filename = fname
 
             # get file size
@@ -4778,12 +5095,12 @@ class WIZWindow(QMainWindow, main_window):
         serverip = dst_ip
         # do_ping = subprocess.Popen("ping " + ("-n 1 " if sys.platform.lower()=="win32" else "-c 1 ") + serverip,
         do_ping = subprocess.Popen(
-            "ping "
-            + ("-n 1 " if "win" in sys.platform.lower() else "-c 1 ")
-            + serverip,
+            ["ping", "-n", "1", serverip]
+            if sys.platform == "win32"
+            else ["ping", "-c", "1", serverip],
             stdout=None,
             stderr=None,
-            shell=True,
+            shell=False,
         )
         ping_response = do_ping.wait()
         self.logger.info(ping_response)
@@ -4962,7 +5279,7 @@ class WIZWindow(QMainWindow, main_window):
         variable.moveCursor(QtGui.QTextCursor.End)
 
     def load_cert_btn_clicked(self, cmd):
-        print("load_cert_btn_clicked()", cmd)
+        self.logger.debug(f"load_cert_btn_clicked cmd={cmd}")
 
         ext = "Certificate (*.crt *.pem *.key)"
         if cmd == "UP":
@@ -5074,7 +5391,7 @@ class WIZWindow(QMainWindow, main_window):
     def check_latest_version(self):
         try:
             latest_release = get_latest_release_version("Wiznet", "WIZnet-S2E-Tool-GUI")
-            print(f"The latest release version is: {latest_release}")
+            self.logger.debug(f"The latest release version is: {latest_release}")
             if VERSION.lower() != str(latest_release).lower():
                 self.show_msgbox_info(
                     "Update Available",
@@ -5084,40 +5401,75 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.error(e)
 
     def about_info(self):
-        msgbox = QMessageBox(self)
-        msgbox.setTextFormat(QtCore.Qt.TextFormat.RichText)
-        text = f"""
-        <html>
-        <head>
-        <style>
-            body {{
-                'font-family': 'Arial, sans-serif';
-                'font-size': '14px';
-            }}
-            p {{
-                "font-size": "16px";
-                "font-size": "black";
-            }}
-            {{
-                "margin-bottom": "4px";
-            }}
-        </style>
-        </head>
-        <body>
-            <h2>About WIZnet-S2E-Tool-GUI</h2>
-            <p>This is Configuration Tool for WIZnet serial to ethernet devices.</p>
-            <p>Version: <b>{VERSION}</b></p>
-            <p>Author: WIZnet</p>
-            <p>Github: <a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI'>Github repository</a></p>
-            <h3>Web site</h3>
-            <p><a href='http://www.wiznet.io/'>WIZnet Official homepage</a></p>
-            <p><a href='https://forum.wiznet.io/'>WIZnet Forum</a></p>
-            <p><a href='https://docs.wiznet.io/'>WIZnet Document</a></p>
-            <br><br>{datetime.datetime.now().year} WIZnet Co., Ltd.</font><br>
-        </body>
-        </html>
-        """
-        msgbox.about(self, "About WIZnet-S2E-Tool-GUI", text)
+        from PyQt5.QtWidgets import QDialog, QVBoxLayout, QTextBrowser, QDialogButtonBox, QLabel
+        from PyQt5.QtCore import QUrl
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("About WIZnet-S2E-Tool-GUI")
+        dialog.setFixedWidth(420)
+
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(20, 14, 20, 10)
+        layout.setSpacing(6)
+
+        browser = QTextBrowser()
+        browser.setOpenExternalLinks(True)
+        browser.setFrameShape(QtWidgets.QFrame.NoFrame)
+        browser.setReadOnly(True)
+        browser.setStyleSheet(
+            "background: white; border: 1px solid #c0c0c0; border-radius: 4px; padding: 8px;"
+        )
+        browser.document().setDocumentMargin(0)
+        gh = "https://github.com/Wiznet/WIZnet-S2E-Tool-GUI"
+        browser.setHtml(
+            f"<html><body style='font-family:Arial,sans-serif;font-size:13px;margin:0;padding:0;'>"
+            f"<h2 style='margin:0 0 6px 0;'>About WIZnet-S2E-Tool-GUI</h2>"
+            f"<p style='margin:2px 0;'>Configuration Tool for WIZnet serial to ethernet devices.</p>"
+            f"<p style='margin:2px 0;'>Version: <b>{VERSION}</b></p>"
+            f"<p style='margin:2px 0;'>Author: WIZnet</p>"
+            f"<p style='margin:2px 0;'>Github: <a href='{gh}'>Repository</a>"
+            f" &nbsp;|&nbsp; <a href='{gh}/releases'>Release</a></p>"
+            f"<p style='margin:8px 0 2px 0;'><b>Web site</b></p>"
+            f"<p style='margin:2px 0;'><a href='http://www.wiznet.io/'>WIZnet Official homepage</a></p>"
+            f"<p style='margin:2px 0;'><a href='https://forum.wiznet.io/'>WIZnet Forum</a></p>"
+            f"<p style='margin:2px 0;'><a href='https://docs.wiznet.io/'>WIZnet Document</a></p>"
+            f"<p style='margin:8px 0 0 0;'><small>{datetime.datetime.now().year} WIZnet Co., Ltd.</small></p>"
+            f"</body></html>"
+        )
+        layout.addWidget(browser)
+
+        ver_label = QLabel("Checking for updates...")
+        ver_label.setStyleSheet("color: gray; font-size: 12px; padding: 2px 0;")
+        layout.addWidget(ver_label)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok)
+        buttons.accepted.connect(dialog.accept)
+        layout.addWidget(buttons)
+
+        self._ver_thread = VersionCheckThread()
+
+        def _on_version(latest):
+            if not latest:
+                ver_label.setText("Version check failed (network error)")
+                ver_label.setStyleSheet("color: gray; font-size: 12px;")
+            elif latest.lstrip('vV') == VERSION.lstrip('vV'):
+                ver_label.setText("✓ You are up to date")
+                ver_label.setStyleSheet("color: green; font-size: 12px;")
+            else:
+                ver_label.setText(
+                    f"{latest} is available. "
+                    f"<a href='https://github.com/Wiznet/WIZnet-S2E-Tool-GUI/releases'>"
+                    f"Download</a>"
+                )
+                ver_label.setTextFormat(QtCore.Qt.RichText)
+                ver_label.setOpenExternalLinks(True)
+                ver_label.setStyleSheet("color: #c07000; font-size: 12px;")
+
+        self._ver_thread.finished.connect(_on_version)
+        self._ver_thread.start()
+
+        dialog.exec_()
+        self._ver_thread.quit()
 
     def menu_document(self):
         self.logger.info("Menu: documentation")
@@ -5371,7 +5723,7 @@ class WIZWindow(QMainWindow, main_window):
             QtGui.QPixmap(resource_path(iconfile)), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off
         )
         button.setIcon(icon)
-        button.setIconSize(QtCore.QSize(40, 40))
+        button.setIconSize(QtCore.QSize(32, 32))
         button.setFont(self.midfont)
 
     def set_btn_icon(self):
@@ -6176,6 +6528,13 @@ class WIZWindow(QMainWindow, main_window):
 
     # ========== CSV 저장/불러오기 ==========
 
+    @staticmethod
+    def _csv_safe(value: str) -> str:
+        s = str(value).strip()
+        if s and s[0] in ('=', '+', '-', '@', '\t', '\r', '\n'):
+            return "'" + s
+        return s
+
     def save_searched_results_to_csv(self):
         """검색 결과를 CSV 파일로 저장"""
         # 검색 결과 확인
@@ -6235,10 +6594,10 @@ class WIZWindow(QMainWindow, main_window):
                     ip_mode = 'DHCP' if profile.get('IM', '0') == '1' else 'Static'
                     local_port = profile.get('LP', '')
 
-                    writer.writerow([
+                    writer.writerow([self._csv_safe(x) for x in [
                         mac, name, version, status, op_mode, detected,
                         ip_addr, subnet, gateway, dns, ip_mode, local_port
-                    ])
+                    ]])
 
             # 저장 성공 시 MRU 업데이트 (Save: 초기화)
             self.csv_mru_manager.add_saved_file(file_path, memo="")
@@ -6480,6 +6839,146 @@ class WIZWindow(QMainWindow, main_window):
                 detected_item = QTableWidgetItem("Yes" if self.detected_list[i] else "No")
                 self.list_device.setItem(i, 4, detected_item)
 
+    # ── 터미널 패널 ─────────────────────────────────────────────
+
+    def _toggle_terminal(self, checked: bool):
+        for ctrl in (self._btn_terminal, self._action_terminal):
+            ctrl.blockSignals(True)
+            ctrl.setChecked(checked)
+            ctrl.blockSignals(False)
+        if checked:
+            self._terminal_panel.snap_to()
+            self._terminal_panel.show()
+        else:
+            self._terminal_panel.hide()
+            self._center_main_window()
+
+    def _on_terminal_panel_hidden(self):
+        self._toggle_terminal(False)
+
+    def _center_main_window(self):
+        from PyQt5.QtWidgets import QApplication
+        screen = QApplication.screenAt(self.pos()) or QApplication.primaryScreen()
+        avail = screen.availableGeometry()
+        geo = self.frameGeometry()
+        self.move(
+            avail.x() + max(0, (avail.width() - geo.width()) // 2),
+            avail.y() + max(0, (avail.height() - geo.height()) // 2),
+        )
+
+    def moveEvent(self, event):
+        super().moveEvent(event)
+        self._terminal_panel.follow_main()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._terminal_panel.follow_main()
+
+    def _device_list_context_menu(self, pos):
+        items = self.list_device.selectedItems()
+        if not items:
+            return
+        menu = QMenu(self)
+        act_terminal = menu.addAction('🖥 터미널로 열기')
+        action = menu.exec_(self.list_device.viewport().mapToGlobal(pos))
+        if action == act_terminal:
+            self._open_device_in_terminal()
+
+    def _open_device_in_terminal(self):
+        mac_item = next(
+            (item for item in self.list_device.selectedItems() if item.column() == 0),
+            None,
+        )
+        if not mac_item:
+            return
+        mac = mac_item.text()
+        profile = self.dev_profile.get(mac, {})
+        if not profile:
+            return
+        device_info = self._get_device_info_for_terminal(profile)
+        active = [t for t in (
+            self._terminal_panel.tab_udp,
+            self._terminal_panel.tab_tcpc,
+            self._terminal_panel.tab_tcps,
+            self._terminal_panel.tab_serial,
+        ) if t._connected]
+        if active:
+            QMessageBox.information(
+                self, '터미널',
+                '연결 중인 탭이 있어 자동 채우기가 생략됩니다.\n'
+                '연결 해제 후 다시 시도하세요.',
+            )
+        else:
+            self._terminal_panel.fill_from_device(device_info)
+        self._terminal_panel.show()
+        self._btn_terminal.setChecked(True)
+
+    def _get_device_info_for_terminal(self, profile: dict) -> dict:
+        """dev_profile 항목 → terminal fill_from_device() 용 dict 변환."""
+        PARITY_IDX = {0: 'None', 1: 'Odd', 2: 'Even'}
+        STOPBITS_IDX = {0: '1', 1: '2'}
+        OP_MODE_MAP = {
+            '0': 'TCP Client',
+            '1': 'TCP Server',
+            '2': 'TCP Client',   # Mixed → Client 로 처리
+            '3': 'UDP',
+        }
+
+        if profile.get('_proto') == 'wiz1x0':
+            udp_on = bool(profile.get('udp', 0))
+            bserver = profile.get('bserver', 0)
+            if udp_on:
+                op_mode = 'UDP'
+            elif bserver == 2:
+                op_mode = 'TCP Server'
+            else:
+                op_mode = 'TCP Client'
+            return {
+                'ip':       profile.get('ip', ''),
+                'port':     profile.get('myport', 5000),
+                'op_mode':  op_mode,
+                'baudrate': profile.get('speed_bps', 9600),
+                'databits': profile.get('databit', 8),
+                'parity':   profile.get('parity_str', 'None'),
+                'stopbits': '1',
+            }
+
+        op_str = profile.get('OP', '1')
+        op_mode = OP_MODE_MAP.get(op_str, 'TCP Server')
+
+        br_idx = int(profile.get('BR', 6))
+        baudrate_str = BAUDRATE_BASE[br_idx] if br_idx < len(BAUDRATE_BASE) else '9600'
+
+        db_idx = int(profile.get('DB', 1) if profile.get('DB', '1') else 1)
+        databits = 7 if db_idx == 0 else 8
+
+        pr_idx = int(profile.get('PR', 0) if profile.get('PR', '0') else 0)
+        parity = PARITY_IDX.get(pr_idx, 'None')
+
+        sb_idx = int(profile.get('SB', 0) if profile.get('SB', '0') else 0)
+        stopbits = STOPBITS_IDX.get(sb_idx, '1')
+
+        return {
+            'ip':       profile.get('LI', ''),
+            'port':     int(profile.get('LP', 5000) or 5000),
+            'op_mode':  op_mode,
+            'baudrate': int(baudrate_str),
+            'databits': databits,
+            'parity':   parity,
+            'stopbits': stopbits,
+        }
+
+
+class VersionCheckThread(QtCore.QThread):
+    finished = QtCore.pyqtSignal(str)
+
+    def run(self):
+        try:
+            latest = get_latest_release_version("Wiznet", "WIZnet-S2E-Tool-GUI")
+            self.finished.emit(latest or "")
+        except Exception:
+            self.finished.emit("")
+
 
 class ThreadProgress(QtCore.QThread):
     change_value = QtCore.pyqtSignal(int)
@@ -6497,13 +6996,13 @@ class ThreadProgress(QtCore.QThread):
             self.msleep(15)
 
     def __del__(self):
-        print("thread: del")
         self.wait()
 
 
 if __name__ == "__main__":
     # High DPI mode
     # PyQt5 High DPI (일부 환경에서 속성 없을 수 있음)
+    logger.debug(f"sys.platform={sys.platform}")
     if hasattr(Qt, 'AA_EnableHighDpiScaling'):
         QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)  # type: ignore[attr-defined]
     if hasattr(Qt, 'AA_UseHighDpiPixmaps'):

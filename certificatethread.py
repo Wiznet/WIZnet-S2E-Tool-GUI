@@ -12,6 +12,7 @@ idle_state = 1
 datasent_state = 2
 
 DELIMITER = "\r\n"
+MAX_REPLY_CHUNKS = 200  # HIGH-03: 비정상 응답 truncation 상한
 
 # PACKET_SIZE = 1200
 PACKET_SIZE = 1024
@@ -78,14 +79,11 @@ class certificatethread(QtCore.QThread):
         self.cli_sock = None
 
     def setparam(self):
-        # Read file data
-        self.fd = open(self.bin_cert_name, "rb")
-        self.data = self.fd.read(-1)
+        with open(self.bin_cert_name, "rb") as f:
+            self.data = f.read()
         self.remainbytes = len(self.data)
         self.filesize = len(self.data)
-        print('remainbytes:', self.remainbytes)
         self.curr_ptr = 0
-        self.fd.close()
 
     def myTimer(self):
         # print('timer1 timeout\r\n')
@@ -238,9 +236,12 @@ class certificatethread(QtCore.QThread):
 
                         for sock in readready:
                             if sock == self.sock.sock:
-                                data = self.sock.recvfrom()
+                                data, _ = self.sock.recvfrom()
                                 self.msleep(10)
                                 replylists = data.split(DELIMITER.encode())
+                                if len(replylists) > MAX_REPLY_CHUNKS:
+                                    self.logger.warning(f"[cert] 비정상 응답 truncate: {len(replylists)} → {MAX_REPLY_CHUNKS}")
+                                    replylists = replylists[:MAX_REPLY_CHUNKS]
                                 self.logger.debug('replylists:', replylists)
 
                                 if self.cmd.encode() in replylists:

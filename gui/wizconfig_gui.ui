@@ -394,13 +394,13 @@
             <property name="minimumSize">
              <size>
               <width>220</width>
-              <height>120</height>
+              <height>140</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>440</width>
-              <height>240</height>
+              <height>260</height>
              </size>
             </property>
             <property name="font">
@@ -606,6 +606,25 @@
                </property>
                <property name="checked">
                 <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="lbl_wiz1x0_search_warn">
+               <property name="font">
+                <font>
+                 <family>맑은 고딕</family>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">color: transparent;</string>
+               </property>
+               <property name="text">
+                <string>※ Enabling this option will increase search time.</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -4886,7 +4905,7 @@ Analog input: Read only</string>
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QTabWidget" name="wiz1x0_tab">
+           <widget class="QWidget" name="wiz1x0_tab">
             <property name="visible">
              <bool>false</bool>
             </property>
@@ -4902,379 +4921,358 @@ Analog input: Read only</string>
               <height>370</height>
              </size>
             </property>
-            <property name="currentIndex">
-             <number>0</number>
-            </property>
-            <!-- ═══════════════════════════════════════════════════ -->
-            <!-- Tab 0 : Network                                     -->
-            <!-- ═══════════════════════════════════════════════════ -->
-            <widget class="QWidget" name="wiz1x0_network_tab">
-             <attribute name="title">
-              <string>Network</string>
-             </attribute>
-             <layout class="QGridLayout" name="gridLayout_wiz1x0_net">
-              <!-- IP Configuration Method -->
-              <item row="0" column="0" colspan="4">
-               <widget class="QGroupBox" name="grp_wiz1x0_ipmode">
-                <property name="title">
-                 <string>IP Configuration Method</string>
-                </property>
-                <property name="maximumSize">
-                 <size><width>16777215</width><height>55</height></size>
-                </property>
-                <layout class="QHBoxLayout" name="hbox_wiz1x0_ipmode">
-                 <item>
-                  <widget class="QRadioButton" name="wiz1x0_ip_static">
-                   <property name="text"><string>Static</string></property>
-                   <property name="checked"><bool>true</bool></property>
+            <layout class="QVBoxLayout" name="vbox_wiz1x0_outer">
+             <property name="spacing"><number>4</number></property>
+             <property name="leftMargin"><number>6</number></property>
+             <property name="topMargin"><number>4</number></property>
+             <property name="rightMargin"><number>6</number></property>
+             <property name="bottomMargin"><number>4</number></property>
+             <!-- ── 헤더: 탭 네비게이션 ── -->
+             <item>
+             <widget class="QWidget" name="wiz1x0_header">
+               <property name="maximumSize"><size><width>16777215</width><height>28</height></size></property>
+               <layout class="QHBoxLayout" name="hbox_wiz1x0_header">
+                <property name="leftMargin"><number>0</number></property>
+                <property name="topMargin"><number>0</number></property>
+                <property name="rightMargin"><number>0</number></property>
+                <property name="bottomMargin"><number>0</number></property>
+                <property name="spacing"><number>4</number></property>
+                <item>
+                 <widget class="QWidget" name="wiz1x0_tabnav">
+                  <property name="visible"><bool>false</bool></property>
+                  <layout class="QHBoxLayout" name="hbox_wiz1x0_tabnav">
+                   <property name="leftMargin"><number>0</number></property>
+                   <property name="topMargin"><number>0</number></property>
+                   <property name="rightMargin"><number>0</number></property>
+                   <property name="bottomMargin"><number>0</number></property>
+                   <property name="spacing"><number>2</number></property>
+                   <item><widget class="QRadioButton" name="wiz1x0_nav_net"><property name="text"><string>Network</string></property><property name="checked"><bool>true</bool></property></widget></item>
+                   <item><widget class="QRadioButton" name="wiz1x0_nav_mid"><property name="text"><string>Mode &amp; Serial</string></property></widget></item>
+                   <item><widget class="QRadioButton" name="wiz1x0_nav_opt"><property name="text"><string>Options</string></property></widget></item>
+                  </layout>
+                 </widget>
+                </item>
+                <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QWidget" name="wiz1x0_meta">
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>28</height>
+               </size>
+              </property>
+              <layout class="QHBoxLayout" name="hbox_wiz1x0_meta">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <property name="spacing">
+                <number>8</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="lbl_wiz1x0_ver">
+                 <property name="text">
+                  <string>Version</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="wiz1x0_version">
+                 <property name="maximumSize">
+                  <size>
+                   <width>110</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="wiz1x0_debug">
+                 <property name="text">
+                  <string>Enable Serial Debug Mode</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="btn_wiz1x0_toggle">
+                 <property name="text">
+                  <string>☰ Full</string>
+                 </property>
+                 <property name="checkable">
+                  <bool>true</bool>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>72</width>
+                   <height>24</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer>
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <!-- ── 콘텐츠 ── -->
+            <item>
+              <widget class="QTabWidget" name="wiz1x0_tabwidget">
+               <widget class="QWidget" name="wiz1x0_col_net">
+                <attribute name="title"><string>Network</string></attribute>
+                 <layout class="QVBoxLayout" name="vbox_wiz1x0_net">
+                  <property name="spacing"><number>4</number></property>
+                  <item>
+                   <widget class="QGroupBox" name="grp_wiz1x0_ipmode">
+                 <property name="title"><string>IP Configuration Method</string></property>
+                 <property name="maximumSize"><size><width>16777215</width><height>55</height></size></property>
+                 <layout class="QHBoxLayout" name="hbox_wiz1x0_ipmode">
+                  <item><widget class="QRadioButton" name="wiz1x0_ip_static"><property name="text"><string>Static</string></property><property name="checked"><bool>true</bool></property></widget></item>
+                  <item><widget class="QRadioButton" name="wiz1x0_ip_dhcp"><property name="text"><string>DHCP</string></property></widget></item>
+                  <item><widget class="QRadioButton" name="wiz1x0_ip_pppoe"><property name="text"><string>PPPoE</string></property></widget></item>
+                  <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property></spacer></item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <layout class="QGridLayout" name="gridLayout_wiz1x0_ipfields">
+                 <property name="verticalSpacing"><number>4</number></property>
+                 <item row="0" column="0"><widget class="QLabel" name="lbl_wiz1x0_localip"><property name="text"><string>Local IP</string></property></widget></item>
+                 <item row="0" column="1"><widget class="QLineEdit" name="wiz1x0_localip"/></item>
+                 <item row="0" column="2"><widget class="QLabel" name="lbl_wiz1x0_myport"><property name="text"><string>Port</string></property></widget></item>
+                 <item row="0" column="3"><widget class="QLineEdit" name="wiz1x0_myport"><property name="maximumSize"><size><width>70</width><height>16777215</height></size></property></widget></item>
+                 <item row="1" column="0"><widget class="QLabel" name="lbl_wiz1x0_subnet"><property name="text"><string>Subnet</string></property></widget></item>
+                 <item row="1" column="1" colspan="3"><widget class="QLineEdit" name="wiz1x0_subnet"/></item>
+                 <item row="2" column="0"><widget class="QLabel" name="lbl_wiz1x0_gw"><property name="text"><string>Gateway</string></property></widget></item>
+                 <item row="2" column="1" colspan="3"><widget class="QLineEdit" name="wiz1x0_gw"/></item>
+                 <item row="3" column="0"><widget class="QLabel" name="lbl_wiz1x0_pppoe_id"><property name="text"><string>PPPoE ID</string></property></widget></item>
+                 <item row="3" column="1" colspan="3"><widget class="QLineEdit" name="wiz1x0_pppoe_id"><property name="maxLength"><number>32</number></property></widget></item>
+                 <item row="4" column="0"><widget class="QLabel" name="lbl_wiz1x0_pppoe_pw"><property name="text"><string>Password</string></property></widget></item>
+                 <item row="4" column="1" colspan="3"><widget class="QLineEdit" name="wiz1x0_pppoe_pw"><property name="maxLength"><number>32</number></property><property name="echoMode"><enum>QLineEdit::Password</enum></property></widget></item>
+                 <item row="5" column="0"><widget class="QLabel" name="lbl_wiz1x0_peerip"><property name="text"><string>Server IP</string></property></widget></item>
+                 <item row="5" column="1"><widget class="QLineEdit" name="wiz1x0_peerip"/></item>
+                 <item row="5" column="2"><widget class="QLabel" name="lbl_wiz1x0_peerport"><property name="text"><string>Port</string></property></widget></item>
+                 <item row="5" column="3"><widget class="QLineEdit" name="wiz1x0_peerport"><property name="maximumSize"><size><width>70</width><height>16777215</height></size></property></widget></item>
+                </layout>
+               </item>
+               <item><spacer><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>5</height></size></property></spacer></item>
+              </layout>
+               </widget>
+               <widget class="QWidget" name="wiz1x0_col_mid">
+                <attribute name="title"><string>Mode &amp; Serial</string></attribute>
+               <layout class="QVBoxLayout" name="vbox_wiz1x0_mid">
+               <property name="spacing"><number>4</number></property>
+               <item>
+                <widget class="QGroupBox" name="grp_wiz1x0_opmode">
+                 <property name="title"><string>Operation Mode</string></property>
+                 <property name="maximumSize"><size><width>16777215</width><height>55</height></size></property>
+                 <layout class="QHBoxLayout" name="hbox_wiz1x0_opmode">
+                  <item><widget class="QRadioButton" name="wiz1x0_op_client"><property name="text"><string>Client</string></property><property name="checked"><bool>true</bool></property></widget></item>
+                  <item><widget class="QRadioButton" name="wiz1x0_op_server"><property name="text"><string>Server</string></property></widget></item>
+                  <item><widget class="QRadioButton" name="wiz1x0_op_mixed"><property name="text"><string>Mixed</string></property></widget></item>
+                  <item><widget class="QCheckBox" name="wiz1x0_udp"><property name="text"><string>Use UDP mode</string></property></widget></item>
+                  <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property></spacer></item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+               <layout class="QGridLayout" name="gridLayout_wiz1x0_dns">
+                 <property name="verticalSpacing"><number>4</number></property>
+                 <item row="0" column="0"><widget class="QCheckBox" name="wiz1x0_dns_enable"><property name="text"><string>Use DNS</string></property></widget></item>
+                 <item row="1" column="0"><widget class="QLabel" name="lbl_wiz1x0_dns_ip"><property name="text"><string>DNS Server IP</string></property></widget></item>
+                 <item row="1" column="1"><widget class="QLineEdit" name="wiz1x0_dns_ip"/></item>
+                 <item row="2" column="0"><widget class="QLabel" name="lbl_wiz1x0_domain"><property name="text"><string>Domain Name</string></property></widget></item>
+                 <item row="2" column="1"><widget class="QLineEdit" name="wiz1x0_domain"/></item>
+                </layout>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="grp_wiz1x0_serial_params">
+                 <property name="title"><string>Serial Parameters</string></property>
+                 <layout class="QFormLayout" name="form_wiz1x0_serial">
+                  <item row="0" column="0"><widget class="QLabel" name="lbl_wiz1x0_baud"><property name="text"><string>Baud Rate</string></property></widget></item>
+                  <item row="0" column="1">
+                   <widget class="QComboBox" name="wiz1x0_baud">
+                    <item><property name="text"><string>1200</string></property></item>
+                    <item><property name="text"><string>2400</string></property></item>
+                    <item><property name="text"><string>4800</string></property></item>
+                    <item><property name="text"><string>9600</string></property></item>
+                    <item><property name="text"><string>19200</string></property></item>
+                    <item><property name="text"><string>38400</string></property></item>
+                    <item><property name="text"><string>57600</string></property></item>
+                    <item><property name="text"><string>115200</string></property></item>
+                    <item><property name="text"><string>230400</string></property></item>
+                   </widget>
+                  </item>
+                  <item row="1" column="0"><widget class="QLabel" name="lbl_wiz1x0_databit"><property name="text"><string>Data Bit</string></property></widget></item>
+                  <item row="1" column="1">
+                   <widget class="QComboBox" name="wiz1x0_databit">
+                    <item><property name="text"><string>7-bit</string></property></item>
+                    <item><property name="text"><string>8-bit</string></property></item>
+                   </widget>
+                  </item>
+                  <item row="2" column="0"><widget class="QLabel" name="lbl_wiz1x0_parity"><property name="text"><string>Parity</string></property></widget></item>
+                  <item row="2" column="1">
+                   <widget class="QComboBox" name="wiz1x0_parity">
+                    <item><property name="text"><string>None</string></property></item>
+                    <item><property name="text"><string>Odd</string></property></item>
+                    <item><property name="text"><string>Even</string></property></item>
+                   </widget>
+                  </item>
+                  <item row="3" column="0"><widget class="QLabel" name="lbl_wiz1x0_stopbit"><property name="text"><string>Stop Bit</string></property></widget></item>
+                  <item row="3" column="1">
+                   <widget class="QComboBox" name="wiz1x0_stopbit">
+                    <property name="enabled"><bool>false</bool></property>
+                    <item><property name="text"><string>1-bit</string></property></item>
+                   </widget>
+                  </item>
+                  <item row="4" column="0"><widget class="QLabel" name="lbl_wiz1x0_flow"><property name="text"><string>Flow</string></property></widget></item>
+                  <item row="4" column="1">
+                   <widget class="QComboBox" name="wiz1x0_flow">
+                    <item><property name="text"><string>None</string></property></item>
+                    <item><property name="text"><string>Xon/Xoff</string></property></item>
+                    <item><property name="text"><string>CTS/RTS</string></property></item>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item><spacer><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>5</height></size></property></spacer></item>
+              </layout>
+               </widget>
+               <widget class="QWidget" name="wiz1x0_col_opt">
+                <attribute name="title"><string>Options</string></attribute>
+               <layout class="QVBoxLayout" name="vbox_wiz1x0_opt">
+               <property name="spacing"><number>4</number></property>
+               <item>
+               <layout class="QGridLayout" name="gridLayout_wiz1x0_misc">
+                 <property name="verticalSpacing"><number>4</number></property>
+                 <item row="0" column="0"><widget class="QLabel" name="lbl_wiz1x0_inactivity"><property name="text"><string>Inactivity time</string></property></widget></item>
+                 <item row="0" column="1">
+                  <widget class="QLineEdit" name="wiz1x0_inactivity">
+                   <property name="maximumSize">
+                    <size>
+                     <width>90</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
                   </widget>
                  </item>
-                 <item>
-                  <widget class="QRadioButton" name="wiz1x0_ip_dhcp">
-                   <property name="text"><string>DHCP</string></property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QRadioButton" name="wiz1x0_ip_pppoe">
-                   <property name="text"><string>PPPoE</string></property>
-                  </widget>
-                 </item>
-                 <item>
-                  <spacer>
-                   <property name="orientation"><enum>Qt::Horizontal</enum></property>
-                   <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
-                  </spacer>
-                 </item>
+                 <item row="0" column="2"><widget class="QLabel" name="lbl_wiz1x0_inactivity_unit"><property name="text"><string>(0~65535 sec)</string></property></widget></item>
+                </layout>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="grp_wiz1x0_packing">
+                 <property name="title"><string>Data Packing Condition</string></property>
+                 <property name="maximumSize"><size><width>16777215</width><height>110</height></size></property>
+                 <layout class="QGridLayout" name="gridLayout_wiz1x0_pack">
+                  <item row="0" column="0"><widget class="QLabel" name="lbl_wiz1x0_pack_time"><property name="text"><string>Time</string></property></widget></item>
+                  <item row="0" column="1">
+                   <widget class="QLineEdit" name="wiz1x0_pack_time">
+                    <property name="maximumSize">
+                     <size>
+                      <width>90</width>
+                      <height>16777215</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="2"><widget class="QLabel" name="lbl_wiz1x0_pack_time_u"><property name="text"><string>(0~65535 ms)</string></property></widget></item>
+                  <item row="1" column="0"><widget class="QLabel" name="lbl_wiz1x0_pack_size"><property name="text"><string>Size</string></property></widget></item>
+                  <item row="1" column="1">
+                   <widget class="QLineEdit" name="wiz1x0_pack_size">
+                    <property name="maximumSize">
+                     <size>
+                      <width>70</width>
+                      <height>16777215</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="2"><widget class="QLabel" name="lbl_wiz1x0_pack_size_u"><property name="text"><string>(0~255 Byte)</string></property></widget></item>
+                  <item row="2" column="0"><widget class="QLabel" name="lbl_wiz1x0_pack_char"><property name="text"><string>Char</string></property></widget></item>
+                  <item row="2" column="1">
+                   <widget class="QLineEdit" name="wiz1x0_pack_char">
+                    <property name="maximumSize">
+                     <size>
+                      <width>70</width>
+                      <height>16777215</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="2"><widget class="QLabel" name="lbl_wiz1x0_pack_char_u"><property name="text"><string>(Hexacode)</string></property></widget></item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="grp_wiz1x0_tcppass">
+                 <property name="title"><string>Password (TCP Server)</string></property>
+                 <property name="maximumSize"><size><width>16777215</width><height>55</height></size></property>
+                 <layout class="QHBoxLayout" name="hbox_wiz1x0_tcppass">
+                  <item><widget class="QCheckBox" name="wiz1x0_en_tcppass"><property name="text"><string>Enable</string></property></widget></item>
+                  <item><widget class="QLabel" name="lbl_wiz1x0_tcppass"><property name="text"><string>Password</string></property></widget></item>
+                  <item><widget class="QLineEdit" name="wiz1x0_tcppass"><property name="maximumSize"><size><width>120</width><height>16777215</height></size></property><property name="maxLength"><number>8</number></property></widget></item>
+                  <item><widget class="QLabel" name="lbl_wiz1x0_tcppass_u"><property name="text"><string>(Max 8 Bytes)</string></property></widget></item>
+                  <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property></spacer></item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="grp_wiz1x0_scfg">
+                 <property name="title"><string>Serial Configuration</string></property>
+                 <property name="maximumSize"><size><width>16777215</width><height>55</height></size></property>
+                 <layout class="QHBoxLayout" name="hbox_wiz1x0_scfg">
+                  <item><widget class="QCheckBox" name="wiz1x0_scfg_enable"><property name="text"><string>Enable</string></property></widget></item>
+                  <item><widget class="QLabel" name="lbl_wiz1x0_scfg_code"><property name="text"><string>Code</string></property></widget></item>
+                  <item><widget class="QLineEdit" name="wiz1x0_scfg1"><property name="maximumSize"><size><width>36</width><height>16777215</height></size></property><property name="maxLength"><number>2</number></property></widget></item>
+                  <item><widget class="QLineEdit" name="wiz1x0_scfg2"><property name="maximumSize"><size><width>36</width><height>16777215</height></size></property><property name="maxLength"><number>2</number></property></widget></item>
+                  <item><widget class="QLineEdit" name="wiz1x0_scfg3"><property name="maximumSize"><size><width>36</width><height>16777215</height></size></property><property name="maxLength"><number>2</number></property></widget></item>
+                  <item><widget class="QLabel" name="lbl_wiz1x0_scfg_unit"><property name="text"><string>(in Hex)</string></property></widget></item>
+                  <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property></spacer></item>
+                 </layout>
+                </widget>
+               </item>
+               <item><spacer><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>5</height></size></property></spacer></item>
+              </layout>
+               </widget>
+              </widget>
+             </item>
+             <item>
+              <widget class="QScrollArea" name="wiz1x0_fullscroll">
+               <property name="visible"><bool>false</bool></property>
+               <property name="widgetResizable"><bool>true</bool></property>
+               <widget class="QWidget" name="wiz1x0_fullcontent">
+                <layout class="QVBoxLayout" name="vbox_wiz1x0_full">
+                 <property name="spacing"><number>8</number></property>
                 </layout>
                </widget>
-              </item>
-              <!-- Local IP / Port -->
-              <item row="1" column="0">
-               <widget class="QLabel" name="lbl_wiz1x0_localip"><property name="text"><string>Local IP</string></property></widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="wiz1x0_localip"/>
-              </item>
-              <item row="1" column="2">
-               <widget class="QLabel" name="lbl_wiz1x0_myport"><property name="text"><string>Port</string></property></widget>
-              </item>
-              <item row="1" column="3">
-               <widget class="QLineEdit" name="wiz1x0_myport"><property name="maximumSize"><size><width>70</width><height>16777215</height></size></property></widget>
-              </item>
-              <!-- Subnet -->
-              <item row="2" column="0">
-               <widget class="QLabel" name="lbl_wiz1x0_subnet"><property name="text"><string>Subnet</string></property></widget>
-              </item>
-              <item row="2" column="1" colspan="3">
-               <widget class="QLineEdit" name="wiz1x0_subnet"/>
-              </item>
-              <!-- Gateway -->
-              <item row="3" column="0">
-               <widget class="QLabel" name="lbl_wiz1x0_gw"><property name="text"><string>Gateway</string></property></widget>
-              </item>
-              <item row="3" column="1" colspan="3">
-               <widget class="QLineEdit" name="wiz1x0_gw"/>
-              </item>
-              <!-- PPPoE ID -->
-              <item row="4" column="0">
-               <widget class="QLabel" name="lbl_wiz1x0_pppoe_id"><property name="text"><string>PPPoE ID</string></property></widget>
-              </item>
-              <item row="4" column="1" colspan="3">
-               <widget class="QLineEdit" name="wiz1x0_pppoe_id"/>
-              </item>
-              <!-- PPPoE PW -->
-              <item row="5" column="0">
-               <widget class="QLabel" name="lbl_wiz1x0_pppoe_pw"><property name="text"><string>Password</string></property></widget>
-              </item>
-              <item row="5" column="1" colspan="3">
-               <widget class="QLineEdit" name="wiz1x0_pppoe_pw">
-                <property name="echoMode"><enum>QLineEdit::Password</enum></property>
-               </widget>
-              </item>
-              <!-- Server IP / Port -->
-              <item row="6" column="0">
-               <widget class="QLabel" name="lbl_wiz1x0_peerip"><property name="text"><string>Server IP</string></property></widget>
-              </item>
-              <item row="6" column="1">
-               <widget class="QLineEdit" name="wiz1x0_peerip"/>
-              </item>
-              <item row="6" column="2">
-               <widget class="QLabel" name="lbl_wiz1x0_peerport"><property name="text"><string>Port</string></property></widget>
-              </item>
-              <item row="6" column="3">
-               <widget class="QLineEdit" name="wiz1x0_peerport"><property name="maximumSize"><size><width>70</width><height>16777215</height></size></property></widget>
-              </item>
-              <!-- Operation Mode -->
-              <item row="7" column="0" colspan="4">
-               <widget class="QGroupBox" name="grp_wiz1x0_opmode">
-                <property name="title"><string>Operation Mode</string></property>
-                <property name="maximumSize">
-                 <size><width>16777215</width><height>55</height></size>
-                </property>
-                <layout class="QHBoxLayout" name="hbox_wiz1x0_opmode">
-                 <item>
-                  <widget class="QRadioButton" name="wiz1x0_op_client">
-                   <property name="text"><string>Client</string></property>
-                   <property name="checked"><bool>true</bool></property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QRadioButton" name="wiz1x0_op_server">
-                   <property name="text"><string>Server</string></property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QRadioButton" name="wiz1x0_op_mixed">
-                   <property name="text"><string>Mixed</string></property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QCheckBox" name="wiz1x0_udp">
-                   <property name="text"><string>Use UDP mode</string></property>
-                  </widget>
-                 </item>
-                 <item>
-                  <spacer>
-                   <property name="orientation"><enum>Qt::Horizontal</enum></property>
-                   <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
-                  </spacer>
-                 </item>
-                </layout>
-               </widget>
-              </item>
-              <!-- DNS -->
-              <item row="8" column="0">
-               <widget class="QCheckBox" name="wiz1x0_dns_enable">
-                <property name="text"><string>Use DNS</string></property>
-               </widget>
-              </item>
-              <item row="8" column="1">
-               <widget class="QLabel" name="lbl_wiz1x0_dns_ip"><property name="text"><string>DNS Server IP</string></property></widget>
-              </item>
-              <item row="8" column="2" colspan="2">
-               <widget class="QLineEdit" name="wiz1x0_dns_ip"/>
-              </item>
-              <!-- Domain Name -->
-              <item row="9" column="0">
-               <widget class="QLabel" name="lbl_wiz1x0_domain"><property name="text"><string>Domain Name</string></property></widget>
-              </item>
-              <item row="9" column="1" colspan="3">
-               <widget class="QLineEdit" name="wiz1x0_domain"/>
-              </item>
-              <!-- 남는 수직 공간 흡수 -->
-              <item row="10" column="0" colspan="4">
-               <spacer>
-                <property name="orientation"><enum>Qt::Vertical</enum></property>
-                <property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property>
-               </spacer>
-              </item>
-             </layout>
-            </widget>
-            <!-- ═══════════════════════════════════════════════════ -->
-            <!-- Tab 1 : Serial                                      -->
-            <!-- ═══════════════════════════════════════════════════ -->
-            <widget class="QWidget" name="wiz1x0_serial_tab">
-             <attribute name="title">
-              <string>Serial</string>
-             </attribute>
-             <layout class="QFormLayout" name="form_wiz1x0_serial">
-              <item row="0" column="0">
-               <widget class="QLabel" name="lbl_wiz1x0_baud"><property name="text"><string>Baud Rate</string></property></widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QComboBox" name="wiz1x0_baud">
-                <item><property name="text"><string>1200</string></property></item>
-                <item><property name="text"><string>2400</string></property></item>
-                <item><property name="text"><string>4800</string></property></item>
-                <item><property name="text"><string>9600</string></property></item>
-                <item><property name="text"><string>19200</string></property></item>
-                <item><property name="text"><string>38400</string></property></item>
-                <item><property name="text"><string>57600</string></property></item>
-                <item><property name="text"><string>115200</string></property></item>
-                <item><property name="text"><string>230400</string></property></item>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="lbl_wiz1x0_databit"><property name="text"><string>Data Bit</string></property></widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QComboBox" name="wiz1x0_databit">
-                <item><property name="text"><string>7-bit</string></property></item>
-                <item><property name="text"><string>8-bit</string></property></item>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="lbl_wiz1x0_parity"><property name="text"><string>Parity</string></property></widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QComboBox" name="wiz1x0_parity">
-                <item><property name="text"><string>None</string></property></item>
-                <item><property name="text"><string>Odd</string></property></item>
-                <item><property name="text"><string>Even</string></property></item>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="lbl_wiz1x0_stopbit"><property name="text"><string>Stop Bit</string></property></widget>
-              </item>
-              <item row="3" column="1">
-               <widget class="QComboBox" name="wiz1x0_stopbit">
-                <property name="enabled"><bool>false</bool></property>
-                <item><property name="text"><string>1-bit</string></property></item>
-               </widget>
-              </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="lbl_wiz1x0_flow"><property name="text"><string>Flow</string></property></widget>
-              </item>
-              <item row="4" column="1">
-               <widget class="QComboBox" name="wiz1x0_flow">
-                <item><property name="text"><string>None</string></property></item>
-                <item><property name="text"><string>Xon/Xoff</string></property></item>
-                <item><property name="text"><string>CTS/RTS</string></property></item>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-            <!-- ═══════════════════════════════════════════════════ -->
-            <!-- Tab 2 : Option                                      -->
-            <!-- ═══════════════════════════════════════════════════ -->
-            <widget class="QWidget" name="wiz1x0_option_tab">
-             <attribute name="title">
-              <string>Option</string>
-             </attribute>
-             <layout class="QGridLayout" name="gridLayout_wiz1x0_opt">
-              <!-- Version / Debug -->
-              <item row="0" column="0">
-               <widget class="QLabel" name="lbl_wiz1x0_ver"><property name="text"><string>Version</string></property></widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLineEdit" name="wiz1x0_version">
-                <property name="readOnly"><bool>true</bool></property>
-               </widget>
-              </item>
-              <item row="0" column="2" colspan="2">
-               <widget class="QCheckBox" name="wiz1x0_debug">
-                <property name="text"><string>Enable Serial Debug Mode</string></property>
-               </widget>
-              </item>
-              <!-- Inactivity Timer -->
-              <item row="1" column="0">
-               <widget class="QLabel" name="lbl_wiz1x0_inactivity"><property name="text"><string>Inactivity time</string></property></widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="wiz1x0_inactivity"/>
-              </item>
-              <item row="1" column="2" colspan="2">
-               <widget class="QLabel" name="lbl_wiz1x0_inactivity_unit"><property name="text"><string>(0 ~ 65535 sec)</string></property></widget>
-              </item>
-              <!-- Data Packing -->
-              <item row="2" column="0" colspan="4">
-               <widget class="QGroupBox" name="grp_wiz1x0_packing">
-                <property name="title"><string>Data Packing Condition</string></property>
-                <property name="maximumSize">
-                 <size><width>16777215</width><height>110</height></size>
-                </property>
-                <layout class="QGridLayout" name="gridLayout_wiz1x0_pack">
-                 <item row="0" column="0"><widget class="QLabel" name="lbl_wiz1x0_pack_time"><property name="text"><string>Time</string></property></widget></item>
-                 <item row="0" column="1"><widget class="QLineEdit" name="wiz1x0_pack_time"/></item>
-                 <item row="0" column="2"><widget class="QLabel" name="lbl_wiz1x0_pack_time_u"><property name="text"><string>(0 ~ 65535 ms)</string></property></widget></item>
-                 <item row="1" column="0"><widget class="QLabel" name="lbl_wiz1x0_pack_size"><property name="text"><string>Size</string></property></widget></item>
-                 <item row="1" column="1"><widget class="QLineEdit" name="wiz1x0_pack_size"/></item>
-                 <item row="1" column="2"><widget class="QLabel" name="lbl_wiz1x0_pack_size_u"><property name="text"><string>(0 ~ 255 Byte)</string></property></widget></item>
-                 <item row="2" column="0"><widget class="QLabel" name="lbl_wiz1x0_pack_char"><property name="text"><string>Char</string></property></widget></item>
-                 <item row="2" column="1"><widget class="QLineEdit" name="wiz1x0_pack_char"/></item>
-                 <item row="2" column="2"><widget class="QLabel" name="lbl_wiz1x0_pack_char_u"><property name="text"><string>(Hexacode)</string></property></widget></item>
-                </layout>
-               </widget>
-              </item>
-              <!-- TCP Password -->
-              <item row="3" column="0" colspan="4">
-               <widget class="QGroupBox" name="grp_wiz1x0_tcppass">
-                <property name="title"><string>Password (TCP Server)</string></property>
-                <property name="maximumSize">
-                 <size><width>16777215</width><height>55</height></size>
-                </property>
-                <layout class="QHBoxLayout" name="hbox_wiz1x0_tcppass">
-                 <item>
-                  <widget class="QCheckBox" name="wiz1x0_en_tcppass">
-                   <property name="text"><string>Enable</string></property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLabel" name="lbl_wiz1x0_tcppass"><property name="text"><string>Password</string></property></widget>
-                 </item>
-                 <item>
-                  <widget class="QLineEdit" name="wiz1x0_tcppass">
-                   <property name="maximumSize"><size><width>120</width><height>16777215</height></size></property>
-                   <property name="maxLength"><number>8</number></property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLabel" name="lbl_wiz1x0_tcppass_u"><property name="text"><string>(Max 8 Bytes)</string></property></widget>
-                 </item>
-                 <item>
-                  <spacer>
-                   <property name="orientation"><enum>Qt::Horizontal</enum></property>
-                   <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
-                  </spacer>
-                 </item>
-                </layout>
-               </widget>
-              </item>
-              <!-- Serial Configuration -->
-              <item row="4" column="0" colspan="4">
-               <widget class="QGroupBox" name="grp_wiz1x0_scfg">
-                <property name="title"><string>Serial Configuration</string></property>
-                <property name="maximumSize">
-                 <size><width>16777215</width><height>55</height></size>
-                </property>
-                <layout class="QHBoxLayout" name="hbox_wiz1x0_scfg">
-                 <item>
-                  <widget class="QCheckBox" name="wiz1x0_scfg_enable">
-                   <property name="text"><string>Enable</string></property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLabel" name="lbl_wiz1x0_scfg_code"><property name="text"><string>Code</string></property></widget>
-                 </item>
-                 <item>
-                  <widget class="QLineEdit" name="wiz1x0_scfg1">
-                   <property name="maximumSize"><size><width>36</width><height>16777215</height></size></property>
-                   <property name="maxLength"><number>2</number></property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLineEdit" name="wiz1x0_scfg2">
-                   <property name="maximumSize"><size><width>36</width><height>16777215</height></size></property>
-                   <property name="maxLength"><number>2</number></property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLineEdit" name="wiz1x0_scfg3">
-                   <property name="maximumSize"><size><width>36</width><height>16777215</height></size></property>
-                   <property name="maxLength"><number>2</number></property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLabel" name="lbl_wiz1x0_scfg_unit"><property name="text"><string>(in Hex)</string></property></widget>
-                 </item>
-                 <item>
-                  <spacer>
-                   <property name="orientation"><enum>Qt::Horizontal</enum></property>
-                   <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
-                  </spacer>
-                 </item>
-                </layout>
-               </widget>
-              </item>
-              <!-- 남는 수직 공간 흡수 -->
-              <item row="5" column="0" colspan="4">
-               <spacer>
-                <property name="orientation"><enum>Qt::Vertical</enum></property>
-                <property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property>
-               </spacer>
-              </item>
-             </layout>
-            </widget>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
           <item row="2" column="0">
@@ -9799,7 +9797,7 @@ interval</string>
            <number>4</number>
           </property>
           <item row="0" column="0">
-           <widget class="QPushButton" name="btn_search">
+           <widget class="QToolButton" name="btn_search">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -9808,8 +9806,8 @@ interval</string>
             </property>
             <property name="minimumSize">
              <size>
-              <width>110</width>
-              <height>55</height>
+              <width>85</width>
+              <height>68</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -9821,32 +9819,17 @@ interval</string>
             <property name="font">
              <font>
               <family>맑은 고딕</family>
-              <pointsize>10</pointsize>
+              <pointsize>9</pointsize>
               <weight>50</weight>
               <italic>false</italic>
               <bold>false</bold>
              </font>
             </property>
-            <property name="mouseTracking">
-             <bool>true</bool>
-            </property>
             <property name="toolTip">
-             <string comment="tooltip 1" extracomment="tooltip 2">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Search&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="toolTipDuration">
-             <number>0</number>
-            </property>
-            <property name="whatsThis">
-             <string extracomment="Search"/>
-            </property>
-            <property name="accessibleName">
-             <string extracomment="3"/>
-            </property>
-            <property name="accessibleDescription">
-             <string extracomment="4"/>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Search&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
-             <string comment="search" extracomment="Search">Device
+             <string>Device
 Search</string>
             </property>
             <property name="icon">
@@ -9855,17 +9838,20 @@ Search</string>
             </property>
             <property name="iconSize">
              <size>
-              <width>40</width>
-              <height>40</height>
+              <width>32</width>
+              <height>32</height>
              </size>
             </property>
-            <property name="shortcut">
-             <string extracomment="shortcut"/>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextUnderIcon</enum>
+            </property>
+            <property name="popupMode">
+             <enum>QToolButton::InstantPopup</enum>
             </property>
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QPushButton" name="btn_setting">
+           <widget class="QToolButton" name="btn_setting">
             <property name="enabled">
              <bool>false</bool>
             </property>
@@ -9877,8 +9863,8 @@ Search</string>
             </property>
             <property name="minimumSize">
              <size>
-              <width>110</width>
-              <height>55</height>
+              <width>85</width>
+              <height>68</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -9890,7 +9876,7 @@ Search</string>
             <property name="font">
              <font>
               <family>맑은 고딕</family>
-              <pointsize>10</pointsize>
+              <pointsize>9</pointsize>
               <weight>50</weight>
               <italic>false</italic>
               <bold>false</bold>
@@ -9909,14 +9895,20 @@ Settings</string>
             </property>
             <property name="iconSize">
              <size>
-              <width>40</width>
-              <height>40</height>
+              <width>32</width>
+              <height>32</height>
              </size>
+            </property>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextUnderIcon</enum>
+            </property>
+            <property name="popupMode">
+             <enum>QToolButton::InstantPopup</enum>
             </property>
            </widget>
           </item>
           <item row="0" column="2">
-           <widget class="QPushButton" name="btn_upload">
+           <widget class="QToolButton" name="btn_upload">
             <property name="enabled">
              <bool>false</bool>
             </property>
@@ -9928,8 +9920,8 @@ Settings</string>
             </property>
             <property name="minimumSize">
              <size>
-              <width>110</width>
-              <height>55</height>
+              <width>85</width>
+              <height>68</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -9941,7 +9933,7 @@ Settings</string>
             <property name="font">
              <font>
               <family>맑은 고딕</family>
-              <pointsize>10</pointsize>
+              <pointsize>9</pointsize>
               <weight>50</weight>
               <italic>false</italic>
               <bold>false</bold>
@@ -9960,14 +9952,20 @@ Upload</string>
             </property>
             <property name="iconSize">
              <size>
-              <width>40</width>
-              <height>40</height>
+              <width>32</width>
+              <height>32</height>
              </size>
+            </property>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextUnderIcon</enum>
+            </property>
+            <property name="popupMode">
+             <enum>QToolButton::InstantPopup</enum>
             </property>
            </widget>
           </item>
           <item row="0" column="3">
-           <widget class="QPushButton" name="btn_reset">
+           <widget class="QToolButton" name="btn_reset">
             <property name="enabled">
              <bool>false</bool>
             </property>
@@ -9979,8 +9977,8 @@ Upload</string>
             </property>
             <property name="minimumSize">
              <size>
-              <width>110</width>
-              <height>55</height>
+              <width>85</width>
+              <height>68</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -9992,7 +9990,7 @@ Upload</string>
             <property name="font">
              <font>
               <family>맑은 고딕</family>
-              <pointsize>10</pointsize>
+              <pointsize>9</pointsize>
               <weight>50</weight>
               <italic>false</italic>
               <bold>false</bold>
@@ -10011,21 +10009,15 @@ Device</string>
             </property>
             <property name="iconSize">
              <size>
-              <width>40</width>
-              <height>40</height>
+              <width>32</width>
+              <height>32</height>
              </size>
             </property>
-            <property name="checkable">
-             <bool>false</bool>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextUnderIcon</enum>
             </property>
-            <property name="autoDefault">
-             <bool>false</bool>
-            </property>
-            <property name="default">
-             <bool>false</bool>
-            </property>
-            <property name="flat">
-             <bool>false</bool>
+            <property name="popupMode">
+             <enum>QToolButton::InstantPopup</enum>
             </property>
            </widget>
           </item>
@@ -10042,8 +10034,8 @@ Device</string>
             </property>
             <property name="minimumSize">
              <size>
-              <width>110</width>
-              <height>55</height>
+              <width>85</width>
+              <height>68</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -10055,7 +10047,7 @@ Device</string>
             <property name="font">
              <font>
               <family>맑은 고딕</family>
-              <pointsize>10</pointsize>
+              <pointsize>9</pointsize>
               <weight>50</weight>
               <italic>false</italic>
               <bold>false</bold>
@@ -10074,30 +10066,15 @@ Reset</string>
             </property>
             <property name="iconSize">
              <size>
-              <width>40</width>
-              <height>40</height>
+              <width>32</width>
+              <height>32</height>
              </size>
             </property>
-            <property name="shortcut">
-             <string/>
-            </property>
-            <property name="checkable">
-             <bool>false</bool>
-            </property>
-            <property name="autoRepeat">
-             <bool>false</bool>
-            </property>
-            <property name="autoExclusive">
-             <bool>false</bool>
-            </property>
             <property name="popupMode">
-             <enum>QToolButton::MenuButtonPopup</enum>
+             <enum>QToolButton::InstantPopup</enum>
             </property>
             <property name="toolButtonStyle">
-             <enum>Qt::ToolButtonTextBesideIcon</enum>
-            </property>
-            <property name="autoRaise">
-             <bool>false</bool>
+             <enum>Qt::ToolButtonTextUnderIcon</enum>
             </property>
            </widget>
           </item>
@@ -10133,14 +10110,20 @@ Reset</string>
            <number>0</number>
           </property>
           <item row="0" column="0">
-           <widget class="QPushButton" name="btn_saveconfig">
+           <widget class="QToolButton" name="btn_saveconfig">
             <property name="enabled">
              <bool>false</bool>
             </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="minimumSize">
              <size>
-              <width>110</width>
-              <height>55</height>
+              <width>85</width>
+              <height>68</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -10167,21 +10150,33 @@ Config</string>
             </property>
             <property name="iconSize">
              <size>
-              <width>20</width>
-              <height>20</height>
+              <width>32</width>
+              <height>32</height>
              </size>
+            </property>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextUnderIcon</enum>
+            </property>
+            <property name="popupMode">
+             <enum>QToolButton::InstantPopup</enum>
             </property>
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QPushButton" name="btn_loadconfig">
+           <widget class="QToolButton" name="btn_loadconfig">
             <property name="enabled">
              <bool>false</bool>
             </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="minimumSize">
              <size>
-              <width>110</width>
-              <height>55</height>
+              <width>85</width>
+              <height>68</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -10193,7 +10188,7 @@ Config</string>
             <property name="font">
              <font>
               <family>맑은 고딕</family>
-              <pointsize>10</pointsize>
+              <pointsize>9</pointsize>
               <weight>50</weight>
               <italic>false</italic>
               <bold>false</bold>
@@ -10208,9 +10203,15 @@ Config</string>
             </property>
             <property name="iconSize">
              <size>
-              <width>20</width>
-              <height>20</height>
+              <width>32</width>
+              <height>32</height>
              </size>
+            </property>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextUnderIcon</enum>
+            </property>
+            <property name="popupMode">
+             <enum>QToolButton::InstantPopup</enum>
             </property>
            </widget>
           </item>
@@ -10232,14 +10233,17 @@ Config</string>
          </widget>
         </item>
         <item row="0" column="4">
-         <widget class="QPushButton" name="btn_exit">
-          <property name="enabled">
-           <bool>true</bool>
+         <widget class="QToolButton" name="btn_exit">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
           <property name="minimumSize">
            <size>
-            <width>110</width>
-            <height>55</height>
+            <width>85</width>
+            <height>62</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -10251,7 +10255,7 @@ Config</string>
           <property name="font">
            <font>
             <family>맑은 고딕</family>
-            <pointsize>10</pointsize>
+            <pointsize>9</pointsize>
             <weight>50</weight>
             <italic>false</italic>
             <bold>false</bold>
@@ -10265,9 +10269,12 @@ Config</string>
           </property>
           <property name="iconSize">
            <size>
-            <width>40</width>
-            <height>40</height>
+            <width>32</width>
+            <height>32</height>
            </size>
+          </property>
+          <property name="toolButtonStyle">
+           <enum>Qt::ToolButtonTextUnderIcon</enum>
           </property>
          </widget>
         </item>
