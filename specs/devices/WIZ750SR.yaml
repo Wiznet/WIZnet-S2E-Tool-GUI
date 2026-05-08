@@ -1,0 +1,113 @@
+# WIZ750SR.yaml
+# 소스 기준: WIZMakeCMD.py cmd_1p_advanced, wizcmdset.py WIZ75X_CMDSET
+
+name: WIZ750SR
+display_name: "WIZ750SR"
+aliases:
+  - "WIZ750SR"
+  - "W7500-S2E"
+  - "W7500P-S2E"
+family: one_port
+channels: 1
+search_cmd_order:
+  - MC
+  - VR
+  - MN
+  - UN
+  - ST
+  - IM
+  - OP
+  - CP
+  - DG
+  - KA
+  - KI
+  - KE
+  - RI
+  - LI
+  - SM
+  - GW
+  - DS
+  - LP
+  - RP
+  - RH
+  - BR
+  - DB
+  - PR
+  - SB
+  - FL
+  - IT
+  - PT
+  - PS
+  - PD
+  - TE
+  - SS
+  - NP
+  - SP
+  - SC
+  - TR
+  - S0
+  - S1
+
+command_groups:
+  - base
+  - retransmit
+  - gpio
+
+overrides:
+  # TR: FW 1.2.0 이상에서만 지원
+  TR:
+    min_version: "1.2.0"
+  # BR: WIZ750SR 최대 230400 (index 0-13)
+  BR:
+    regex: "^([0-9]|1[0-3])$"
+    values:
+      "0": "300"
+      "1": "600"
+      "2": "1200"
+      "3": "1800"
+      "4": "2400"
+      "5": "4800"
+      "6": "9600"
+      "7": "14400"
+      "8": "19200"
+      "9": "28800"
+      "10": "38400"
+      "11": "57600"
+      "12": "115200"
+      "13": "230400"
+
+fw_constraints:
+  upload_supported: true
+  config_port: 50001
+
+ui:
+  widget_overrides:
+    tcp_timeout:
+      visible: true
+      tooltip: "Requires firmware 1.2.0 or later"
+  tabs:
+    - id: network
+      label: "Network"
+      groups:
+        - device_info
+        - ip_mode
+        - op_mode
+        - conn_password
+    - id: serial
+      label: "Serial"
+      groups:
+        - serial_info
+        - serial_params
+        - data_packing
+    - id: options
+      label: "Options"
+      groups:
+        - inactivity
+        - keepalive
+        - trigger
+        - search_password
+        - tcp_options
+    - id: userio
+      label: "User I/O"
+      groups:
+        - gpio

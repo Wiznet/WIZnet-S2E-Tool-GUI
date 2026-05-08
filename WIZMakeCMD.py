@@ -250,25 +250,25 @@ class WIZMakeCMD:
                 for cmd in cmd_wiz510ssl:
                     cmd_list.append([cmd, ""])
             elif 'WIZ5XXSR' in devname:
-                print(f"search::devstatus={devstatus}")
+                self.logger.debug(f"search::devstatus={devstatus}")
                 if devstatus == 'BOOT':
                     for cmd in cmd_1p_boot:
                         cmd_list.append([cmd, ""])
-                    print(f"search::cmd_list={cmd_list}")
+                    self.logger.debug(f"search::cmd_list={cmd_list}")
                     return cmd_list
                 for cmd in cmd_wiz5xxsr:
                     cmd_list.append([cmd, ""])
-                print(f"search::cmd_list2={cmd_list}")
+                self.logger.debug(f"search::cmd_list2={cmd_list}")
                 # Commands for E-SAVE
                 #if 'E-SAVE' in devname:
                 #    for cmd in cmd_wiz5xxsr_esave:
                 #        cmd_list.append([cmd, ""])
             elif 'W55RP20-S2E-2CH' in devname:
-                print(f"search::devstatus={devstatus}")
+                self.logger.debug(f"search::devstatus={devstatus}")
                 if devstatus == 'BOOT':
                     for cmd in cmd_1p_boot:
                         cmd_list.append([cmd, ""])
-                    print(f"search::cmd_list={cmd_list}")
+                    self.logger.debug(f"search::cmd_list={cmd_list}")
                     return cmd_list
 
                 if version_compare(version, "1.1.8") >= 0:
@@ -278,14 +278,14 @@ class WIZMakeCMD:
                     temp_cmd_w55rp20_2ch = cmd_security_base + cmd_wiz5xxsr_added
                 for cmd in temp_cmd_w55rp20_2ch:
                     cmd_list.append([cmd, ""])
-                print(f"search::cmd_list2={cmd_list}")
+                self.logger.debug(f"search::cmd_list2={cmd_list}")
 
             elif 'W55RP20-S2E' in devname:
-                print(f"search::devstatus={devstatus}")
+                self.logger.debug(f"search::devstatus={devstatus}")
                 if devstatus == 'BOOT':
                     for cmd in cmd_1p_boot:
                         cmd_list.append([cmd, ""])
-                    print(f"search::cmd_list={cmd_list}")
+                    self.logger.debug(f"search::cmd_list={cmd_list}")
                     return cmd_list
                 # W55RP20-S2E는 SD 명령어 포함 (버전 1.1.8 이상인 경우에만)
                 if version_compare(version, "1.1.8") >= 0:
@@ -294,13 +294,13 @@ class WIZMakeCMD:
                     temp_cmd_w55rp20 = cmd_security_base + cmd_wiz5xxsr_added
                 for cmd in temp_cmd_w55rp20:
                     cmd_list.append([cmd, ""])
-                print(f"search::cmd_list2={cmd_list}")
+                self.logger.debug(f"search::cmd_list2={cmd_list}")
             elif 'W232N' in devname or 'IP20' in devname:
-                print(f"search::devstatus={devstatus}")
+                self.logger.debug(f"search::devstatus={devstatus}")
                 if devstatus == 'BOOT':
                     for cmd in cmd_1p_boot:
                         cmd_list.append([cmd, ""])
-                    print(f"search::cmd_list={cmd_list}")
+                    self.logger.debug(f"search::cmd_list={cmd_list}")
                     return cmd_list
                 # W232N과 IP20도 SD, DD, SE 명령어 지원 (버전 1.1.8 이상인 경우에만)
                 if version_compare(version, "1.1.8") >= 0:
@@ -309,7 +309,7 @@ class WIZMakeCMD:
                     temp_cmd_wiz5xxsr = cmd_wiz5xxsr
                 for cmd in temp_cmd_wiz5xxsr:
                     cmd_list.append([cmd, ""])
-                print(f"search::cmd_list2={cmd_list}")
+                self.logger.debug(f"search::cmd_list2={cmd_list}")
                 # Commands for E-SAVE
                 #if 'E-SAVE' in devname:
                 #    for cmd in cmd_wiz5xxsr_esave:
@@ -328,7 +328,7 @@ class WIZMakeCMD:
         else:
             for cmd in cmd_gpio_4pin:
                 cmd_list.append([cmd, ""])
-        print(f"devname={devname}, cmds={cmd_list}")
+        self.logger.debug(f"devname={devname}, cmds={cmd_list}")
         return cmd_list
 
     # Set device
@@ -428,7 +428,7 @@ class WIZMakeCMD:
         self.logger.info(f'Reset: {mac_addr}')
         cmd_list = []
         try:
-            print("reset", mac_addr, idcode, set_pw, devname)
+            self.logger.debug(f"reset mac_addr={mac_addr} idcode={idcode} set_pw={set_pw} devname={devname}")
             cmd_list = self.make_header(mac_addr, idcode, devname=devname, set_pw=set_pw)
             cmd_list.append(["RT", ""])
         except Exception as e:

@@ -9797,7 +9797,7 @@ interval</string>
            <number>4</number>
           </property>
           <item row="0" column="0">
-           <widget class="QPushButton" name="btn_search">
+           <widget class="QToolButton" name="btn_search">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -9806,8 +9806,8 @@ interval</string>
             </property>
             <property name="minimumSize">
              <size>
-              <width>110</width>
-              <height>55</height>
+              <width>85</width>
+              <height>68</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -9819,32 +9819,17 @@ interval</string>
             <property name="font">
              <font>
               <family>맑은 고딕</family>
-              <pointsize>10</pointsize>
+              <pointsize>9</pointsize>
               <weight>50</weight>
               <italic>false</italic>
               <bold>false</bold>
              </font>
             </property>
-            <property name="mouseTracking">
-             <bool>true</bool>
-            </property>
             <property name="toolTip">
-             <string comment="tooltip 1" extracomment="tooltip 2">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Search&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="toolTipDuration">
-             <number>0</number>
-            </property>
-            <property name="whatsThis">
-             <string extracomment="Search"/>
-            </property>
-            <property name="accessibleName">
-             <string extracomment="3"/>
-            </property>
-            <property name="accessibleDescription">
-             <string extracomment="4"/>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Search&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
-             <string comment="search" extracomment="Search">Device
+             <string>Device
 Search</string>
             </property>
             <property name="icon">
@@ -9853,17 +9838,20 @@ Search</string>
             </property>
             <property name="iconSize">
              <size>
-              <width>40</width>
-              <height>40</height>
+              <width>32</width>
+              <height>32</height>
              </size>
             </property>
-            <property name="shortcut">
-             <string extracomment="shortcut"/>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextUnderIcon</enum>
+            </property>
+            <property name="popupMode">
+             <enum>QToolButton::InstantPopup</enum>
             </property>
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QPushButton" name="btn_setting">
+           <widget class="QToolButton" name="btn_setting">
             <property name="enabled">
              <bool>false</bool>
             </property>
@@ -9875,8 +9863,8 @@ Search</string>
             </property>
             <property name="minimumSize">
              <size>
-              <width>110</width>
-              <height>55</height>
+              <width>85</width>
+              <height>68</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -9888,7 +9876,7 @@ Search</string>
             <property name="font">
              <font>
               <family>맑은 고딕</family>
-              <pointsize>10</pointsize>
+              <pointsize>9</pointsize>
               <weight>50</weight>
               <italic>false</italic>
               <bold>false</bold>
@@ -9907,14 +9895,20 @@ Settings</string>
             </property>
             <property name="iconSize">
              <size>
-              <width>40</width>
-              <height>40</height>
+              <width>32</width>
+              <height>32</height>
              </size>
+            </property>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextUnderIcon</enum>
+            </property>
+            <property name="popupMode">
+             <enum>QToolButton::InstantPopup</enum>
             </property>
            </widget>
           </item>
           <item row="0" column="2">
-           <widget class="QPushButton" name="btn_upload">
+           <widget class="QToolButton" name="btn_upload">
             <property name="enabled">
              <bool>false</bool>
             </property>
@@ -9926,8 +9920,8 @@ Settings</string>
             </property>
             <property name="minimumSize">
              <size>
-              <width>110</width>
-              <height>55</height>
+              <width>85</width>
+              <height>68</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -9939,7 +9933,7 @@ Settings</string>
             <property name="font">
              <font>
               <family>맑은 고딕</family>
-              <pointsize>10</pointsize>
+              <pointsize>9</pointsize>
               <weight>50</weight>
               <italic>false</italic>
               <bold>false</bold>
@@ -9958,14 +9952,20 @@ Upload</string>
             </property>
             <property name="iconSize">
              <size>
-              <width>40</width>
-              <height>40</height>
+              <width>32</width>
+              <height>32</height>
              </size>
+            </property>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextUnderIcon</enum>
+            </property>
+            <property name="popupMode">
+             <enum>QToolButton::InstantPopup</enum>
             </property>
            </widget>
           </item>
           <item row="0" column="3">
-           <widget class="QPushButton" name="btn_reset">
+           <widget class="QToolButton" name="btn_reset">
             <property name="enabled">
              <bool>false</bool>
             </property>
@@ -9977,8 +9977,8 @@ Upload</string>
             </property>
             <property name="minimumSize">
              <size>
-              <width>110</width>
-              <height>55</height>
+              <width>85</width>
+              <height>68</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -9990,7 +9990,7 @@ Upload</string>
             <property name="font">
              <font>
               <family>맑은 고딕</family>
-              <pointsize>10</pointsize>
+              <pointsize>9</pointsize>
               <weight>50</weight>
               <italic>false</italic>
               <bold>false</bold>
@@ -10009,21 +10009,15 @@ Device</string>
             </property>
             <property name="iconSize">
              <size>
-              <width>40</width>
-              <height>40</height>
+              <width>32</width>
+              <height>32</height>
              </size>
             </property>
-            <property name="checkable">
-             <bool>false</bool>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextUnderIcon</enum>
             </property>
-            <property name="autoDefault">
-             <bool>false</bool>
-            </property>
-            <property name="default">
-             <bool>false</bool>
-            </property>
-            <property name="flat">
-             <bool>false</bool>
+            <property name="popupMode">
+             <enum>QToolButton::InstantPopup</enum>
             </property>
            </widget>
           </item>
@@ -10040,8 +10034,8 @@ Device</string>
             </property>
             <property name="minimumSize">
              <size>
-              <width>110</width>
-              <height>55</height>
+              <width>85</width>
+              <height>68</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -10053,7 +10047,7 @@ Device</string>
             <property name="font">
              <font>
               <family>맑은 고딕</family>
-              <pointsize>10</pointsize>
+              <pointsize>9</pointsize>
               <weight>50</weight>
               <italic>false</italic>
               <bold>false</bold>
@@ -10072,30 +10066,15 @@ Reset</string>
             </property>
             <property name="iconSize">
              <size>
-              <width>40</width>
-              <height>40</height>
+              <width>32</width>
+              <height>32</height>
              </size>
             </property>
-            <property name="shortcut">
-             <string/>
-            </property>
-            <property name="checkable">
-             <bool>false</bool>
-            </property>
-            <property name="autoRepeat">
-             <bool>false</bool>
-            </property>
-            <property name="autoExclusive">
-             <bool>false</bool>
-            </property>
             <property name="popupMode">
-             <enum>QToolButton::MenuButtonPopup</enum>
+             <enum>QToolButton::InstantPopup</enum>
             </property>
             <property name="toolButtonStyle">
-             <enum>Qt::ToolButtonTextBesideIcon</enum>
-            </property>
-            <property name="autoRaise">
-             <bool>false</bool>
+             <enum>Qt::ToolButtonTextUnderIcon</enum>
             </property>
            </widget>
           </item>
@@ -10131,14 +10110,20 @@ Reset</string>
            <number>0</number>
           </property>
           <item row="0" column="0">
-           <widget class="QPushButton" name="btn_saveconfig">
+           <widget class="QToolButton" name="btn_saveconfig">
             <property name="enabled">
              <bool>false</bool>
             </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="minimumSize">
              <size>
-              <width>110</width>
-              <height>55</height>
+              <width>85</width>
+              <height>68</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -10165,21 +10150,33 @@ Config</string>
             </property>
             <property name="iconSize">
              <size>
-              <width>20</width>
-              <height>20</height>
+              <width>32</width>
+              <height>32</height>
              </size>
+            </property>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextUnderIcon</enum>
+            </property>
+            <property name="popupMode">
+             <enum>QToolButton::InstantPopup</enum>
             </property>
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QPushButton" name="btn_loadconfig">
+           <widget class="QToolButton" name="btn_loadconfig">
             <property name="enabled">
              <bool>false</bool>
             </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="minimumSize">
              <size>
-              <width>110</width>
-              <height>55</height>
+              <width>85</width>
+              <height>68</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -10191,7 +10188,7 @@ Config</string>
             <property name="font">
              <font>
               <family>맑은 고딕</family>
-              <pointsize>10</pointsize>
+              <pointsize>9</pointsize>
               <weight>50</weight>
               <italic>false</italic>
               <bold>false</bold>
@@ -10206,9 +10203,15 @@ Config</string>
             </property>
             <property name="iconSize">
              <size>
-              <width>20</width>
-              <height>20</height>
+              <width>32</width>
+              <height>32</height>
              </size>
+            </property>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextUnderIcon</enum>
+            </property>
+            <property name="popupMode">
+             <enum>QToolButton::InstantPopup</enum>
             </property>
            </widget>
           </item>
@@ -10230,14 +10233,17 @@ Config</string>
          </widget>
         </item>
         <item row="0" column="4">
-         <widget class="QPushButton" name="btn_exit">
-          <property name="enabled">
-           <bool>true</bool>
+         <widget class="QToolButton" name="btn_exit">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
           <property name="minimumSize">
            <size>
-            <width>110</width>
-            <height>55</height>
+            <width>85</width>
+            <height>62</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -10249,7 +10255,7 @@ Config</string>
           <property name="font">
            <font>
             <family>맑은 고딕</family>
-            <pointsize>10</pointsize>
+            <pointsize>9</pointsize>
             <weight>50</weight>
             <italic>false</italic>
             <bold>false</bold>
@@ -10263,9 +10269,12 @@ Config</string>
           </property>
           <property name="iconSize">
            <size>
-            <width>40</width>
-            <height>40</height>
+            <width>32</width>
+            <height>32</height>
            </size>
+          </property>
+          <property name="toolButtonStyle">
+           <enum>Qt::ToolButtonTextUnderIcon</enum>
           </property>
          </widget>
         </item>

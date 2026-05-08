@@ -1,0 +1,44 @@
+# w55rp20_ext.yaml
+# W55RP20-S2E / W232N / IP20 전용 확장 커맨드
+# 소스 기준: wizcmdset.py::WIZ5XX_RP_CMDSET SD/DD/SE 항목
+#
+# 주의: 여기서 DD = "Send Data at Disconnection" (문자열, 최대 30자)
+# WIZ107/108의 DD = "DDNS Enable" (0/1) 과 완전히 다른 커맨드임!
+# 혼동 방지를 위해 이 파일에서만 W55RP20 전용 DD를 정의.
+# device spec에서 ddns.yaml 대신 w55rp20_ext.yaml 사용.
+
+SD:
+  description: "Send Data at Connection (max 30 chars)"
+  regex: "^.{0,30}$"
+  values: {}
+  access: RW
+  ui:
+    tab: options
+    group: connection_events
+    widget: lineedit
+    label: "Data at Connection"
+    order: 1
+
+DD:
+  description: "Send Data at Disconnection (max 30 chars)"
+  regex: "^.{0,30}$"
+  values: {}
+  access: RW
+  ui:
+    tab: options
+    group: connection_events
+    widget: lineedit
+    label: "Data at Disconnection"
+    order: 2
+
+SE:
+  description: "Ethernet Data Connection Condition (max 30 chars)"
+  regex: "^.{0,30}$"
+  values: {}
+  access: RW
+  ui:
+    tab: options
+    group: connection_events
+    widget: lineedit
+    label: "Connection Condition"
+    order: 3

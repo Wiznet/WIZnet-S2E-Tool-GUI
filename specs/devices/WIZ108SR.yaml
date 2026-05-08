@@ -1,0 +1,125 @@
+# WIZ108SR.yaml
+# WIZ107SR과 하드웨어 차이가 있으나 펌웨어/커맨드셋은 동일
+# 소스 기준: ConfigTool107_source_v1.4.4.1 (WIZ107SR과 동일 툴로 지원)
+
+name: WIZ108SR
+display_name: "WIZ108SR"
+aliases:
+  - "WIZ108SR"
+family: one_port
+channels: 1
+search_cmd_order:
+  - MC
+  - VR
+  - MN
+  - UN
+  - ST
+  - IM
+  - OP
+  - DD
+  - CP
+  - PO
+  - DG
+  - KA
+  - KI
+  - KE
+  - RI
+  - LI
+  - SM
+  - GW
+  - DS
+  - PI
+  - PP
+  - DX
+  - DP
+  - DI
+  - DW
+  - DH
+  - LP
+  - RP
+  - RH
+  - BR
+  - DB
+  - PR
+  - SB
+  - FL
+  - IT
+  - PT
+  - PS
+  - PD
+  - TE
+  - SS
+  - NP
+  - SP
+
+command_groups:
+  - base
+  - ddns
+  - pppoe
+  - telnet
+
+overrides:
+  IM:
+    regex: "^[0-2]$"
+    values:
+      "0": "Static IP"
+      "1": "DHCP"
+      "2": "PPPoE"
+  DB:
+    regex: "^[0-2]$"
+    values:
+      "0": "7-bit"
+      "1": "8-bit"
+      "2": "9-bit"
+  BR:
+    regex: "^([0-9]|1[0-3])$"
+    values:
+      "0": "300"
+      "1": "600"
+      "2": "1200"
+      "3": "1800"
+      "4": "2400"
+      "5": "4800"
+      "6": "9600"
+      "7": "14400"
+      "8": "19200"
+      "9": "28800"
+      "10": "38400"
+      "11": "57600"
+      "12": "115200"
+      "13": "230400"
+
+fw_constraints:
+  upload_supported: true
+  hw_version_field: VR
+  new_hw_major_versions: [3, 4, 5, 7]
+  new_fw_effective_size: 52224
+  old_fw_max_size: 52224
+  upload_port_from_response: true
+  config_port: 50001
+
+ui:
+  tabs:
+    - id: network
+      label: "Network"
+      groups:
+        - device_info
+        - ip_mode
+        - pppoe
+        - op_mode
+        - protocol
+        - ddns
+        - conn_password
+    - id: serial
+      label: "Serial"
+      groups:
+        - serial_info
+        - serial_params
+        - data_packing
+    - id: options
+      label: "Options"
+      groups:
+        - inactivity
+        - keepalive
+        - trigger
+        - search_password

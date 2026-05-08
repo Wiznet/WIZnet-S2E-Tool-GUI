@@ -1,0 +1,61 @@
+{
+  "_comment": "FW from Git 기능에서 사용하는 장치별 펌웨어 소스 정의",
+  "_name_pattern": "fnmatch 글로브 — 장치 목록에서 선택된 Device name 매칭",
+  "_asset_pattern": "fnmatch 글로브 — GitHub 릴리스 asset 파일명 매칭",
+  "_extract_file": "zip 내부에서 꺼낼 파일명. null 이면 asset 자체를 업로드",
+  "_exclude_asset_keywords": "대소문자 무시 키워드 — 포함된 asset 은 무조건 건너뜀",
+  "version": 1,
+  "families": [
+    {
+      "id": "w55rp20",
+      "display_name": "W55RP20 Series",
+      "repo": "WIZnet-ioNIC/W55RP20-S2E",
+      "exclude_asset_keywords": [],
+      "devices": [
+        {
+          "name_pattern": "IP20",
+          "asset_pattern": "IP20_Bin_*.zip",
+          "extract_file": "App_linker.bin"
+        },
+        {
+          "name_pattern": "W232N",
+          "asset_pattern": "W232N_Bin_*.zip",
+          "extract_file": "App_linker.bin"
+        },
+        {
+          "name_pattern": "W55RP20-S2E",
+          "asset_pattern": "W55RP20-S2E_Bin_*.zip",
+          "extract_file": "App_linker.bin"
+        },
+        {
+          "name_pattern": "W55RP20-S2E_Platypus",
+          "asset_pattern": "Bin_Files_W55RP20-S2E_Custom_Platypus_V*.zip",
+          "extract_file": "App_linker.bin"
+        }
+      ]
+    },
+    {
+      "id": "wiz750sr",
+      "display_name": "WIZ750SR Series",
+      "repo": "Wiznet/WIZ750SR",
+      "exclude_asset_keywords": ["boot"],
+      "devices": [
+        {
+          "name_pattern": "WIZ750SR",
+          "asset_pattern": "WIZ750SRv*.bin",
+          "extract_file": null
+        },
+        {
+          "name_pattern": "WIZ750SR-T1L",
+          "asset_pattern": "WIZ750SR-T1Lv*.bin",
+          "extract_file": null
+        },
+        {
+          "name_pattern": "WIZ750SR-1??",
+          "asset_pattern": "WIZ750SR-1xxv*.bin",
+          "extract_file": null
+        }
+      ]
+    }
+  ]
+}

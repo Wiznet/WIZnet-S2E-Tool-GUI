@@ -15,6 +15,7 @@ VB6 소스(WIZ1xxSR_config_v3.0.2) 기반.
 """
 
 import struct
+import ipaddress
 
 # ─────────────────────────────────────────────
 # typeBoardInfo 구조체 (163 bytes, little-endian)
@@ -115,7 +116,10 @@ def mac_bytes_to_str(mac6: bytes) -> str:
 
 def mac_str_to_bytes(mac_str: str) -> bytes:
     """'00:08:DC:11:22:33' → b'\\x00\\x08\\xdc...'"""
-    return bytes(int(x, 16) for x in mac_str.replace('-', ':').split(':'))
+    parts = mac_str.replace('-', ':').split(':')
+    if len(parts) != 6:
+        raise ValueError(f"MAC은 6 octet이어야 함: {mac_str!r}")
+    return bytes(int(x, 16) for x in parts)
 
 
 def ip_bytes_to_str(ip4: bytes) -> str:
@@ -123,8 +127,7 @@ def ip_bytes_to_str(ip4: bytes) -> str:
 
 
 def ip_str_to_bytes(ip_str: str) -> bytes:
-    parts = ip_str.split('.')
-    return bytes(int(p) for p in parts)
+    return ipaddress.IPv4Address(ip_str.strip()).packed
 
 
 def cstr_to_str(raw: bytes) -> str:
@@ -181,7 +184,10 @@ def parse_imin(data: bytes) -> dict | None:
     if 1 <= wiz120_marker <= 9:
         return None  # WIZ120SR → 제외
 
-    fields = struct.unpack(STRUCT_FORMAT, raw)
+    try:
+        fields = struct.unpack(STRUCT_FORMAT, raw)
+    except struct.error:
+        return None
     (mac, bserver, ip, subnet, gw, myport, peerip, peerport,
      speed, databit, parity, stopbit, flow,
      d_ch, d_size, d_time, i_time, debugoff, appver,
@@ -279,7 +285,11 @@ def build_sett(d: dict) -> bytes:
 
     scfg      = int(d.get('scfg', 0))
     scfg_hex  = d.get('scfg_str', '000000')
-    scfg_b    = bytes.fromhex(scfg_hex.zfill(6))[:3]
+    try:
+        scfg_b = bytes.fromhex(scfg_hex.zfill(6))[:3]
+    except ValueError:
+        logger.warning(f"[build_sett] scfg_str 오류: {scfg_hex!r}, 기본값 사용")
+        scfg_b = b'\x00\x00\x00'
 
     pppoe_id_b   = str_to_cstr(d.get('pppoe_id', ''), 32)
     pppoe_pass_b = str_to_cstr(d.get('pppoe_pass', ''), 32)

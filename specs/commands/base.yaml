@@ -1,0 +1,490 @@
+# base.yaml
+# 모든 WIZnet S2E 장비에 공통인 커맨드 정의
+# 소스 기준: wizcmdset.py::common_cmdset + WIZ107/108 clsSEC.COMMANDS 교집합
+
+# ------- Read-Only (장치 정보) -------
+
+MC:
+  description: "MAC address"
+  regex: "^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$"
+  values: {}
+  access: RO
+  ui:
+    tab: network
+    group: device_info
+    widget: label
+    label: "MAC Address"
+    order: 1
+
+VR:
+  description: "Firmware Version"
+  regex: ""
+  values: {}
+  access: RO
+  ui:
+    tab: network
+    group: device_info
+    widget: label
+    label: "Firmware Version"
+    order: 2
+
+MN:
+  description: "Product Name"
+  regex: ""
+  values: {}
+  access: RO
+  ui:
+    tab: network
+    group: device_info
+    widget: label
+    label: "Model Name"
+    order: 3
+
+ST:
+  description: "Operation status"
+  regex: ""
+  values: {}
+  access: RO
+  ui:
+    tab: network
+    group: device_info
+    widget: label
+    label: "Status"
+    order: 4
+
+UN:
+  description: "UART Interface (Str)"
+  regex: ""
+  values: {}
+  access: RO
+  ui:
+    tab: serial
+    group: serial_info
+    widget: label
+    label: "UART Interface"
+    order: 1
+
+# ------- Network — IP Mode -------
+
+IM:
+  description: "IP address Allocation Mode"
+  regex: "^[0-1]$"
+  values:
+    "0": "Static IP"
+    "1": "DHCP"
+  access: RW
+  ui:
+    tab: network
+    group: ip_mode
+    widget: radiogroup
+    label: "IP Address Allocation"
+    order: 1
+
+LI:
+  description: "Local IP address"
+  regex: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: ip_mode
+    widget: ip
+    label: "IP Address"
+    order: 2
+    depends_on: {IM: "0"}
+
+SM:
+  description: "Subnet mask"
+  regex: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: ip_mode
+    widget: ip
+    label: "Subnet Mask"
+    order: 3
+    depends_on: {IM: "0"}
+
+GW:
+  description: "Gateway address"
+  regex: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: ip_mode
+    widget: ip
+    label: "Gateway"
+    order: 4
+    depends_on: {IM: "0"}
+
+DS:
+  description: "DNS Server address"
+  regex: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: ip_mode
+    widget: ip
+    label: "DNS Server"
+    order: 5
+
+# ------- Network — Operation Mode -------
+
+OP:
+  description: "Network Operation Mode"
+  regex: "^[0-3]$"
+  values:
+    "0": "TCP Client mode"
+    "1": "TCP Server mode"
+    "2": "TCP Mixed mode"
+    "3": "UDP mode"
+  access: RW
+  ui:
+    tab: network
+    group: op_mode
+    widget: radiogroup
+    label: "Operation Mode"
+    order: 1
+
+LP:
+  description: "Local port number"
+  regex: "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: op_mode
+    widget: port
+    label: "Local Port"
+    order: 2
+
+RH:
+  description: "Remote Host IP address / Domain"
+  regex: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: op_mode
+    widget: lineedit
+    label: "Remote Host"
+    order: 3
+    span: 2
+    depends_on: {OP: ["0", "2", "3"]}
+
+RP:
+  description: "Remote Host Port number"
+  regex: "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: op_mode
+    widget: port
+    label: "Remote Port"
+    order: 4
+    depends_on: {OP: ["0", "2", "3"]}
+
+RI:
+  description: "TCP Reconnection Interval"
+  regex: "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: op_mode
+    widget: lineedit
+    label: "Reconnection Interval (ms)"
+    order: 5
+    depends_on: {OP: ["0", "2"]}
+
+# ------- Network — Connection Password -------
+
+CP:
+  description: "Connection Password Enable"
+  regex: "^[0-1]$"
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: conn_password
+    widget: checkbox
+    label: "Enable Connection Password"
+    order: 1
+
+NP:
+  description: "Connection Password"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: conn_password
+    widget: lineedit
+    label: "Password"
+    order: 2
+    password: true
+    depends_on: {CP: "1"}
+
+# ------- Serial -------
+
+BR:
+  description: "UART Baud rate"
+  regex: "^([0-9]|1[0-5])$"
+  values:
+    "0": "300"
+    "1": "600"
+    "2": "1200"
+    "3": "1800"
+    "4": "2400"
+    "5": "4800"
+    "6": "9600"
+    "7": "14400"
+    "8": "19200"
+    "9": "28800"
+    "10": "38400"
+    "11": "57600"
+    "12": "115200"
+    "13": "230400"
+    "14": "460800"
+    "15": "921600"
+  access: RW
+  ui:
+    tab: serial
+    group: serial_params
+    widget: combobox
+    label: "Baud Rate"
+    order: 1
+
+DB:
+  description: "UART Data bit length"
+  regex: "^[0-1]$"
+  values:
+    "0": "7-bit"
+    "1": "8-bit"
+  access: RW
+  ui:
+    tab: serial
+    group: serial_params
+    widget: combobox
+    label: "Data Bits"
+    order: 2
+
+PR:
+  description: "UART Parity bit"
+  regex: "^[0-2]$"
+  values:
+    "0": "NONE"
+    "1": "ODD"
+    "2": "EVEN"
+  access: RW
+  ui:
+    tab: serial
+    group: serial_params
+    widget: combobox
+    label: "Parity"
+    order: 3
+
+SB:
+  description: "UART Stop bit length"
+  regex: "^[0-1]$"
+  values:
+    "0": "1-bit"
+    "1": "2-bit"
+  access: RW
+  ui:
+    tab: serial
+    group: serial_params
+    widget: combobox
+    label: "Stop Bits"
+    order: 4
+
+FL:
+  description: "UART Flow Control"
+  regex: "^[0-4]$"
+  values:
+    "0": "NONE"
+    "1": "XON/XOFF"
+    "2": "RTS/CTS"
+    "3": "RTS on TX"
+    "4": "RTS on TX (invert)"
+  access: RW
+  ui:
+    tab: serial
+    group: serial_params
+    widget: combobox
+    label: "Flow Control"
+    order: 5
+
+DG:
+  description: "Serial Debug Message Enable"
+  regex: "^[0-4]$"
+  values: {}
+  access: RW
+  ui:
+    tab: serial
+    group: serial_params
+    widget: checkbox
+    label: "Debug Message"
+    order: 6
+
+# ------- Serial Data Packing -------
+
+PT:
+  description: "Time Delimiter (ms)"
+  regex: "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: serial
+    group: data_packing
+    widget: lineedit
+    label: "Timer (0~65535 ms)"
+    order: 1
+
+PS:
+  description: "Size Delimiter (bytes)"
+  regex: "^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: serial
+    group: data_packing
+    widget: lineedit
+    label: "Size (0~255 bytes)"
+    order: 2
+
+PD:
+  description: "Char Delimiter (hex)"
+  regex: "^([0-9a-fA-F][0-9a-fA-F])$"
+  values: {}
+  access: RW
+  ui:
+    tab: serial
+    group: data_packing
+    widget: lineedit
+    label: "Character (hex 00~FF)"
+    order: 3
+
+# ------- Options -------
+
+IT:
+  description: "Inactivity Timer Value (ms)"
+  regex: "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: options
+    group: inactivity
+    widget: lineedit
+    label: "Inactivity Timer (0~65535 ms)"
+    order: 1
+
+KA:
+  description: "TCP Keep-alive Enable"
+  regex: "^[0-1]$"
+  values: {}
+  access: RW
+  ui:
+    tab: options
+    group: keepalive
+    widget: checkbox
+    label: "Enable TCP Keep-alive"
+    order: 1
+
+KI:
+  description: "TCP Keep-alive Initial Interval (ms)"
+  regex: "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: options
+    group: keepalive
+    widget: lineedit
+    label: "Initial Interval (ms)"
+    order: 2
+    depends_on: {KA: "1"}
+
+KE:
+  description: "TCP Keep-alive Retry Interval (ms)"
+  regex: "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: options
+    group: keepalive
+    widget: lineedit
+    label: "Retry Interval (ms)"
+    order: 3
+    depends_on: {KA: "1"}
+
+TE:
+  description: "Command mode Switch Code Enable"
+  regex: "^[0-1]$"
+  values: {}
+  access: RW
+  ui:
+    tab: options
+    group: trigger
+    widget: checkbox
+    label: "Enable Software Trigger"
+    order: 1
+
+SS:
+  description: "Command mode Switch Code (3-byte hex)"
+  regex: "^(([0-9a-fA-F][0-9a-fA-F]){3})$"
+  values: {}
+  access: RW
+  ui:
+    tab: options
+    group: trigger
+    widget: hex3
+    label: "Trigger Code"
+    order: 2
+    depends_on: {TE: "1"}
+
+SP:
+  description: "Search ID Code (Search Password)"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: options
+    group: search_password
+    widget: lineedit
+    label: "Search Password"
+    order: 1
+    password: true
+
+# ------- Write-Only (commands, no UI) -------
+
+SV:
+  description: "Save Device Setting"
+  regex: ""
+  values: {}
+  access: WO
+  ui: null
+
+RT:
+  description: "Device Reboot"
+  regex: ""
+  values: {}
+  access: WO
+  ui: null
+
+FR:
+  description: "Device Factory Reset"
+  regex: ""
+  values: {}
+  access: WO
+  ui: null
+
+EX:
+  description: "Command mode exit"
+  regex: ""
+  values: {}
+  access: WO
+  ui: null

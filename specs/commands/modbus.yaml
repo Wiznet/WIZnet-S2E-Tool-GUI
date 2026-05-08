@@ -1,0 +1,23 @@
+# modbus.yaml
+# Modbus 프로토콜 커맨드
+# 지원 장비: WIZ2000, WIZ5XXSR-RP 계열, W55RP20-S2E
+# 소스 기준: wizcmdset.py PO/MB 항목 (WIZ5XX_RP_CMDSET)
+#
+# 주의: WIZ5XX-RP계열의 PO/MB는 Modbus 관련이지만,
+# WIZ107/108의 PO는 TCP/Telnet 프로토콜 선택으로 의미가 완전히 다름.
+# 장비 spec의 command_groups에서 적절히 선택.
+
+MB:
+  description: "Modbus protocol for channel 0"
+  regex: "^[0-2]$"
+  values:
+    "0": "Serial to Ethernet"
+    "1": "Modbus RTU to TCP converter"
+    "2": "Modbus ASCII to TCP converter"
+  access: RW
+  ui:
+    tab: options
+    group: modbus
+    widget: combobox
+    label: "Modbus Mode (CH0)"
+    order: 1

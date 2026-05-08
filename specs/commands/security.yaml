@@ -1,0 +1,211 @@
+# security.yaml
+# SSL/TLS, MQTT, 인증서 관련 커맨드
+# 지원 장비: WIZ510SSL, WIZ5XXSR-RP, W55RP20-S2E, W232N, IP20
+# 소스 기준: wizcmdset.py::WIZ5XX_RP_CMDSET
+
+# --- Operation Mode 확장 (SSL/MQTT 포함) ---
+# 주의: base.yaml의 OP를 override해야 함. device spec의 overrides에서 처리.
+# OP 확장값:
+#   "4": "SSL TCP Client mode"
+#   "5": "MQTT Client"
+#   "6": "MQTTS Client"
+
+# --- SSL ---
+
+SO:
+  description: "SSL receive timeout"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: network
+    group: ssl_options
+    widget: lineedit
+    label: "SSL Timeout"
+    order: 1
+
+RC:
+  description: "Root CA Option"
+  regex: "^[0-2]$"
+  values:
+    "0": "Not used"
+    "1": "Verify server certificate"
+    "2": "Verify all"
+  access: RW
+  ui:
+    tab: certificate
+    group: cert_options
+    widget: combobox
+    label: "Root CA"
+    order: 1
+
+CE:
+  description: "Client Certificate Enable"
+  regex: "^[0-1]$"
+  values: {}
+  access: RW
+  ui:
+    tab: certificate
+    group: cert_options
+    widget: checkbox
+    label: "Enable Client Certificate"
+    order: 2
+
+OC:
+  description: "Root CA (upload)"
+  regex: ""
+  values: {}
+  access: WO
+  ui:
+    tab: certificate
+    group: cert_upload
+    widget: fileupload
+    label: "Root CA File"
+    order: 1
+
+LC:
+  description: "Client Certificate (upload)"
+  regex: ""
+  values: {}
+  access: WO
+  ui:
+    tab: certificate
+    group: cert_upload
+    widget: fileupload
+    label: "Client Certificate File"
+    order: 2
+
+PK:
+  description: "Private Key (upload)"
+  regex: ""
+  values: {}
+  access: WO
+  ui:
+    tab: certificate
+    group: cert_upload
+    widget: fileupload
+    label: "Private Key File"
+    order: 3
+
+# --- MQTT ---
+
+QU:
+  description: "MQTT Options - User name"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: mqtt
+    group: mqtt_options
+    widget: lineedit
+    label: "Username"
+    order: 1
+
+QP:
+  description: "MQTT options - Password"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: mqtt
+    group: mqtt_options
+    widget: lineedit
+    label: "Password"
+    order: 2
+    password: true
+
+QC:
+  description: "MQTT options - Client ID"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: mqtt
+    group: mqtt_options
+    widget: lineedit
+    label: "Client ID"
+    order: 3
+
+QK:
+  description: "MQTT Keep-Alive (s)"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: mqtt
+    group: mqtt_options
+    widget: lineedit
+    label: "Keep Alive (s)"
+    order: 4
+
+PU:
+  description: "MQTT Publish topic"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: mqtt
+    group: mqtt_topics
+    widget: lineedit
+    label: "Publish Topic"
+    order: 1
+
+U0:
+  description: "MQTT Subscribe topic 1"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: mqtt
+    group: mqtt_topics
+    widget: lineedit
+    label: "Subscribe Topic 1"
+    order: 2
+
+U1:
+  description: "MQTT Subscribe topic 2"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: mqtt
+    group: mqtt_topics
+    widget: lineedit
+    label: "Subscribe Topic 2"
+    order: 3
+
+U2:
+  description: "MQTT Subscribe topic 3"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: mqtt
+    group: mqtt_topics
+    widget: lineedit
+    label: "Subscribe Topic 3"
+    order: 4
+
+QO:
+  description: "MQTT QoS level"
+  regex: "^[0-2]$"
+  values:
+    "0": "QoS 0 (At most once)"
+    "1": "QoS 1 (At least once)"
+    "2": "QoS 2 (Exactly once)"
+  access: RW
+  ui:
+    tab: mqtt
+    group: mqtt_options
+    widget: combobox
+    label: "QoS Level"
+    order: 5
+
+# --- Firmware copy ---
+
+UF:
+  description: "Copy firmware from firmware bank to application bank"
+  regex: ""
+  values: {}
+  access: RW
+  ui: null

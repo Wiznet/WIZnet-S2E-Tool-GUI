@@ -1,0 +1,87 @@
+# IP20.yaml
+# W55RP20 칩 기반 단일 채널 장비 (W55RP20-S2E와 동일 커맨드셋)
+
+name: IP20
+display_name: "IP20"
+aliases:
+  - "IP20"
+family: security
+channels: 1
+
+command_groups:
+  - base
+  - retransmit
+  - security
+  - w55rp20_ext
+
+overrides:
+  # BR: IP20 최대 921600 (index 0-15)
+  BR:
+    regex: "^([0-9]|1[0-5])$"
+    values:
+      "0": "300"
+      "1": "600"
+      "2": "1200"
+      "3": "1800"
+      "4": "2400"
+      "5": "4800"
+      "6": "9600"
+      "7": "14400"
+      "8": "19200"
+      "9": "28800"
+      "10": "38400"
+      "11": "57600"
+      "12": "115200"
+      "13": "230400"
+      "14": "460800"
+      "15": "921600"
+  OP:
+    regex: "^[0-6]$"
+    values:
+      "0": "TCP Client mode"
+      "1": "TCP Server mode"
+      "2": "TCP Mixed mode"
+      "3": "UDP mode"
+      "4": "SSL TCP Client mode"
+      "5": "MQTT Client"
+      "6": "MQTTS Client"
+
+fw_constraints:
+  upload_supported: true
+  config_port: 50001
+
+ui:
+  tabs:
+    - id: network
+      label: "Network"
+      groups:
+        - device_info
+        - ip_mode
+        - op_mode
+        - conn_password
+        - ssl_options
+    - id: serial
+      label: "Serial"
+      groups:
+        - serial_info
+        - serial_params
+        - data_packing
+    - id: options
+      label: "Options"
+      groups:
+        - inactivity
+        - keepalive
+        - trigger
+        - search_password
+        - tcp_options
+        - connection_events
+    - id: mqtt
+      label: "MQTT"
+      groups:
+        - mqtt_options
+        - mqtt_topics
+    - id: certificate
+      label: "Certificate"
+      groups:
+        - cert_options
+        - cert_upload

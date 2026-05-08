@@ -1,0 +1,21 @@
+# telnet.yaml
+# Network Protocol (TCP Raw vs Telnet) 선택 커맨드
+# 지원 장비: WIZ107SR, WIZ108SR
+# 소스 기준: frmMain.vb DisplayValue() PO 블록, CalcSetMsg() — PO는 미포함 (표시만)
+#
+# 주의: WIZ107/108 원본 소스의 CalcSetMsg()에 PO 커맨드가 명시적으로 없음.
+# 그러나 clsSEC.SetMsg()에는 포함되어 있음 → 실제 SET시 전송됨.
+
+PO:
+  description: "Network Protocol (TCP Raw / Telnet)"
+  regex: "^[0-1]$"
+  values:
+    "0": "TCP Raw"
+    "1": "Telnet"
+  access: RW
+  ui:
+    tab: network
+    group: protocol
+    widget: radiogroup
+    label: "Network Protocol"
+    order: 1

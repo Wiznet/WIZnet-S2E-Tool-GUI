@@ -20,7 +20,7 @@ Get-ChildItem .\*.spec | Where-Object { $_.Name -ne "$target_bin_name.spec" } | 
 Write-Output "Cleaned up old .spec files"
 
 # Run build via uv to use the .venv environment
-uv run python -m PyInstaller -w -F -n $target_bin_name --add-data ".\\gui\\*;.\\gui" --add-data ".\\version;.\\" --add-data ".\\config\\*.yaml;.\\config" .\main_gui.py
+uv run python -m PyInstaller -w -F -n $target_bin_name --add-data ".\\gui\\*;.\\gui" --add-data ".\\version;.\\" --add-data ".\\config\\*.yaml;.\\config" --add-data ".\\config\\*.json;.\\config" .\main_gui.py
 
 if ($NoSign) {
     Write-Output "Build complete (unsigned): dist\$target_bin_name.exe"

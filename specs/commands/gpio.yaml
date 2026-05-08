@@ -1,0 +1,162 @@
+# gpio.yaml
+# User I/O (GPIO) 커맨드
+# 지원 장비: WIZ750SR, WIZ750SR-1xx (4핀), 일부 장비 (2핀)
+# 소스 기준: wizcmdset.py::common_cmdset CA/CB/CC/CD/GA/GB/GC/GD/SC/S0/S1
+
+CA:
+  description: "Type and Direction of User I/O pin A"
+  regex: "^[0-2]$"
+  values:
+    "0": "Digital Input"
+    "1": "Digital Output"
+    "2": "Analog Input"
+  access: RW
+  ui:
+    tab: options
+    group: gpio
+    widget: combobox
+    label: "I/O Pin A Type"
+    order: 1
+
+CB:
+  description: "Type and Direction of User I/O pin B"
+  regex: "^[0-2]$"
+  values:
+    "0": "Digital Input"
+    "1": "Digital Output"
+    "2": "Analog Input"
+  access: RW
+  ui:
+    tab: options
+    group: gpio
+    widget: combobox
+    label: "I/O Pin B Type"
+    order: 2
+
+CC:
+  description: "Type and Direction of User I/O pin C"
+  regex: "^[0-2]$"
+  values:
+    "0": "Digital Input"
+    "1": "Digital Output"
+    "2": "Analog Input"
+  access: RW
+  ui:
+    tab: options
+    group: gpio
+    widget: combobox
+    label: "I/O Pin C Type"
+    order: 3
+
+CD:
+  description: "Type and Direction of User I/O pin D"
+  regex: "^[0-2]$"
+  values:
+    "0": "Digital Input"
+    "1": "Digital Output"
+    "2": "Analog Input"
+  access: RW
+  ui:
+    tab: options
+    group: gpio
+    widget: combobox
+    label: "I/O Pin D Type"
+    order: 4
+
+GA:
+  description: "Status and Value of User I/O pin A"
+  regex: "^[0-1]$"
+  values:
+    "0": "Low"
+    "1": "High"
+  access: RW
+  ui:
+    tab: options
+    group: gpio
+    widget: combobox
+    label: "I/O Pin A Value"
+    order: 5
+
+GB:
+  description: "Status and Value of User I/O pin B"
+  regex: "^[0-1]$"
+  values:
+    "0": "Low"
+    "1": "High"
+  access: RW
+  ui:
+    tab: options
+    group: gpio
+    widget: combobox
+    label: "I/O Pin B Value"
+    order: 6
+
+GC:
+  description: "Status and Value of User I/O pin C"
+  regex: "^[0-1]$"
+  values:
+    "0": "Low"
+    "1": "High"
+  access: RW
+  ui:
+    tab: options
+    group: gpio
+    widget: combobox
+    label: "I/O Pin C Value"
+    order: 7
+
+GD:
+  description: "Status and Value of User I/O pin D"
+  regex: "^[0-1]$"
+  values:
+    "0": "Low"
+    "1": "High"
+  access: RW
+  ui:
+    tab: options
+    group: gpio
+    widget: combobox
+    label: "I/O Pin D Value"
+    order: 8
+
+SC:
+  description: "Status pin S0/S1 Operation Mode"
+  regex: "^([0-1]{2})$"
+  values:
+    "00": "PHY Link / TCP Connection Status"
+    "11": "DTR/DSR"
+  access: RW
+  ui:
+    tab: options
+    group: gpio
+    widget: combobox
+    label: "Status Pin Mode"
+    order: 9
+
+S0:
+  description: "Status of pin S0 (PHY Link or DTR)"
+  regex: "^[0-1]$"
+  values:
+    "0": "PHY Link Up / Not ready"
+    "1": "PHY Link Down / Ready"
+  access: RO
+  ui:
+    tab: options
+    group: gpio
+    widget: label
+    label: "Status Pin S0"
+    order: 10
+
+S1:
+  description: "Status of pin S1 (TCP Connection or DSR)"
+  regex: "^[0-1]$"
+  values:
+    "0": "PHY Link Up / Not ready"
+    "1": "PHY Link Down / Ready"
+  access: RO
+  ui:
+    tab: options
+    group: gpio
+    widget: label
+    label: "Status Pin S1"
+    order: 11
