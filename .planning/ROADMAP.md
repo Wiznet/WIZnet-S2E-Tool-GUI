@@ -26,7 +26,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. `specs/schema/device.schema.json` 파일이 존재하고 기존 specs/devices/*.yaml 전체에 대해 유효성을 통과한다
   2. `specs/schema/command-group.schema.json` 파일이 존재하고 기존 specs/commands/*.yaml 전체에 대해 유효성을 통과한다
   3. meta: 블록 필드(id, name, category, description, requires, conflicts)가 스키마에 정의되어 있다
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 01-01-PLAN.md — device.schema.json + command-group.schema.json 작성 및 validate_schemas.py로 전체 YAML 검증
 
 ### Phase 2: Module Metadata
 **Goal**: specs/commands/*.yaml 10개 파일 각각에 meta: 블록을 추가하여 에디터가 모듈을 카테고리별로 나열하고 조립 가능성을 판단할 수 있게 한다
@@ -56,6 +59,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Schema Definition | 0/TBD | Not started | - |
+| 1. Schema Definition | 0/1 | Not started | - |
 | 2. Module Metadata | 0/TBD | Not started | - |
 | 3. Loader Integration | 0/TBD | Not started | - |
