@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-05-12)
 
 **Core value:** 현장 엔지니어가 WIZnet S2E 장치를 네트워크로 검색·설정할 수 있는 신뢰할 수 있는 도구
-**Current focus:** Milestone v1.7 정의 중
+**Current focus:** Phase 1 - Schema Definition (v1.6.3 Device Module Architecture)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-05-13 — Milestone v1.6.3 시작 (Device Module Architecture)
+Phase: 1 of 3 (Schema Definition)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-05-12 — ROADMAP.md 생성 (v1.6.3 3-phase 로드맵 확정)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -27,6 +27,8 @@ Progress: [░░░░░░░░░░] 0%
 - 2026-05-12: DeviceSpec YAML → 장치별 UI 빌드의 단일 진실 소스로 확립
 - 2026-05-12: main_gui.py 줄번호 맵 폐기 → Grep 즉시 확인 원칙
 - 2026-05-12: GSD 도입 — STATE.md 강제 읽기로 정보 전파 문제 해결
+- 2026-05-12: v1.6.3 페이즈 순서 확정 — SCH-01(스키마 정의) → MOD-01(메타 추가) → MOD-02/03+SCH-02(로더 통합)
+- 2026-05-12: jsonschema Python 패키지 의존성 추가 여부 Phase 3 착수 전 확인 필요
 
 ### Pending Todos
 
@@ -41,10 +43,10 @@ TASKS.md → `.planning/todos/pending/` 이관 예정
 
 ### Blockers/Concerns
 
-없음
+- jsonschema 패키지 의존성 추가 필요 여부 확인 필요 (Phase 3 착수 전)
 
 ## Session Continuity
 
 Last session: 2026-05-12
-Stopped at: GSD .planning/ 초기화 완료, milestone v1.7 요구사항 수집 중
+Stopped at: v1.6.3 ROADMAP.md + STATE.md 작성 완료, Phase 1 planning 대기
 Resume file: None

@@ -36,8 +36,8 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| MOD-01 | TBD   | Active |
-| MOD-02 | TBD   | Active |
-| MOD-03 | TBD   | Active |
-| SCH-01 | TBD   | Active |
-| SCH-02 | TBD   | Active |
+| SCH-01 | Phase 1 | Pending |
+| MOD-01 | Phase 2 | Pending |
+| MOD-02 | Phase 3 | Pending |
+| MOD-03 | Phase 3 | Pending |
+| SCH-02 | Phase 3 | Pending |
