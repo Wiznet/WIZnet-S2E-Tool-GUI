@@ -56,7 +56,8 @@
         },
         "values": {
           "type": "object",
-          "description": "Allowed value map. Empty object ({}) for commands with no predefined values."
+          "description": "Allowed value map. Keys are string representations of valid values, mapped to display labels. Empty object ({}) for free-form or no-predefined-value commands.",
+          "additionalProperties": {"type": "string"}
         },
         "access": {
           "type": "string",

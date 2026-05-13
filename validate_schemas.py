@@ -34,7 +34,12 @@ def validate_all() -> None:
 
     print("=== Device YAML ===")
     for f in sorted((SPECS_DIR / "devices").glob("*.yaml")):
-        data = yaml.safe_load(f.read_text(encoding="utf-8"))
+        try:
+            data = yaml.safe_load(f.read_text(encoding="utf-8"))
+        except yaml.YAMLError as e:
+            errors.append(f"FAIL {f.name}: YAML parse error: {e}")
+            print(f"  FAIL {f.name}: YAML parse error: {e}")
+            continue
         try:
             jsonschema.validate(instance=data, schema=device_schema)
             print(f"  OK  {f.name}")
@@ -44,13 +49,40 @@ def validate_all() -> None:
 
     print("\n=== Command Group YAML ===")
     for f in sorted((SPECS_DIR / "commands").glob("*.yaml")):
-        data = yaml.safe_load(f.read_text(encoding="utf-8"))
+        try:
+            data = yaml.safe_load(f.read_text(encoding="utf-8"))
+        except yaml.YAMLError as e:
+            errors.append(f"FAIL {f.name}: YAML parse error: {e}")
+            print(f"  FAIL {f.name}: YAML parse error: {e}")
+            continue
         try:
             jsonschema.validate(instance=data, schema=cmd_schema)
             print(f"  OK  {f.name}")
         except jsonschema.ValidationError as e:
             errors.append(f"FAIL {f.name}: {e.message}")
             print(f"  FAIL {f.name}: {e.message}")
+
+    print("\n=== Cross-group Duplicate Command Codes ===")
+    group_commands: dict[str, list[str]] = {}
+    for f in sorted((SPECS_DIR / "commands").glob("*.yaml")):
+        try:
+            data = yaml.safe_load(f.read_text(encoding="utf-8"))
+        except yaml.YAMLError:
+            continue
+        group_commands[f.stem] = [k for k in data if k != "meta"]
+
+    all_codes: dict[str, list[str]] = {}
+    for group, codes in group_commands.items():
+        for code in codes:
+            all_codes.setdefault(code, []).append(group)
+
+    dup_found = False
+    for code, groups in sorted(all_codes.items()):
+        if len(groups) > 1:
+            print(f"  WARN  '{code}' defined in multiple groups: {groups}")
+            dup_found = True
+    if not dup_found:
+        print("  OK  No duplicate codes across groups")
 
     print()
     if errors:
