@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WIZnet Command Group",
+  "description": "Schema for specs/commands/*.yaml files. Command codes are dynamic keys matched by patternProperties.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Module metadata (optional in Phase 1, populated in Phase 2).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique module identifier (e.g. 'base', 'ddns')"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable module name"
+        },
+        "category": {
+          "type": "string",
+          "description": "Module category for editor grouping (e.g. 'network', 'security')"
+        },
+        "description": {
+          "type": "string",
+          "description": "Brief description of the module's purpose"
+        },
+        "requires": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Other module IDs this module depends on"
+        },
+        "conflicts": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Other module IDs that cannot be used with this module"
+        }
+      }
+    }
+  },
+  "patternProperties": {
+    "^[A-Z0-9]{2}$": {
+      "type": "object",
+      "required": ["description", "regex", "values", "access"],
+      "additionalProperties": false,
+      "description": "A single command entry keyed by its 2-character command code.",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Human-readable command description"
+        },
+        "regex": {
+          "type": "string",
+          "description": "Validation regex for command value. Empty string means no validation."
+        },
+        "values": {
+          "type": "object",
+          "description": "Allowed value map. Empty object ({}) for commands with no predefined values."
+        },
+        "access": {
+          "type": "string",
+          "enum": ["RO", "RW", "WO"],
+          "description": "Command access mode"
+        },
+        "ui": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "UI hints. null for WO-only commands (SV, RT, FR, EX, UF). Internal fields are flexible."
+            }
+          ],
+          "description": "UI layout hints. null is valid for write-only commands."
+        }
+      }
+    }
+  }
+}
