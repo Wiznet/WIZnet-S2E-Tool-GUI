@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WIZnet Device Spec",
+  "description": "Schema for specs/devices/*.yaml files. Core fields are strict; ui internals are flexible.",
+  "type": "object",
+  "required": ["name", "family", "channels", "command_groups"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Canonical device name (e.g. WIZ750SR)"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable display name"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Alternative names for device matching"
+    },
+    "family": {
+      "type": "string",
+      "enum": ["one_port", "security", "two_port", "security_two_port"],
+      "description": "Device family — determines available features"
+    },
+    "channels": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2,
+      "description": "Number of serial channels"
+    },
+    "search_cmd_order": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Command codes sent during device search, in order"
+    },
+    "command_groups": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["base", "ddns", "gpio", "modbus", "pppoe", "retransmit",
+                 "security", "telnet", "two_port", "w55rp20_ext"]
+      },
+      "minItems": 1,
+      "description": "Command group names. Must match specs/commands/*.yaml filenames."
+    },
+    "overrides": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Per-command overrides. Values may be plain strings or {value, min_version} objects."
+    },
+    "fw_constraints": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Firmware upload constraints. Fields vary per device (WIZ107/108SR have extra fields)."
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "UI layout hints. Internal structure is flexible to allow editor evolution."
+    }
+  }
+}
