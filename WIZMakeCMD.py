@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from packaging.version import Version
+from packaging.version import Version, InvalidVersion
 
 """
 Make Serial command
@@ -140,7 +140,16 @@ cmd_w55rp20 = cmd_security_base + cmd_wiz5xxsr_added + cmd_w55rp20_added
 cmd_w55rp20_2ch = cmd_w55rp20 + cmd_w55rp20_2ch_ch1
 
 
-def version_compare(version1: str, version2: str):
+def _safe_version(v: str) -> Version:
+    try:
+        return Version(v)
+    except InvalidVersion:
+        # PEP 440 비표준 접미사(예: "1.2.2wiz") → 숫자 부분만 추출
+        m = re.match(r'[\d.]+', v)
+        return Version(m.group(0).rstrip('.')) if m else Version("0")
+
+
+def version_compare(version1: str, version2: str) -> int:
     """버전을 비교해서 앞이 크면 1 뒤가 크면 -1 같으면 0을 반환
     Args:
         version1 (str): 첫번째 버전
@@ -148,7 +157,8 @@ def version_compare(version1: str, version2: str):
     """
     if not version1 or not version2:
         return 0
-    return 0 if version1 == version2 else -1 if Version(version1) < Version(version2) else 1
+    v1, v2 = _safe_version(version1), _safe_version(version2)
+    return 0 if v1 == v2 else (-1 if v1 < v2 else 1)
 
 
 class WIZMakeCMD:
