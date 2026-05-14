@@ -15,6 +15,7 @@ from WIZMSGHandler import WIZMSGHandler, DataRefresh
 from WIZ1x0MSGHandler import WIZ1x0Searcher, WIZ1x0Setter
 from certificatethread import certificatethread
 from device_search_config import DeviceSearchConfig
+from device_spec_loader import load_device, detect_device
 
 from wizcmdset import (
     Wizcmdset,
@@ -1468,7 +1469,6 @@ class WIZWindow(QMainWindow, main_window):
 
     def _config_serial_for_device(self):
         """장치별 보드레이트/시리얼 포트 설정."""
-        from device_spec_loader import load_device, detect_device
         if not self.curr_dev:
             return
         spec_name = detect_device(self.curr_dev) or self.curr_dev
@@ -1481,7 +1481,6 @@ class WIZWindow(QMainWindow, main_window):
 
     def _config_status_pin_for_device(self):
         """SC 상태 핀 옵션 설정."""
-        from device_spec_loader import load_device, detect_device
         if not self.curr_dev:
             return
         spec_name = detect_device(self.curr_dev) or self.curr_dev
@@ -1524,7 +1523,6 @@ class WIZWindow(QMainWindow, main_window):
 
     def _config_security_options(self):
         """SECURITY_DEVICE 관련 옵션 및 ch2 공통 옵션 설정."""
-        from device_spec_loader import load_device, detect_device
         if not self.curr_dev:
             return
         spec_name = detect_device(self.curr_dev) or self.curr_dev
