@@ -130,3 +130,9 @@ _workspace/
 
 # Claude AI work documents
 .claude/
+
+# GSD planning config (local only)
+.planning/config.json
+
+# Task list (local only)
+TASKS.md
