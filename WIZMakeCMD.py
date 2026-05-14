@@ -140,27 +140,6 @@ cmd_w55rp20 = cmd_security_base + cmd_wiz5xxsr_added + cmd_w55rp20_added
 cmd_w55rp20_2ch = cmd_w55rp20 + cmd_w55rp20_2ch_ch1
 
 
-# @TODO:@BUG 아래 경우 1을 반환해야 하는데 -1을 반환함
-# >>> version_compare("1.10.8.1.9", "1.2.8")
-# version_compare: obj1 = ['1', '10', '8', '1', '9'] , obj2 = ['1', '2', '8'] , obj1 > obj2 = 0 obj1 < obj2 = 1
-# -1
-def version_compare_old(version1: str, version2: str):
-    """버전을 비교해서 앞이 크면 1 뒤가 크면 -1 같으면 0을 반환
-    Args:
-        version1 (str): 첫번째 버전
-        version2 (str): 두번째 버전
-    """
-    def normalize(v):
-        # return [x for x in re.sub(r'(\.0+)*$','',v).split('.')]
-        return [x for x in re.sub(r"(\.0+\.[dev])*$", "", v).split(".")]
-    obj1 = normalize(version1)
-    obj2 = normalize(version2)
-    print("version_compare: obj1 =", obj1, ", obj2 =", obj2, ", obj1 > obj2 =", int(obj1 > obj2), "obj1 < obj2 =", int(obj1 < obj2))
-    return (obj1 > obj2) - (obj1 < obj2)
-    # if return value < 0: version2 upper than version1
-
-
-# 이슈 수정 중 함수 버그 발견해서 수정함 #36
 def version_compare(version1: str, version2: str):
     """버전을 비교해서 앞이 크면 1 뒤가 크면 -1 같으면 0을 반환
     Args:
