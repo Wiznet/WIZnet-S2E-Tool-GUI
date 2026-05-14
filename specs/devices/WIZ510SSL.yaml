@@ -83,8 +83,8 @@ fw_constraints:
 ui:
   widget_overrides:
     # 이전 기준: 'WIZ5XXSR' in curr_dev or curr_dev in W55RP20_FAMILY or 'W232N' in curr_dev or 'IP20' in curr_dev
-    # → 해당 목록에 없는 WIZ510SSL만 groupbox_ch1_timeout 숨김
-    groupbox_ch1_timeout:
+    # → 해당 목록에 없는 WIZ510SSL만 groupbox_ch0_timeout 숨김
+    groupbox_ch0_timeout:
       visible: false
     # 이전 기준: SECURITY_DEVICE이면서 WIZ5XXSR/W55RP20/W232N/IP20 제외 → WIZ510SSL만 표시
     group_current_bank:

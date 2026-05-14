@@ -1,0 +1,338 @@
+# w55rp20_two_port.yaml
+# W55RP20-S2E-2CH 전용 채널 1 커맨드
+# 소스 기준: wizcmdset.py::W55RP20_2CH_CMDSET (ch1 전용 항목)
+#
+# WIZ752_CMDSET(two_port.yaml)과의 차이:
+#   QO → AO  (ch1 OP mode — W55RP20는 SSL/MQTT 포함 0-6)
+#   QP → AP  (ch1 Remote Port)
+#   NT → AT  (ch1 Packing Time)
+#   추가: RO (ch1 SSL timeout), EO (ch1 Modbus), RD/RF/EE (ch1 connection events)
+#   EB: 0-19 (W55RP20 고속 baudrate, FW >= 1.2.1 에서 16-19 활성화)
+
+QS:
+  description: "Operation status for channel 1"
+  regex: ""
+  values: {}
+  access: RO
+  ui:
+    tab: channel1
+    group: ch1_info
+    widget: label
+    label: "CH1 Status"
+    order: 1
+
+EN:
+  description: "UART Interface (Str) for channel 1"
+  regex: ""
+  values: {}
+  access: RO
+  ui:
+    tab: channel1
+    group: ch1_info
+    widget: label
+    label: "CH1 UART Interface"
+    order: 2
+
+AO:
+  description: "Network Operation Mode for channel 1 - Extended"
+  regex: "^[0-6]$"
+  values:
+    "0": "TCP Client mode"
+    "1": "TCP Server mode"
+    "2": "TCP Mixed mode"
+    "3": "UDP mode"
+    "4": "SSL TCP Client mode"
+    "5": "MQTT Client"
+    "6": "MQTTS Client"
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_op_mode
+    widget: radiogroup
+    label: "CH1 Operation Mode"
+    order: 1
+
+QL:
+  description: "Local port number for channel 1"
+  regex: "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_op_mode
+    widget: lineedit
+    label: "CH1 Local Port"
+    order: 2
+
+QH:
+  description: "Remote Host IP address for channel 1"
+  regex: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_op_mode
+    widget: lineedit
+    label: "CH1 Remote Host"
+    order: 3
+    depends_on: {AO: ["0", "2", "3", "4"]}
+
+AP:
+  description: "Remote Host Port number for channel 1"
+  regex: "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_op_mode
+    widget: lineedit
+    label: "CH1 Remote Port"
+    order: 4
+    depends_on: {AO: ["0", "2", "3", "4"]}
+
+RR:
+  description: "TCP Reconnection Interval for channel 1 (ms)"
+  regex: "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_op_mode
+    widget: lineedit
+    label: "CH1 Reconnection Interval (ms)"
+    order: 5
+
+EB:
+  description: "UART channel 1 Baud rate"
+  regex: "^([0-9]|1[0-5])$"
+  values:
+    "0": "300"
+    "1": "600"
+    "2": "1200"
+    "3": "1800"
+    "4": "2400"
+    "5": "4800"
+    "6": "9600"
+    "7": "14400"
+    "8": "19200"
+    "9": "28800"
+    "10": "38400"
+    "11": "57600"
+    "12": "115200"
+    "13": "230400"
+    "14": "460800"
+    "15": "921600"
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_serial
+    widget: combobox
+    label: "CH1 Baud Rate"
+    order: 1
+
+ED:
+  description: "UART channel 1 Data bit length"
+  regex: "^[0-1]$"
+  values:
+    "0": "7-bit"
+    "1": "8-bit"
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_serial
+    widget: combobox
+    label: "CH1 Data Bits"
+    order: 2
+
+EP:
+  description: "UART channel 1 Parity bit"
+  regex: "^[0-2]$"
+  values:
+    "0": "NONE"
+    "1": "ODD"
+    "2": "EVEN"
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_serial
+    widget: combobox
+    label: "CH1 Parity"
+    order: 3
+
+ES:
+  description: "UART channel 1 Stop bit length"
+  regex: "^[0-1]$"
+  values:
+    "0": "1-bit"
+    "1": "2-bit"
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_serial
+    widget: combobox
+    label: "CH1 Stop Bits"
+    order: 4
+
+EF:
+  description: "UART channel 1 Flow Control"
+  regex: "^[0-2]$"
+  values:
+    "0": "NONE"
+    "1": "XON/XOFF"
+    "2": "RTS/CTS"
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_serial
+    widget: combobox
+    label: "CH1 Flow Control"
+    order: 5
+
+AT:
+  description: "Time Delimiter for channel 1 (ms)"
+  regex: "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_packing
+    widget: lineedit
+    label: "CH1 Timer (ms)"
+    order: 1
+
+NS:
+  description: "Size Delimiter for channel 1 (bytes)"
+  regex: "^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_packing
+    widget: lineedit
+    label: "CH1 Size (bytes)"
+    order: 2
+
+ND:
+  description: "Char Delimiter for channel 1 (hex)"
+  regex: "^([0-9a-fA-F][0-9a-fA-F])$"
+  values: {}
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_packing
+    widget: lineedit
+    label: "CH1 Character (hex)"
+    order: 3
+
+RV:
+  description: "Inactivity Timer Value for channel 1 (ms)"
+  regex: "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_options
+    widget: lineedit
+    label: "CH1 Inactivity Timer (ms)"
+    order: 1
+
+RA:
+  description: "TCP Keep-alive Enable for channel 1"
+  regex: "^[0-1]$"
+  values: {}
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_options
+    widget: checkbox
+    label: "CH1 Keep-alive"
+    order: 2
+
+RS:
+  description: "TCP Keep-alive Initial Interval for channel 1 (ms)"
+  regex: "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_options
+    widget: lineedit
+    label: "CH1 KA Initial (ms)"
+    order: 3
+    depends_on: {RA: "1"}
+
+RE:
+  description: "TCP Keep-alive Retry Interval for channel 1 (ms)"
+  regex: "^([0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  values: {}
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_options
+    widget: lineedit
+    label: "CH1 KA Retry (ms)"
+    order: 4
+    depends_on: {RA: "1"}
+
+RO:
+  description: "SSL receive timeout for channel 1"
+  regex: ""
+  values: {}
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_options
+    widget: lineedit
+    label: "CH1 SSL Timeout"
+    order: 5
+
+EO:
+  description: "Modbus protocol for channel 1"
+  regex: "^[0-2]$"
+  values:
+    "0": "Serial to Ethernet"
+    "1": "RTU to TCP"
+    "2": "ASCII to TCP"
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_options
+    widget: combobox
+    label: "CH1 Modbus Protocol"
+    order: 6
+
+RD:
+  description: "Send Data at Connection for channel 1 (max 30 chars)"
+  regex: "^.{0,30}$"
+  values: {}
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_connection_events
+    widget: lineedit
+    label: "CH1 Serial Data at Connection"
+    order: 1
+
+RF:
+  description: "Send Data at Disconnection for channel 1 (max 30 chars)"
+  regex: "^.{0,30}$"
+  values: {}
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_connection_events
+    widget: lineedit
+    label: "CH1 Serial Data at Disconnection"
+    order: 2
+
+EE:
+  description: "Ethernet Connection Condition for channel 1 (max 30 chars)"
+  regex: "^.{0,30}$"
+  values: {}
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_connection_events
+    widget: lineedit
+    label: "CH1 Ethernet Connection Condition"
+    order: 3

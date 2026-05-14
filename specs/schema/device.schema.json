@@ -40,7 +40,7 @@
       "items": {
         "type": "string",
         "enum": ["base", "ddns", "gpio", "modbus", "pppoe", "retransmit",
-                 "security", "telnet", "two_port", "w55rp20_ext"]
+                 "security", "telnet", "two_port", "w55rp20_ext", "w55rp20_two_port"]
       },
       "minItems": 1,
       "description": "Command group names. Must match specs/commands/*.yaml filenames."

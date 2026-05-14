@@ -16,7 +16,7 @@ SD:
     tab: options
     group: connection_events
     widget: lineedit
-    label: "Data at Connection"
+    label: "Serial Data at Connection"
     order: 1
 
 DD:
@@ -28,7 +28,7 @@ DD:
     tab: options
     group: connection_events
     widget: lineedit
-    label: "Data at Disconnection"
+    label: "Serial Data at Disconnection"
     order: 2
 
 SE:
@@ -40,5 +40,5 @@ SE:
     tab: options
     group: connection_events
     widget: lineedit
-    label: "Connection Condition"
+    label: "Ethernet Connection Condition"
     order: 3

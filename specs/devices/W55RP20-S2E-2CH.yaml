@@ -14,10 +14,33 @@ command_groups:
   - retransmit
   - security
   - w55rp20_ext
-  - two_port
+  - w55rp20_two_port
 
 overrides:
   BR:
+    regex: "^([0-9]|1[0-9])$"
+    values:
+      "0": "300"
+      "1": "600"
+      "2": "1200"
+      "3": "1800"
+      "4": "2400"
+      "5": "4800"
+      "6": "9600"
+      "7": "14400"
+      "8": "19200"
+      "9": "28800"
+      "10": "38400"
+      "11": "57600"
+      "12": "115200"
+      "13": "230400"
+      "14": "460800"
+      "15": "921600"
+      "16": {value: "1M", min_version: "1.2.1"}
+      "17": {value: "2M", min_version: "1.2.1"}
+      "18": {value: "4M", min_version: "1.2.1"}
+      "19": {value: "8M", min_version: "1.2.1"}
+  EB:
     regex: "^([0-9]|1[0-9])$"
     values:
       "0": "300"
@@ -50,30 +73,6 @@ overrides:
       "4": "SSL TCP Client mode"
       "5": "MQTT Client"
       "6": "MQTTS Client"
-  # two_port.yaml의 EB도 고속으로 override
-  EB:
-    regex: "^([0-9]|1[0-9])$"
-    values:
-      "0": "300"
-      "1": "600"
-      "2": "1200"
-      "3": "1800"
-      "4": "2400"
-      "5": "4800"
-      "6": "9600"
-      "7": "14400"
-      "8": "19200"
-      "9": "28800"
-      "10": "38400"
-      "11": "57600"
-      "12": "115200"
-      "13": "230400"
-      "14": "460800"
-      "15": "921600"
-      "16": {value: "1M", min_version: "1.2.1"}
-      "17": {value: "2M", min_version: "1.2.1"}
-      "18": {value: "4M", min_version: "1.2.1"}
-      "19": {value: "8M", min_version: "1.2.1"}
 
 fw_constraints:
   upload_supported: true
@@ -103,6 +102,7 @@ ui:
         - ch1_serial
         - ch1_packing
         - ch1_options
+        - ch1_connection_events
     - id: options
       label: "Options"
       groups:
