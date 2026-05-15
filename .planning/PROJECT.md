@@ -18,29 +18,28 @@ WIZnet S2E(Serial-to-Ethernet) 모듈 설정 GUI 도구. UDP 브로드캐스트�
 - ✓ WIZ107SR / WIZ108SR 전면 지원 (cmd_107sr, DDNS/PPPoE/PO) — v1.6.0
 - ✓ WIZ1x0SR 바이너리 프로토콜 지원 (FIND/IMIN/SETT/SETC, UDP:1460) — v1.6.1
 - ✓ DeviceSpec YAML 기반 장치 프로파일 시스템 — v1.6.2.1
-- ✓ JSON Schema (device.schema.json, command-group.schema.json) — v1.6.3 Phase 1 (Validated in Phase 1: Schema Definition)
 - ✓ GitHub Releases에서 펌웨어 다운로드·업로드 (FW from Git) — v1.6.2.1
 - ✓ 터미널 유틸리티 패널 (Hercules 대체) — v1.6.2.1
 - ✓ 누적 검색 / 고급 검색 옵션 / 진행바 — v1.5.9
+- ✓ JSON Schema (device/command-group) + command YAML meta: 블록 + DeviceSpec.module_meta — GSD v1.6.3 (2026-05-15)
 
 ### Active
 
-- [ ] specs/modules/ 신설 — network, serial, tcp_ip, security 공통 모듈 YAML 정의
-- [ ] 기존 장치 YAML → uses:[...] 조합 방식으로 리팩토링 (기능 변화 없음)
-- [ ] device_spec_loader.py 모듈 조합 로딩 지원
-- [ ] main/ 유지보수 — dead code, import 중복, TODO 처리
-- [ ] refactored/ 백업 후 보류 처리
+- [ ] WIZ550SR 검색·설정 지원 (UDP 6550, XOR 암호화, 바이너리 프로토콜)
+- [ ] WIZ550S2E 검색·설정 지원 (232B 구조체)
+- [ ] WIZ550WEB 검색·설정 지원 (133B 구조체)
+- [ ] WIZ550 FW 업로드 (TFTP 방식 — 로컬 TFTP 서버 + op_code 0xD1)
 
-## Current Milestone: v1.6.3 Device Module Architecture
+## Current Milestone: v1.6.3 WIZ550SR/S2E/WEB 장치 지원
 
-**Goal:** DeviceSpec을 모듈 조합 구조로 전환하여 장치 프로파일 에디터의 데이터 기반을 구축한다.
+**Goal:** WIZ550SR / WIZ550S2E / WIZ550WEB 세 장치를 검색·설정·FW업로드할 수 있도록 통합하여 공개 릴리즈한다.
 
 **Target features:**
-- specs/modules/ 신설 (network, serial, tcp_ip, security 모듈)
-- 장치 YAML → uses:[...] 조합 방식 리팩토링
-- device_spec_loader.py 모듈 조합 처리
-- main/ 유지보수 (dead code, import 중복, TODO 처리)
-- refactored/ 백업 후 보류
+- WIZ550MSGHandler.py (UDP 6550 + XOR 암호화 + op_code 처리)
+- WIZ550Profile.py (162B/232B/133B 구조체 파싱·빌드)
+- specs/devices/ YAML 3개 (WIZ550SR, WIZ550S2E, WIZ550WEB)
+- main_gui.py 통합 (검색·설정·Apply·공장초기화 라우팅)
+- FW 업로드 TFTP (로컬 서버 구동 + 장치에 업로드 패킷 전송)
 
 ### Out of Scope
 
@@ -90,4 +89,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-13 — Phase 1 complete (JSON Schema 확립)*
+*Last updated: 2026-05-15 — GSD v1.6.3 완료 (Schema+Meta+Loader), WIZ550SR 마일스톤 시작*

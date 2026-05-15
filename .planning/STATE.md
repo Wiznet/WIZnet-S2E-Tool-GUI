@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.6.3
-milestone_name: milestone
+milestone: v1.6.3-wiz550
+milestone_name: WIZ550SR/S2E/WEB 장치 지원
 status: executing
-stopped_at: Phase 3 완료 (module_meta 로딩 + 스키마 검증 통합) — v1.6.3 마일스톤 완료
-last_updated: "2026-05-15T10:10:00.000Z"
+stopped_at: WIZ550SR 마일스톤 시작 — 요구사항 정의 중
+last_updated: "2026-05-15T10:30:00.000Z"
 last_activity: 2026-05-15
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,16 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-12)
 
 **Core value:** 현장 엔지니어가 WIZnet S2E 장치를 네트워크로 검색·설정할 수 있는 신뢰할 수 있는 도구
-**Current focus:** Phase 03 — Loader Integration
+**Current focus:** WIZ550SR 마일스톤 — 요구사항 정의
 
 ## Current Position
 
-Phase: 3
-Plan: Complete
-Status: v1.6.3 마일스톤 전체 완료
-Last activity: 2026-05-15
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-15 — Milestone v1.6.3 WIZ550SR 시작
 
 ## Performance Metrics
 
