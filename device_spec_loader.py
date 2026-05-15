@@ -9,12 +9,16 @@ YAML 스펙 파일 → DeviceSpec 구조체 빌드
 """
 from __future__ import annotations
 
+import json
+import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+_log = logging.getLogger(__name__)
 
 SPECS_DIR = Path(__file__).parent / "specs"
 COMMANDS_DIR = SPECS_DIR / "commands"
@@ -26,6 +30,7 @@ DEVICES_DIR = SPECS_DIR / "devices"
 
 _spec_cache: dict[tuple[str, str], DeviceSpec] = {}   # (name, fw_ver) → spec
 _alias_cache: dict[str, str | None] = {}               # MN_UPPER → spec_name
+_schema_cache: dict[str, dict] = {}                    # schema_name → schema dict
 
 
 # ---------------------------------------------------------------------------
@@ -74,6 +79,16 @@ class FWConfig:
 
 
 @dataclass
+class ModuleMeta:
+    id: str
+    name: str
+    category: str
+    description: str = ""
+    requires: list[str] = field(default_factory=list)
+    conflicts: list[str] = field(default_factory=list)
+
+
+@dataclass
 class UITabConfig:
     tab_id: str
     label: str
@@ -109,6 +124,7 @@ class DeviceSpec:
     search_cmd_list: list[str]      # cmdset에 없는 항목 자동 제외
     fw_config: FWConfig
     ui_config: UIConfig
+    module_meta: dict[str, ModuleMeta] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +162,77 @@ def _check_version_condition(fw_ver: Any, condition: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# 스키마 검증 헬퍼
+# ---------------------------------------------------------------------------
+
+def _get_schema(schema_name: str) -> dict | None:
+    """specs/schema/<schema_name> JSON Schema 로드 (캐싱). 파일 없으면 None."""
+    if schema_name in _schema_cache:
+        return _schema_cache[schema_name]
+    path = SPECS_DIR / "schema" / schema_name
+    if not path.exists():
+        return None
+    schema = json.loads(path.read_text(encoding="utf-8"))
+    _schema_cache[schema_name] = schema
+    return schema
+
+
+def _validate_yaml_schema(data: dict, schema_name: str, source: str) -> None:
+    """data를 JSON Schema로 검증. jsonschema 미설치 시 skip, 위반 시 warning 출력."""
+    schema = _get_schema(schema_name)
+    if schema is None:
+        return
+    try:
+        import jsonschema
+        jsonschema.validate(data, schema)
+    except ImportError:
+        pass
+    except Exception as exc:
+        msg = exc.message if hasattr(exc, "message") else str(exc)
+        _log.warning("Schema validation failed [%s]: %s", source, msg)
+
+
+# ---------------------------------------------------------------------------
+# 모듈 메타 헬퍼
+# ---------------------------------------------------------------------------
+
+def _parse_module_meta(group_id: str, raw: dict) -> ModuleMeta:
+    """command YAML의 meta: 블록 dict → ModuleMeta."""
+    return ModuleMeta(
+        id=raw.get("id", group_id),
+        name=raw.get("name", group_id),
+        category=raw.get("category", ""),
+        description=raw.get("description", ""),
+        requires=raw.get("requires") or [],
+        conflicts=raw.get("conflicts") or [],
+    )
+
+
+def _validate_module_compatibility(
+    group_names: list[str],
+    module_meta: dict[str, ModuleMeta],
+) -> None:
+    """requires/conflicts 위반 시 warning 로그 출력."""
+    group_set = set(group_names)
+    for group in group_names:
+        meta = module_meta.get(group)
+        if meta is None:
+            continue
+        for req in meta.requires:
+            if req not in group_set:
+                _log.warning(
+                    "Module '%s' requires '%s' which is missing from command_groups",
+                    group, req,
+                )
+        for conflict in meta.conflicts:
+            if conflict in group_set:
+                _log.warning(
+                    "Module '%s' conflicts with '%s' but both are in command_groups",
+                    group, conflict,
+                )
+
+
+# ---------------------------------------------------------------------------
 # 로더 내부 헬퍼
 # ---------------------------------------------------------------------------
 
@@ -174,13 +261,20 @@ def _filter_values(raw_values: dict, fw_ver=None) -> dict[str, str]:
     return result
 
 
-def _load_command_group(group_name: str) -> dict[str, CmdEntry]:
-    """commands/<group>.yaml → {cmd: CmdEntry}."""
+def _load_command_group(
+    group_name: str,
+) -> tuple[dict[str, CmdEntry], ModuleMeta | None]:
+    """commands/<group>.yaml → ({cmd: CmdEntry}, ModuleMeta | None)."""
     path = COMMANDS_DIR / f"{group_name}.yaml"
     if not path.exists():
         raise FileNotFoundError(f"Command group not found: {path}")
     raw = _load_yaml(path)
-    return {
+    _validate_yaml_schema(raw, "command-group.schema.json", f"commands/{group_name}.yaml")
+
+    meta_raw = raw.get("meta")
+    meta = _parse_module_meta(group_name, meta_raw) if isinstance(meta_raw, dict) else None
+
+    cmdset = {
         cmd: CmdEntry(
             cmd=cmd,
             description=spec.get("description", ""),
@@ -190,7 +284,9 @@ def _load_command_group(group_name: str) -> dict[str, CmdEntry]:
             ui=spec.get("ui"),
         )
         for cmd, spec in raw.items()
+        if cmd != "meta"
     }
+    return cmdset, meta
 
 
 def _apply_overrides(
@@ -293,10 +389,20 @@ def _load_device_impl(device_name: str, fw_version: str | None) -> DeviceSpec:
     dev = _load_yaml(path)
     fw_ver = _parse_version(fw_version)
 
+    # 0. device YAML 스키마 검증
+    _validate_yaml_schema(dev, "device.schema.json", f"devices/{device_name}.yaml")
+
     # 1. 커맨드 그룹 병합
     cmdset: dict[str, CmdEntry] = {}
+    module_meta: dict[str, ModuleMeta] = {}
     for group in dev.get("command_groups", []):
-        cmdset.update(_load_command_group(group))
+        group_cmdset, meta = _load_command_group(group)
+        cmdset.update(group_cmdset)
+        if meta is not None:
+            module_meta[group] = meta
+
+    # 1b. requires/conflicts 호환성 검증
+    _validate_module_compatibility(list(dev.get("command_groups", [])), module_meta)
 
     # 2. device-level overrides (min_version 필터 포함)
     if "overrides" in dev:
@@ -348,6 +454,7 @@ def _load_device_impl(device_name: str, fw_version: str | None) -> DeviceSpec:
         search_cmd_list=search_cmd_list,
         fw_config=fw_config,
         ui_config=ui_config,
+        module_meta=module_meta,
     )
 
 
@@ -403,6 +510,14 @@ if __name__ == "__main__":
     print("\n=== W55RP20-S2E — FW 1.2.1 (BR 0-19) ===")
     s = load_device("W55RP20-S2E", "1.2.1")
     print(f"  BR count: {len(s.cmdset['BR'].values)}, last: {s.cmdset['BR'].values.get(str(len(s.cmdset['BR'].values)-1))}")
+
+    print("\n=== module_meta 접근 테스트 ===")
+    s = load_device("WIZ107SR", "3.0.0")
+    print(f"  base.name:     {s.module_meta['base'].name}")
+    print(f"  ddns.category: {s.module_meta['ddns'].category}")
+    print(f"  ddns.requires: {s.module_meta['ddns'].requires}")
+    s2 = load_device("W55RP20-S2E-2CH", "1.2.1")
+    print(f"  w55rp20_two_port.conflicts: {s2.module_meta['w55rp20_two_port'].conflicts}")
 
     print("\n=== detect_device 테스트 ===")
     print(f"  'WIZ107SR' → {detect_device('WIZ107SR')}")
