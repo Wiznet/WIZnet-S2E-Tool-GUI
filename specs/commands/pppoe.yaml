@@ -2,6 +2,16 @@
 # PPPoE 관련 커맨드
 # 지원 장비: WIZ107SR, WIZ108SR (IM=2)
 # 소스 기준: frmMain.vb DisplayValue() IM=2 블록, CalcSetMsg() rbPPP 블록
+
+meta:
+  id: pppoe
+  name: "PPPoE"
+  category: network
+  description: "PPPoE 접속 설정 커맨드 (WIZ107SR/108SR, IM=2 선택 시 활성)"
+  requires:
+    - base
+  conflicts: []
+
 #
 # 주의: IM 커맨드 자체는 base.yaml에 정의되어 있으나,
 # PPPoE 장비에서는 device 스펙 overrides로 IM regex="^[0-2]$", values에 "2":"PPPoE" 추가

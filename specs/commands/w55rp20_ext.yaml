@@ -1,6 +1,16 @@
 # w55rp20_ext.yaml
 # W55RP20-S2E / W232N / IP20 전용 확장 커맨드
 # 소스 기준: wizcmdset.py::WIZ5XX_RP_CMDSET SD/DD/SE 항목
+
+meta:
+  id: w55rp20_ext
+  name: "W55RP20 Extensions"
+  category: extension
+  description: "W55RP20-S2E / W232N / IP20 전용 확장 커맨드 (SD/DD/SE)"
+  requires:
+    - base
+  conflicts: []
+
 #
 # 주의: 여기서 DD = "Send Data at Disconnection" (문자열, 최대 30자)
 # WIZ107/108의 DD = "DDNS Enable" (0/1) 과 완전히 다른 커맨드임!

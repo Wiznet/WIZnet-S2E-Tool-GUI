@@ -1,6 +1,18 @@
 # w55rp20_two_port.yaml
 # W55RP20-S2E-2CH 전용 채널 1 커맨드
 # 소스 기준: wizcmdset.py::W55RP20_2CH_CMDSET (ch1 전용 항목)
+
+meta:
+  id: w55rp20_two_port
+  name: "W55RP20 Two-Port Channel 1"
+  category: channel
+  description: "W55RP20-S2E-2CH 채널 1 전용 커맨드 (SSL/MQTT 포함 OP 모드 지원)"
+  requires:
+    - base
+    - w55rp20_ext
+  conflicts:
+    - two_port
+
 #
 # WIZ752_CMDSET(two_port.yaml)과의 차이:
 #   QO → AO  (ch1 OP mode — W55RP20는 SSL/MQTT 포함 0-6)

@@ -3,6 +3,16 @@
 # 지원 장비: WIZ510SSL, WIZ5XXSR-RP, W55RP20-S2E, W232N, IP20
 # 소스 기준: wizcmdset.py::WIZ5XX_RP_CMDSET
 
+meta:
+  id: security
+  name: "Security (SSL/TLS/MQTT)"
+  category: security
+  description: "SSL/TLS 인증, MQTT 설정, 인증서 관련 커맨드 (보안 장치 전용)"
+  requires:
+    - base
+  conflicts: []
+
+
 # --- Operation Mode 확장 (SSL/MQTT 포함) ---
 # 주의: base.yaml의 OP를 override해야 함. device spec의 overrides에서 처리.
 # OP 확장값:

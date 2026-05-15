@@ -3,6 +3,15 @@
 # 지원 장비: WIZ107SR, WIZ108SR
 # 소스 기준: frmMain.vb CalcSetMsg() DDNS 블록, clsSEC.vb
 
+meta:
+  id: ddns
+  name: "DDNS"
+  category: network
+  description: "Dynamic DNS 설정 커맨드 (WIZ107SR/108SR 전용)"
+  requires:
+    - base
+  conflicts: []
+
 DD:
   description: "DDNS Enable"
   regex: "^[0-1]$"
