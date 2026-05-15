@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Schema Definition** - 장치 YAML 및 커맨드 그룹 YAML JSON Schema 정의 (completed 2026-05-13)
 - [x] **Phase 2: Module Metadata** - specs/commands/*.yaml 각 파일에 meta: 블록 추가 (completed 2026-05-15)
-- [ ] **Phase 3: Loader Integration** - device_spec_loader.py 메타 로딩 + 호환성 검증 + 스키마 검증 통합
+- [x] **Phase 3: Loader Integration** - device_spec_loader.py 메타 로딩 + 호환성 검증 + 스키마 검증 통합 (completed 2026-05-15)
 
 ## Phase Details
 
@@ -61,4 +61,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Schema Definition | 1/1 | Complete    | 2026-05-13 |
 | 2. Module Metadata | 1/1 | Complete    | 2026-05-15 |
-| 3. Loader Integration | 0/TBD | Not started | - |
+| 3. Loader Integration | 1/1 | Complete    | 2026-05-15 |
