@@ -37,7 +37,12 @@ DeviceSpec YAML로 UI를 정의하며, TFTP 방식 펌웨어 업로드까지 포
   3. XOR 암호화/복호화가 원본 Java 구현과 동일하게 동작한다
   4. QThread 기반으로 동작하며 시그널로 결과를 전달한다
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 04-00-PLAN.md — Wave 0 테스트 스텁 (tests/ 디렉토리 + conftest.py + stub 파일)
+- [ ] 04-01-PLAN.md — WIZ550MSGHandler.py 구현 (4개 QThread + 헬퍼 함수)
+- [ ] 04-02-PLAN.md — WIZ550Profile.py 구현 (SR/S2E/WEB 구조체 파서/빌더)
 
 ### Phase 5: DeviceSpec YAML
 
@@ -61,6 +66,13 @@ DeviceSpec YAML로 UI를 정의하며, TFTP 방식 펌웨어 업로드까지 포
 **Depends on**: Phase 4, Phase 5
 
 **Requirements**: UI-01, UI-02, UI-03, UI-04
+
+**UI Implementation Approach** (Auto Layout — see 06-CONTEXT.md):
+
+- WIZ550 설정 패널: .ui 파일 수정 없이 **Python 코드로 동적 생성** (장치 3종 분기 대응)
+- 레이아웃: QVBoxLayout + QHBoxLayout 계층 (QGridLayout 최소화)
+- 간격: DESIGN.md 토큰 — xs=8px(행 간격), md=16px(패널 여백)
+- 색상: Apply 버튼 #cc785c, 성공 #5db872, 오류 #c64545 (신규 UI 요소에만 적용)
 
 **Success Criteria** (what must be TRUE):
   1. 검색 시 WIZ550 장치가 기존 장치 목록에 함께 표시된다 (MAC, IP, 장치명, FW 버전)
@@ -109,7 +121,7 @@ Phases execute in numeric order: 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. Protocol Engine | 0/TBD | Pending | — |
+| 4. Protocol Engine | 0/3 | Planning Done | — |
 | 5. DeviceSpec YAML | 0/TBD | Pending | — |
 | 6. GUI Integration | 0/TBD | Pending | — |
 | 7. TFTP FW Upload | 0/TBD | Pending | — |
