@@ -278,3 +278,23 @@ def get_info_reply_sr() -> bytes:
 
     header = _make_header(OP_GET_INFO, WIZNET_REPLY, len(payload))
     return header + payload
+
+
+# ─────────────────────────────────────────────────────────────────
+# PyQt5 GUI 테스트용 QApplication 픽스처 (Phase 6 — Wave 0)
+# ─────────────────────────────────────────────────────────────────
+import sys
+
+@pytest.fixture(scope="session")
+def qapp():
+    """
+    세션 전체에서 재사용하는 QApplication 인스턴스.
+    pytest-qt 없이 순수 PyQt5로 구성.
+    이미 QApplication이 존재하면 재사용한다.
+    """
+    from PyQt5.QtWidgets import QApplication
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+    yield app
+    # 세션 종료 시 app을 명시적으로 종료하지 않음 — pytest 종료 시 자동 해제
