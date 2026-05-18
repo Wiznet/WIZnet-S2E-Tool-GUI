@@ -16,7 +16,7 @@ DeviceSpec YAML로 UI를 정의하며, TFTP 방식 펌웨어 업로드까지 포
 - Phases 1~3 completed in prior milestone (v1.6.3 Device Module Architecture)
 
 - [x] **Phase 4: Protocol Engine** — WIZ550MSGHandler.py + WIZ550Profile.py 신규 구현 (completed 2026-05-18)
-- [ ] **Phase 5: DeviceSpec YAML** — specs/devices/ WIZ550SR/S2E/WEB.yaml 3개 작성
+- [x] **Phase 5: DeviceSpec YAML** — specs/devices/ WIZ550SR/S2E/WEB.yaml 3개 작성 (completed 2026-05-18)
 - [ ] **Phase 6: GUI Integration** — main_gui.py 검색·설정·Apply·Reset 연결
 - [ ] **Phase 7: TFTP FW Upload** — tftpy 기반 로컬 서버 + op_code 0xD1 전송
 - [ ] **Phase 8: Release** — v1.6.3 빌드·서명·릴리즈
