@@ -1192,12 +1192,22 @@ class WIZWindow(QMainWindow, main_window):
 
     # Button click events
     def event_setting_clicked(self):
+        # WIZ550 장치이면 전용 Apply 흐름으로 라우팅 (UI-03, Phase 6)
+        if (hasattr(self, 'curr_mac') and self.curr_mac
+                and self.dev_profile.get(self.curr_mac, {}).get('_proto') == 'wiz550'):
+            self.apply_wiz550()
+            return
         if self.curr_dev == 'WIZ1x0SR':
             self.apply_1x0()
             return
         self.do_setting()
 
     def event_reset_clicked(self):
+        # WIZ550 장치이면 전용 Reset 흐름으로 라우팅 (UI-04, Phase 6)
+        if (hasattr(self, 'curr_mac') and self.curr_mac
+                and self.dev_profile.get(self.curr_mac, {}).get('_proto') == 'wiz550'):
+            self.reset_wiz550(op_code=OP_REMOTE_RESET)
+            return
         if self.curr_dev == 'WIZ1x0SR':
             self.show_msgbox("Info", "WIZ1x0SR은 Apply 시 자동으로 재시작됩니다.", QMessageBox.Information)
             return
@@ -1216,7 +1226,12 @@ class WIZWindow(QMainWindow, main_window):
         opt = option.text()
 
         if "settings" in opt:
-            self.event_factory_setting()
+            # WIZ550 장치이면 전용 FactoryReset 흐름으로 라우팅 (UI-04, Phase 6)
+            if (hasattr(self, 'curr_mac') and self.curr_mac
+                    and self.dev_profile.get(self.curr_mac, {}).get('_proto') == 'wiz550'):
+                self.reset_wiz550(op_code=OP_FACTORY_RESET)
+            else:
+                self.event_factory_setting()
         elif "firmware" in opt:
             self.event_factory_firmware()
 
@@ -3579,6 +3594,179 @@ class WIZWindow(QMainWindow, main_window):
         # B-02 Stage 2: GET_INFO 완료 후에 위젯에 값 채우기
         self.fill_devinfo_wiz550(cfg)
         self.statusbar.showMessage(f" WIZ550 설정 로드 완료: {macaddr}")
+
+    # ──────────────────────────────────────────────────────────────
+    # WIZ550 Apply / Reset / FactoryReset (UI-03, UI-04, Wave 3)
+    # ──────────────────────────────────────────────────────────────
+
+    def fill_setinfo_wiz550(self) -> dict:
+        """
+        _wiz550_field_widgets에서 사용자 입력값을 읽어 dict로 반환 (UI-03).
+        readonly(QLabel) 위젯은 건너뜀.
+        uint16 타입은 int 변환, ip 타입은 str 유지.
+        """
+        from PyQt5.QtWidgets import QLabel, QCheckBox, QComboBox, QLineEdit
+        result = {}
+        if not hasattr(self, '_wiz550_field_widgets'):
+            return result
+
+        for field_id, widget in self._wiz550_field_widgets.items():
+            if isinstance(widget, QLabel):
+                continue  # readonly — 값 수집 제외
+            elif isinstance(widget, QCheckBox):
+                result[field_id] = 1 if widget.isChecked() else 0
+            elif isinstance(widget, QComboBox):
+                # userData는 YAML choices 키 (bps int 또는 working_mode int)
+                result[field_id] = widget.currentData()
+            elif isinstance(widget, QLineEdit):
+                text = widget.text().strip()
+                # uint16 필드 (local_port, remote_port, inactivity, reconnection)
+                # ip/text 필드는 str 유지
+                try:
+                    result[field_id] = int(text)
+                except ValueError:
+                    result[field_id] = text
+        return result
+
+    def apply_wiz550(self):
+        """
+        WIZ550 설정 Apply — 비밀번호 입력 → Profile 빌드 → WIZ550Setter 시작 (UI-03).
+        D-05: Apply 버튼 #cc785c (신규 WIZ550 UI에만 적용, 기존 UI 불변).
+        """
+        if not hasattr(self, 'curr_mac') or not self.curr_mac:
+            return
+        d_profile = self.dev_profile.get(self.curr_mac, {})
+        device_type = d_profile.get('device_type', 'WIZ550SR')
+
+        # 비밀번호 입력 다이얼로그
+        from PyQt5.QtWidgets import QInputDialog, QLineEdit
+        pw, ok = QInputDialog.getText(
+            self,
+            "WIZ550 설정 비밀번호",
+            "설정 비밀번호 (없으면 빈 칸):",
+            QLineEdit.Password,
+            d_profile.get('pw_setting', ''),
+        )
+        if not ok:
+            return  # 취소
+
+        # 위젯에서 값 수집
+        d = self.fill_setinfo_wiz550()
+        d['pw_setting'] = pw  # 입력한 비밀번호로 덮어쓰기
+
+        # dev_profile의 Discovery/GET_INFO 정보 병합 (mac_bytes 등 필수 필드)
+        d.update({k: v for k, v in d_profile.items() if k not in d})
+
+        # Profile bytes 빌드
+        try:
+            from WIZ550Profile import build_sr, build_s2e, build_web
+            builders = {
+                'WIZ550SR':  build_sr,
+                'WIZ550S2E': build_s2e,
+                'WIZ550WEB': build_web,
+            }
+            builder = builders.get(device_type, build_sr)
+            config_bytes = builder(d)
+        except Exception as e:
+            self.logger.error(f"[WIZ550] Profile 빌드 오류: {e}")
+            self.statusbar.showMessage(f" WIZ550 Apply 오류: {e}")
+            return
+
+        target_ip = d.get('local_ip', '')
+        if not target_ip:
+            self.statusbar.showMessage(" WIZ550 Apply 오류: IP 주소 없음")
+            return
+
+        setter = WIZ550Setter(
+            target_ip=target_ip,
+            target_mac=self.curr_mac,
+            password=pw,
+            config_data=config_bytes,
+            iface_ip=self.selected_eth or "",
+        )
+        setter.set_done.connect(self._on_wiz550_set_done)
+        setter.start()
+        self.statusbar.showMessage(f" WIZ550 설정 전송 중... ({self.curr_mac})")
+
+    def _on_wiz550_set_done(self, success: bool):
+        """WIZ550Setter 완료 콜백 — 성공/실패 메시지 표시 (D-05 컬러)."""
+        from PyQt5.QtWidgets import QMessageBox
+        if success:
+            # D-05: 성공 색상 #5db872
+            self.statusbar.showMessage(" WIZ550 설정 저장 완료")
+            self.statusbar.setStyleSheet("QStatusBar { color: #5db872; }")
+            QMessageBox.information(
+                self, "WIZ550 Apply", "설정이 성공적으로 저장되었습니다."
+            )
+        else:
+            # D-05: 오류 색상 #c64545
+            self.statusbar.showMessage(" WIZ550 설정 저장 실패 (응답 없음 또는 비밀번호 오류)")
+            self.statusbar.setStyleSheet("QStatusBar { color: #c64545; }")
+            QMessageBox.warning(
+                self, "WIZ550 Apply 실패",
+                "설정 저장에 실패했습니다.\n비밀번호를 확인하거나 장치 연결을 확인하세요."
+            )
+        # statusbar 색상을 3초 후 원상복구
+        from PyQt5.QtCore import QTimer
+        QTimer.singleShot(3000, lambda: self.statusbar.setStyleSheet(""))
+
+    def reset_wiz550(self, op_code: int = None):
+        """
+        WIZ550 Reset 전송 — REMOTE_RESET(0xE0) 또는 FACTORY_RESET(0xF0) (UI-04).
+        op_code 기본값: OP_REMOTE_RESET
+        """
+        if op_code is None:
+            op_code = OP_REMOTE_RESET
+
+        if not hasattr(self, 'curr_mac') or not self.curr_mac:
+            return
+
+        d_profile = self.dev_profile.get(self.curr_mac, {})
+        target_ip = d_profile.get('local_ip', '')
+        if not target_ip:
+            self.statusbar.showMessage(" WIZ550 Reset 오류: IP 주소 없음")
+            return
+
+        # 비밀번호 입력
+        from PyQt5.QtWidgets import QInputDialog, QLineEdit
+        op_name = "Factory Reset" if op_code == OP_FACTORY_RESET else "Reset"
+        pw, ok = QInputDialog.getText(
+            self,
+            f"WIZ550 {op_name}",
+            f"{op_name} 비밀번호 (없으면 빈 칸):",
+            QLineEdit.Password,
+            d_profile.get('pw_setting', ''),
+        )
+        if not ok:
+            return
+
+        resetter = WIZ550Resetter(
+            target_ip=target_ip,
+            target_mac=self.curr_mac,
+            password=pw,
+            op_code=op_code,
+            iface_ip=self.selected_eth or "",
+        )
+        resetter.reset_done.connect(
+            lambda success, name=op_name: self._on_wiz550_reset_done(success, name)
+        )
+        resetter.start()
+        self.statusbar.showMessage(f" WIZ550 {op_name} 전송 중... ({self.curr_mac})")
+
+    def _on_wiz550_reset_done(self, success: bool, op_name: str = "Reset"):
+        """WIZ550Resetter 완료 콜백 — 결과 표시 (UI-04)."""
+        from PyQt5.QtWidgets import QMessageBox
+        if success:
+            self.statusbar.showMessage(f" WIZ550 {op_name} 완료")
+            QMessageBox.information(
+                self, f"WIZ550 {op_name}", f"{op_name}이 완료되었습니다."
+            )
+        else:
+            self.statusbar.showMessage(f" WIZ550 {op_name} 실패")
+            QMessageBox.warning(
+                self, f"WIZ550 {op_name} 실패",
+                f"{op_name}에 실패했습니다.\n장치 연결을 확인하세요."
+            )
 
     # ──────────────────────────────────────────────────────────────
     # WIZ1x0SR 전용 UI (바이너리 프로토콜, 완전 분리)
