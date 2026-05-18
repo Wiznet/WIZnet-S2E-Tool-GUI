@@ -2350,6 +2350,20 @@ class WIZWindow(QMainWindow, main_window):
                 else:
                     self._wiz1x0_search_pending = False
 
+                # WIZ550 검색 — 항상 병행 시작 (체크박스 없이, D-07)
+                # 이전 searcher 실행 중이면 새로 시작하지 않음 (WinError 10048 방지)
+                if self.wiz550_searcher is None or not self.wiz550_searcher.isRunning():
+                    self._wiz550_search_pending = True
+                    self.wiz550_searcher = WIZ550Searcher(
+                        iface_ip=self.selected_eth if self.selected_eth else "",
+                        timeout=self.search_pre_wait_time,
+                    )
+                    self.wiz550_searcher.search_done.connect(self._merge_wiz550_results)
+                    self.wiz550_searcher.start()
+                    self.logger.info(f"[TIMING] {self._T()} WIZ550Searcher.start() 완료")
+                else:
+                    self.logger.info(f"[TIMING] {self._T()} WIZ550Searcher 이미 실행 중 — skip")
+
     def _merge_wiz1x0_results(self, results: list):
         """WIZ1x0Searcher 완료 콜백 — 결과를 기존 device list에 병합."""
         self._wiz1x0_search_pending = False
@@ -2396,6 +2410,45 @@ class WIZWindow(QMainWindow, main_window):
             # Phase 3 완료 후 pgbar hide가 pending 상태였으면 이제 숨김
             self.pgbar.hide()
 
+    def _merge_wiz550_results(self, results: list):
+        """WIZ550Searcher 완료 콜백 — 검색 결과를 기존 장치 목록에 병합 (UI-01, D-07)."""
+        self._wiz550_search_pending = False
+        self.logger.info(f"[WIZ550] 검색 완료: {len(results)}개")
+
+        existing_macs = self.mac_list_str()
+        new_results = [d for d in results if d['mac'] not in existing_macs]
+        if new_results:
+            _wiz550_bg = QtGui.QColor(0xD0, 0xFF, 0xD0)  # 연한 녹색 배경 (WIZ1x0 하늘색과 구분)
+            for device_dict in new_results:
+                mac_str = device_dict['mac']
+                self.mac_list.append(mac_str.encode())
+                self.mn_list.append(device_dict.get('device_type', 'WIZ550SR'))
+                self.vr_list.append(device_dict.get('fw_str', '').encode())
+                self.st_list.append(b'normal')
+                self.mode_list.append(b'0')
+                self.detected_list.append(True)
+                self.dev_profile[mac_str] = device_dict  # _proto='wiz550' 포함
+
+            self.searched_devnum = len(self.mac_list)
+            self.searched_num.setText(str(self.searched_devnum))
+
+            for device_dict in new_results:
+                mac_str = device_dict['mac']
+                row = self.list_device.rowCount()
+                self.list_device.insertRow(row)
+                for col, text in [
+                    (0, mac_str),
+                    (1, device_dict.get('device_type', 'WIZ550SR')),
+                    (2, device_dict.get('fw_str', '')),
+                ]:
+                    item = QTableWidgetItem(text)
+                    item.setBackground(_wiz550_bg)
+                    self.list_device.setItem(row, col, item)
+            self.list_device.resizeRowsToContents()
+            QApplication.processEvents()
+        else:
+            self.logger.debug("[WIZ550] 신규 장치 없음 (모두 중복 또는 결과 없음)")
+
     def mac_list_str(self):
         """self.mac_list를 str 집합으로 반환 (중복 체크용)."""
         result = set()
@@ -2429,10 +2482,11 @@ class WIZWindow(QMainWindow, main_window):
 
         self.code = " "
         # self.all_response = []
-        # WIZ1x0SR는 IMIN 응답에 전체 데이터 포함 → Phase 3 skip
+        # WIZ1x0SR + WIZ550: 바이너리 프로토콜 장치 → WIZ5xxSR 텍스트 커맨드 제외 (UI-01, Pitfall 3)
+        _binary_proto = ('wiz1x0', 'wiz550')
         dev_info_list = [
             d for d in dev_info_list
-            if self.dev_profile.get(d[0], {}).get('_proto') != 'wiz1x0'
+            if self.dev_profile.get(d[0], {}).get('_proto') not in _binary_proto
         ]
         self.logger.info(f"search_each_dev() dev_info_list: {dev_info_list}")
         total_devs = len(dev_info_list)
