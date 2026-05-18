@@ -888,6 +888,9 @@ class WIZWindow(QMainWindow, main_window):
         # WIZ550 검색 스레드 초기화 (Phase 6 — UI-01, D-07)
         self.wiz550_searcher = None
         self._wiz550_search_pending = False
+        # WIZ550 동적 패널 컨테이너 (런타임 생성, 초기 None)
+        self._wiz550_container = None
+        self._wiz550_field_widgets = {}
         self._connect_wiz1x0_signals()
         self._apply_wiz1x0_compact_layout()
         self._apply_wiz1x0_field_widths()
@@ -3255,6 +3258,50 @@ class WIZWindow(QMainWindow, main_window):
             self.fill_devinfo_1x0(self.dev_profile[macaddr])
             return
 
+        # WIZ550 전용 UI 패널 (Phase 6 — UI-02, B-02: 2단계 분리)
+        # Stage 1: 패널 구조 빌드 + 배치 → Stage 2: GET_INFO 완료 후 값 채우기
+        if self.dev_profile.get(macaddr, {}).get('_proto') == 'wiz550':
+            self.curr_mac = macaddr
+            d = self.dev_profile[macaddr]
+            device_type = d.get('device_type', 'WIZ550SR')
+
+            # 패널 컨테이너 최초 생성 또는 장치 타입 변경 시 재빌드 (B-02 Stage 1)
+            if (self._wiz550_container is None
+                    or getattr(self, '_wiz550_last_type', None) != device_type):
+                new_panel = self._build_wiz550_panel(device_type)
+                # 기존 패널 해제 (Pitfall 4: 메모리 누수 방지)
+                if self._wiz550_container is not None:
+                    self._wiz550_container.setParent(None)
+
+                # B-03: generalTab 부모 레이아웃에 삽입 + None 체크
+                parent_widget = self.generalTab.parentWidget()
+                if parent_widget is None or parent_widget.layout() is None:
+                    # fallback: None이면 에러 로그 + 종료 (레이아웃 파악 실패)
+                    self.logger.error(
+                        "[WIZ550] wiz550_container 삽입 실패: generalTab.parentWidget() 또는 layout()이 None"
+                    )
+                    return
+                parent_widget.layout().addWidget(new_panel)
+                self._wiz550_container = new_panel
+                self._wiz550_last_type = device_type
+                self._wiz550_container.setVisible(False)
+
+            self._show_wiz550_panel(True)
+
+            # GET_INFO로 최신 설정 읽기 (B-02 Stage 2: 완료 후 _on_wiz550_get_done에서 값 채움)
+            getter = WIZ550Getter(
+                target_mac=macaddr,
+                device_type=device_type,
+                iface_ip=self.selected_eth or "",
+            )
+            getter.get_done.connect(
+                lambda cfg, mac=macaddr, dtype=device_type:
+                    self._on_wiz550_get_done(cfg, mac, dtype)
+            )
+            getter.start()
+            self.statusbar.showMessage(f" WIZ550 설정 읽는 중... ({macaddr})")
+            return
+
         # 표준 장치: wiz1x0 패널 숨기고 기존 UI 복원
         self._show_wiz1x0_panel(False)
 
@@ -3353,6 +3400,186 @@ class WIZWindow(QMainWindow, main_window):
             self.serial_debug.setCurrentIndex(2)
 
     # Check: decode exception handling
+    # ──────────────────────────────────────────────────────────────
+    # WIZ550 전용 UI (바이너리 프로토콜, 동적 패널 — Phase 6 UI-02)
+    # ──────────────────────────────────────────────────────────────
+
+    def _show_wiz550_panel(self, show: bool):
+        """WIZ550 전용 패널 ↔ 기존 generalTab 전환 (D-01, D-07).
+        wiz550_container: 런타임 생성 QWidget (Wave 2에서 동적 삽입).
+        """
+        if hasattr(self, '_wiz550_container') and self._wiz550_container is not None:
+            self._wiz550_container.setVisible(show)
+        self.generalTab.setVisible(not show)
+        self.channel_tab.setVisible(not show)
+        # WIZ1x0SR 패널이 열려있으면 함께 닫기
+        if show and hasattr(self, 'wiz1x0_tab'):
+            self.wiz1x0_tab.setVisible(False)
+
+    def _build_wiz550_panel(self, device_type: str):
+        """
+        DeviceSpec YAML sections → QGroupBox → 위젯 rows 동적 빌드 (D-01, D-06).
+        device_type: 'WIZ550SR' | 'WIZ550S2E' | 'WIZ550WEB'
+        반환: QScrollArea (스크롤 가능 컨테이너)
+
+        참고: D-06 CONTEXT.md의 device_spec_loader.load()는 pseudo-code.
+              실제 구현은 yaml.safe_load() 직접 사용 (W-3).
+
+        타이밍: get_clicked_devinfo()에서 호출 (B-02 Stage 1).
+                위젯 구조만 빌드하고 값 채우기는 _on_wiz550_get_done()에서 수행.
+        """
+        import yaml
+        from pathlib import Path
+        from PyQt5.QtWidgets import (
+            QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,
+            QLabel, QLineEdit, QCheckBox, QComboBox, QScrollArea, QSizePolicy,
+        )
+
+        yaml_path = Path(__file__).parent / 'specs' / 'devices' / f'{device_type}.yaml'
+        spec = yaml.safe_load(yaml_path.read_text(encoding='utf-8'))
+
+        # condition 판별 (WIZ550S2E mqtt/modbus) — fw_version 키 사용 (W-1)
+        d = self.dev_profile.get(getattr(self, 'curr_mac', ''), {})
+        fw_version = d.get('fw_version', b'\x00\x00\x00')
+        if len(fw_version) >= 2 and fw_version[1] != 0:
+            has_mqtt   = (fw_version[1] % 2 == 1)
+            has_modbus = (fw_version[1] % 2 == 0)
+        else:
+            has_mqtt = has_modbus = False
+
+        # 루트 스크롤 영역 (WEB 4섹션 대응)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.NoFrame)
+
+        inner = QWidget()
+        scroll.setWidget(inner)
+
+        root_layout = QVBoxLayout(inner)
+        root_layout.setSpacing(8)                      # D-03: spacing.xs
+        root_layout.setContentsMargins(16, 16, 16, 16) # D-03: spacing.md
+
+        self._wiz550_field_widgets = {}  # field_id → QWidget
+
+        for section in spec.get('ui', {}).get('sections', []):
+            condition = section.get('condition')
+            if condition == 'mqtt'   and not has_mqtt:
+                continue
+            if condition == 'modbus' and not has_modbus:
+                continue
+
+            grp = QGroupBox(section.get('label', ''))
+            grp_layout = QVBoxLayout(grp)
+            grp_layout.setSpacing(8)          # D-03: spacing.xs
+
+            for field in section.get('fields', []):
+                widget = self._make_wiz550_field_widget(field)
+                self._wiz550_field_widgets[field['id']] = widget
+
+                row = QHBoxLayout()
+                row.setSpacing(8)             # D-03: spacing.xs
+                lbl = QLabel(field.get('label', field['id']))
+                lbl.setFixedWidth(140)        # D-04: 레이블 고정폭
+                lbl.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+                row.addWidget(lbl)
+                row.addWidget(widget)
+                grp_layout.addLayout(row)
+
+            root_layout.addWidget(grp)
+
+        root_layout.addStretch()
+        return scroll
+
+    def _make_wiz550_field_widget(self, field: dict):
+        """
+        field dict → 타입별 QWidget 생성 (D-04, RESEARCH Pattern 5).
+        disabled:true 필드는 setEnabled(False) (WR-01 해소).
+        """
+        from PyQt5.QtWidgets import (
+            QLabel, QLineEdit, QCheckBox, QComboBox, QSizePolicy,
+        )
+        ftype    = field.get('type', 'text')
+        disabled = field.get('disabled', False)
+
+        if ftype == 'readonly':
+            w = QLabel(str(field.get('value', '')))
+            w.setEnabled(False)
+            return w
+
+        if ftype == 'checkbox':
+            w = QCheckBox()
+        elif ftype == 'dropdown':
+            w = QComboBox()
+            for k, v in field.get('choices', {}).items():
+                w.addItem(str(v), userData=k)
+        elif ftype in ('ip', 'text', 'uint16'):
+            w = QLineEdit()
+            if ftype == 'ip':
+                w.setPlaceholderText('0.0.0.0')
+            elif ftype == 'uint16':
+                w.setPlaceholderText('0')
+        else:
+            w = QLineEdit()
+
+        if disabled:
+            w.setEnabled(False)
+
+        # D-04: 입력 위젯 Expanding (Fill)
+        w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        return w
+
+    def fill_devinfo_wiz550(self, d: dict):
+        """
+        parse_sr/s2e/web 반환 dict → _wiz550_field_widgets에 값 채우기.
+        disabled 필드(serial_command 등)는 dict에 없으므로 continue 가드 (WR-01).
+        호출 시점: _on_wiz550_get_done() 내부 (B-02 Stage 2 — GET_INFO 완료 후).
+        """
+        from PyQt5.QtWidgets import QLabel, QCheckBox, QComboBox, QLineEdit
+        if not hasattr(self, '_wiz550_field_widgets'):
+            return
+
+        for field_id, widget in self._wiz550_field_widgets.items():
+            if field_id not in d:
+                continue  # WR-01: disabled 필드 또는 WEB 미지원 필드 — KeyError 방지
+
+            val = d[field_id]
+
+            if isinstance(widget, QLabel):
+                widget.setText(str(val))
+            elif isinstance(widget, QCheckBox):
+                widget.setChecked(bool(val))
+            elif isinstance(widget, QComboBox):
+                # choices 키는 bps int 또는 working_mode int — userData(int)와 str 변환 비교
+                matched = False
+                for i in range(widget.count()):
+                    stored_key = widget.itemData(i)
+                    if str(stored_key) == str(val):
+                        widget.setCurrentIndex(i)
+                        matched = True
+                        break
+                if not matched:
+                    self.logger.debug(f"fill_devinfo_wiz550: {field_id}={val} → choices 매칭 실패")
+            elif isinstance(widget, QLineEdit):
+                widget.setText(str(val))
+
+    def _on_wiz550_get_done(self, cfg: dict, macaddr: str, device_type: str):
+        """
+        WIZ550Getter 완료 콜백 — GET_INFO 응답을 dev_profile에 merge하고 UI에 채운다 (UI-02).
+        B-02 Stage 2: 패널 구조는 이미 빌드된 상태. 여기서 fill_devinfo_wiz550()으로 값만 채움.
+        """
+        if not cfg:
+            self.statusbar.showMessage(f" WIZ550 설정 읽기 실패: {macaddr}")
+            self.logger.warning(f"[WIZ550] GET_INFO 응답 없음: {macaddr}")
+            return
+
+        # dev_profile에 병합 (Discovery 정보 보존)
+        self.dev_profile.setdefault(macaddr, {}).update(cfg)
+        self.logger.info(f"[WIZ550] GET_INFO 완료: {macaddr} ({device_type})")
+
+        # B-02 Stage 2: GET_INFO 완료 후에 위젯에 값 채우기
+        self.fill_devinfo_wiz550(cfg)
+        self.statusbar.showMessage(f" WIZ550 설정 로드 완료: {macaddr}")
+
     # ──────────────────────────────────────────────────────────────
     # WIZ1x0SR 전용 UI (바이너리 프로토콜, 완전 분리)
     # ──────────────────────────────────────────────────────────────
