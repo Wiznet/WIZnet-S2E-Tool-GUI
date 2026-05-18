@@ -1,0 +1,94 @@
+# specs/devices/WIZ550SR.yaml
+# WIZ550SR DeviceSpec — Phase 5 (SPEC-01)
+# field.id 기준: WIZ550Profile._parse_base_162() 반환 dict 키
+# Phase 6: _build_wiz550_panel('WIZ550SR') 이 이 파일을 로드하여 UI 동적 생성
+
+name: WIZ550SR
+display_name: "WIZ550SR"
+aliases:
+  - "WIZ550SR"
+family: wiz550
+channels: 1
+
+protocol:
+  handler: WIZ550MSGHandler
+  port: 6550
+  product_code: [0x02, 0x00, 0x00]
+  config_size: 162
+  parser: parse_sr
+  builder: build_sr
+
+ui:
+  sections:
+    - id: network
+      label: "Network"
+      fields:
+        - {id: mac,           label: "MAC Address",  type: readonly}
+        - {id: dhcp_use,      label: "DHCP",         type: checkbox}
+        - {id: local_ip,      label: "IP Address",   type: ip}
+        - {id: subnet,        label: "Subnet Mask",  type: ip}
+        - {id: gateway,       label: "Gateway",      type: ip}
+        - {id: dns_server_ip, label: "DNS Server",   type: ip}
+        - id: working_mode
+          label: "Working Mode"
+          type: dropdown
+          choices:
+            0: "TCP Client"
+            1: "TCP Server"
+            2: "UDP"
+        - {id: local_port,  label: "Local Port",   type: uint16}
+        - {id: remote_ip,   label: "Remote IP",    type: ip}
+        - {id: remote_port, label: "Remote Port",  type: uint16}
+
+    - id: serial
+      label: "Serial"
+      fields:
+        - id: baud_rate
+          label: "Baud Rate"
+          type: dropdown
+          # D-03 override: D-03 예시는 인덱스 기반(0~11)이나 WIZ550Profile.py의
+          # baud_rate 필드가 실제 bps 정수값(115200)을 저장하므로 choices 키도 bps 정수값으로 작성
+          choices:
+            300: "300 bps"
+            600: "600 bps"
+            1200: "1200 bps"
+            2400: "2400 bps"
+            4800: "4800 bps"
+            9600: "9600 bps"
+            19200: "19200 bps"
+            38400: "38400 bps"
+            57600: "57600 bps"
+            115200: "115200 bps"
+            230400: "230400 bps"
+            460800: "460800 bps"
+        - {id: data_bits,    label: "Data Bits",    type: readonly, value: "8-bit"}
+        - id: parity
+          label: "Parity"
+          type: dropdown
+          choices:
+            0: "None"
+            1: "Odd"
+            2: "Even"
+        - id: stop_bits
+          label: "Stop Bits"
+          type: dropdown
+          choices:
+            0: "1 bit"
+            1: "2 bits"
+        - id: flow_control
+          label: "Flow Control"
+          type: dropdown
+          # PROF-01: XON/XOFF(1) 지원 안 함 — 0(None)과 2(RTS/CTS)만 포함
+          choices:
+            0: "None"
+            2: "RTS/CTS"
+
+    - id: options
+      label: "Options"
+      fields:
+        - {id: pw_setting,     label: "Search Password",       type: text}
+        - {id: pw_connect,     label: "Connect Password",      type: text}
+        - {id: serial_command, label: "AT Command Mode",       type: checkbox}
+        - {id: dns_use,        label: "DNS Enable",            type: checkbox}
+        - {id: inactivity,     label: "Inactivity Timeout",    type: uint16}
+        - {id: reconnection,   label: "Reconnection Interval", type: uint16}
