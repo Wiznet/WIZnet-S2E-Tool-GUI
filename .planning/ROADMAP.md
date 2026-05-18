@@ -60,8 +60,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-00-PLAN.md — Wave 0: WIZ550 스키마 + 테스트 스텁 + validate_schemas.py 라우팅
-- [ ] 05-01-PLAN.md — Wave 1: WIZ550SR/S2E/WEB.yaml 3개 작성
+- [x] 05-00-PLAN.md — Wave 0: WIZ550 스키마 + 테스트 스텁 + validate_schemas.py 라우팅
+- [x] 05-01-PLAN.md — Wave 1: WIZ550SR/S2E/WEB.yaml 3개 작성
 
 ### Phase 6: GUI Integration
 
