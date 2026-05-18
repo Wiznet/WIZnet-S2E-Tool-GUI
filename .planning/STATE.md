@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.6.3
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 5 complete, ready to plan Phase 6
-last_updated: "2026-05-18T19:56:00.000Z"
-last_activity: 2026-05-18
+status: executing
+stopped_at: Phase 6 complete — WIZ550 GUI Integration (검색/UI패널/Apply/Reset) 완료. Phase 7 TFTP FW Upload 다음.
+last_updated: "2026-05-18T21:52:00.000Z"
+last_activity: 2026-05-18 -- Phase 06 complete
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
-  percent: 75
+  total_plans: 13
+  completed_plans: 9
+  percent: 69
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-18)
 
 **Core value:** 현장 엔지니어가 WIZnet S2E 장치를 네트워크로 검색·설정할 수 있는 신뢰할 수 있는 도구
-**Current focus:** Phase 6 GUI Integration — main_gui.py WIZ550 장치 통합
+**Current focus:** Phase 07 — TFTP FW Upload
 
 ## Current Position
 
-Phase: 06
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-05-18
+Phase: 07 (tftp-fw-upload) — PENDING
+Plan: 0 of TBD
+Status: Phase 06 complete — awaiting Phase 07 planning
+Last activity: 2026-05-18 -- Phase 06 complete
 
-Progress: [███████████████░░░░░] 7/9 plans (75%)
+Progress: [███████████████░░░░░] 9/13 plans (69%)
 
 ## Performance Metrics
 
@@ -52,11 +52,11 @@ Progress: [███████████████░░░░░] 7/9 pla
 
 ### Blockers/Concerns
 
-- ⚠️ WIZ550 코드 리뷰 WR-01: WIZ550WEB serial_command — parse_web() 반환 dict에 없는 키, Phase 6 UI 빌더에서 KeyError 방지 필요
-- ⚠️ WIZ550 코드 리뷰 WR-02: YAML choices integer key vs JSON string key — 실제 jsonschema 통과 확인됨, 단 스키마 명시화 권장
+- ⚠️ CR-01 (비긴급): getter/setter/resetter QThread 로컬 변수 — self._wiz550_getter 등으로 저장 권장 (현재 PyQt5 C++ 레이어가 유지)
+- ⚠️ CR-02 (비긴급): _wiz550_field_widgets setParent(None) 후 dict 미정리
 
 ## Session Continuity
 
 Last session: 2026-05-18
-Stopped at: Phase 5 complete — WIZ550SR/S2E/WEB YAML 3개 + schema + validate 라우팅 완료. Phase 6 CONTEXT.md 존재, 플래닝 준비됨.
+Stopped at: Phase 6 complete — GUI Integration (검색/UI패널/Apply/Reset) 완료. 28 passed, 5 xfailed. SC-3 실 장치 테스트 필요.
 Resume file: None
