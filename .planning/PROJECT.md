@@ -22,6 +22,7 @@ WIZnet S2E(Serial-to-Ethernet) 모듈 설정 GUI 도구. UDP 브로드캐스트�
 - ✓ 터미널 유틸리티 패널 (Hercules 대체) — v1.6.2.1
 - ✓ 누적 검색 / 고급 검색 옵션 / 진행바 — v1.5.9
 - ✓ JSON Schema (device/command-group) + command YAML meta: 블록 + DeviceSpec.module_meta — GSD v1.6.3 (2026-05-15)
+- ✓ WIZ550 DeviceSpec YAML 3개 (WIZ550SR/S2E/WEB) + device.wiz550.schema.json + validate 라우팅 — Validated in Phase 05 (2026-05-18)
 
 ### Active
 
