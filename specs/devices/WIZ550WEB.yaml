@@ -1,0 +1,145 @@
+# specs/devices/WIZ550WEB.yaml
+# WIZ550WEB DeviceSpec — Phase 5 (SPEC-03)
+# 133B 구조체: network + UART0/UART1 시리얼 + pw_setting + dhcp/dns
+# disabled:true 필드: working_mode/remote_ip/remote_port/local_port/serial_command (SPEC-03)
+# D-05의 at_cmd == WIZ550Profile 실제 키 serial_command (CONTEXT.md 표기 불일치 — field.id는 serial_command 사용)
+# pw_connect 없음 — WEB 구조체 미포함 (RESEARCH.md Pitfall 2)
+# field.id 기준: WIZ550Profile.parse_web() 반환 dict 키
+
+name: WIZ550WEB
+display_name: "WIZ550WEB"
+aliases:
+  - "WIZ550WEB"
+family: wiz550
+channels: 2
+
+protocol:
+  handler: WIZ550MSGHandler
+  port: 6550
+  # WIZ550Profile.py WEB_FORMAT module_type hex='010200' -> [0x01, 0x02, 0x00]
+  product_code: [0x01, 0x02, 0x00]
+  config_size: 133
+  parser: parse_web
+  builder: build_web
+
+ui:
+  sections:
+    - id: network
+      label: "Network"
+      fields:
+        - {id: mac,           label: "MAC Address",  type: readonly}
+        - {id: dhcp_use,      label: "DHCP",         type: checkbox}
+        - {id: local_ip,      label: "IP Address",   type: ip}
+        - {id: subnet,        label: "Subnet Mask",  type: ip}
+        - {id: gateway,       label: "Gateway",      type: ip}
+        - {id: dns_server_ip, label: "DNS Server",   type: ip}
+        - {id: dns_use,       label: "DNS Enable",   type: checkbox}
+        # WEB 구조체에 없는 필드 — disabled:true 로 명시 (SPEC-03)
+        - id: working_mode
+          label: "Working Mode"
+          type: dropdown
+          disabled: true
+          choices:
+            0: "TCP Client"
+            1: "TCP Server"
+            2: "UDP"
+        - {id: remote_ip,   label: "Remote IP",   type: ip,     disabled: true}
+        - {id: remote_port, label: "Remote Port", type: uint16, disabled: true}
+        - {id: local_port,  label: "Local Port",  type: uint16, disabled: true}
+
+    - id: uart0
+      label: "UART0"
+      fields:
+        - id: uart0_baud_rate
+          label: "Baud Rate"
+          type: dropdown
+          # D-03 override: bps 정수값 키 사용 (WIZ550Profile parse_web uart0_baud_rate = 실제 bps int)
+          choices:
+            300: "300 bps"
+            600: "600 bps"
+            1200: "1200 bps"
+            2400: "2400 bps"
+            4800: "4800 bps"
+            9600: "9600 bps"
+            19200: "19200 bps"
+            38400: "38400 bps"
+            57600: "57600 bps"
+            115200: "115200 bps"
+            230400: "230400 bps"
+            460800: "460800 bps"
+        - {id: uart0_data_bits,    label: "Data Bits",    type: readonly, value: "8-bit"}
+        - id: uart0_parity
+          label: "Parity"
+          type: dropdown
+          choices:
+            0: "None"
+            1: "Odd"
+            2: "Even"
+        - id: uart0_stop_bits
+          label: "Stop Bits"
+          type: dropdown
+          choices:
+            0: "1 bit"
+            1: "2 bits"
+        - id: uart0_flow_control
+          label: "Flow Control"
+          type: dropdown
+          # Assumption A2: WEB 구조체의 flow_control 값 범위 미명시
+          # SR/S2E와 달리 XON/XOFF(1) 포함 3개 choices (실물 확인 전 포함이 안전)
+          choices:
+            0: "None"
+            1: "XON/XOFF"
+            2: "RTS/CTS"
+
+    - id: uart1
+      label: "UART1"
+      fields:
+        - id: uart1_baud_rate
+          label: "Baud Rate"
+          type: dropdown
+          # D-03 override: bps 정수값 키 사용 (WIZ550Profile parse_web uart1_baud_rate = 실제 bps int)
+          choices:
+            300: "300 bps"
+            600: "600 bps"
+            1200: "1200 bps"
+            2400: "2400 bps"
+            4800: "4800 bps"
+            9600: "9600 bps"
+            19200: "19200 bps"
+            38400: "38400 bps"
+            57600: "57600 bps"
+            115200: "115200 bps"
+            230400: "230400 bps"
+            460800: "460800 bps"
+        - {id: uart1_data_bits,    label: "Data Bits",    type: readonly, value: "8-bit"}
+        - id: uart1_parity
+          label: "Parity"
+          type: dropdown
+          choices:
+            0: "None"
+            1: "Odd"
+            2: "Even"
+        - id: uart1_stop_bits
+          label: "Stop Bits"
+          type: dropdown
+          choices:
+            0: "1 bit"
+            1: "2 bits"
+        - id: uart1_flow_control
+          label: "Flow Control"
+          type: dropdown
+          # Assumption A2: WEB 구조체의 flow_control 값 범위 미명시
+          # SR/S2E와 달리 XON/XOFF(1) 포함 3개 choices (실물 확인 전 포함이 안전)
+          choices:
+            0: "None"
+            1: "XON/XOFF"
+            2: "RTS/CTS"
+
+    - id: options
+      label: "Options"
+      fields:
+        - {id: pw_setting,     label: "Search Password", type: text}
+        # pw_connect 없음 — WEB 구조체 미포함 (RESEARCH.md Pitfall 2)
+        # serial_command: D-05의 at_cmd와 동일 필드 (WIZ550Profile 실제 키명 = serial_command)
+        # WEB 구조체에 없으므로 disabled:true
+        - {id: serial_command, label: "AT Command Mode", type: checkbox, disabled: true}
