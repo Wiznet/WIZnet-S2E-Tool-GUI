@@ -85,7 +85,13 @@ Plans:
   4. Reset / Factory Reset이 정상 동작한다
   5. 기존 WIZ5xxSR / WIZ1x0SR 검색·설정에 회귀가 없다
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 06-00-PLAN.md — Wave 0: 테스트 인프라 (conftest.py qapp 픽스처 + test_wiz550_gui.py 스텁 6개)
+- [ ] 06-01-PLAN.md — Wave 1: 검색 통합 (search_pre WIZ550Searcher 병행 + _merge_wiz550_results + search_each_dev 필터)
+- [ ] 06-02-PLAN.md — Wave 2: UI 패널 빌드 (_build_wiz550_panel + _make_wiz550_field_widget + _show_wiz550_panel + fill_devinfo_wiz550 + get_clicked_devinfo 분기)
+- [ ] 06-03-PLAN.md — Wave 3: 설정 쓰기/Reset (fill_setinfo_wiz550 + apply_wiz550 + reset_wiz550 + 버튼 라우팅)
 
 ### Phase 7: TFTP FW Upload
 
@@ -126,8 +132,8 @@ Phases execute in numeric order: 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 4. Protocol Engine | 3/3 | Complete    | 2026-05-18 |
-| 5. DeviceSpec YAML | 0/2 | Pending | — |
-| 6. GUI Integration | 0/TBD | Pending | — |
+| 5. DeviceSpec YAML | 2/2 | Complete | 2026-05-18 |
+| 6. GUI Integration | 0/4 | Pending | — |
 | 7. TFTP FW Upload | 0/TBD | Pending | — |
 | 8. Release | 0/TBD | Pending | — |
 
