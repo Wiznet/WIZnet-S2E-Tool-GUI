@@ -28,6 +28,7 @@ SCHEMA_DIR = SPECS_DIR / "schema"
 
 def validate_all() -> None:
     device_schema = json.loads((SCHEMA_DIR / "device.schema.json").read_text(encoding="utf-8"))
+    wiz550_schema = json.loads((SCHEMA_DIR / "device.wiz550.schema.json").read_text(encoding="utf-8"))
     cmd_schema = json.loads((SCHEMA_DIR / "command-group.schema.json").read_text(encoding="utf-8"))
 
     errors: list[str] = []
@@ -41,7 +42,8 @@ def validate_all() -> None:
             print(f"  FAIL {f.name}: YAML parse error: {e}")
             continue
         try:
-            jsonschema.validate(instance=data, schema=device_schema)
+            schema = wiz550_schema if data.get("family") == "wiz550" else device_schema
+            jsonschema.validate(instance=data, schema=schema)
             print(f"  OK  {f.name}")
         except jsonschema.ValidationError as e:
             errors.append(f"FAIL {f.name}: {e.message}")
