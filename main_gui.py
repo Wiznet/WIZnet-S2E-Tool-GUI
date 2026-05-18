@@ -13,6 +13,14 @@ from WIZUDPSock import WIZUDPSock
 from FWUploadThread import FWUploadThread
 from WIZMSGHandler import WIZMSGHandler, DataRefresh
 from WIZ1x0MSGHandler import WIZ1x0Searcher, WIZ1x0Setter
+from WIZ550MSGHandler import (
+    WIZ550Searcher,
+    WIZ550Getter,
+    WIZ550Setter,
+    WIZ550Resetter,
+    OP_REMOTE_RESET,
+    OP_FACTORY_RESET,
+)
 from certificatethread import certificatethread
 from device_search_config import DeviceSearchConfig
 from device_spec_loader import load_device, detect_device
@@ -877,6 +885,9 @@ class WIZWindow(QMainWindow, main_window):
         self._search_phase3_done = False      # search_each_dev() 완료 플래그
         # WIZ1x0SR 전용 패널: 초기 hidden, 시그널 연결
         self.wiz1x0_tab.setVisible(False)
+        # WIZ550 검색 스레드 초기화 (Phase 6 — UI-01, D-07)
+        self.wiz550_searcher = None
+        self._wiz550_search_pending = False
         self._connect_wiz1x0_signals()
         self._apply_wiz1x0_compact_layout()
         self._apply_wiz1x0_field_widths()
