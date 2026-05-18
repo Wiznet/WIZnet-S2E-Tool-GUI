@@ -532,11 +532,19 @@ def validate_all() -> None:
    - 현재 파악: WIZ550MSGHandler.py에 4개 클래스 존재 (Searcher/Getter/Setter/Resetter)
    - 불명확한 점: Phase 6 로더가 이 문자열을 어떻게 해석하는지 아직 결정 안 됨
    - 권장: `WIZ550MSGHandler` (모듈명)으로 기록, Phase 6에서 실제 매핑 결정
+   - **RESOLVED (2026-05-18):** `protocol.handler: WIZ550MSGHandler` (모듈 파일명) 사용.
+     WIZ550Searcher는 클래스명이고, Phase 6 로더가 `device_spec_loader.load(device_type)`에서
+     device_type을 키로 라우팅하므로 모듈 파일명이 더 적합하다. 06-CONTEXT.md D-06의
+     `_build_wiz550_panel()` 패턴과 일치. 플랜에서는 `WIZ550MSGHandler` 사용.
 
 2. **baud_rate choices의 YAML 타입**
    - YAML에서 `115200: "115200 bps"` 형태로 작성 시 키가 정수로 파싱됨
    - Phase 6에서 `dev_info['baud_rate']`(int)와 비교 시 타입 일치 여부 확인 필요
    - 권장: YAML에 정수 키로 작성, Phase 6에서 `int(key)` 비교 처리
+   - **RESOLVED (2026-05-18):** YAML 정수 키 115200 == `parse_sr()`/`parse_s2e()` 반환
+     `baud_rate` (int, struct 'I' 언패킹) 직접 비교 가능. 타입 불일치 없음.
+     실제 choices 값: 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600,
+     115200, 230400, 460800 [VERIFIED: WIZ550Profile.py _parse_base_162 구조체 확인]
 
 ---
 
