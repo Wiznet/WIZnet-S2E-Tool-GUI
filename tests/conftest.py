@@ -1,172 +1,147 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-tests/conftest.py — WIZ550 테스트 공통 픽스처
+tests/conftest.py — Phase 4 공통 픽스처
 
-픽스처 데이터는 WIZ550 프로토콜 명세 기반 최소 유효 바이트 블록이다.
-실제 장치 응답과 동일한 크기·구조를 갖도록 struct format 계산으로 검증됨.
+WIZ550 프로토콜 테스트용 더미 패킷 생성 헬퍼.
 """
+
 import struct
 import pytest
 
-# ─────────────────────────────────────────────────────────────
-# 크기 상수 (04-RESEARCH.md Pattern 5 기준)
-# ─────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────
+# 공통 상수 (WIZ550MSGHandler와 동기화)
+# ─────────────────────────────────────────────────────────────────
+STX            = 0xA5
+WIZNET_REQUEST = 0xAA
+WIZNET_REPLY   = 0x55
+OP_DISCOVERY   = 0xA1
+OP_GET_INFO    = 0xB0
+WIZ550_PORT    = 6550
+
+
+def _make_header(op_code: int, direction: int, payload_len: int, unicast: bool = False) -> bytes:
+    """
+    7B 헤더 생성 (암호화 없음 — valid bit7=0).
+    direction: WIZNET_REQUEST(0xAA) 또는 WIZNET_REPLY(0x55)
+    """
+    buf = bytearray(7)
+    buf[0] = STX
+    buf[1] = 0x00              # valid: bit7=0 → 암호화 없음
+    buf[2] = 0x01 if unicast else 0x00
+    buf[3] = op_code
+    buf[4] = direction
+    buf[5] = payload_len & 0xFF
+    buf[6] = (payload_len >> 8) & 0xFF
+    return bytes(buf)
+
+
+# ─────────────────────────────────────────────────────────────────
+# SR 162B 구조체 — test_get_info_length_parse 픽스처용
+# ─────────────────────────────────────────────────────────────────
+SR_FORMAT = (
+    '<'
+    'H'    # packet_size LE [0~1]
+    '3s'   # module_type[3] [2~4]
+    '25s'  # module_name[25] [5~29]
+    '3s'   # fw_ver[3] [30~32]
+    '6s'   # mac[6] [33~38]
+    '4s'   # local_ip[4] [39~42]
+    '4s'   # gateway[4] [43~46]
+    '4s'   # subnet[4] [47~50]
+    'B'    # working_mode [51]
+    'B'    # state [52]
+    '4s'   # remote_ip[4] [53~56]
+    'H'    # local_port LE [57~58]
+    'H'    # remote_port LE [59~60]
+    'H'    # inactivity LE [61~62]
+    'H'    # reconnection LE [63~64]
+    'H'    # packing_time LE [65~66]
+    'B'    # packing_size [67]
+    '4s'   # packing_delimiter[4] [68~71]
+    'B'    # packing_delimiter_length [72]
+    'B'    # packing_data_appendix [73]
+    'I'    # baud_rate 4B LE [74~77]
+    'B'    # data_bits [78]
+    'B'    # parity [79]
+    'B'    # stop_bits [80]
+    'B'    # flow_control [81]
+    '10s'  # pw_setting[10] [82~91]
+    '10s'  # pw_connect[10] [92~101]
+    'B'    # dhcp_use [102]
+    'B'    # dns_use [103]
+    '4s'   # dns_server_ip[4] [104~107]
+    '50s'  # dns_domain_name[50] [108~157]
+    'B'    # serial_command [158]
+    '3s'   # serial_trigger[3] [159~161]
+)
 SR_SIZE = 162
-WEB_SIZE = 133
-MQTT_EXTENSION_SIZE = 70   # 10+10+25+25
-MODBUS_EXTENSION_SIZE = 2  # BB
+assert struct.calcsize(SR_FORMAT) == SR_SIZE
 
-# ─────────────────────────────────────────────────────────────
-# 픽스처 헬퍼
-# ─────────────────────────────────────────────────────────────
-def _make_base_162(module_type: bytes, fw_ver: bytes = b'\x01\x01\x00') -> bytes:
+
+def _make_sr_config_bytes() -> bytes:
     """
-    SR/S2E 기본 162B 더미 바이트 생성.
-    packet_size=162(LE), module_type, module_name(25B), fw_ver(3B), 나머지 0으로 채움.
+    테스트용 WIZ550SR 162B Config 더미 데이터 생성.
+    local_ip=192.168.0.100, mac=00:08:DC:AB:CD:EF, baud_rate=115200
     """
-    buf = bytearray(SR_SIZE)
-    # packet_size LE [0~1]
-    struct.pack_into('<H', buf, 0, SR_SIZE)
-    # module_type [2~4]
-    buf[2:5] = module_type[:3]
-    # module_name [5~29] — null-terminated ASCII
-    name = b'WIZ550TEST\x00' + b'\x00' * 14
-    buf[5:30] = name
-    # fw_ver [30~32]
-    buf[30:33] = fw_ver[:3]
-    # mac [33~38] — 더미 MAC 00:08:DC:AB:CD:EF
-    buf[33:39] = bytes([0x00, 0x08, 0xDC, 0xAB, 0xCD, 0xEF])
-    # local_ip [39~42] — 192.168.0.100
-    buf[39:43] = bytes([192, 168, 0, 100])
-    # gateway [43~46] — 192.168.0.1
-    buf[43:47] = bytes([192, 168, 0, 1])
-    # subnet [47~50] — 255.255.255.0
-    buf[47:51] = bytes([255, 255, 255, 0])
-    # baud_rate [74~77] — 115200 LE uint32
-    struct.pack_into('<I', buf, 74, 115200)
-    # data_bits [78] — 8
-    buf[78] = 8
-    # stop_bits [80] — 1
-    buf[80] = 1
-    return bytes(buf)
-
-
-# ─────────────────────────────────────────────────────────────
-# WIZ550SR 픽스처
-# ─────────────────────────────────────────────────────────────
-@pytest.fixture
-def sr_bytes() -> bytes:
-    """WIZ550SR 162B 더미 Config 바이트 (module_type=[0x02,0x00,0x00])"""
-    return _make_base_162(bytes([0x02, 0x00, 0x00]))
-
-
-# ─────────────────────────────────────────────────────────────
-# WIZ550S2E 픽스처 — 3종 변형
-# ─────────────────────────────────────────────────────────────
-@pytest.fixture
-def s2e_base_bytes() -> bytes:
-    """WIZ550S2E 기본 162B (module_type=[0x00,0x00,0x00], fw_ver[1]=짝수(0))"""
-    return _make_base_162(bytes([0x00, 0x00, 0x00]), fw_ver=b'\x01\x00\x00')
+    return struct.pack(
+        SR_FORMAT,
+        162,                            # packet_size
+        bytes([0x02, 0x00, 0x00]),      # module_type = SR
+        b'WIZ550SR\x00' + b'\x00' * 16,  # module_name (25B)
+        bytes([1, 0, 0]),               # fw_ver 1.0.0
+        bytes([0x00, 0x08, 0xDC, 0xAB, 0xCD, 0xEF]),  # mac
+        bytes([192, 168, 0, 100]),      # local_ip
+        bytes([192, 168, 0, 1]),        # gateway
+        bytes([255, 255, 255, 0]),      # subnet
+        0,                              # working_mode
+        0,                              # state
+        bytes([0, 0, 0, 0]),            # remote_ip
+        5000,                           # local_port
+        5000,                           # remote_port
+        0,                              # inactivity
+        3000,                           # reconnection
+        0,                              # packing_time
+        0,                              # packing_size
+        b'\x00' * 4,                   # packing_delimiter
+        0,                              # packing_delimiter_length
+        0,                              # packing_data_appendix
+        115200,                         # baud_rate
+        3,                              # data_bits (8-bit)
+        0,                              # parity
+        0,                              # stop_bits
+        0,                              # flow_control
+        b'\x00' * 10,                  # pw_setting
+        b'\x00' * 10,                  # pw_connect
+        0,                              # dhcp_use
+        0,                              # dns_use
+        bytes([0, 0, 0, 0]),            # dns_server_ip
+        b'\x00' * 50,                  # dns_domain_name
+        0,                              # serial_command
+        b'\x00' * 3,                   # serial_trigger
+    )
 
 
 @pytest.fixture
-def s2e_modbus_bytes() -> bytes:
-    """WIZ550S2E Modbus 164B (fw_ver[1]=짝수(0), 길이>=164)"""
-    base = bytearray(_make_base_162(bytes([0x00, 0x00, 0x00]), fw_ver=b'\x01\x00\x00'))
-    # Modbus 확장 2B: modbus_use=1, modbus_mode=0
-    ext = struct.pack('<BB', 1, 0)
-    return bytes(base) + ext  # 164B
-
-
-@pytest.fixture
-def s2e_mqtt_bytes() -> bytes:
-    """WIZ550S2E MQTT 232B (fw_ver[1]=홀수(1), 길이>=232)"""
-    base = bytearray(_make_base_162(bytes([0x00, 0x00, 0x00]), fw_ver=b'\x01\x01\x00'))
-    # MQTT 확장 70B: mqtt_user(10)+mqtt_pw(10)+pub_topic(25)+sub_topic(25)
-    mqtt_user  = b'mqttuser\x00\x00'
-    mqtt_pw    = b'mqttpass\x00\x00'
-    pub_topic  = b'pub/test\x00' + b'\x00' * 16
-    sub_topic  = b'sub/test\x00' + b'\x00' * 16
-    ext = mqtt_user + mqtt_pw + pub_topic + sub_topic  # 70B
-    assert len(ext) == 70
-    return bytes(base) + ext  # 232B
-
-
-# ─────────────────────────────────────────────────────────────
-# WIZ550WEB 픽스처
-# ─────────────────────────────────────────────────────────────
-@pytest.fixture
-def web_bytes() -> bytes:
-    """WIZ550WEB 133B 더미 Config 바이트 (module_type=[0x01,0x02,0x00])"""
-    buf = bytearray(WEB_SIZE)
-    # packet_size LE [0~1]
-    struct.pack_into('<H', buf, 0, WEB_SIZE)
-    # module_type [2~4]
-    buf[2:5] = bytes([0x01, 0x02, 0x00])
-    # module_name [5~29]
-    buf[5:30] = b'WIZ550WEB\x00' + b'\x00' * 15
-    # fw_ver [30~32]
-    buf[30:33] = b'\x01\x00\x00'
-    # mac [33~38] — 00:08:DC:11:22:33
-    buf[33:39] = bytes([0x00, 0x08, 0xDC, 0x11, 0x22, 0x33])
-    # local_ip [39~42] — 192.168.0.200
-    buf[39:43] = bytes([192, 168, 0, 200])
-    # gateway [43~46]
-    buf[43:47] = bytes([192, 168, 0, 1])
-    # subnet [47~50]
-    buf[47:51] = bytes([255, 255, 255, 0])
-    # uart0_baud_rate [51~54] — 9600 LE uint32
-    struct.pack_into('<I', buf, 51, 9600)
-    # uart0_data_bits [55] — 8
-    buf[55] = 8
-    # uart0_stop_bits [57] — 1
-    buf[57] = 1
-    # uart1_baud_rate [59~62] — 9600
-    struct.pack_into('<I', buf, 59, 9600)
-    # uart1_data_bits [63] — 8
-    buf[63] = 8
-    # uart1_stop_bits [65] — 1
-    buf[65] = 1
-    return bytes(buf)
-
-
-# ─────────────────────────────────────────────────────────────
-# Discovery 응답 픽스처 (7B 헤더 + 12B payload)
-# ─────────────────────────────────────────────────────────────
-@pytest.fixture
-def discovery_reply_sr() -> bytes:
-    """WIZ550SR Discovery 응답 더미 패킷 (19B, 암호화 없음)"""
-    # 헤더: STX=0xA5, valid=0x01(암호화 안 됨), unicast=0, op_code=0xA1, REPLY=0x55, len=12 LE
-    header = bytes([0xA5, 0x01, 0x00, 0xA1, 0x55, 0x0C, 0x00])
-    # payload: product_code[3] + fw_ver[3] + mac[6]
-    product_code = bytes([0x02, 0x00, 0x00])  # SR
-    fw_ver       = bytes([0x01, 0x00, 0x01])
-    mac          = bytes([0x00, 0x08, 0xDC, 0xAB, 0xCD, 0xEF])
-    return header + product_code + fw_ver + mac  # 19B
-
-
-@pytest.fixture
-def get_info_reply_sr(sr_bytes) -> bytes:
+def get_info_reply_sr() -> bytes:
     """
-    WIZ550SR GET_INFO 응답 더미 패킷.
-    7B 헤더 + payload(src_mac[6] + config_len_LE[2] + sr_bytes[162])
-    D-08: recv[6~7]에서 config_len 재파싱 검증용.
-    """
-    config_data = sr_bytes  # 162B
-    config_len  = len(config_data)  # 162
-    src_mac     = bytes([0x00, 0x08, 0xDC, 0xAB, 0xCD, 0xEF])
-    # payload: mac[6] + len_LSB + len_MSB + config[162] = 170B
-    payload = src_mac + struct.pack('<H', config_len) + config_data
-    payload_len = len(payload)  # 170
+    GET_INFO(0xB0) 응답 더미 패킷 (암호화 없음).
 
-    # 헤더: STX, valid=0x01(암호화 없음), unicast=1, op_code=0xB0, REPLY=0x55, len LE
-    header = bytearray(7)
-    header[0] = 0xA5
-    header[1] = 0x01   # valid — 암호화 없음 (bit7=0)
-    header[2] = 0x01
-    header[3] = 0xB0
-    header[4] = 0x55
-    header[5] = payload_len & 0xFF
-    header[6] = (payload_len >> 8) & 0xFF
-    return bytes(header) + payload
+    구조 (WIZ550MSGHandler._parse_get_info_reply 기대값):
+      7B 헤더
+      6B src_mac
+      2B config_len (= 162, LE)
+      162B system_info (SR Config)
+    총 = 7 + 6 + 2 + 162 = 177B
+    """
+    config_bytes = _make_sr_config_bytes()
+    config_len   = len(config_bytes)  # 162
+
+    # payload: src_mac[6] + config_len[2] + config_data[162]
+    src_mac  = bytes([0x00, 0x08, 0xDC, 0xAB, 0xCD, 0xEF])
+    len_le   = struct.pack('<H', config_len)   # 2B LE
+    payload  = src_mac + len_le + config_bytes
+
+    header = _make_header(OP_GET_INFO, WIZNET_REPLY, len(payload))
+    return header + payload
