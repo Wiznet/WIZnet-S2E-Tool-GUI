@@ -54,10 +54,14 @@ Plans:
 
 **Success Criteria** (what must be TRUE):
   1. `specs/devices/WIZ550SR.yaml`, `WIZ550S2E.yaml`, `WIZ550WEB.yaml` 3개 파일 존재
-  2. 3개 모두 `specs/schema/device.schema.json` 검증 통과 (`validate_schemas.py` 전체 통과)
+  2. 3개 모두 `specs/schema/device.wiz550.schema.json` 검증 통과 (`validate_schemas.py` 전체 통과)
   3. WIZ550WEB 비활성 필드(working_mode, remote_ip 등)가 YAML에 명시적으로 정의됨
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 05-00-PLAN.md — Wave 0: WIZ550 스키마 + 테스트 스텁 + validate_schemas.py 라우팅
+- [ ] 05-01-PLAN.md — Wave 1: WIZ550SR/S2E/WEB.yaml 3개 작성
 
 ### Phase 6: GUI Integration
 
@@ -122,7 +126,7 @@ Phases execute in numeric order: 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 4. Protocol Engine | 3/3 | Complete    | 2026-05-18 |
-| 5. DeviceSpec YAML | 0/TBD | Pending | — |
+| 5. DeviceSpec YAML | 0/2 | Pending | — |
 | 6. GUI Integration | 0/TBD | Pending | — |
 | 7. TFTP FW Upload | 0/TBD | Pending | — |
 | 8. Release | 0/TBD | Pending | — |
