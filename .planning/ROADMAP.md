@@ -15,7 +15,7 @@ DeviceSpec YAML로 UI를 정의하며, TFTP 방식 펌웨어 업로드까지 포
 - Integer phases (4, 5, 6, 7, 8): Planned milestone work
 - Phases 1~3 completed in prior milestone (v1.6.3 Device Module Architecture)
 
-- [ ] **Phase 4: Protocol Engine** — WIZ550MSGHandler.py + WIZ550Profile.py 신규 구현
+- [x] **Phase 4: Protocol Engine** — WIZ550MSGHandler.py + WIZ550Profile.py 신규 구현 (completed 2026-05-18)
 - [ ] **Phase 5: DeviceSpec YAML** — specs/devices/ WIZ550SR/S2E/WEB.yaml 3개 작성
 - [ ] **Phase 6: GUI Integration** — main_gui.py 검색·설정·Apply·Reset 연결
 - [ ] **Phase 7: TFTP FW Upload** — tftpy 기반 로컬 서버 + op_code 0xD1 전송
@@ -40,9 +40,9 @@ DeviceSpec YAML로 UI를 정의하며, TFTP 방식 펌웨어 업로드까지 포
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-00-PLAN.md — Wave 0 테스트 스텁 (tests/ 디렉토리 + conftest.py + stub 파일)
-- [ ] 04-01-PLAN.md — WIZ550MSGHandler.py 구현 (4개 QThread + 헬퍼 함수)
-- [ ] 04-02-PLAN.md — WIZ550Profile.py 구현 (SR/S2E/WEB 구조체 파서/빌더)
+- [x] 04-00-PLAN.md — Wave 0 테스트 스텁 (tests/ 디렉토리 + conftest.py + stub 파일)
+- [x] 04-01-PLAN.md — WIZ550MSGHandler.py 구현 (4개 QThread + 헬퍼 함수)
+- [x] 04-02-PLAN.md — WIZ550Profile.py 구현 (SR/S2E/WEB 구조체 파서/빌더)
 
 ### Phase 5: DeviceSpec YAML
 
@@ -121,7 +121,7 @@ Phases execute in numeric order: 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 4. Protocol Engine | 0/3 | Planning Done | — |
+| 4. Protocol Engine | 3/3 | Complete    | 2026-05-18 |
 | 5. DeviceSpec YAML | 0/TBD | Pending | — |
 | 6. GUI Integration | 0/TBD | Pending | — |
 | 7. TFTP FW Upload | 0/TBD | Pending | — |
