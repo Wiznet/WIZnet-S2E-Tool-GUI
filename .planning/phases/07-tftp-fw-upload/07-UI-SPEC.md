@@ -63,6 +63,8 @@ Phase 6 D-03 패턴 + 기존 main_gui.py/fw_git_dialog.py 패턴 준수.
 
 > 총 3개 역할, 2개 weight (400/500). DESIGN.md의 body-sm(14px)보다 12-13px 소형으로 맞춤 — 기존 fw_git_dialog 13px 기준 준수.
 
+> **Typography 구분 전략 (executor 주의):** Body/Label(13px)와 Status message(12px)의 1px 차이는 시각적으로 미미하다. 두 역할의 실제 구분은 크기가 아닌 **색상**으로 달성한다 — Status message는 반드시 `color: #6c6a64` (muted) 를 기본값으로 적용하고, 성공/오류 시에만 `#5db872` / `#c64545` 로 교체한다. 크기 단독으로 계층을 표현하려 하지 말 것.
+
 ---
 
 ## Color
@@ -76,9 +78,9 @@ Phase 6 D-05에서 DESIGN.md 컬러 토큰 → Qt 스타일시트 매핑 확정.
 | Accent (10%) | #cc785c (colors.primary) | Upload 버튼 배경만 (기존 Phase 6 Apply 버튼과 동일) |
 | Success | #5db872 (colors.success) | 상태 메시지 "Upload complete!" 텍스트 색상 |
 | Error | #c64545 (colors.error) | 오류 메시지 텍스트 색상 (port 69 실패, 타임아웃) |
-| Muted | #6c6a64 (colors.muted) | 보조 설명 텍스트 ("Optional" 힌트 등) |
+| Muted | #6c6a64 (colors.muted) | 보조 설명 텍스트 ("Optional" 힌트, 기본 상태 메시지) |
 
-Accent reserved for: Upload 버튼 배경 한 군데만. Browse 버튼, Cancel 버튼, Refresh 버튼은 시스템 기본 버튼 스타일 유지.
+Accent reserved for: Upload 버튼 배경 한 군데만. Browse 버튼, Close/Stop Upload 버튼, Refresh 버튼은 시스템 기본 버튼 스타일 유지.
 
 > 기존 UI 전체 색상 교체 금지 — Phase 6 D-05 원칙 준수. WIZ550 FW 다이얼로그 내 신규 위젯에만 토큰 적용.
 
@@ -124,8 +126,14 @@ WIZ550FWDialog(QDialog)
     └── btn_row: QHBoxLayout
         ├── addStretch()
         ├── btn_upload: QPushButton("Upload") [default=True, primary style]
-        └── btn_cancel: QPushButton("Cancel")
+        └── btn_cancel: QPushButton("Close")  ← idle/완료 상태
+            [업로드 진행 중에는 setText("Stop Upload") 호출]
 ```
+
+> **btn_cancel 레이블 동작 규칙 (executor 필수 준수):**
+> - 초기 표시 / 업로드 완료 후: `setText("Close")` — 다이얼로그를 닫는 의미임을 명확히 함
+> - 업로드 진행 중 (`btn_upload.setEnabled(False)` 시점과 동시에): `setText("Stop Upload")` — 클릭 시 서버 stop(now=True) + QThread 정리 후 다이얼로그 닫기
+> - 업로드 완료(성공/실패) 후: 다시 `setText("Close")` 로 복원
 
 ### 위젯 크기 정책
 
@@ -133,10 +141,13 @@ WIZ550FWDialog(QDialog)
 |------|-----------|------|
 | QLabel (고정 폭) | Fixed, Preferred | setFixedWidth(80) |
 | QLineEdit (입력) | Expanding, Preferred | 가용 폭 채움 |
-| QPushButton ("Browse...", "Cancel") | Fixed, Preferred | setFixedWidth(70) / (80) |
+| QPushButton ("Browse...") | Fixed, Preferred | setFixedWidth(70) |
+| QPushButton ("Close" / "Stop Upload") | Fixed, Preferred | setFixedWidth(90) — 두 레이블 중 긴 쪽 기준 |
 | QPushButton ("Upload") | Fixed, Preferred | setFixedWidth(90) |
 | QProgressBar | Expanding, Preferred | 탭 내 전체 폭 차지 |
 | QLabel (status) | Expanding, Fixed | setFixedHeight(20) |
+
+> "Stop Upload" 레이블이 "Close"보다 길므로 btn_cancel 폭을 90px로 통일한다. 레이블 전환 시 버튼 폭이 변경되어 레이아웃이 흔들리는 것을 방지한다.
 
 ---
 
@@ -170,6 +181,24 @@ btn_upload.setStyleSheet("""
 """)
 ```
 
+### Close / Stop Upload 버튼 (btn_cancel)
+
+| State | Label | Action |
+|-------|-------|--------|
+| Idle (업로드 전) | `"Close"` | `self.reject()` — 다이얼로그 닫기 |
+| 업로드 진행 중 | `"Stop Upload"` | 서버 stop(now=True) + QThread 정리 → `self.reject()` |
+| 업로드 완료 후 | `"Close"` | `self.accept()` 또는 `self.reject()` — 다이얼로그 닫기 |
+
+```python
+# 업로드 시작 시
+btn_cancel.setText("Stop Upload")
+btn_upload.setEnabled(False)
+
+# 업로드 완료/실패 시
+btn_cancel.setText("Close")
+btn_upload.setEnabled(True)
+```
+
 ### QProgressBar (D-07)
 
 | State | Range | Value | 설명 |
@@ -194,14 +223,15 @@ pgbar.setValue(100)
 | State | Text | Color |
 |-------|------|-------|
 | Idle | "" (공백) | — |
-| 진행 중 | "Sending 0xD1 packet..." | 시스템 기본 |
+| 진행 중 | "Sending firmware upload request..." | #6c6a64 (muted) |
 | 완료 성공 | "Upload complete!" | #5db872 (success) |
 | 오류 | [오류 메시지] | #c64545 (error) |
 
 ```python
 lbl_status.setStyleSheet("color: #5db872;")  # 성공
 lbl_status.setStyleSheet("color: #c64545;")  # 오류
-lbl_status.setStyleSheet("")                  # 기본
+lbl_status.setStyleSheet("color: #6c6a64;")  # 진행 중 (muted)
+lbl_status.setStyleSheet("")                  # 기본 (idle)
 ```
 
 ### 입력 유효성 검증
@@ -224,14 +254,15 @@ lbl_status.setStyleSheet("")                  # 기본
 | 다이얼로그 타이틀 | `WIZ550 FW Upload` |
 | Tab 0 텍스트 | `자동 (내장 TFTP)` |
 | Tab 1 텍스트 | `수동 (외부 TFTP)` |
-| Primary CTA | `Upload` (동사 단독 — 기존 "Download" 패턴과 일관) |
+| Primary CTA | `Upload` (동사 단독 — 기존 fw_git_dialog.py의 "Download" 단일 동사 패턴과 의도적으로 일관. 이 프로젝트의 확립된 관례임.) |
 | Browse 버튼 | `Browse...` (기존 fw_git_dialog 패턴 일관) |
-| Cancel 버튼 | `Cancel` |
+| Cancel 버튼 — idle/완료 상태 | `Close` |
+| Cancel 버튼 — 업로드 진행 중 | `Stop Upload` |
 | pw 필드 placeholder | `Optional` |
 | 업로드 시작 상태 | `Sending firmware upload request...` |
 | 완료 성공 상태 | `Upload complete!` |
 | 0xD2 대기 중 상태 | `Waiting for device response...` |
-| 타임아웃 오류 | `Upload timed out. No response from device.` |
+| 타임아웃 오류 | `Upload timed out. No response from device. Please retry or check the device connection.` |
 | Port 69 바인딩 실패 (D-02) | `Port 69 requires Administrator privileges. Please use the manual tab with an external TFTP server.` |
 | 파일 미선택 오류 (자동 탭) | `Please select a firmware file.` |
 | BOOT 파일 선택 오류 | `Cannot upload BOOT firmware file. Please select an APP firmware file only.` (기존 main_gui.py 패턴 준용) |
@@ -245,7 +276,7 @@ lbl_status.setStyleSheet("")                  # 기본
 
 이 다이얼로그에 파괴적 동작 없음. Upload는 장치 펌웨어를 덮어쓰지만 사용자가 명시적으로 파일을 선택하고 Upload를 눌러야 하므로 별도 확인 다이얼로그 불필요 (기존 firmware_update() 흐름과 동일).
 
-단, 업로드 진행 중 Cancel 누를 경우:
+단, 업로드 진행 중 "Stop Upload" 누를 경우:
 - 서버 stop(now=True) + QThread 정리 후 다이얼로그 닫기
 - 별도 확인 없이 즉시 중단 (진행 중 취소는 사용자 의지로 간주)
 
@@ -289,12 +320,13 @@ lbl_status.setStyleSheet("")                  # 기본
 ```
 ┌──────────────────────────────────────────────┐
 │ [상태 메시지 QLabel                           ]   │
-│                              [Upload] [Cancel] │
+│                    [Upload] [Close / Stop Upload] │
 └──────────────────────────────────────────────┘
 ```
 
-- lbl_status: Expanding, fixedHeight=20, 기본="" 
-- btn_row: addStretch() → btn_upload(90px, primary style) → btn_cancel(80px, default style)
+- lbl_status: Expanding, fixedHeight=20, 기본=""
+- btn_row: addStretch() → btn_upload(90px, primary style) → btn_cancel(90px, default style)
+- btn_cancel 레이블은 업로드 상태에 따라 "Close" ↔ "Stop Upload" 동적 전환
 
 ---
 
@@ -321,15 +353,16 @@ PyQt5 데스크톱 앱 — 레지스트리 게이트 적용 불가. 모든 의�
 | 루트 레이아웃 | QVBoxLayout, spacing=8, margins=12,12,12,12 | 동일 |
 | 섹션 구분 | QFrame(HLine/Sunken) | 동일 |
 | 프로그레스바 | `setRange(0,0)`, visible=False | 동일 |
-| 버튼 행 | addStretch() → 기능버튼 → Cancel | 동일 |
+| 버튼 행 | addStretch() → 기능버튼 → Cancel | 동일 (Cancel 레이블은 상태별 동적 변경) |
 | 기본 버튼 | btn_dl.setDefault(True) | btn_upload.setDefault(True) |
+| CTA 레이블 관례 | "Download" (단일 동사) | "Upload" (단일 동사 — 동일 관례) |
 
 ### Phase 6 D-02~D-05 디자인 토큰 적용 범위
 
 - D-02 레이아웃: QVBoxLayout + QHBoxLayout 계층, QGridLayout 미사용
 - D-03 간격 토큰: setSpacing(8) 행 간격, setContentsMargins(12,12,12,12) 외곽 여백
 - D-04 크기 정책: 레이블 Fixed, 입력 Expanding
-- D-05 컬러 토큰: Upload 버튼 #cc785c, 상태 메시지 #5db872/#c64545
+- D-05 컬러 토큰: Upload 버튼 #cc785c, 상태 메시지 #5db872/#c64545/#6c6a64
 
 ---
 
@@ -362,3 +395,7 @@ PyQt5 데스크톱 앱 — 레지스트리 게이트 적용 불가. 모든 의�
 | QProgressBar 코드 패턴 | RESEARCH.md Pattern: QProgressBar Indeterminate |
 | BOOT 파일 오류 문구 | main_gui.py firmware_file_open() 직접 스캔 |
 | 입력 유효성 검증 항목 | RESEARCH.md §Security Domain V5 Input Validation |
+| btn_cancel 레이블 동적 전환 | checker revision — idle="Close", active="Stop Upload" |
+| 타임아웃 오류 복구 경로 문구 | checker revision — "Please retry or check the device connection." 추가 |
+| Typography muted 색상 구분 전략 | checker revision — 12px/13px 구분은 크기 아닌 #6c6a64 색상으로 달성 |
+| Upload CTA 단일 동사 관례 선언 | checker revision — fw_git_dialog "Download" 패턴과의 일관성 명시 |
