@@ -107,7 +107,13 @@ Plans:
   3. 업로드 완료(0xD2 응답) 또는 타임아웃 시 결과가 사용자에게 표시된다
   4. QProgressBar 또는 상태 메시지로 진행 상황이 표시된다
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 07-00-PLAN.md — Wave 0: 테스트 스텁 (tests/test_wiz550_fw.py — FW-01~04 5개 함수)
+- [ ] 07-01-PLAN.md — Wave 1: 패킷 빌더 + QThread (build_fw_upload_pkt + WIZ550FWUploadThread.py)
+- [ ] 07-02-PLAN.md — Wave 2: FW 업로드 다이얼로그 (wiz550_fw_dialog.py — 2탭 UI)
+- [ ] 07-03-PLAN.md — Wave 3: main_gui.py 연결 (event_upload_clicked 분기 + upload_wiz550)
 
 ### Phase 8: Release
 
@@ -134,7 +140,7 @@ Phases execute in numeric order: 4 → 5 → 6 → 7 → 8
 | 4. Protocol Engine | 3/3 | Complete    | 2026-05-18 |
 | 5. DeviceSpec YAML | 2/2 | Complete | 2026-05-18 |
 | 6. GUI Integration | 4/4 | Complete | 2026-05-18 |
-| 7. TFTP FW Upload | 0/TBD | Pending | — |
+| 7. TFTP FW Upload | 0/4 | Pending | — |
 | 8. Release | 0/TBD | Pending | — |
 
 ---
