@@ -261,20 +261,21 @@ def get_info_reply_sr() -> bytes:
     """
     GET_INFO(0xB0) 응답 더미 패킷 (암호화 없음).
 
-    구조 (WIZ550MSGHandler._parse_get_info_reply 기대값):
+    실제 프로토콜 구조 (RESEARCH Pattern 4 기준):
       7B 헤더
       6B src_mac
-      2B config_len (= 162, LE)
-      162B system_info (SR Config)
-    총 = 7 + 6 + 2 + 162 = 177B
-    """
-    config_bytes = _make_sr_config_bytes()
-    config_len   = len(config_bytes)  # 162
+      162B system_info  ← packet_size H(2B)가 system_info[0:2] == config_len
+    총 = 7 + 6 + 162 = 175B
 
-    # payload: src_mac[6] + config_len[2] + config_data[162]
-    src_mac  = bytes([0x00, 0x08, 0xDC, 0xAB, 0xCD, 0xEF])
-    len_le   = struct.pack('<H', config_len)   # 2B LE
-    payload  = src_mac + len_le + config_bytes
+    config_len은 별도 필드가 아니라 system_info[0:2](= packet_size)에서 읽음.
+    파서: config_len = payload[6:8], system_info = payload[6:6+config_len]
+    """
+    config_bytes = _make_sr_config_bytes()  # 162B, [0:2] = packet_size = 162
+
+    # payload: src_mac[6] + system_info[162]
+    # system_info[0:2] = packet_size = 162 이 곧 config_len 역할
+    src_mac = bytes([0x00, 0x08, 0xDC, 0xAB, 0xCD, 0xEF])
+    payload = src_mac + config_bytes
 
     header = _make_header(OP_GET_INFO, WIZNET_REPLY, len(payload))
     return header + payload

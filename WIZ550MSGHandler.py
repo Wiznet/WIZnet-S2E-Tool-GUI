@@ -256,9 +256,10 @@ def _parse_get_info_reply(data: bytes, device_type: str) -> dict:
 
     src_mac = ':'.join(f'{b:02X}' for b in payload[0:6])
 
-    # system_info: payload[8]부터 config_len 바이트
-    # payload[0~5]=src_mac(6B), payload[6~7]=config_len(2B), payload[8~]=Config 본체
-    system_info = bytes(payload[8:8 + config_len])
+    # system_info: payload[6]부터 config_len 바이트 (RESEARCH Pattern 4 기준)
+    # payload[6~7]=config_len(2B) 자체가 SR_FORMAT의 packet_size H 필드이므로
+    # system_info는 payload[6]에서 시작 (payload[8]부터 하면 2B 오프셋 오류 발생)
+    system_info = bytes(payload[6:6 + config_len])
 
     if not system_info or len(system_info) < 5:
         logger.warning(f"[WIZ550] GET_INFO system_info 부족: {len(system_info)}B")
