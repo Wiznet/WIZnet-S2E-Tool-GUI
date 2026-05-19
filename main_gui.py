@@ -891,6 +891,10 @@ class WIZWindow(QMainWindow, main_window):
         # WIZ550 동적 패널 컨테이너 (런타임 생성, 초기 None)
         self._wiz550_container = None
         self._wiz550_field_widgets = {}
+        # WIZ550 QThread 참조 보관 — GC로 인한 "Destroyed while running" 방지 (CR-01)
+        self._wiz550_getter = None
+        self._wiz550_setter = None
+        self._wiz550_resetter = None
         self._connect_wiz1x0_signals()
         self._apply_wiz1x0_compact_layout()
         self._apply_wiz1x0_field_widths()
@@ -999,6 +1003,11 @@ class WIZWindow(QMainWindow, main_window):
                 # Phase 3 미완료: curr_mac/dev/ver/st 는 설정하되 Apply 버튼 활성화는 스킵
                 self.selected_devinfo()
                 self.statusbar.showMessage('Retrieving device info, please wait...')
+                return
+            # WIZ550 장치: itemClicked → get_clicked_devinfo()가 전담 처리
+            # object_config()는 device.schema.json 기반 load_device()를 호출하므로
+            # WIZ550 YAML(command_groups 없음)에 적용하면 스키마 검증 오류 발생
+            if mac_item and self.dev_profile.get(mac_item.text(), {}).get('_proto') == 'wiz550':
                 return
             self.object_config()
 
@@ -3304,16 +3313,17 @@ class WIZWindow(QMainWindow, main_window):
             self._show_wiz550_panel(True)
 
             # GET_INFO로 최신 설정 읽기 (B-02 Stage 2: 완료 후 _on_wiz550_get_done에서 값 채움)
-            getter = WIZ550Getter(
+            # self._wiz550_getter에 저장 — 로컬 변수면 함수 return 후 GC가 실행 중인 QThread 파괴
+            self._wiz550_getter = WIZ550Getter(
                 target_mac=macaddr,
                 device_type=device_type,
                 iface_ip=self.selected_eth or "",
             )
-            getter.get_done.connect(
+            self._wiz550_getter.get_done.connect(
                 lambda cfg, mac=macaddr, dtype=device_type:
                     self._on_wiz550_get_done(cfg, mac, dtype)
             )
-            getter.start()
+            self._wiz550_getter.start()
             self.statusbar.showMessage(f" WIZ550 설정 읽는 중... ({macaddr})")
             return
 
@@ -3677,15 +3687,15 @@ class WIZWindow(QMainWindow, main_window):
             self.statusbar.showMessage(" WIZ550 Apply 오류: IP 주소 없음")
             return
 
-        setter = WIZ550Setter(
+        self._wiz550_setter = WIZ550Setter(
             target_ip=target_ip,
             target_mac=self.curr_mac,
             password=pw,
             config_data=config_bytes,
             iface_ip=self.selected_eth or "",
         )
-        setter.set_done.connect(self._on_wiz550_set_done)
-        setter.start()
+        self._wiz550_setter.set_done.connect(self._on_wiz550_set_done)
+        self._wiz550_setter.start()
         self.statusbar.showMessage(f" WIZ550 설정 전송 중... ({self.curr_mac})")
 
     def _on_wiz550_set_done(self, success: bool):
@@ -3740,17 +3750,17 @@ class WIZWindow(QMainWindow, main_window):
         if not ok:
             return
 
-        resetter = WIZ550Resetter(
+        self._wiz550_resetter = WIZ550Resetter(
             target_ip=target_ip,
             target_mac=self.curr_mac,
             password=pw,
             op_code=op_code,
             iface_ip=self.selected_eth or "",
         )
-        resetter.reset_done.connect(
+        self._wiz550_resetter.reset_done.connect(
             lambda success, name=op_name: self._on_wiz550_reset_done(success, name)
         )
-        resetter.start()
+        self._wiz550_resetter.start()
         self.statusbar.showMessage(f" WIZ550 {op_name} 전송 중... ({self.curr_mac})")
 
     def _on_wiz550_reset_done(self, success: bool, op_name: str = "Reset"):
