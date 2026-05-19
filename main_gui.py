@@ -888,7 +888,7 @@ class WIZWindow(QMainWindow, main_window):
         # WIZ550 검색 스레드 초기화 (Phase 6 — UI-01, D-07)
         self.wiz550_searcher = None
         self._wiz550_search_pending = False
-        # WIZ550 QThread 참조 보관 — GC로 인한 "Destroyed while running" 방지 (CR-01)
+        # WIZ550 QThread references — prevent "Destroyed while running" via GC (CR-01)
         self._wiz550_getter = None
         self._wiz550_setter = None
         self._wiz550_resetter = None
@@ -1001,7 +1001,7 @@ class WIZWindow(QMainWindow, main_window):
                 self.selected_devinfo()
                 self.statusbar.showMessage('Retrieving device info, please wait...')
                 return
-            # WIZ550: object_config() 대신 최소 활성화만 수행 (YAML에 command_groups 없어 스키마 오류 발생)
+            # WIZ550: minimal enable instead of object_config() (no command_groups in YAML → schema error)
             if mac_item and self.dev_profile.get(mac_item.text(), {}).get('_proto') == 'wiz550':
                 self.selected_devinfo()
                 for btn in (self.btn_reset, self.btn_factory, self.btn_upload,
@@ -3294,7 +3294,7 @@ class WIZWindow(QMainWindow, main_window):
             self.fill_devinfo_1x0(self.dev_profile[macaddr])
             return
 
-        # WIZ550: 기존 generalTab 재활용 (동적 패널 없음)
+        # WIZ550: reuse existing generalTab (no dynamic panel)
         if self.dev_profile.get(macaddr, {}).get('_proto') == 'wiz550':
             self.curr_mac = macaddr
             d = self.dev_profile[macaddr]
@@ -3302,12 +3302,12 @@ class WIZWindow(QMainWindow, main_window):
             self.curr_dev = device_type
             self.curr_ver = d.get('fw_str', '')
             self.curr_st = DeviceStatus.app
-            # wiz1x0 패널 숨기고 기존 generalTab 복원
+            # hide wiz1x0 panel and restore generalTab
             self._show_wiz1x0_panel(False)
-            self.btn_setting.setEnabled(True)  # _show_wiz1x0_panel(False)가 btn_setting을 끄므로 복원
-            # basic_tab + advance_tab 표시, mqtt/certificate 제거
+            self.btn_setting.setEnabled(True)  # _show_wiz1x0_panel(False) disables btn_setting — restore it
+            # show basic_tab + advance_tab, remove mqtt/certificate tabs
             self.general_tab_config()
-            # GET_INFO로 최신 설정 읽기
+            # fetch latest config via GET_INFO
             self._wiz550_getter = WIZ550Getter(
                 target_mac=macaddr,
                 device_type=device_type,
@@ -3321,7 +3321,7 @@ class WIZWindow(QMainWindow, main_window):
             self.statusbar.showMessage(f" WIZ550 설정 읽는 중... ({macaddr})")
             return
 
-        # 표준 장치: wiz1x0 패널 숨기고 기존 UI 복원
+        # standard device: hide wiz1x0 panel and restore default UI
         self._show_wiz1x0_panel(False)
 
         try:
@@ -3420,11 +3420,11 @@ class WIZWindow(QMainWindow, main_window):
 
     # Check: decode exception handling
     # ──────────────────────────────────────────────────────────────
-    # WIZ550 UI 채우기 (기존 generalTab 위젯 재활용)
+    # WIZ550 UI fill (reusing existing generalTab widgets)
     # ──────────────────────────────────────────────────────────────
 
     def fill_devinfo_wiz550(self, d: dict):
-        """parse_sr/s2e/web 반환 dict → 기존 generalTab 위젯에 직접 채우기."""
+        """Fill existing generalTab widgets directly from parse_sr/s2e/web result dict."""
         # Device info
         self.dev_type.setText(d.get('module_name', d.get('device_type', '')))
         self.fw_version.setText(d.get('fw_str', ''))
@@ -3456,12 +3456,12 @@ class WIZWindow(QMainWindow, main_window):
         self.ch0_remoteip.setText(d.get('remote_ip', ''))
         self.ch0_remoteport.setText(str(d.get('remote_port', 0)))
 
-        # Serial — baud_rate는 실제 bps 정수(115200 등), ch0_baud 콤보는 "115200" 텍스트
+        # Serial — baud_rate is actual bps int (e.g. 115200), ch0_baud combo stores it as text "115200"
         baud = d.get('baud_rate', 115200)
         idx = self.ch0_baud.findText(str(baud))
         if idx >= 0:
             self.ch0_baud.setCurrentIndex(idx)
-        # WIZ550 data_bits 인코딩: 2=7bit, 3=8bit / UI 콤보: index 0="7", index 1="8"
+        # WIZ550 data_bits encoding: 2=7bit, 3=8bit / UI combo: index 0="7", index 1="8"
         _db_text = {2: '7', 3: '8'}.get(d.get('data_bits', 3), '8')
         _db_idx = self.ch0_databit.findText(_db_text)
         if _db_idx >= 0:
@@ -3484,7 +3484,7 @@ class WIZWindow(QMainWindow, main_window):
         self.at_enable.setChecked(bool(d.get('serial_command', 0)))
 
     def _on_wiz550_get_done(self, cfg: dict, macaddr: str, device_type: str):
-        """WIZ550Getter 완료 콜백 — GET_INFO 응답을 dev_profile에 merge하고 기존 UI에 채운다."""
+        """WIZ550Getter completion callback — merge GET_INFO response into dev_profile and fill UI."""
         if not cfg:
             self.statusbar.showMessage(f" WIZ550 설정 읽기 실패: {macaddr}")
             self.logger.warning(f"[WIZ550] GET_INFO 응답 없음: {macaddr}")
@@ -3503,8 +3503,8 @@ class WIZWindow(QMainWindow, main_window):
     # ──────────────────────────────────────────────────────────────
 
     def fill_setinfo_wiz550(self) -> dict:
-        """기존 generalTab 위젯에서 WIZ550 설정값을 읽어 dict로 반환."""
-        # dev_profile 복사본 기반 — mac/module_type/fw_ver 등 readonly 필드 보존
+        """Read WIZ550 settings from existing generalTab widgets and return as dict."""
+        # based on dev_profile copy — preserves readonly fields such as mac/module_type/fw_ver
         d = self.dev_profile.get(self.curr_mac, {}).copy()
 
         # Network
@@ -3533,12 +3533,12 @@ class WIZWindow(QMainWindow, main_window):
         except ValueError:
             d['remote_port'] = 0
 
-        # Serial — ch0_baud 텍스트("115200") → int
+        # Serial — ch0_baud text ("115200") → int
         try:
             d['baud_rate'] = int(self.ch0_baud.currentText())
         except ValueError:
             pass
-        # UI 콤보 "7"→2, "8"→3 (WIZ550 프로토콜 인코딩으로 역변환)
+        # reverse-map UI combo text "7"→2, "8"→3 back to WIZ550 protocol encoding
         d['data_bits'] = {'7': 2, '8': 3}.get(self.ch0_databit.currentText(), 3)
         d['parity'] = self.ch0_parity.currentIndex()
         d['stop_bits'] = self.ch0_stopbit.currentIndex()
@@ -3591,9 +3591,9 @@ class WIZWindow(QMainWindow, main_window):
         if not ok:
             return  # 취소
 
-        # 위젯에서 값 수집 (dev_profile 복사본 기반 — readonly 필드 자동 보존)
+        # collect values from widgets (based on dev_profile copy — readonly fields preserved automatically)
         d = self.fill_setinfo_wiz550()
-        d['pw_setting'] = pw  # 다이얼로그 입력값 우선
+        d['pw_setting'] = pw  # dialog input takes precedence
 
         # Profile bytes 빌드
         try:
