@@ -1009,6 +1009,7 @@ class WIZWindow(QMainWindow, main_window):
                     btn.setEnabled(True)
                 self.generalTab.setEnabled(True)
                 self.generalTab.setTabEnabled(0, True)
+                self.channel_tab.setEnabled(True)
                 self.refresh_grp.setEnabled(True)
                 return
             self.object_config()
