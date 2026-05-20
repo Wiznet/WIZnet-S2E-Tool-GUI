@@ -1,6 +1,10 @@
 """
 GitHub release list → select → download/extract dialog.
 Emits firmware_ready(bin_path, filesize) signal on completion, then auto-closes.
+
+fw_type_list (optional): WIZ550처럼 같은 장치가 여러 repo를 갖는 경우
+  [{"label": "SR", "family": {...}, "device_spec": {...}}, ...]
+  제공 시 "Type:" 콤보가 Release 위에 표시되고, 선택 변경 시 릴리스 목록 갱신.
 """
 import os
 
@@ -52,18 +56,24 @@ class _DownloadThread(QThread):
 class FWGitDialog(QDialog):
     firmware_ready = pyqtSignal(str, int)   # (bin_path, filesize)
 
-    def __init__(self, parent, device_name, family, device_spec, fetcher, dl_path):
+    def __init__(self, parent, device_name, family, device_spec, fetcher, dl_path,
+                 fw_type_list=None):
+        """
+        fw_type_list: [{"label": str, "family": dict, "device_spec": dict}, ...]
+          None 또는 빈 리스트면 타입 선택 행 미표시.
+        """
         super().__init__(parent)
-        self._device_name = device_name
-        self._family = family
-        self._device_spec = device_spec
-        self._fetcher = fetcher
-        self._dl_path = dl_path
-        self._releases = []
+        self._device_name  = device_name
+        self._family       = family
+        self._device_spec  = device_spec
+        self._fetcher      = fetcher
+        self._dl_path      = dl_path
+        self._fw_type_list = fw_type_list or []
+        self._releases     = []
         self._current_asset = None
-        self._fetch_thread = None
-        self._dl_thread = None
-        self._tmp_bin_path = None
+        self._fetch_thread  = None
+        self._dl_thread     = None
+        self._tmp_bin_path  = None
 
         self.setWindowTitle("FW from Git")
         self.setFixedWidth(540)
@@ -77,17 +87,30 @@ class FWGitDialog(QDialog):
         root.setSpacing(8)
         root.setContentsMargins(12, 12, 12, 12)
 
-        # Device / repository info
         grid = QGridLayout()
         grid.setColumnStretch(1, 1)
-        grid.addWidget(QLabel("Device:"), 0, 0)
-        grid.addWidget(QLabel(
-            f"<b>{self._device_name}</b>  "
-            f"<span style='color:gray'>({self._family['repo']})</span>"
-        ), 0, 1)
+        row = 0
+
+        # Device / repository info
+        grid.addWidget(QLabel("Device:"), row, 0)
+        self._lbl_device = QLabel()
+        self._lbl_device.setWordWrap(True)
+        self._refresh_device_label()
+        grid.addWidget(self._lbl_device, row, 1)
+        row += 1
+
+        # Type 콤보 (fw_type_list 제공 시에만)
+        if self._fw_type_list:
+            grid.addWidget(QLabel("Type:"), row, 0)
+            self._combo_type = QComboBox()
+            for entry in self._fw_type_list:
+                self._combo_type.addItem(entry["label"])
+            self._combo_type.currentIndexChanged.connect(self._on_type_changed)
+            grid.addWidget(self._combo_type, row, 1)
+            row += 1
 
         # Release selection row
-        grid.addWidget(QLabel("Release:"), 1, 0)
+        grid.addWidget(QLabel("Release:"), row, 0)
         rel_row = QHBoxLayout()
         self._combo = QComboBox()
         self._combo.setMinimumWidth(260)
@@ -97,13 +120,14 @@ class FWGitDialog(QDialog):
         self._btn_refresh.setFixedWidth(80)
         self._btn_refresh.clicked.connect(self._start_fetch)
         rel_row.addWidget(self._btn_refresh)
-        grid.addLayout(rel_row, 1, 1)
+        grid.addLayout(rel_row, row, 1)
+        row += 1
 
         # Asset row
-        grid.addWidget(QLabel("Asset:"), 2, 0)
+        grid.addWidget(QLabel("Asset:"), row, 0)
         self._lbl_asset = QLabel("—")
         self._lbl_asset.setWordWrap(True)
-        grid.addWidget(self._lbl_asset, 2, 1)
+        grid.addWidget(self._lbl_asset, row, 1)
 
         root.addLayout(grid)
 
@@ -149,6 +173,22 @@ class FWGitDialog(QDialog):
         btn_cancel.clicked.connect(self.reject)
         btn_row.addWidget(btn_cancel)
         root.addLayout(btn_row)
+
+    def _refresh_device_label(self):
+        self._lbl_device.setText(
+            f"<b>{self._device_name}</b>  "
+            f"<span style='color:gray'>({self._family['repo']})</span>"
+        )
+
+    # ── Type 변경 ────────────────────────────────────────────────────
+    def _on_type_changed(self, index):
+        if index < 0 or index >= len(self._fw_type_list):
+            return
+        entry = self._fw_type_list[index]
+        self._family      = entry["family"]
+        self._device_spec = entry["device_spec"]
+        self._refresh_device_label()
+        self._start_fetch()
 
     # ── Fetch releases ───────────────────────────────────────────────
     def _start_fetch(self):
@@ -248,6 +288,8 @@ class FWGitDialog(QDialog):
         self._pgbar.setVisible(busy)
         self._btn_refresh.setEnabled(not busy)
         self._combo.setEnabled(not busy)
+        if self._fw_type_list:
+            self._combo_type.setEnabled(not busy)
         if not busy:
             self._btn_dl.setEnabled(self._current_asset is not None)
         else:

@@ -68,7 +68,7 @@ class WIZ550FWUploadThread(QThread):
 
     def __init__(self, mode: str, fw_path: str, target_ip: str, target_mac: str,
                  server_ip: str, server_port: int, password: str = "",
-                 iface_ip: str = ""):
+                 iface_ip: str = "", tftp_fname: str = ""):
         super().__init__()
         self.mode        = mode          # 'auto' | 'manual'
         self.fw_path     = fw_path
@@ -78,6 +78,9 @@ class WIZ550FWUploadThread(QThread):
         self.server_port = server_port
         self.password    = password
         self.iface_ip    = iface_ip
+        # manual 모드: 다이얼로그에서 입력한 TFTP 파일명
+        # auto 모드: _run_auto()에서 canonical 이름으로 덮어씀
+        self._tftp_fname = tftp_fname
 
         self._stop_event = threading.Event()
         self._server     = None     # tftpy.TftpServer 인스턴스

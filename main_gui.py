@@ -5353,25 +5353,23 @@ class WIZWindow(QMainWindow, main_window):
         )
 
         if is_wiz550:
-            fw_types = ["SR", "SE / MQTT", "SE-MODBUS"]
-            fw_type, ok = QInputDialog.getItem(
-                self,
-                "WIZ550 FW 종류 선택",
-                "업로드할 펌웨어 종류를 선택하세요:",
-                fw_types, 0, False,
-            )
-            if not ok:
-                return
-            type_to_family_id = {
-                "SR":        "wiz550sr",
-                "SE / MQTT": "wiz550s2e",
-                "SE-MODBUS": "wiz550s2e_modbus",
-            }
-            family, device_spec = self._fw_fetcher.find_family_by_id(
-                type_to_family_id[fw_type]
-            )
-            display_name = f"WIZ550 [{fw_type}]"
+            # 타입 선택을 FWGitDialog 내부 콤보로 처리 — 팝업 없이 바로 열림
+            _wiz550_type_map = [
+                ("SR",        "wiz550sr"),
+                ("SE / MQTT", "wiz550s2e"),
+                ("SE-MODBUS", "wiz550s2e_modbus"),
+            ]
+            fw_type_list = []
+            for label, fid in _wiz550_type_map:
+                fam, dspec = self._fw_fetcher.find_family_by_id(fid)
+                if fam and dspec:
+                    fw_type_list.append({"label": label, "family": fam, "device_spec": dspec})
+            # 첫 번째 타입(SR)을 기본값으로 사용
+            family      = fw_type_list[0]["family"]
+            device_spec = fw_type_list[0]["device_spec"]
+            display_name = self.curr_dev
         else:
+            fw_type_list = []
             family, device_spec = self._fw_fetcher.find_device(self.curr_dev)
             if family is None:
                 dn = self.curr_dev.upper()
@@ -5393,7 +5391,8 @@ class WIZWindow(QMainWindow, main_window):
         from fw_git_dialog import FWGitDialog
         dlg = FWGitDialog(
             self, display_name, family, device_spec,
-            self._fw_fetcher, self._fw_download_path
+            self._fw_fetcher, self._fw_download_path,
+            fw_type_list=fw_type_list or None,
         )
         dlg.firmware_ready.connect(self._on_fw_git_ready)
         dlg.exec_()
