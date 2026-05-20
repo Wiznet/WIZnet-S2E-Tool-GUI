@@ -5347,39 +5347,52 @@ class WIZWindow(QMainWindow, main_window):
             )
             return
 
-        family, device_spec = self._fw_fetcher.find_device(self.curr_dev)
-        # TODO: 테스트용 — 미지원 장치 체크 임시 비활성화
-        # if family is None:
-        #     supported = "\n".join(
-        #         f"  • {p}" for p in self._fw_fetcher.supported_devices()
-        #     )
-        #     self.show_msgbox(
-        #         "Warning",
-        #         f"'{self.curr_dev}'는 FW from Git 미지원 장치입니다.\n\n지원 장치:\n{supported}",
-        #         QMessageBox.Warning,
-        #     )
-        #     return
-        if family is None:
-            # 테스트 폴백: 패턴 접두사로 가장 유사한 장치 선택
-            # 예) W55RP20-S2E-2CH → W55RP20-S2E 패턴이 부분 일치
-            dn = self.curr_dev.upper()
-            sources = self._fw_fetcher._sources
-            best_fam = sources["families"][0]
-            best_dev = best_fam["devices"][0]
-            for fam in sources["families"]:
-                for dev in fam["devices"]:
-                    base = dev["name_pattern"].rstrip("?*").upper()
-                    if base and dn.startswith(base):
-                        best_fam, best_dev = fam, dev
-                        break
-                else:
-                    continue
-                break
-            family, device_spec = best_fam, best_dev
+        is_wiz550 = (
+            hasattr(self, 'curr_mac') and self.curr_mac
+            and self.dev_profile.get(self.curr_mac, {}).get('_proto') == 'wiz550'
+        )
+
+        if is_wiz550:
+            fw_types = ["SR", "SE", "SE-MODBUS"]
+            fw_type, ok = QInputDialog.getItem(
+                self,
+                "WIZ550 FW 종류 선택",
+                "업로드할 펌웨어 종류를 선택하세요:",
+                fw_types, 0, False,
+            )
+            if not ok:
+                return
+            type_to_family_id = {
+                "SR":       "wiz550sr",
+                "SE":       "wiz550s2e",
+                "SE-MODBUS":"wiz550s2e_modbus",
+            }
+            family, device_spec = self._fw_fetcher.find_family_by_id(
+                type_to_family_id[fw_type]
+            )
+            display_name = f"WIZ550 [{fw_type}]"
+        else:
+            family, device_spec = self._fw_fetcher.find_device(self.curr_dev)
+            if family is None:
+                dn = self.curr_dev.upper()
+                sources = self._fw_fetcher._sources
+                best_fam = sources["families"][0]
+                best_dev = best_fam["devices"][0]
+                for fam in sources["families"]:
+                    for dev in fam["devices"]:
+                        base = dev["name_pattern"].rstrip("?*").upper()
+                        if base and dn.startswith(base):
+                            best_fam, best_dev = fam, dev
+                            break
+                    else:
+                        continue
+                    break
+                family, device_spec = best_fam, best_dev
+            display_name = self.curr_dev
 
         from fw_git_dialog import FWGitDialog
         dlg = FWGitDialog(
-            self, self.curr_dev, family, device_spec,
+            self, display_name, family, device_spec,
             self._fw_fetcher, self._fw_download_path
         )
         dlg.firmware_ready.connect(self._on_fw_git_ready)
