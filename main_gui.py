@@ -5399,8 +5399,10 @@ class WIZWindow(QMainWindow, main_window):
 
     def _on_fw_git_ready(self, filepath: str, filesize: int):
         # WIZ550: TFTP 프로토콜 — 기존 AB+FW 경로 우회
-        if (hasattr(self, 'curr_mac') and self.curr_mac
-                and self.dev_profile.get(self.curr_mac, {}).get('_proto') == 'wiz550'):
+        _mac   = getattr(self, 'curr_mac', None)
+        _proto = self.dev_profile.get(_mac, {}).get('_proto') if _mac else None
+        logger.info(f"[FWGit] firmware_ready: mac={_mac} proto={_proto} file={filepath}")
+        if _mac and _proto == 'wiz550':
             self._open_wiz550_dialog_with_file(filepath)
             return
 
