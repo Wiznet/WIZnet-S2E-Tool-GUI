@@ -44,6 +44,11 @@
           "name_pattern": "WIZ550SR",
           "asset_pattern": "Binary_v*.zip",
           "extract_file": "WIZ550SR_App.bin"
+        },
+        {
+          "name_pattern": "WIZ550S2E",
+          "asset_pattern": "Binary_v*.zip",
+          "extract_file": "WIZ550SR_App.bin"
         }
       ]
     },
