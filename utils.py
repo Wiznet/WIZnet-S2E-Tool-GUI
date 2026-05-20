@@ -53,9 +53,8 @@ def get_logger(logger_name, path, filename):
     LOG_LEVEL = logging.INFO
     # LOG_LEVEL = logging.DEBUG
 
-    LOG_DIR = os.path.join(path, f'.{filename}')
-    if not os.path.isdir(LOG_DIR):
-        os.mkdir(LOG_DIR)
+    LOG_DIR = os.path.join(path, f'.{filename}', 'logs')
+    os.makedirs(LOG_DIR, exist_ok=True)
 
     log_path = os.path.join(LOG_DIR, f'{filename}.log')
 
