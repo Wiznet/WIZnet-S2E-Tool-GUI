@@ -1,9 +1,9 @@
 ---
 phase: 7
 slug: tftp-fw-upload
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-19
 ---
 
@@ -38,14 +38,14 @@ created: 2026-05-19
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 7-01-01 | 01 | 0 | FW-01 | — | N/A | unit | `uv run pytest tests/test_wiz550_fw.py::test_tftp_server_tempdir -x` | ❌ Wave 0 | ⬜ pending |
-| 7-01-02 | 01 | 0 | FW-02 | T-7-02 | server_port LE 검증 | unit | `uv run pytest tests/test_wiz550_fw.py::test_build_fw_upload_pkt -x` | ❌ Wave 0 | ⬜ pending |
-| 7-01-03 | 01 | 0 | FW-03 | — | N/A | unit | `uv run pytest tests/test_wiz550_fw.py::test_parse_fw_done_reply -x` | ❌ Wave 0 | ⬜ pending |
-| 7-01-04 | 01 | 0 | FW-04 | — | N/A | unit | `uv run pytest tests/test_wiz550_fw.py::test_dialog_tabs -x` | ❌ Wave 0 | ⬜ pending |
-| 7-02-01 | 02 | 1 | FW-01 | T-7-01 | OSError 포트 69 → 사용자 안내 후 중단 | manual | — (실행 환경 의존) | — | ⬜ pending |
-| 7-02-02 | 00 | 0 | FW-02 | T-7-03 | BOOT 파일명 업로드 거부 | unit | `uv run pytest tests/test_wiz550_fw.py::test_boot_file_rejected -x` | ❌ Wave 0 | ⬜ pending |
-| 7-03-01 | 03 | 2 | FW-03 | — | N/A | unit | `uv run pytest tests/test_wiz550_fw.py -x -q` | ❌ Wave 0 | ⬜ pending |
-| 7-04-01 | 04 | 2 | FW-04 | — | N/A | unit | `uv run pytest tests/test_wiz550_fw.py -x -q` | ❌ Wave 0 | ⬜ pending |
+| 7-01-01 | 01 | 0 | FW-01 | — | N/A | unit | `uv run pytest tests/test_wiz550_fw.py::test_tftp_server_tempdir -x` | ✅ | ✅ green |
+| 7-01-02 | 01 | 0 | FW-02 | T-7-02 | server_port LE 검증 | unit | `uv run pytest tests/test_wiz550_fw.py::test_build_fw_upload_pkt -x` | ✅ | ✅ green |
+| 7-01-03 | 01 | 0 | FW-03 | — | N/A | unit | `uv run pytest tests/test_wiz550_fw.py::test_parse_fw_done_reply -x` | ✅ | ✅ green |
+| 7-01-04 | 01 | 0 | FW-04 | — | N/A | unit | `uv run pytest tests/test_wiz550_fw.py::test_dialog_tabs -x` | ✅ | ✅ green |
+| 7-02-01 | 02 | 1 | FW-01 | T-7-01 | OSError 포트 69 → 사용자 안내 후 중단 | manual | — (실행 환경 의존) | ✅ | ✅ green |
+| 7-02-02 | 00 | 0 | FW-02 | T-7-03 | BOOT 파일명 업로드 거부 | unit | `uv run pytest tests/test_wiz550_fw.py::test_boot_file_rejected -x` | ✅ | ✅ green |
+| 7-03-01 | 03 | 2 | FW-03 | — | N/A | unit | `uv run pytest tests/test_wiz550_fw.py -x -q` | ✅ | ✅ green |
+| 7-04-01 | 04 | 2 | FW-04 | — | N/A | unit | `uv run pytest tests/test_wiz550_fw.py -x -q` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -55,7 +55,7 @@ created: 2026-05-19
 
 ## Wave 0 Requirements
 
-- [ ] `tests/test_wiz550_fw.py` — FW-01~04 커버 (stubs 포함)
+- [x] `tests/test_wiz550_fw.py` — FW-01~04 커버 (stubs 포함)
   - `test_build_fw_upload_pkt` — 86바이트 레이아웃 + server_port LE(`struct.pack('<H', 69)`) 검증
   - `test_tftp_server_tempdir` — tempfile.mkdtemp() + TftpServer 초기화 성공 (실제 bind 없이)
   - `test_parse_fw_done_reply` — 0xD2 응답 헤더 파싱 (7B 헤더 체크: 0xA5, op_code[0]=0xD2, op_code[1]=0x55)
@@ -76,11 +76,11 @@ created: 2026-05-19
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 5s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 5s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved — 2026-05-20
