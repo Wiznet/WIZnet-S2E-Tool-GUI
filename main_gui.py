@@ -5389,6 +5389,12 @@ class WIZWindow(QMainWindow, main_window):
         dlg.exec_()
 
     def _on_fw_git_ready(self, filepath: str, filesize: int):
+        # WIZ550: TFTP 프로토콜 — 기존 AB+FW 경로 우회
+        if (hasattr(self, 'curr_mac') and self.curr_mac
+                and self.dev_profile.get(self.curr_mac, {}).get('_proto') == 'wiz550'):
+            self._open_wiz550_dialog_with_file(filepath)
+            return
+
         if self.localip_addr is None:
             self.show_msgbox(
                 "Warning",
@@ -5407,6 +5413,28 @@ class WIZWindow(QMainWindow, main_window):
             self.t_fwup.upload_result.connect(
                 lambda _, p=_path: self._cleanup_fw_git_file(p)
             )
+
+    def _open_wiz550_dialog_with_file(self, filepath: str):
+        """FW from Git 메뉴에서 WIZ550 장치 선택 시 WIZ550FWDialog를 열고 파일을 자동 채움."""
+        if not self.curr_mac or self.curr_mac not in self.dev_profile:
+            return
+        dev_data = self.dev_profile[self.curr_mac]
+        target_ip = dev_data.get('IP', '')
+        if not target_ip:
+            return
+        dlg = WIZ550FWDialog(
+            localip_addr=self.localip_addr or '',
+            target_ip=target_ip,
+            target_mac=self.curr_mac,
+            device_name=self.curr_dev or '',
+            fw_fetcher=getattr(self, '_fw_fetcher', None),
+            fw_download_path=getattr(self, '_fw_download_path', ''),
+            parent=self,
+        )
+        # 다운로드된 파일 자동 채움
+        dlg._fw_path = filepath
+        dlg.edit_file.setText(os.path.basename(filepath))
+        dlg.exec_()
 
     def _cleanup_fw_git_file(self, path: str):
         if path and os.path.isfile(path):
