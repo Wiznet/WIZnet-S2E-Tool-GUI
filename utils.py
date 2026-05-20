@@ -1,9 +1,43 @@
+import datetime
+import glob
 import requests
 import socket
 import os
 import functools
 import logging
 import logging.handlers
+
+
+def _rotate_log_on_startup(log_path: str, keep: int = 10) -> None:
+    """
+    앱 시작 시 기존 로그 파일을 수정일 기반 이름으로 아카이브.
+
+    wizconfig.log  →  wizconfig_2026-05-20.log
+    같은 날 여러 번 실행 시: wizconfig_2026-05-20_1.log, _2.log …
+    오래된 아카이브는 최근 keep개만 유지하고 나머지 삭제.
+    """
+    if not os.path.isfile(log_path):
+        return
+    mtime = os.path.getmtime(log_path)
+    date_str = datetime.datetime.fromtimestamp(mtime).strftime('%Y-%m-%d')
+    base, ext = os.path.splitext(log_path)
+    rotated = f"{base}_{date_str}{ext}"
+    counter = 1
+    while os.path.exists(rotated):
+        rotated = f"{base}_{date_str}_{counter}{ext}"
+        counter += 1
+    try:
+        os.rename(log_path, rotated)
+    except OSError:
+        return
+
+    # 오래된 아카이브 정리
+    archived = sorted(glob.glob(f"{base}_*{ext}"))
+    for old in archived[:-keep]:
+        try:
+            os.remove(old)
+        except OSError:
+            pass
 
 
 def get_logger(logger_name, path, filename):
@@ -15,7 +49,7 @@ def get_logger(logger_name, path, filename):
     """
     # Config variables
     LOG_MAX_SIZE = 1024 * 1024 * 5
-    LOG_FILE_CNT = 5
+    LOG_FILE_CNT = 2          # 시작 시 로테이션하므로 세션 내 백업은 2개로 충분
     LOG_LEVEL = logging.INFO
     # LOG_LEVEL = logging.DEBUG
 
@@ -24,6 +58,9 @@ def get_logger(logger_name, path, filename):
         os.mkdir(LOG_DIR)
 
     log_path = os.path.join(LOG_DIR, f'{filename}.log')
+
+    # 앱 시작 시 이전 로그 아카이브
+    _rotate_log_on_startup(log_path)
 
     logger = logging.getLogger(logger_name)
     logger.setLevel(LOG_LEVEL)
