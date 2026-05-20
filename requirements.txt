@@ -20,3 +20,4 @@ charset-normalizer==3.4.4
 idna==3.11
 urllib3==2.7.0
 pyserial==3.5
+tftpy==0.8.7
