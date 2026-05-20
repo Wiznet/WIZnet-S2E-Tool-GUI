@@ -162,6 +162,29 @@ def _build_reset(op_code: int, target_mac: str, password: str) -> bytes:
     return _build_header_with_payload(op_code, unicast=True, payload=payload)
 
 
+def build_fw_upload_pkt(target_mac: str, server_ip: str, server_port: int,
+                        file_name: str, password: str = "") -> bytes:
+    """
+    FIRMWARE_UPLOAD_INIT(0xD1) 패킷 — 86바이트 (FW-02).
+
+    payload 79B: dst_mac[6] + pw_len[1] + pw[16] + server_ip[4]
+                 + server_port LE[2] + file_name[50]
+
+    server_port는 리틀엔디안 (LSB first).
+    Java 원본: data[i++]=(byte)port; data[i++]=(byte)(port>>8);
+    """
+    mac_b    = _mac_str_to_bytes(target_mac)
+    pw_bytes = password.encode('ascii', errors='replace')[:16]
+    pw_enc   = pw_bytes.ljust(16, b'\x00')
+    pw_len   = min(len(password.strip()), 16)
+    ip_b     = bytes(int(x) for x in server_ip.split('.'))
+    port_b   = struct.pack('<H', server_port)
+    fname_b  = file_name.encode('ascii', errors='replace')[:50].ljust(50, b'\x00')
+    payload  = mac_b + bytes([pw_len]) + pw_enc + ip_b + port_b + fname_b
+    assert len(payload) == 79, f"payload must be 79B, got {len(payload)}"
+    return _build_header_with_payload(OP_FW_UPLOAD, unicast=True, payload=payload)
+
+
 # ─────────────────────────────────────────────────────────────────
 # 응답 파싱 함수 (PROTO-05, D-08)
 # ─────────────────────────────────────────────────────────────────

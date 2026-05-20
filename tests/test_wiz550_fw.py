@@ -35,7 +35,10 @@ def test_build_fw_upload_pkt():
     assert len(pkt) == 86, f"Expected 86 bytes, got {len(pkt)}"
     assert pkt[0] == 0xA5, "STX mismatch"
     assert pkt[3] == 0xD1, "op_code must be 0xD1 (FW_UPLOAD)"
-    port = struct.unpack_from('<H', pkt, 34)[0]
+    # payload는 XOR 암호화 — valid 바이트로 key 추출 후 복호화
+    key = pkt[1] & 0x7F if pkt[1] & 0x80 else 0
+    dec = bytes(b ^ key for b in pkt[7:])   # 복호화 payload 79B
+    port = struct.unpack_from('<H', dec, 27)[0]  # payload 내 server_port offset
     assert port == 69, f"server_port LE 오류: expected 69, got {port}"
 
 
