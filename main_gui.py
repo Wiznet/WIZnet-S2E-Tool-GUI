@@ -21,6 +21,7 @@ from WIZ550MSGHandler import (
     OP_REMOTE_RESET,
     OP_FACTORY_RESET,
 )
+from wiz550_fw_dialog import WIZ550FWDialog
 from certificatethread import certificatethread
 from device_search_config import DeviceSearchConfig
 from device_spec_loader import load_device, detect_device
@@ -1248,9 +1249,16 @@ class WIZWindow(QMainWindow, main_window):
             self.event_factory_firmware()
 
     def event_upload_clicked(self):
+        # WIZ550 장치 전용 다이얼로그 (D-06)
+        if (hasattr(self, 'curr_mac') and self.curr_mac
+                and self.dev_profile.get(self.curr_mac, {}).get('_proto') == 'wiz550'):
+            self.upload_wiz550()
+            return
+        # 기존 WIZ1x0SR 처리 (미지원)
         if self.curr_dev == 'WIZ1x0SR':
             self.show_msgbox("Info", "WIZ1x0SR 펌웨어 업로드는 지원되지 않습니다.", QMessageBox.Information)
             return
+        # 기존 WIZ5xxSR 처리
         if self.localip_addr is not None:
             self.update_btn_clicked()
         else:
@@ -1259,6 +1267,29 @@ class WIZWindow(QMainWindow, main_window):
                 "Local IP information could not be found. Check the Network configuration.",
                 QMessageBox.Warning,
             )
+
+    def upload_wiz550(self):
+        """WIZ550 장치 TFTP FW 업로드 다이얼로그 실행 (D-06)."""
+        if not self.curr_mac or self.curr_mac not in self.dev_profile:
+            self.show_msgbox("Warning", "장치 정보를 불러올 수 없습니다. 장치를 다시 선택하세요.", QMessageBox.Warning)
+            return
+
+        dev_data = self.dev_profile[self.curr_mac]
+        target_ip = dev_data.get('IP', '')
+        target_mac = self.curr_mac
+        localip = self.localip_addr or ''
+
+        if not target_ip:
+            self.show_msgbox("Warning", "장치 IP 정보가 없습니다. 장치를 다시 검색하세요.", QMessageBox.Warning)
+            return
+
+        dlg = WIZ550FWDialog(
+            localip_addr=localip,
+            target_ip=target_ip,
+            target_mac=target_mac,
+            parent=self,
+        )
+        dlg.exec_()
 
     def gpio_check(self):
         if not self.curr_dev:
