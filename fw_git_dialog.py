@@ -8,11 +8,11 @@ fw_type_list (optional): WIZ550처럼 같은 장치가 여러 repo를 갖는 경
 """
 import os
 
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal, QTimer
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QComboBox, QPushButton, QProgressBar,
-    QFileDialog, QMessageBox, QFrame,
+    QFileDialog, QMessageBox, QFrame, QLineEdit,
 )
 
 
@@ -57,10 +57,12 @@ class FWGitDialog(QDialog):
     firmware_ready = pyqtSignal(str, int)   # (bin_path, filesize)
 
     def __init__(self, parent, device_name, family, device_spec, fetcher, dl_path,
-                 fw_type_list=None):
+                 fw_type_list=None, wiz550_config=None):
         """
         fw_type_list: [{"label": str, "family": dict, "device_spec": dict}, ...]
           None 또는 빈 리스트면 타입 선택 행 미표시.
+        wiz550_config: {"target_ip": str, "target_mac": str, "localip_addr": str, "pw_setting": str}
+          제공 시 다운로드 완료 후 TFTP 업로드를 이 창 안에서 자동 진행.
         """
         super().__init__(parent)
         self._device_name  = device_name
@@ -69,10 +71,12 @@ class FWGitDialog(QDialog):
         self._fetcher      = fetcher
         self._dl_path      = dl_path
         self._fw_type_list = fw_type_list or []
+        self._wiz550_config = wiz550_config
         self._releases     = []
         self._current_asset = None
         self._fetch_thread  = None
         self._dl_thread     = None
+        self._upload_thread = None
         self._tmp_bin_path  = None
 
         self.setWindowTitle("FW from Git")
@@ -128,6 +132,17 @@ class FWGitDialog(QDialog):
         self._lbl_asset = QLabel("—")
         self._lbl_asset.setWordWrap(True)
         grid.addWidget(self._lbl_asset, row, 1)
+        row += 1
+
+        # Password 행 (WIZ550 업로드 모드에서만 표시)
+        if self._wiz550_config is not None:
+            grid.addWidget(QLabel("Password:"), row, 0)
+            self._edit_pw = QLineEdit()
+            self._edit_pw.setEchoMode(QLineEdit.Password)
+            self._edit_pw.setPlaceholderText("Optional")
+            if self._wiz550_config.get('pw_setting'):
+                self._edit_pw.setText(self._wiz550_config['pw_setting'])
+            grid.addWidget(self._edit_pw, row, 1)
 
         root.addLayout(grid)
 
@@ -256,15 +271,67 @@ class FWGitDialog(QDialog):
         self._dl_thread.start()
 
     def _on_download_done(self, path, size):
-        self._set_busy(False)
         self._tmp_bin_path = path
-        self.firmware_ready.emit(path, size)
-        self.accept()
+        if self._wiz550_config is not None:
+            self._start_wiz550_upload(path)
+        else:
+            self._set_busy(False)
+            self.firmware_ready.emit(path, size)
+            self.accept()
 
     def _on_download_error(self, msg):
         self._set_busy(False)
         self._cleanup_tmp()
         QMessageBox.critical(self, "Error", f"Download failed:\n{msg}")
+
+    # ── WIZ550 인라인 TFTP 업로드 ─────────────────────────────────────
+    def _start_wiz550_upload(self, fw_path):
+        from WIZ550FWUploadThread import WIZ550FWUploadThread
+        cfg = self._wiz550_config
+        self._lbl_asset.setText("Starting TFTP upload...")
+        self._lbl_asset.setStyleSheet("color: gray;")
+        password = self._edit_pw.text() if hasattr(self, '_edit_pw') else ''
+        self._upload_thread = WIZ550FWUploadThread(
+            mode='auto',
+            fw_path=fw_path,
+            target_ip=cfg['target_ip'],
+            target_mac=cfg['target_mac'],
+            server_ip=cfg['localip_addr'],
+            server_port=69,
+            password=password,
+            iface_ip=cfg['localip_addr'],
+        )
+        self._upload_thread.progress.connect(self._on_upload_progress)
+        self._upload_thread.finished.connect(self._on_upload_finished)
+        self._upload_thread.error.connect(self._on_upload_error)
+        self._upload_thread.start()
+
+    def _on_upload_progress(self, msg: str):
+        self._lbl_asset.setText(msg)
+        self._lbl_asset.setStyleSheet("color: gray;")
+
+    def _on_upload_finished(self, success: bool):
+        self._set_busy(False)
+        self._cleanup_tmp()
+        if success:
+            self._lbl_asset.setText("Upload complete!")
+            self._lbl_asset.setStyleSheet("color: green;")
+            QTimer.singleShot(1500, self.accept)
+        else:
+            current = self._lbl_asset.text()
+            if current in {"Starting TFTP upload...", "Sending firmware upload request...",
+                           "Waiting for device response..."}:
+                self._lbl_asset.setText(
+                    "Upload timed out — no response from device. "
+                    "Check connection and retry."
+                )
+            self._lbl_asset.setStyleSheet("color: red;")
+
+    def _on_upload_error(self, msg: str):
+        self._set_busy(False)
+        self._cleanup_tmp()
+        self._lbl_asset.setText(f"Upload error: {msg}")
+        self._lbl_asset.setStyleSheet("color: red;")
 
     def _cleanup_tmp(self):
         if self._tmp_bin_path and os.path.isfile(self._tmp_bin_path):
@@ -282,6 +349,13 @@ class FWGitDialog(QDialog):
         if path:
             self._dl_path = path
             self._lbl_dlpath.setText(path)
+
+    # ── 닫기 안전 정리 ────────────────────────────────────────────────
+    def closeEvent(self, event):
+        if self._upload_thread is not None and self._upload_thread.isRunning():
+            self._upload_thread.stop()
+            self._upload_thread.wait(3000)
+        event.accept()
 
     # ── Helpers ──────────────────────────────────────────────────────
     def _set_busy(self, busy: bool):

@@ -182,6 +182,7 @@ def build_fw_upload_pkt(target_mac: str, server_ip: str, server_port: int,
     fname_b  = file_name.encode('ascii', errors='replace')[:50].ljust(50, b'\x00')
     payload  = mac_b + bytes([pw_len]) + pw_enc + ip_b + port_b + fname_b
     assert len(payload) == 79, f"payload must be 79B, got {len(payload)}"
+    # unicast=True: Java 원본 §4.3 — firmware_upload()는 항상 유니캐스트 (SET_INFO와 동일)
     return _build_header_with_payload(OP_FW_UPLOAD, unicast=True, payload=payload)
 
 

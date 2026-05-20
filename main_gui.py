@@ -1275,9 +1275,11 @@ class WIZWindow(QMainWindow, main_window):
             return
 
         dev_data = self.dev_profile[self.curr_mac]
-        target_ip = dev_data.get('IP', '')
+        # WIZ550 profile은 'local_ip' 키 사용; 일반 장치는 'IP'
+        target_ip = dev_data.get('local_ip', '') or dev_data.get('IP', '')
         target_mac = self.curr_mac
-        localip = self.localip_addr or ''
+        # TFTP 서버 바인딩 IP = PC NIC IP (selected_eth), 장치 IP(localip_addr)가 아님
+        localip = self.selected_eth or ''
 
         if not target_ip:
             self.show_msgbox("Warning", "장치 IP 정보가 없습니다. 장치를 다시 검색하세요.", QMessageBox.Warning)
@@ -2953,6 +2955,13 @@ class WIZWindow(QMainWindow, main_window):
                 self.list_device.verticalHeader().setSectionResizeMode(2)
                 self.logger.info(f"[TIMING] {self._T()} 테이블 업데이트 완료 (resize 포함: {(time.time() - _t_resize) * 1000:.1f}ms)")
 
+            # mac_list 기반으로 카운트 재동기화 — WIZ550/_merge_wiz550_results가 먼저
+            # 완료됐을 때 devnum(일반 프로토콜 수)이 전체 수를 덮어쓰는 것을 방지
+            _total = len(self.mac_list)
+            if _total != self.searched_devnum:
+                self.searched_devnum = _total
+                self.searched_num.setText(str(_total))
+
             # 반복 검색 로직 (유지/갱신 모드 + UDP broadcast 전용)
             # devnum == 0이어도 반복 검색 수행 (처음 응답 없던 장비가 나중에 응답할 수 있음)
             if self.cumulative_mode and self.broadcast.isChecked():
@@ -3464,6 +3473,7 @@ class WIZWindow(QMainWindow, main_window):
         dhcp = bool(d.get('dhcp_use', 0))
         self.ip_dhcp.setChecked(dhcp)
         self.ip_static.setChecked(not dhcp)
+        self.event_ip_alloc()   # DHCP면 IP/subnet/gateway 비활성화
         self.localip.setText(d.get('local_ip', ''))
         self.localip_addr = d.get('local_ip', '')
         self.subnet.setText(d.get('subnet', ''))
@@ -5353,18 +5363,21 @@ class WIZWindow(QMainWindow, main_window):
         )
 
         if is_wiz550:
-            # 타입 선택을 FWGitDialog 내부 콤보로 처리 — 팝업 없이 바로 열림
-            _wiz550_type_map = [
-                ("SR",        "wiz550sr"),
-                ("SE / MQTT", "wiz550s2e"),
-                ("SE-MODBUS", "wiz550s2e_modbus"),
-            ]
+            # device_type 기반으로 해당 장치에 맞는 펌웨어만 표시 — 잘못된 이미지 플래싱 방지
+            _dev_type = self.dev_profile.get(self.curr_mac, {}).get('device_type', '')
+            if 'SR' in _dev_type.upper():
+                _wiz550_type_map = [("SR", "wiz550sr")]
+            else:
+                # S2E / WEB — SR 이미지 노출 방지
+                _wiz550_type_map = [
+                    ("SE / MQTT",  "wiz550s2e"),
+                    ("SE-MODBUS",  "wiz550s2e_modbus"),
+                ]
             fw_type_list = []
             for label, fid in _wiz550_type_map:
                 fam, dspec = self._fw_fetcher.find_family_by_id(fid)
                 if fam and dspec:
                     fw_type_list.append({"label": label, "family": fam, "device_spec": dspec})
-            # 첫 번째 타입(SR)을 기본값으로 사용
             family      = fw_type_list[0]["family"]
             device_spec = fw_type_list[0]["device_spec"]
             display_name = self.curr_dev
@@ -5388,24 +5401,29 @@ class WIZWindow(QMainWindow, main_window):
                 family, device_spec = best_fam, best_dev
             display_name = self.curr_dev
 
+        wiz550_config = None
+        if is_wiz550 and self.curr_mac and self.curr_mac in self.dev_profile:
+            _d = self.dev_profile[self.curr_mac]
+            _tip = _d.get('local_ip', '') or _d.get('IP', '')
+            if _tip:
+                wiz550_config = {
+                    'target_ip':   _tip,
+                    'target_mac':  self.curr_mac,
+                    'localip_addr': self.selected_eth or '',
+                    'pw_setting':  _d.get('pw_setting', '').strip(),
+                }
+
         from fw_git_dialog import FWGitDialog
         dlg = FWGitDialog(
             self, display_name, family, device_spec,
             self._fw_fetcher, self._fw_download_path,
             fw_type_list=fw_type_list or None,
+            wiz550_config=wiz550_config,
         )
         dlg.firmware_ready.connect(self._on_fw_git_ready)
         dlg.exec_()
 
     def _on_fw_git_ready(self, filepath: str, filesize: int):
-        # WIZ550: TFTP 프로토콜 — 기존 AB+FW 경로 우회
-        _mac   = getattr(self, 'curr_mac', None)
-        _proto = self.dev_profile.get(_mac, {}).get('_proto') if _mac else None
-        logger.info(f"[FWGit] firmware_ready: mac={_mac} proto={_proto} file={filepath}")
-        if _mac and _proto == 'wiz550':
-            self._open_wiz550_dialog_with_file(filepath)
-            return
-
         if self.localip_addr is None:
             self.show_msgbox(
                 "Warning",
@@ -5424,25 +5442,6 @@ class WIZWindow(QMainWindow, main_window):
             self.t_fwup.upload_result.connect(
                 lambda _, p=_path: self._cleanup_fw_git_file(p)
             )
-
-    def _open_wiz550_dialog_with_file(self, filepath: str):
-        """FW from Git 메뉴에서 WIZ550 장치 선택 시 WIZ550FWDialog를 열고 파일을 자동 채움."""
-        if not self.curr_mac or self.curr_mac not in self.dev_profile:
-            return
-        dev_data = self.dev_profile[self.curr_mac]
-        target_ip = dev_data.get('IP', '')
-        if not target_ip:
-            return
-        dlg = WIZ550FWDialog(
-            localip_addr=self.localip_addr or '',
-            target_ip=target_ip,
-            target_mac=self.curr_mac,
-            parent=self,
-        )
-        # 다운로드된 파일 자동 채움
-        dlg._fw_path = filepath
-        dlg.edit_file.setText(os.path.basename(filepath))
-        dlg.exec_()
 
     def _cleanup_fw_git_file(self, path: str):
         if path and os.path.isfile(path):

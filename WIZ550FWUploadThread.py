@@ -37,9 +37,9 @@ from PyQt5.QtCore import QThread, pyqtSignal
 from WIZ550MSGHandler import build_fw_upload_pkt, WIZ550_PORT
 from utils import logger
 
-# tftpy 내부 로그를 같은 레벨로 연결
+# tftpy 내부 로그: WARNING 이상만 출력
 _tftpy_log = logging.getLogger('tftpy')
-_tftpy_log.setLevel(logging.DEBUG)
+_tftpy_log.setLevel(logging.WARNING)
 for _h in logger.handlers:
     _tftpy_log.addHandler(_h)
 
@@ -180,7 +180,9 @@ class WIZ550FWUploadThread(QThread):
     def _send_fw_init(self):
         """self._d2_sock (이미 bind됨)으로 0xD1 전송."""
         if self.mode == 'auto':
-            fw_filename = os.path.basename(self.fw_path)
+            orig = os.path.basename(self.fw_path)
+            # fwgit_TS_<canonical> 형식이면 canonical 이름 사용 (장치 bootloader가 파일명 하드코딩 시 대비)
+            fw_filename = _canonical_name(orig) or orig
         else:
             # manual 모드: 다이얼로그에서 입력한 파일명
             fw_filename = getattr(self, '_manual_fname', '')
@@ -201,6 +203,8 @@ class WIZ550FWUploadThread(QThread):
             f"[WIZ550FW] 0xD1 상세: server={self.server_ip}:{self.server_port} "
             f"file='{fw_filename}' mac={self.target_mac} pw_len={len(self.password)}"
         )
+        logger.debug(f"[WIZ550FW] 0xD1 hex: {pkt.hex(' ')}")
+        # 장치 IP로 유니캐스트 전송 — Java 원본 §4.3: firmware_upload()는 항상 unicast
         self._d2_sock.sendto(pkt, (self.target_ip, WIZ550_PORT))
 
     def _wait_d2(self, timeout_sec: float = 30.0) -> bool:
@@ -212,8 +216,11 @@ class WIZ550FWUploadThread(QThread):
         """
         self._d2_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._d2_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._d2_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        # NIC IP에 바인딩해서 0xD1 소스 IP를 올바르게 설정
+        bind_ip = self.iface_ip or ''
         try:
-            self._d2_sock.bind(('', 0))
+            self._d2_sock.bind((bind_ip, 0))
         except OSError as e:
             self._d2_sock.close()
             self._d2_sock = None
@@ -223,7 +230,7 @@ class WIZ550FWUploadThread(QThread):
             return False
 
         local_addr = self._d2_sock.getsockname()
-        logger.debug(f"[WIZ550FW] D2 소켓 bind 완료: {local_addr}")
+        logger.debug(f"[WIZ550FW] D2 소켓 bind: {local_addr} (iface={bind_ip!r})")
 
         # 0xD1 전송 — 같은 소켓의 에페머럴 소스포트로 장치 응답이 돌아옴
         try:
@@ -235,7 +242,7 @@ class WIZ550FWUploadThread(QThread):
             return False
 
         self.progress.emit("Waiting for device response...")
-        logger.info(f"[WIZ550FW] 0xD2 대기 시작 (최대 {timeout_sec}초)")
+        logger.debug(f"[WIZ550FW] 0xD2 대기 시작 (최대 {timeout_sec}초)")
 
         self._d2_sock.setblocking(False)
         deadline = time.time() + timeout_sec
@@ -259,7 +266,7 @@ class WIZ550FWUploadThread(QThread):
                     f"len={len(data)} head=[{hex_head}]"
                 )
                 if _is_fw_done_reply(data):
-                    logger.info(f"[WIZ550FW] 0xD2 (FW_UPLOAD_DONE) 수신 ← {addr}")
+                    logger.info(f"[WIZ550FW] 0xD2 수신 ← {addr}")
                     self.progress.emit("Device acknowledged upload complete")
                     return True
                 else:
