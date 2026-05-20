@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout,
     QTabWidget, QWidget, QLabel, QLineEdit,
     QPushButton, QProgressBar, QFrame,
-    QFileDialog, QMessageBox,
+    QFileDialog, QMessageBox, QInputDialog,
 )
 
 from WIZ550FWUploadThread import WIZ550FWUploadThread
@@ -34,13 +34,19 @@ class WIZ550FWDialog(QDialog):
     def __init__(self, localip_addr: str = "",
                  target_ip: str = "",
                  target_mac: str = "",
+                 device_name: str = "",
+                 fw_fetcher=None,
+                 fw_download_path: str = "",
                  parent=None):
         super().__init__(parent)
-        self._localip_addr = localip_addr
-        self._target_ip    = target_ip
-        self._target_mac   = target_mac
-        self._upload_thread = None
-        self._fw_path       = ""
+        self._localip_addr    = localip_addr
+        self._target_ip       = target_ip
+        self._target_mac      = target_mac
+        self._device_name     = device_name
+        self._fw_fetcher      = fw_fetcher
+        self._fw_download_path = fw_download_path
+        self._upload_thread   = None
+        self._fw_path         = ""
         self._build_ui()
         self._connect_signals()
 
@@ -109,9 +115,12 @@ class WIZ550FWDialog(QDialog):
         self.edit_file.setPlaceholderText("No file selected")
         self.btn_browse = QPushButton("Browse...")
         self.btn_browse.setFixedWidth(70)
+        self.btn_from_git = QPushButton("From GitHub...")
+        self.btn_from_git.setFixedWidth(100)
         file_row.addWidget(lbl_file)
         file_row.addWidget(self.edit_file, 1)
         file_row.addWidget(self.btn_browse)
+        file_row.addWidget(self.btn_from_git)
         auto_layout.addLayout(file_row)
 
         # 비밀번호 행
@@ -192,6 +201,7 @@ class WIZ550FWDialog(QDialog):
 
     def _connect_signals(self):
         self.btn_browse.clicked.connect(self._on_browse)
+        self.btn_from_git.clicked.connect(self._on_from_github)
         self.btn_upload.clicked.connect(self._on_upload)
         self.btn_cancel.clicked.connect(self._on_cancel)
 
@@ -211,6 +221,42 @@ class WIZ550FWDialog(QDialog):
             return
         self._fw_path = fname
         self.edit_file.setText(os.path.basename(fname))
+
+    def _on_from_github(self):
+        if self._fw_fetcher is None:
+            self._set_status("FW from Git 설정을 불러오지 못했습니다.", error=True)
+            return
+
+        matches = self._fw_fetcher.find_all_devices(self._device_name)
+        if not matches:
+            self._set_status(
+                f"'{self._device_name}'는 FW from Git 미지원 장치입니다.", error=True
+            )
+            return
+
+        if len(matches) == 1:
+            family, device_spec = matches[0]
+        else:
+            names = [fam["display_name"] for fam, _ in matches]
+            chosen, ok = QInputDialog.getItem(
+                self, "펌웨어 소스 선택", "펌웨어 저장소를 선택하세요:", names, 0, False
+            )
+            if not ok:
+                return
+            family, device_spec = matches[names.index(chosen)]
+
+        from fw_git_dialog import FWGitDialog
+        dlg = FWGitDialog(
+            self, self._device_name, family, device_spec,
+            self._fw_fetcher, self._fw_download_path,
+        )
+        dlg.firmware_ready.connect(self._on_fw_git_ready)
+        dlg.exec_()
+
+    def _on_fw_git_ready(self, filepath: str, filesize: int):
+        self._fw_path = filepath
+        self.edit_file.setText(os.path.basename(filepath))
+        self._set_status(f"Downloaded: {os.path.basename(filepath)}", muted=True)
 
     def _on_upload(self):
         valid, err_msg = self._validate_inputs()

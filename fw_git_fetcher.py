@@ -34,6 +34,15 @@ class FWGitFetcher:
                     return fam, dev
         return None, None
 
+    def find_all_devices(self, device_name: str) -> list:
+        """매칭되는 모든 (family, device) 쌍 반환 — 복수 repo 지원용."""
+        results = []
+        for fam in self._sources.get("families", []):
+            for dev in fam.get("devices", []):
+                if fnmatch.fnmatch(device_name, dev["name_pattern"]):
+                    results.append((fam, dev))
+        return results
+
     def supported_devices(self) -> list:
         """경고 다이얼로그용 name_pattern 목록"""
         result = []

@@ -1287,6 +1287,9 @@ class WIZWindow(QMainWindow, main_window):
             localip_addr=localip,
             target_ip=target_ip,
             target_mac=target_mac,
+            device_name=self.curr_dev or '',
+            fw_fetcher=getattr(self, '_fw_fetcher', None),
+            fw_download_path=getattr(self, '_fw_download_path', ''),
             parent=self,
         )
         dlg.exec_()
