@@ -5353,7 +5353,7 @@ class WIZWindow(QMainWindow, main_window):
         )
 
         if is_wiz550:
-            fw_types = ["SR", "SE", "SE-MODBUS"]
+            fw_types = ["SR", "SE / MQTT", "SE-MODBUS"]
             fw_type, ok = QInputDialog.getItem(
                 self,
                 "WIZ550 FW 종류 선택",
@@ -5363,9 +5363,9 @@ class WIZWindow(QMainWindow, main_window):
             if not ok:
                 return
             type_to_family_id = {
-                "SR":       "wiz550sr",
-                "SE":       "wiz550s2e",
-                "SE-MODBUS":"wiz550s2e_modbus",
+                "SR":        "wiz550sr",
+                "SE / MQTT": "wiz550s2e",
+                "SE-MODBUS": "wiz550s2e_modbus",
             }
             family, device_spec = self._fw_fetcher.find_family_by_id(
                 type_to_family_id[fw_type]
