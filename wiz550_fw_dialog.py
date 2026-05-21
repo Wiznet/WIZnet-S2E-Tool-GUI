@@ -243,9 +243,7 @@ class WIZ550FWDialog(QDialog):
             mode        = 'auto'
             fw_path     = self._fw_path
             # 업로드 직전 target_ip 서브넷 기준 NIC 재선택 (다이얼로그 열린 후 NIC 변경 대응)
-            _best = _best_server_ip(self._target_ip, fallback=self._localip_addr)
-            logger.warning(f"[WIZ550FW] _on_upload: target={self._target_ip!r} fallback={self._localip_addr!r} best={_best!r}")
-            server_ip   = _best or "0.0.0.0"
+            server_ip   = _best_server_ip(self._target_ip, fallback=self._localip_addr) or "0.0.0.0"
             server_port = 69
             password    = self.edit_pw.text()
         else:
