@@ -542,6 +542,13 @@ class WIZWindow(QMainWindow, main_window):
         WIZMSGHandler.emit_stabilization_ms = self.timing_config.get_phase1_emit_stabilization_ms()
         WIZMSGHandler.skip_phase1_emit_delay = self.timing_config.is_skip_phase1_emit_delay()
 
+        # 로그 레벨 초기 적용 + config 파일 실시간 감시
+        self.logger.setLevel(self.timing_config.get_log_level())
+        self._config_watcher = QtCore.QFileSystemWatcher(
+            [str(self.timing_config.config_file_path)], self
+        )
+        self._config_watcher.fileChanged.connect(self._on_config_file_changed)
+
         self.localip_addr = None
 
         # last selected firmware file name/size (include path)
@@ -2799,7 +2806,7 @@ class WIZWindow(QMainWindow, main_window):
             else:
                 # 유지/갱신 모드: 기존 데이터 유지, 모든 "검색됨" 상태를 False로 초기화
                 self.detected_list = [False] * len(self.mac_list)
-                # self.logger.info(f"유지/갱신 모드: 기존 {len(self.mac_list)}개 장비 유지, 검색됨 초기화")
+                self.logger.debug(f"유지/갱신 모드: 기존 {len(self.mac_list)}개 장비 유지, 검색됨 초기화")
 
         # Determine data source (wizmsghandler for UDP/TCP unicast)
         # CSV Load 모드에서는 건너뜀 (이미 데이터가 self.mac_list 등에 있음)
@@ -2823,12 +2830,12 @@ class WIZWindow(QMainWindow, main_window):
                 # [DIAG] WIZMSGHandler 수신 리스트 길이 검증
                 if data_source:
                     _d = data_source
-                    # self.logger.info(
-                    #     f"[DIAG] WIZMSGHandler lists: mac={len(_d.mac_list)}"
-                    #     f" mn={len(_d.mn_list)} vr={len(_d.vr_list)}"
-                    #     f" st={len(_d.st_list)} mode={len(_d.mode_list)}"
-                    #     f" rcv={len(_d.rcv_list)}"
-                    # )
+                    self.logger.debug(
+                        f"[DIAG] WIZMSGHandler lists: mac={len(_d.mac_list)}"
+                        f" mn={len(_d.mn_list)} vr={len(_d.vr_list)}"
+                        f" st={len(_d.st_list)} mode={len(_d.mode_list)}"
+                        f" rcv={len(_d.rcv_list)}"
+                    )
                     # 정렬 이상 감지
                     lens = [len(_d.mac_list), len(_d.mn_list), len(_d.vr_list), len(_d.st_list)]
                     if len(set(lens)) > 1:
@@ -2899,11 +2906,11 @@ class WIZWindow(QMainWindow, main_window):
                 # [DIAG] 병합/교체 후 self 리스트 길이 검증
                 _self_lens = [len(self.mac_list), len(self.mn_list), len(self.vr_list),
                               len(self.st_list), len(self.detected_list)]
-                # self.logger.info(
-                #     f"[DIAG] 병합 후 self lists: mac={_self_lens[0]}"
-                #     f" mn={_self_lens[1]} vr={_self_lens[2]}"
-                #     f" st={_self_lens[3]} detected={_self_lens[4]}"
-                # )
+                self.logger.debug(
+                    f"[DIAG] 병합 후 self lists: mac={_self_lens[0]}"
+                    f" mn={_self_lens[1]} vr={_self_lens[2]}"
+                    f" st={_self_lens[3]} detected={_self_lens[4]}"
+                )
                 if len(set(_self_lens)) > 1:
                     self.logger.warning(f"[DIAG] self 리스트 길이 불일치! {_self_lens}")
 
@@ -2972,7 +2979,7 @@ class WIZWindow(QMainWindow, main_window):
                 # 이번 검색에서 새로 발견된 장비 수 (로깅용 참고 정보)
                 newly_detected = sum(1 for d in self.detected_list if d)
 
-                # self.logger.info(f"반복 검색 {self.retry_search_current}회차: 전체 {total_count}개 (이번 검색: {newly_detected}개)")
+                self.logger.debug(f"반복 검색 {self.retry_search_current}회차: 전체 {total_count}개 (이번 검색: {newly_detected}개)")
 
                 # 조기 종료 조건 체크 (리팩토링)
                 reached_expected = (self.retry_search_expected_count > 0 and
@@ -2986,11 +2993,11 @@ class WIZWindow(QMainWindow, main_window):
                 if reached_expected:
                     self.logger.info(f"예상 장비 수 도달: {total_count}/{self.retry_search_expected_count}")
                 if reached_max:
-                    pass  # self.logger.info(f"최대 반복 횟수 도달: {self.retry_search_current}/{self.retry_search_max_count}")
+                    self.logger.debug(f"최대 반복 횟수 도달: {self.retry_search_current}/{self.retry_search_max_count}")
 
                 # 계속 반복할지 결정
                 if should_continue:
-                    # self.logger.info(f"반복 검색 계속: {self.retry_search_current + 1}회차 시작")
+                    self.logger.debug(f"반복 검색 계속: {self.retry_search_current + 1}회차 시작")
                     # 약간의 딜레이 후 재검색 (상수 사용)
                     # self.logger.info(f"[TIMING] {self._T()} QTimer.singleShot({RetrySearchLimits.RETRY_DELAY_MS}ms) 설정 → _continue_retry_search 예약")
                     QtCore.QTimer.singleShot(RetrySearchLimits.RETRY_DELAY_MS, self._continue_retry_search)
@@ -3246,11 +3253,11 @@ class WIZWindow(QMainWindow, main_window):
                 self.mode_list.append(new_mode_list[i] if new_mode_list and i < len(new_mode_list) else b'')
                 self.detected_list.append(True)
                 existing_mac_map[new_mac_str] = len(self.mac_list) - 1  # 이후 중복 방지
-                # self.logger.info(f"신규 장비 추가: {new_mac_str}")
+                self.logger.debug(f"신규 장비 추가: {new_mac_str}")
 
         detected_count = sum(1 for d in self.detected_list if d)
         total_count = len(self.mac_list)
-        # self.logger.info(f"검색 결과 유지/갱신: 전체 {total_count}개 (현재 검색: {detected_count}개)")
+        self.logger.debug(f"검색 결과 유지/갱신: 전체 {total_count}개 (현재 검색: {detected_count}개)")
 
     def get_dev_list(self):
         # basic_data = None
@@ -6613,6 +6620,22 @@ class WIZWindow(QMainWindow, main_window):
                 "오류",
                 f"고급 검색 옵션 설정 중 오류가 발생했습니다:\n{e}"
             )
+
+    def _on_config_file_changed(self, path: str):
+        """config 파일 변경 감지 → 로그 레벨 즉시 반영"""
+        import yaml
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f) or {}
+            level_str = data.get('logging', {}).get('level', 'INFO').upper()
+            level = getattr(__import__('logging'), level_str, __import__('logging').INFO)
+            self.logger.setLevel(level)
+            self.logger.info(f"[Config] 로그 레벨 변경: {level_str}")
+        except Exception as e:
+            self.logger.warning(f"[Config] 로그 레벨 변경 실패: {e}")
+        # 일부 에디터는 파일을 삭제 후 재생성 → watcher에서 제거됨, 재등록
+        if path not in self._config_watcher.files():
+            self._config_watcher.addPath(path)
 
     def _get_current_search_config(self):
         """현재 검색 설정 읽기 (DeviceSearchConfig + 내부 변수)"""

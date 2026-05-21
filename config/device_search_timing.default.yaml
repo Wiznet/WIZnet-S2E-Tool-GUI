@@ -187,6 +187,10 @@ active_preset: "normal"
 # 로깅 (Logging)
 # ============================================================
 logging:
+  # 로그 레벨: DEBUG / INFO / WARNING
+  # - 런타임 변경 가능 (파일 저장 즉시 반영)
+  level: INFO
+
   # TIMING 로그 활성화
   # - true: [TIMING] 로그 출력
   # - false: TIMING 로그 숨김

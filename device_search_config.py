@@ -124,6 +124,7 @@ class DeviceSearchConfig:
         },
         'active_preset': 'normal',
         'logging': {
+            'level': 'INFO',
             'enable_timing_logs': True,
             'verbose_debug': False,
             'show_timing_in_statusbar': False,
@@ -344,6 +345,11 @@ class DeviceSearchConfig:
             float: 최대값 (초)
         """
         return float(self.config['experimental']['auto_tune']['max_timeout_sec'])
+
+    def get_log_level(self) -> int:
+        """로그 레벨 반환 (logging.DEBUG / INFO / WARNING)"""
+        level_str = self.config.get('logging', {}).get('level', 'INFO').upper()
+        return getattr(logging, level_str, logging.INFO)
 
     def is_skip_phase1_emit_delay(self) -> bool:
         """Phase 1 emit 전 msleep 건너뛰기 여부
