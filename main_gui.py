@@ -230,7 +230,7 @@ class SearchErrorCollector:
         """에러 메시지박스 표시"""
         msgbox = QMessageBox(parent)
         msgbox.setIcon(QMessageBox.Warning)
-        msgbox.setWindowTitle("검색 오류")
+        msgbox.setWindowTitle("Search Error")
         msgbox.setTextFormat(QtCore.Qt.TextFormat.RichText)  # IDE 경고 무시 (실제 작동함)
         msgbox.setText(self.to_html())
         msgbox.setStandardButtons(QMessageBox.Ok)
@@ -689,7 +689,7 @@ class WIZWindow(QMainWindow, main_window):
         self.menuOption.addSeparator()
         self.menuOption.addAction(self._action_terminal)
 
-        self._action_fw_dl_path = QAction("FW 다운로드 경로...", self)
+        self._action_fw_dl_path = QAction("FW Download Path...", self)
         self._action_fw_dl_path.triggered.connect(self.event_set_fw_download_path)
         self.menuOption.addAction(self._action_fw_dl_path)
 
@@ -786,7 +786,7 @@ class WIZWindow(QMainWindow, main_window):
         self._btn_terminal.setMaximumSize(240, 100)
         self._btn_terminal.setIconSize(QtCore.QSize(32, 32))
         self._btn_terminal.setFont(self.midfont)
-        self._btn_terminal.setToolTip('터미널 패널 열기/닫기')
+        self._btn_terminal.setToolTip('Open/Close Terminal Panel')
         self._btn_terminal.clicked.connect(self._toggle_terminal)
         _grid.addWidget(self._btn_terminal, 0, 4)
         _grid.addWidget(self.btn_exit, 0, 5)
@@ -1229,7 +1229,7 @@ class WIZWindow(QMainWindow, main_window):
             self.reset_wiz550(op_code=OP_REMOTE_RESET)
             return
         if self.curr_dev == 'WIZ1x0SR':
-            self.show_msgbox("Info", "WIZ1x0SR은 Apply 시 자동으로 재시작됩니다.", QMessageBox.Information)
+            self.show_msgbox("Info", "WIZ1x0SR automatically restarts when Apply is performed.", QMessageBox.Information)
             return
         self.do_reset()
 
@@ -1263,7 +1263,7 @@ class WIZWindow(QMainWindow, main_window):
             return
         # 기존 WIZ1x0SR 처리 (미지원)
         if self.curr_dev == 'WIZ1x0SR':
-            self.show_msgbox("Info", "WIZ1x0SR 펌웨어 업로드는 지원되지 않습니다.", QMessageBox.Information)
+            self.show_msgbox("Info", "WIZ1x0SR firmware upload is not supported.", QMessageBox.Information)
             return
         # 기존 WIZ5xxSR 처리
         if self.localip_addr is not None:
@@ -1278,7 +1278,7 @@ class WIZWindow(QMainWindow, main_window):
     def upload_wiz550(self):
         """WIZ550 장치 TFTP FW 업로드 다이얼로그 실행 (D-06)."""
         if not self.curr_mac or self.curr_mac not in self.dev_profile:
-            self.show_msgbox("Warning", "장치 정보를 불러올 수 없습니다. 장치를 다시 선택하세요.", QMessageBox.Warning)
+            self.show_msgbox("Warning", "Unable to load device information. Please reselect the device.", QMessageBox.Warning)
             return
 
         dev_data = self.dev_profile[self.curr_mac]
@@ -1289,7 +1289,7 @@ class WIZWindow(QMainWindow, main_window):
         localip = self.selected_eth or ''
 
         if not target_ip:
-            self.show_msgbox("Warning", "장치 IP 정보가 없습니다. 장치를 다시 검색하세요.", QMessageBox.Warning)
+            self.show_msgbox("Warning", "Device IP information is missing. Please search for the device again.", QMessageBox.Warning)
             return
 
         dlg = WIZ550FWDialog(
@@ -2346,7 +2346,7 @@ class WIZWindow(QMainWindow, main_window):
             self.list_device.setHorizontalHeaderItem(1, item_name)
 
             item_detected = QTableWidgetItem()
-            item_detected.setText("검색됨")
+            item_detected.setText("Detected")
             item_detected.setFont(self.midfont)
             self.list_device.setHorizontalHeaderItem(2, item_detected)
 
@@ -2769,7 +2769,7 @@ class WIZWindow(QMainWindow, main_window):
                     f"profile keys={list(profile.keys())}, "
                     f"raw={repr(dev_data[:80])}"
                 )
-                self.statusbar.showMessage(" [오류] 장비 응답에 MAC 주소(MC) 없음 — 해당 항목 건너뜀")
+                self.statusbar.showMessage(" [Error] No MAC address (MC) in device response — item skipped")
 
             # 구 retry 메커니즘 (cumulative 모드에서는 항상 0)
             if self.search_retrynum:
@@ -3070,7 +3070,7 @@ class WIZWindow(QMainWindow, main_window):
             from PyQt5.QtWidgets import QMessageBox
             QMessageBox.critical(
                 self,
-                "반복 검색 오류",
+                "Repeated Search Error",
                 f"An error occurred during repeated search:\n{str(e)}\n\nSearch will be stopped."
             )
 
@@ -3330,7 +3330,7 @@ class WIZWindow(QMainWindow, main_window):
     def get_clicked_devinfo(self, macaddr, call_from=None):
         if macaddr not in self.dev_profile:
             self.statusbar.showMessage('Retrieving device info, please wait...')
-            QToolTip.showText(QtGui.QCursor.pos(), "장치 정보 수집 중입니다.\n검색 완료 후 다시 클릭하세요.", self)
+            QToolTip.showText(QtGui.QCursor.pos(), "Collecting device information.\nPlease click again after the search completes.", self)
             return
 
         # WIZ1x0SR 전용 UI 패널
@@ -3366,7 +3366,7 @@ class WIZWindow(QMainWindow, main_window):
                     self._on_wiz550_get_done(cfg, mac, dtype)
             )
             self._wiz550_getter.start()
-            self.statusbar.showMessage(f" WIZ550 설정 읽는 중... ({macaddr})")
+            self.statusbar.showMessage(f" Reading WIZ550 settings... ({macaddr})")
             return
 
         # standard device: hide wiz1x0 panel and restore default UI
@@ -3539,7 +3539,7 @@ class WIZWindow(QMainWindow, main_window):
     def _on_wiz550_get_done(self, cfg: dict, macaddr: str, device_type: str):
         """WIZ550Getter completion callback — merge GET_INFO response into dev_profile and fill UI."""
         if not cfg:
-            self.statusbar.showMessage(f" WIZ550 설정 읽기 실패: {macaddr}")
+            self.statusbar.showMessage(f" Failed to read WIZ550 settings: {macaddr}")
             self.logger.warning(f"[WIZ550] GET_INFO 응답 없음: {macaddr}")
             return
 
@@ -3549,7 +3549,7 @@ class WIZWindow(QMainWindow, main_window):
 
         # B-02 Stage 2: GET_INFO 완료 후에 위젯에 값 채우기
         self.fill_devinfo_wiz550(cfg)
-        self.statusbar.showMessage(f" WIZ550 설정 로드 완료: {macaddr}")
+        self.statusbar.showMessage(f" WIZ550 settings loaded: {macaddr}")
 
     # ──────────────────────────────────────────────────────────────
     # WIZ550 Apply / Reset / FactoryReset (UI-03, UI-04, Wave 3)
@@ -3640,8 +3640,8 @@ class WIZWindow(QMainWindow, main_window):
         from PyQt5.QtWidgets import QInputDialog, QLineEdit
         pw, ok = QInputDialog.getText(
             self,
-            "WIZ550 설정 비밀번호",
-            "설정 비밀번호 (없으면 빈 칸):",
+            "WIZ550 Settings Password",
+            "Settings password (leave blank if none):",
             QLineEdit.Password,
             d_profile.get('pw_setting', ''),
         )
@@ -3664,12 +3664,12 @@ class WIZWindow(QMainWindow, main_window):
             config_bytes = builder(d)
         except Exception as e:
             self.logger.error(f"[WIZ550] Profile 빌드 오류: {e}")
-            self.statusbar.showMessage(f" WIZ550 Apply 오류: {e}")
+            self.statusbar.showMessage(f" WIZ550 Apply Error: {e}")
             return
 
         target_ip = d.get('local_ip', '')
         if not target_ip:
-            self.statusbar.showMessage(" WIZ550 Apply 오류: IP 주소 없음")
+            self.statusbar.showMessage(" WIZ550 Apply Error: No IP address")
             return
 
         self._wiz550_setter = WIZ550Setter(
@@ -3681,25 +3681,25 @@ class WIZWindow(QMainWindow, main_window):
         )
         self._wiz550_setter.set_done.connect(self._on_wiz550_set_done)
         self._wiz550_setter.start()
-        self.statusbar.showMessage(f" WIZ550 설정 전송 중... ({self.curr_mac})")
+        self.statusbar.showMessage(f" Sending WIZ550 settings... ({self.curr_mac})")
 
     def _on_wiz550_set_done(self, success: bool):
         """WIZ550Setter 완료 콜백 — 성공/실패 메시지 표시 (D-05 컬러)."""
         from PyQt5.QtWidgets import QMessageBox
         if success:
             # D-05: 성공 색상 #5db872
-            self.statusbar.showMessage(" WIZ550 설정 저장 완료")
+            self.statusbar.showMessage(" WIZ550 settings saved")
             self.statusbar.setStyleSheet("QStatusBar { color: #5db872; }")
             QMessageBox.information(
-                self, "WIZ550 Apply", "설정이 성공적으로 저장되었습니다."
+                self, "WIZ550 Apply", "Settings were saved successfully."
             )
         else:
             # D-05: 오류 색상 #c64545
-            self.statusbar.showMessage(" WIZ550 설정 저장 실패 (응답 없음 또는 비밀번호 오류)")
+            self.statusbar.showMessage(" Failed to save WIZ550 settings (no response or wrong password)")
             self.statusbar.setStyleSheet("QStatusBar { color: #c64545; }")
             QMessageBox.warning(
-                self, "WIZ550 Apply 실패",
-                "설정 저장에 실패했습니다.\n비밀번호를 확인하거나 장치 연결을 확인하세요."
+                self, "WIZ550 Apply Failed",
+                "Failed to save settings.\nPlease check the password or device connection."
             )
         # statusbar 색상을 3초 후 원상복구
         from PyQt5.QtCore import QTimer
@@ -3719,7 +3719,7 @@ class WIZWindow(QMainWindow, main_window):
         d_profile = self.dev_profile.get(self.curr_mac, {})
         target_ip = d_profile.get('local_ip', '')
         if not target_ip:
-            self.statusbar.showMessage(" WIZ550 Reset 오류: IP 주소 없음")
+            self.statusbar.showMessage(" WIZ550 Reset Error: No IP address")
             return
 
         # 비밀번호 입력
@@ -3728,7 +3728,7 @@ class WIZWindow(QMainWindow, main_window):
         pw, ok = QInputDialog.getText(
             self,
             f"WIZ550 {op_name}",
-            f"{op_name} 비밀번호 (없으면 빈 칸):",
+            f"{op_name} password (leave blank if none):",
             QLineEdit.Password,
             d_profile.get('pw_setting', ''),
         )
@@ -3746,21 +3746,21 @@ class WIZWindow(QMainWindow, main_window):
             lambda success, name=op_name: self._on_wiz550_reset_done(success, name)
         )
         self._wiz550_resetter.start()
-        self.statusbar.showMessage(f" WIZ550 {op_name} 전송 중... ({self.curr_mac})")
+        self.statusbar.showMessage(f" Sending WIZ550 {op_name}... ({self.curr_mac})")
 
     def _on_wiz550_reset_done(self, success: bool, op_name: str = "Reset"):
         """WIZ550Resetter 완료 콜백 — 결과 표시 (UI-04)."""
         from PyQt5.QtWidgets import QMessageBox
         if success:
-            self.statusbar.showMessage(f" WIZ550 {op_name} 완료")
+            self.statusbar.showMessage(f" WIZ550 {op_name} complete")
             QMessageBox.information(
-                self, f"WIZ550 {op_name}", f"{op_name}이 완료되었습니다."
+                self, f"WIZ550 {op_name}", f"{op_name} completed."
             )
         else:
-            self.statusbar.showMessage(f" WIZ550 {op_name} 실패")
+            self.statusbar.showMessage(f" WIZ550 {op_name} failed")
             QMessageBox.warning(
-                self, f"WIZ550 {op_name} 실패",
-                f"{op_name}에 실패했습니다.\n장치 연결을 확인하세요."
+                self, f"WIZ550 {op_name} Failed",
+                f"{op_name} failed.\nPlease check the device connection."
             )
 
     # ──────────────────────────────────────────────────────────────
@@ -4112,12 +4112,12 @@ class WIZWindow(QMainWindow, main_window):
         d = self.fill_setinfo_1x0()
         target_ip = d.get('ip', '')
         if not target_ip or target_ip == '0.0.0.0':
-            self.show_msgbox("Error", "유효한 IP 주소가 없습니다.", QMessageBox.Warning)
+            self.show_msgbox("Error", "No valid IP address.", QMessageBox.Warning)
             return
 
         reply = QMessageBox.question(
             self, "Apply",
-            f"설정을 적용합니다.\n{target_ip}\n\n※ WIZ1x0SR은 Apply 즉시 저장 후 재시작됩니다.",
+            f"Settings will be applied.\n{target_ip}\n\nNote: WIZ1x0SR saves and restarts immediately on Apply.",
             QMessageBox.Ok | QMessageBox.Cancel,
         )
         if reply != QMessageBox.Ok:
@@ -4145,10 +4145,10 @@ class WIZWindow(QMainWindow, main_window):
             # SETC 응답 없거나 파싱 실패 시 → 전송한 값으로 프로파일 갱신
             if not updated and hasattr(self, '_last_1x0_board_dict') and mac in self.dev_profile:
                 self.dev_profile[mac].update(self._last_1x0_board_dict)
-            self.statusbar.showMessage(" WIZ1x0SR 설정 완료 — 장치 재시작 후 Device Search를 다시 실행하세요")
+            self.statusbar.showMessage(" WIZ1x0SR settings complete — please re-run Device Search after the device restarts")
         else:
-            self.statusbar.showMessage(" WIZ1x0SR 설정 실패 — 응답 없음 (SETC 타임아웃)")
-            self.show_msgbox("Error", "WIZ1x0SR 설정 실패 — 응답 없음", QMessageBox.Warning)
+            self.statusbar.showMessage(" WIZ1x0SR settings failed — no response (SETC timeout)")
+            self.show_msgbox("Error", "WIZ1x0SR settings failed — no response", QMessageBox.Warning)
 
     # ──────────────────────────────────────────────────────────────
 
@@ -5355,7 +5355,7 @@ class WIZWindow(QMainWindow, main_window):
 
     def event_set_fw_download_path(self):
         path = QFileDialog.getExistingDirectory(
-            self, "FW 다운로드 경로 선택", self._fw_download_path
+            self, "Select FW Download Path", self._fw_download_path
         )
         if path:
             self._fw_download_path = path
@@ -5363,12 +5363,12 @@ class WIZWindow(QMainWindow, main_window):
 
     def event_fw_from_git(self):
         if not self.curr_dev:
-            self.show_msgbox("Warning", "장치를 먼저 선택하세요.", QMessageBox.Warning)
+            self.show_msgbox("Warning", "Please select a device first.", QMessageBox.Warning)
             return
         if self._fw_fetcher is None:
             self.show_msgbox(
                 "Warning",
-                "FW from Git 설정 파일(fw_sources.json)을 불러오지 못했습니다.",
+                "Failed to load FW from Git configuration file (fw_sources.json).",
                 QMessageBox.Warning,
             )
             return
@@ -6307,24 +6307,24 @@ class WIZWindow(QMainWindow, main_window):
                 if self._apply_timing_settings(new_values):
                     QMessageBox.information(
                         self,
-                        "설정 저장",
-                        "검색 타이밍 설정이 저장되었습니다.\n\n"
-                        "일부 설정은 다음 검색부터 적용됩니다."
+                        "Settings Saved",
+                        "Search timing settings have been saved.\n\n"
+                        "Some settings will take effect from the next search."
                     )
                 else:
                     QMessageBox.warning(
                         self,
-                        "저장 실패",
-                        "설정 저장에 실패했습니다.\n"
-                        "로그를 확인해주세요."
+                        "Save Failed",
+                        "Failed to save settings.\n"
+                        "Please check the log."
                     )
 
         except Exception as e:
             self.logger.error(f"타이밍 설정 다이얼로그 오류: {e}")
             QMessageBox.critical(
                 self,
-                "오류",
-                f"타이밍 설정 중 오류가 발생했습니다:\n{e}"
+                "Error",
+                f"An error occurred while configuring timing settings:\n{e}"
             )
 
     def _create_timing_settings_dialog(self, current_values: dict) -> QDialog:
@@ -6340,7 +6340,7 @@ class WIZWindow(QMainWindow, main_window):
                                      QDoubleSpinBox, QSpinBox, QCheckBox, QGroupBox)
 
         dialog = QDialog(self)
-        dialog.setWindowTitle("검색 타이밍 설정")
+        dialog.setWindowTitle("Search Timing Settings")
         dialog.setModal(True)
         dialog.setMinimumWidth(500)
 
@@ -6348,7 +6348,7 @@ class WIZWindow(QMainWindow, main_window):
         main_layout = QVBoxLayout()
 
         # === Phase 1 타이밍 그룹 ===
-        phase1_group = QGroupBox("Phase 1 타이밍 (UDP Broadcast / TCP Multicast)")
+        phase1_group = QGroupBox("Phase 1 Timing (UDP Broadcast / TCP Multicast)")
         phase1_layout = QFormLayout()
 
         # Loop Select Timeout
@@ -6356,11 +6356,11 @@ class WIZWindow(QMainWindow, main_window):
         dialog.spin_loop_timeout.setRange(0.1, 5.0)
         dialog.spin_loop_timeout.setSingleStep(0.1)
         dialog.spin_loop_timeout.setDecimals(1)
-        dialog.spin_loop_timeout.setSuffix(" 초")
+        dialog.spin_loop_timeout.setSuffix(" sec")
         dialog.spin_loop_timeout.setValue(current_values['phase1_loop_select_timeout'])
         dialog.spin_loop_timeout.setToolTip(
-            "마지막 응답 이후 추가 응답 대기 시간\n"
-            "권장: 일반 0.5초, 구형 장비 1.0초, 고속 0.3초"
+            "Additional wait time after the last response\n"
+            "Recommended: 0.5s (normal), 1.0s (legacy devices), 0.3s (fast)"
         )
         phase1_layout.addRow("Loop Select Timeout:", dialog.spin_loop_timeout)
 
@@ -6371,25 +6371,25 @@ class WIZWindow(QMainWindow, main_window):
         dialog.spin_emit_delay.setSuffix(" ms")
         dialog.spin_emit_delay.setValue(current_values['phase1_emit_stabilization_ms'])
         dialog.spin_emit_delay.setToolTip(
-            "PyQt signal queue 안정화 대기 시간\n"
-            "권장: 50ms (실험적: 0~100ms)"
+            "PyQt signal queue stabilization wait time\n"
+            "Recommended: 50ms (experimental: 0~100ms)"
         )
-        phase1_layout.addRow("Emit 안정화 딜레이:", dialog.spin_emit_delay)
+        phase1_layout.addRow("Emit Stabilization Delay:", dialog.spin_emit_delay)
 
         # Skip Emit Delay (Experimental)
         dialog.check_skip_delay = QCheckBox()
         dialog.check_skip_delay.setChecked(current_values['skip_phase1_emit_delay'])
         dialog.check_skip_delay.setToolTip(
-            "⚠ 실험적 기능: Emit 전 딜레이 생략\n"
-            "활성화 시 약 50ms 단축되지만 signal queue 불안정 가능성"
+            "Experimental: Skip the pre-emit delay\n"
+            "Saves about 50ms when enabled, but signal queue may be unstable"
         )
-        phase1_layout.addRow("Emit 딜레이 건너뛰기 (실험적):", dialog.check_skip_delay)
+        phase1_layout.addRow("Skip Emit Delay (Experimental):", dialog.check_skip_delay)
 
         phase1_group.setLayout(phase1_layout)
         main_layout.addWidget(phase1_group)
 
         # === Phase 3 타이밍 그룹 ===
-        phase3_group = QGroupBox("Phase 3 타이밍 (개별 장비 쿼리)")
+        phase3_group = QGroupBox("Phase 3 Timing (Per-Device Query)")
         phase3_layout = QFormLayout()
 
         # Device Query Timeout
@@ -6397,19 +6397,19 @@ class WIZWindow(QMainWindow, main_window):
         dialog.spin_query_timeout.setRange(0.5, 5.0)
         dialog.spin_query_timeout.setSingleStep(0.1)
         dialog.spin_query_timeout.setDecimals(1)
-        dialog.spin_query_timeout.setSuffix(" 초")
+        dialog.spin_query_timeout.setSuffix(" sec")
         dialog.spin_query_timeout.setValue(current_values['phase3_device_query_timeout'])
         dialog.spin_query_timeout.setToolTip(
-            "각 장비 응답 대기 시간\n"
-            "권장: 일반 1.5초, 빠른 1.0초, 느린/원거리 2.0초"
+            "Per-device response wait time\n"
+            "Recommended: 1.5s (normal), 1.0s (fast), 2.0s (slow/distant)"
         )
-        phase3_layout.addRow("장비 쿼리 타임아웃:", dialog.spin_query_timeout)
+        phase3_layout.addRow("Device Query Timeout:", dialog.spin_query_timeout)
 
         phase3_group.setLayout(phase3_layout)
         main_layout.addWidget(phase3_group)
 
         # === TCP 설정 그룹 ===
-        tcp_group = QGroupBox("TCP 설정 (TCP Multicast / Mixed Search)")
+        tcp_group = QGroupBox("TCP Settings (TCP Multicast / Mixed Search)")
         tcp_layout = QFormLayout()
 
         # Max Parallel Workers
@@ -6418,16 +6418,16 @@ class WIZWindow(QMainWindow, main_window):
         dialog.spin_tcp_workers.setSingleStep(5)
         dialog.spin_tcp_workers.setValue(current_values['tcp_max_parallel_workers'])
         dialog.spin_tcp_workers.setToolTip(
-            "최대 동시 연결 수\n"
-            "권장: 15 (네트워크 대역폭에 따라 조정)"
+            "Maximum number of concurrent connections\n"
+            "Recommended: 15 (adjust based on network bandwidth)"
         )
-        tcp_layout.addRow("최대 병렬 워커 수:", dialog.spin_tcp_workers)
+        tcp_layout.addRow("Max Parallel Workers:", dialog.spin_tcp_workers)
 
         tcp_group.setLayout(tcp_layout)
         main_layout.addWidget(tcp_group)
 
         # === UI 설정 그룹 ===
-        ui_group = QGroupBox("UI 설정")
+        ui_group = QGroupBox("UI Settings")
         ui_layout = QFormLayout()
 
         # Progress Bar Update Percent
@@ -6437,12 +6437,12 @@ class WIZWindow(QMainWindow, main_window):
         dialog.spin_pgbar_percent.setSuffix(" %")
         dialog.spin_pgbar_percent.setValue(current_values['pgbar_update_percent'])
         dialog.spin_pgbar_percent.setToolTip(
-            "Progress bar 갱신 퍼센트\n"
-            "작을수록 자주 갱신 (부드럽지만 느림)\n"
-            "클수록 드물게 갱신 (빠르지만 뚝뚝 끊김)\n"
-            "권장: 5~20%"
+            "Progress bar update percent\n"
+            "Smaller = updates more often (smoother but slower)\n"
+            "Larger = updates less often (faster but choppier)\n"
+            "Recommended: 5~20%"
         )
-        ui_layout.addRow("Progress Bar 갱신 주기:", dialog.spin_pgbar_percent)
+        ui_layout.addRow("Progress Bar Update Interval:", dialog.spin_pgbar_percent)
 
         # Progress Bar Auto Hide Delay
         dialog.spin_pgbar_hide = QSpinBox()
@@ -6451,27 +6451,27 @@ class WIZWindow(QMainWindow, main_window):
         dialog.spin_pgbar_hide.setSuffix(" ms")
         dialog.spin_pgbar_hide.setValue(current_values['pgbar_auto_hide_delay_ms'])
         dialog.spin_pgbar_hide.setToolTip(
-            "검색 완료 후 Progress bar 자동 숨김 대기 시간\n"
-            "0이면 즉시 숨김"
+            "Wait time before auto-hiding Progress bar after search completes\n"
+            "0 = hide immediately"
         )
-        ui_layout.addRow("Progress Bar 자동 숨김 딜레이:", dialog.spin_pgbar_hide)
+        ui_layout.addRow("Progress Bar Auto-Hide Delay:", dialog.spin_pgbar_hide)
 
         ui_group.setLayout(ui_layout)
         main_layout.addWidget(ui_group)
 
         # === 버튼 박스 ===
         button_box = QDialogButtonBox()
-        btn_save = button_box.addButton("저장", QDialogButtonBox.AcceptRole)
-        btn_cancel = button_box.addButton("취소", QDialogButtonBox.RejectRole)
-        btn_reset = button_box.addButton("기본값 복원", QDialogButtonBox.ResetRole)
+        btn_save = button_box.addButton("Save", QDialogButtonBox.AcceptRole)
+        btn_cancel = button_box.addButton("Cancel", QDialogButtonBox.RejectRole)
+        btn_reset = button_box.addButton("Restore Defaults", QDialogButtonBox.ResetRole)
 
         # 버튼 툴팁
         if btn_save is not None:
-            btn_save.setToolTip("설정을 저장하고 적용합니다")
+            btn_save.setToolTip("Save and apply settings")
         if btn_cancel is not None:
-            btn_cancel.setToolTip("변경사항을 무시하고 닫습니다")
+            btn_cancel.setToolTip("Discard changes and close")
         if btn_reset is not None:
-            btn_reset.setToolTip("모든 설정을 기본값으로 되돌립니다")
+            btn_reset.setToolTip("Restore all settings to defaults")
 
         # 시그널 연결
         button_box.accepted.connect(dialog.accept)
@@ -6542,9 +6542,9 @@ class WIZWindow(QMainWindow, main_window):
         """
         reply = QMessageBox.question(
             dialog,
-            "기본값 복원 확인",
-            "모든 타이밍 설정을 기본값으로 되돌리시겠습니까?\n\n"
-            "이 작업은 즉시 저장되며, 되돌릴 수 없습니다.",
+            "Confirm Restore Defaults",
+            "Restore all timing settings to defaults?\n\n"
+            "This is saved immediately and cannot be undone.",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No
         )
@@ -6555,8 +6555,8 @@ class WIZWindow(QMainWindow, main_window):
                 if not self.timing_config.reset_to_defaults():
                     QMessageBox.warning(
                         dialog,
-                        "복원 실패",
-                        "기본값 복원에 실패했습니다.\n로그를 확인해주세요."
+                        "Restore Failed",
+                        "Failed to restore defaults.\nPlease check the log."
                     )
                     return
 
@@ -6581,8 +6581,8 @@ class WIZWindow(QMainWindow, main_window):
 
                 QMessageBox.information(
                     dialog,
-                    "복원 완료",
-                    "모든 설정이 기본값으로 복원되었습니다."
+                    "Restore Complete",
+                    "All settings have been restored to defaults."
                 )
 
                 self.logger.info("타이밍 설정 기본값 복원 완료")
@@ -6591,8 +6591,8 @@ class WIZWindow(QMainWindow, main_window):
                 self.logger.error(f"기본값 복원 실패: {e}")
                 QMessageBox.critical(
                     dialog,
-                    "오류",
-                    f"기본값 복원 중 오류가 발생했습니다:\n{e}"
+                    "Error",
+                    f"An error occurred while restoring defaults:\n{e}"
                 )
 
     # ========== Advanced Search Options 다이얼로그 ==========
@@ -6617,8 +6617,8 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.error(f"Advanced Search Options 다이얼로그 오류: {e}")
             QtWidgets.QMessageBox.critical(
                 self,
-                "오류",
-                f"고급 검색 옵션 설정 중 오류가 발생했습니다:\n{e}"
+                "Error",
+                f"An error occurred while configuring advanced search options:\n{e}"
             )
 
     def _on_config_file_changed(self, path: str):
@@ -6949,17 +6949,17 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.error(f"Failed to apply advanced search options: {e}")
             QtWidgets.QMessageBox.critical(
                 self,
-                "오류",
-                f"설정 저장 실패:\n{e}"
+                "Error",
+                f"Failed to save settings:\n{e}"
             )
 
     def _reset_advanced_dialog_to_defaults(self, dialog):
         """Advanced Search Options 다이얼로그 기본값 복원"""
         reply = QtWidgets.QMessageBox.question(
             dialog,
-            "기본값 복원 확인",
-            "모든 고급 검색 옵션을 기본값으로 되돌리시겠습니까?\n\n"
-            "이 작업은 즉시 저장되며, 되돌릴 수 없습니다.",
+            "Confirm Restore Defaults",
+            "Restore all advanced search options to defaults?\n\n"
+            "This is saved immediately and cannot be undone.",
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
             QtWidgets.QMessageBox.No
         )
@@ -6970,8 +6970,8 @@ class WIZWindow(QMainWindow, main_window):
                 if not self.device_search_config.reset_to_defaults():
                     QtWidgets.QMessageBox.warning(
                         dialog,
-                        "복원 실패",
-                        "기본값 복원에 실패했습니다.\n로그를 확인해주세요."
+                        "Restore Failed",
+                        "Failed to restore defaults.\nPlease check the log."
                     )
                     return
 
@@ -7025,8 +7025,8 @@ class WIZWindow(QMainWindow, main_window):
 
                 QtWidgets.QMessageBox.information(
                     dialog,
-                    "복원 완료",
-                    "모든 설정이 기본값으로 복원되었습니다."
+                    "Restore Complete",
+                    "All settings have been restored to defaults."
                 )
 
                 self.logger.info("Advanced search options 기본값 복원 완료")
@@ -7035,8 +7035,8 @@ class WIZWindow(QMainWindow, main_window):
                 self.logger.error(f"기본값 복원 실패: {e}")
                 QtWidgets.QMessageBox.critical(
                     dialog,
-                    "오류",
-                    f"기본값 복원 중 오류가 발생했습니다:\n{e}"
+                    "Error",
+                    f"An error occurred while restoring defaults:\n{e}"
                 )
 
     # ========== CSV 저장/불러오기 ==========
@@ -7054,8 +7054,8 @@ class WIZWindow(QMainWindow, main_window):
         if not hasattr(self, 'mac_list') or not self.mac_list:
             QtWidgets.QMessageBox.critical(
                 self,
-                "저장 실패",
-                "검색된 장비가 없습니다."
+                "Save Failed",
+                "No searched devices found."
             )
             return
 
@@ -7068,7 +7068,7 @@ class WIZWindow(QMainWindow, main_window):
 
         file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
-            "검색 결과 저장",
+            "Save Search Results",
             default_path,
             "CSV Files (*.csv);;All Files (*)",
         )
@@ -7119,15 +7119,15 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.info(f"Saved {len(self.mac_list)} devices to {file_path}")
             QtWidgets.QMessageBox.information(
                 self,
-                "저장 완료",
-                f"{len(self.mac_list)}개 장비 정보가 저장되었습니다."
+                "Saved",
+                f"{len(self.mac_list)} device(s) saved."
             )
         except Exception as e:
             self.logger.error(f"Failed to save CSV: {e}")
             QtWidgets.QMessageBox.critical(
                 self,
-                "오류",
-                f"CSV 저장 실패:\n{e}"
+                "Error",
+                f"Failed to save CSV:\n{e}"
             )
 
     def load_searched_results_from_csv(self):
@@ -7154,7 +7154,7 @@ class WIZWindow(QMainWindow, main_window):
 
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
-            "검색 결과 불러오기",
+            "Load Search Results",
             default_path,
             "CSV Files (*.csv);;All Files (*)",
         )
@@ -7166,8 +7166,8 @@ class WIZWindow(QMainWindow, main_window):
         if hasattr(self, 'mac_list') and self.mac_list:
             reply = QtWidgets.QMessageBox.question(
                 self,
-                "확인",
-                "기존 검색 결과를 덮어쓰시겠습니까?",
+                "Confirm",
+                "Overwrite existing search results?",
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
             )
             if reply != QtWidgets.QMessageBox.Yes:
@@ -7180,7 +7180,7 @@ class WIZWindow(QMainWindow, main_window):
                 # 헤더 검증 (기본 필드만 필수, Operation Mode와 네트워크 정보는 선택)
                 required_headers = {'Mac Address', 'Device Name', 'Firmware Version', 'Status', 'Detected'}
                 if not required_headers.issubset(set(reader.fieldnames or [])):
-                    raise ValueError(f"CSV 헤더 누락: {required_headers - set(reader.fieldnames or [])}")
+                    raise ValueError(f"Missing CSV headers: {required_headers - set(reader.fieldnames or [])}")
 
                 # 데이터 읽기
                 mac_list = []
@@ -7273,8 +7273,8 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.error(f"Failed to load CSV: {e}")
             QtWidgets.QMessageBox.critical(
                 self,
-                "오류",
-                f"CSV 불러오기 실패:\n{e}"
+                "Error",
+                f"Failed to load CSV:\n{e}"
             )
 
     def _execute_phase2_from_csv(self):
@@ -7392,7 +7392,7 @@ class WIZWindow(QMainWindow, main_window):
         if not items:
             return
         menu = QMenu(self)
-        act_terminal = menu.addAction('🖥 터미널로 열기')
+        act_terminal = menu.addAction('🖥 Open in Terminal')
         action = menu.exec_(self.list_device.viewport().mapToGlobal(pos))
         if action == act_terminal:
             self._open_device_in_terminal()
@@ -7417,9 +7417,9 @@ class WIZWindow(QMainWindow, main_window):
         ) if t._connected]
         if active:
             QMessageBox.information(
-                self, '터미널',
-                '연결 중인 탭이 있어 자동 채우기가 생략됩니다.\n'
-                '연결 해제 후 다시 시도하세요.',
+                self, 'Terminal',
+                'A tab is currently connected; auto-fill is skipped.\n'
+                'Please disconnect and try again.',
             )
         else:
             self._terminal_panel.fill_from_device(device_info)

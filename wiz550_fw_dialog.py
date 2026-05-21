@@ -159,7 +159,7 @@ class WIZ550FWDialog(QDialog):
         auto_layout.addWidget(self.pgbar_auto)
 
         auto_layout.addStretch()
-        self.tab_widget.addTab(auto_widget, "자동 (내장 TFTP)")
+        self.tab_widget.addTab(auto_widget, "Auto (Built-in TFTP)")
 
     def _build_manual_tab(self):
         manual_widget = QWidget()
@@ -206,7 +206,7 @@ class WIZ550FWDialog(QDialog):
         manual_layout.addLayout(pw_row)
 
         manual_layout.addStretch()
-        self.tab_widget.addTab(manual_widget, "수동 (외부 TFTP)")
+        self.tab_widget.addTab(manual_widget, "Manual (External TFTP)")
 
     # ── 시그널 연결 ───────────────────────────────────────────────────
 
@@ -219,13 +219,13 @@ class WIZ550FWDialog(QDialog):
 
     def _on_browse(self):
         fname, _ = QFileDialog.getOpenFileName(
-            self, "펌웨어 파일 선택", "", "Binary Files (*.bin);;All Files (*)"
+            self, "Select Firmware File", "", "Binary Files (*.bin);;All Files (*)"
         )
         if not fname:
             return
         if _is_boot_file(fname):
             QMessageBox.warning(
-                self, "파일 오류",
+                self, "File Error",
                 "Cannot upload BOOT firmware file. Please select an APP firmware file only."
             )
             return
