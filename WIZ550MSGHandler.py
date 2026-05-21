@@ -478,7 +478,14 @@ class WIZ550Setter(QThread):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
 
-            bind_ip = self.iface_ip if self.iface_ip else ''
+            # 대상 IP 기반 OS 라우팅으로 최적 NIC 자동 선택 — selected_eth가 다른 서브넷이어도 동작
+            try:
+                _probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                _probe.connect((self.target_ip, 1))
+                bind_ip = _probe.getsockname()[0]
+                _probe.close()
+            except Exception:
+                bind_ip = self.iface_ip or ''
             sock.bind((bind_ip, 0))
 
             pkt = _build_set_info(self.target_mac, self.password, self.config_data)
@@ -536,7 +543,14 @@ class WIZ550Resetter(QThread):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
 
-            bind_ip = self.iface_ip if self.iface_ip else ''
+            # 대상 IP 기반 OS 라우팅으로 최적 NIC 자동 선택
+            try:
+                _probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                _probe.connect((self.target_ip, 1))
+                bind_ip = _probe.getsockname()[0]
+                _probe.close()
+            except Exception:
+                bind_ip = self.iface_ip or ''
             sock.bind((bind_ip, 0))
 
             op_name = "FACTORY_RESET" if self.op_code == OP_FACTORY_RESET else "REMOTE_RESET"
