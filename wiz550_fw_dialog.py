@@ -11,8 +11,11 @@ D-07: QProgressBar indeterminate → 완료 100%
 UI-SPEC: fw_git_dialog.py 패턴 계승
 """
 
+import ipaddress
 import os
 import socket
+
+import ifaddr
 
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout,
@@ -23,6 +26,29 @@ from PyQt5.QtWidgets import (
 
 from WIZ550FWUploadThread import WIZ550FWUploadThread
 from utils import logger
+
+
+def _best_server_ip(target_ip: str, fallback: str = "") -> str:
+    """target_ip와 같은 서브넷에 있는 로컬 NIC IP 반환. 없으면 fallback."""
+    try:
+        target = ipaddress.ip_address(target_ip)
+        for adapter in ifaddr.get_adapters():
+            for ip in adapter.ips:
+                if not isinstance(ip.ip, str):
+                    continue
+                prefix = getattr(ip, 'network_prefix', None)
+                if prefix is None:
+                    continue
+                try:
+                    net = ipaddress.ip_network(f"{ip.ip}/{prefix}", strict=False)
+                    if target in net:
+                        logger.debug(f"[WIZ550FW] TFTP server IP 자동선택: {ip.ip}/{prefix} ← target {target_ip}")
+                        return ip.ip
+                except Exception:
+                    continue
+    except Exception as e:
+        logger.debug(f"[WIZ550FW] NIC 서브넷 매칭 실패: {e}")
+    return fallback
 
 
 def _is_boot_file(filename: str) -> bool:
@@ -36,8 +62,9 @@ class WIZ550FWDialog(QDialog):
                  target_mac: str = "",
                  parent=None):
         super().__init__(parent)
-        self._localip_addr  = localip_addr
         self._target_ip     = target_ip
+        # target_ip 서브넷과 일치하는 NIC IP 자동선택; 매칭 없으면 전달받은 값 사용
+        self._localip_addr  = _best_server_ip(target_ip, fallback=localip_addr)
         self._target_mac    = target_mac
         self._upload_thread = None
         self._fw_path       = ""
@@ -222,7 +249,7 @@ class WIZ550FWDialog(QDialog):
         if tab == 0:
             mode        = 'auto'
             fw_path     = self._fw_path
-            server_ip   = ""   # OS 라우팅 프로브로 자동 결정 (target_ip 기준 최적 NIC)
+            server_ip   = self._localip_addr or "0.0.0.0"
             server_port = 69
             password    = self.edit_pw.text()
         else:
