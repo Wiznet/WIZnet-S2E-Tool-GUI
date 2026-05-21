@@ -356,11 +356,11 @@ class WIZ550Searcher(QThread):
 
             bind_ip = self.iface_ip if self.iface_ip else ''
             sock.bind((bind_ip, 0))  # 임시 포트 (장치가 src port로 응답 전송)
-            logger.info(f"[WIZ550] Searcher bind {bind_ip or 'INADDR_ANY'}")
+            # logger.info(f"[WIZ550] Searcher bind {bind_ip or 'INADDR_ANY'}")
 
             pkt = _build_discovery_all()
             sock.sendto(pkt, ('255.255.255.255', WIZ550_PORT))
-            logger.info(f"[WIZ550] DISCOVERY_ALL 브로드캐스트 → 255.255.255.255:{WIZ550_PORT}")
+            # logger.info(f"[WIZ550] DISCOVERY_ALL 브로드캐스트 → 255.255.255.255:{WIZ550_PORT}")
 
             deadline = time.time() + self.timeout
             while True:
@@ -382,7 +382,7 @@ class WIZ550Searcher(QThread):
 
                 mac = info['mac']
                 if mac not in results:
-                    logger.info(f"[WIZ550] 발견: {mac} ({addr[0]}) type={info['device_type']} fw={info['fw_str']}")
+                    # logger.info(f"[WIZ550] 발견: {mac} ({addr[0]}) type={info['device_type']} fw={info['fw_str']}")
                     results[mac] = info
 
         except Exception as e:

@@ -255,7 +255,7 @@ class WIZMSGHandler(QThread):
                         if sock == self.sock.sock:
                             data, addr = self.sock.recvfrom()
                             if t_send is not None:
-                                self.logger.info(f"[TIMING] iter={self.iter} recv #{len(self.rcv_list)+1} at +{time.time()-t_send:.3f}s")
+                                # self.logger.info(f"[TIMING] iter={self.iter} recv #{len(self.rcv_list)+1} at +{time.time()-t_send:.3f}s")
                             self.logger.debug(f"Pre-search recv: {len(data)}B from {addr}")
                             # self.searched_data.emit(data)
 
@@ -300,13 +300,14 @@ class WIZMSGHandler(QThread):
                                             self.setting_pw_wrong = False
 
                     if t_send is not None:
-                        self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s iter={self.iter} 루프 select(1s) 시작")
+                        # self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s iter={self.iter} 루프 select(1s) 시작")
+                        pass
                     _t_loop_sel = time.time()
                     readready, writeready, errorready = select.select(
                         self.inputs, self.outputs, self.errors, WIZMSGHandler.loop_select_timeout
                     )
                     if t_send is not None:
-                        self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s iter={self.iter} 루프 select 완료 ({(time.time()-_t_loop_sel)*1000:.0f}ms 소요, ready={len(readready)})")
+                        # self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s iter={self.iter} 루프 select 완료 ({(time.time()-_t_loop_sel)*1000:.0f}ms 소요, ready={len(readready)})")
 
                     if not readready or not replylists:
                         break
@@ -341,13 +342,13 @@ class WIZMSGHandler(QThread):
 
                     if t_send is not None:
                         t_loop_break = time.time()
-                        self.logger.info(f"[TIMING] loop broke at +{t_loop_break-t_send:.3f}s, {len(self.mac_list)} devices found")
+                        # self.logger.info(f"[TIMING] loop broke at +{t_loop_break-t_send:.3f}s, {len(self.mac_list)} devices found")
 
                     # Phase 1 emit 전 안정화 대기 (실험적 플래그로 제어)
                     if not WIZMSGHandler.skip_phase1_emit_delay:
                         self.msleep(WIZMSGHandler.emit_stabilization_ms)
                         if t_send is not None:
-                            self.logger.info(f"[TIMING] after msleep({WIZMSGHandler.emit_stabilization_ms}): +{time.time()-t_send:.3f}s → emitting result")
+                            # self.logger.info(f"[TIMING] after msleep({WIZMSGHandler.emit_stabilization_ms}): +{time.time()-t_send:.3f}s → emitting result")
                     else:
                         # 실험적: msleep 생략 (PyQt signal queue 불안정 가능성)
                         if t_send is not None:
