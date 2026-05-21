@@ -201,9 +201,9 @@ class WIZMSGHandler(QThread):
             return
 
         try:
-            if t_send is not None:
-                # self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s initial select(timeout={self.timeout}s) 시작")
             _t_sel0 = time.time()
+            # if t_send is not None:
+            #     self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s initial select(timeout={self.timeout}s) 시작")
             readready, writeready, errorready = select.select(
                 self.inputs, self.outputs, self.errors, self.timeout
             )
