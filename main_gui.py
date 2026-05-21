@@ -3344,7 +3344,8 @@ class WIZWindow(QMainWindow, main_window):
             self.curr_st = DeviceStatus.boot if d.get('is_boot') else DeviceStatus.app
             # hide wiz1x0 panel and restore generalTab
             self._show_wiz1x0_panel(False)
-            self.btn_setting.setEnabled(True)  # _show_wiz1x0_panel(False) disables btn_setting — restore it
+            # BOOT 상태에서는 Apply 차단 (BOOT 펌웨어는 SET_INFO 미처리)
+            self.btn_setting.setEnabled(self.curr_st not in DeviceStatusMinimum)
             # show basic_tab + advance_tab, remove mqtt/certificate tabs
             self.general_tab_config()
             # fetch latest config via GET_INFO
