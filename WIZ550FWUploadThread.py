@@ -86,6 +86,20 @@ class WIZ550FWUploadThread(QThread):
         self._server     = None     # tftpy.TftpServer 인스턴스
         self._d2_sock    = None     # 0xD1 전송 + 0xD2 수신 공용 소켓
 
+        # NIC 자동선택: target_ip 기반 OS 라우팅 프로브 (WIZ550Setter와 동일 패턴)
+        try:
+            _probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            _probe.connect((target_ip, 1))
+            self._effective_bind_ip = _probe.getsockname()[0]
+            _probe.close()
+        except Exception:
+            self._effective_bind_ip = iface_ip or ''
+
+        # auto 모드에서 server_ip가 미지정('' / '0.0.0.0')이면 자동선택 NIC IP로 확정
+        # → 0xD1 패킷 server_ip 필드와 TFTP 서버 바인딩 IP를 일치시킴
+        if not self.server_ip or self.server_ip == '0.0.0.0':
+            self.server_ip = self._effective_bind_ip
+
     def run(self):
         try:
             if self.mode == 'auto':
@@ -217,8 +231,8 @@ class WIZ550FWUploadThread(QThread):
         self._d2_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._d2_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._d2_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        # NIC IP에 바인딩해서 0xD1 소스 IP를 올바르게 설정
-        bind_ip = self.iface_ip or ''
+        # OS 라우팅 프로브로 결정된 NIC에 바인딩 → 0xD1 소스 IP = TFTP server_ip 일치
+        bind_ip = self._effective_bind_ip
         try:
             self._d2_sock.bind((bind_ip, 0))
         except OSError as e:
