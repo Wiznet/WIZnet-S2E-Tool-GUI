@@ -287,16 +287,19 @@ class FWGitDialog(QDialog):
     # ── WIZ550 인라인 TFTP 업로드 ─────────────────────────────────────
     def _start_wiz550_upload(self, fw_path):
         from WIZ550FWUploadThread import WIZ550FWUploadThread
+        from wiz550_fw_dialog import _best_server_ip
         cfg = self._wiz550_config
         self._lbl_asset.setText("Starting TFTP upload...")
         self._lbl_asset.setStyleSheet("color: gray;")
         password = self._edit_pw.text() if hasattr(self, '_edit_pw') else ''
+        # target_ip 서브넷 기준 NIC 자동선택 (UI NIC 드롭다운과 무관하게 올바른 IP 사용)
+        server_ip = _best_server_ip(cfg['target_ip'], fallback=cfg['localip_addr'])
         self._upload_thread = WIZ550FWUploadThread(
             mode='auto',
             fw_path=fw_path,
             target_ip=cfg['target_ip'],
             target_mac=cfg['target_mac'],
-            server_ip=cfg['localip_addr'],
+            server_ip=server_ip,
             server_port=69,
             password=password,
             iface_ip=cfg['localip_addr'],
