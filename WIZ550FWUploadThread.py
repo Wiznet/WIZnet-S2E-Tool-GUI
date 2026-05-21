@@ -23,10 +23,12 @@ WIZ550FWUploadThread.py — WIZ550 TFTP 펌웨어 업로드 QThread
 
 import logging
 import os
+import platform
 import re
 import select
 import shutil
 import socket
+import subprocess
 import tempfile
 import threading
 import time
@@ -37,11 +39,44 @@ from PyQt5.QtCore import QThread, pyqtSignal
 from WIZ550MSGHandler import build_fw_upload_pkt, WIZ550_PORT
 from utils import logger
 
-# tftpy 내부 로그: WARNING 이상만 출력
+# tftpy 내부 로그: INFO 이상 출력 — 장치 TFTP GET 요청 수신 여부 진단
 _tftpy_log = logging.getLogger('tftpy')
-_tftpy_log.setLevel(logging.WARNING)
+_tftpy_log.setLevel(logging.INFO)
 for _h in logger.handlers:
     _tftpy_log.addHandler(_h)
+
+_FW_RULE_NAME = "WIZnet_S2E_TFTP_UDP69"
+
+
+def _add_firewall_rule(port: int) -> bool:
+    """Windows 방화벽 — 포트 UDP 인바운드 허용 규칙 추가. 비-Windows / 권한 부족 시 False."""
+    if platform.system() != 'Windows':
+        return False
+    try:
+        subprocess.run([
+            'netsh', 'advfirewall', 'firewall', 'add', 'rule',
+            f'name={_FW_RULE_NAME}',
+            'dir=in', 'action=allow', 'protocol=UDP', f'localport={port}',
+        ], check=True, capture_output=True, timeout=5)
+        logger.info(f"[WIZ550FW] 방화벽 규칙 추가: UDP {port} 인바운드 허용")
+        return True
+    except Exception as e:
+        logger.warning(f"[WIZ550FW] 방화벽 규칙 추가 실패 (관리자 권한 필요): {e}")
+        return False
+
+
+def _remove_firewall_rule():
+    """_add_firewall_rule로 추가한 규칙 삭제."""
+    if platform.system() != 'Windows':
+        return
+    try:
+        subprocess.run([
+            'netsh', 'advfirewall', 'firewall', 'delete', 'rule',
+            f'name={_FW_RULE_NAME}',
+        ], check=True, capture_output=True, timeout=5)
+        logger.info(f"[WIZ550FW] 방화벽 규칙 삭제: {_FW_RULE_NAME}")
+    except Exception as e:
+        logger.warning(f"[WIZ550FW] 방화벽 규칙 삭제 실패: {e}")
 
 
 def _is_fw_done_reply(data: bytes) -> bool:
@@ -117,6 +152,8 @@ class WIZ550FWUploadThread(QThread):
         fw_filename = os.path.basename(self.fw_path)
         canonical   = _canonical_name(fw_filename)
 
+        fw_rule_added = _add_firewall_rule(self.server_port)
+
         tmpdir = tempfile.mkdtemp(prefix='wiz550fw_')
         logger.debug(f"[WIZ550FW] tmpdir: {tmpdir}")
 
@@ -162,6 +199,8 @@ class WIZ550FWUploadThread(QThread):
                 self.error.emit("TFTP 서버 시작 타임아웃")
             self.finished.emit(False)
             shutil.rmtree(tmpdir, ignore_errors=True)
+            if fw_rule_added:
+                _remove_firewall_rule()
             return
 
         logger.info(
@@ -179,6 +218,8 @@ class WIZ550FWUploadThread(QThread):
         self._server.stop(now=True)
         listen_thread.join(timeout=3)
         shutil.rmtree(tmpdir, ignore_errors=True)
+        if fw_rule_added:
+            _remove_firewall_rule()
 
         self.finished.emit(success)
 
