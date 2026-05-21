@@ -174,12 +174,16 @@ def _parse_base_162(data: bytes) -> dict:
      dhcp_use, dns_use, dns_server_ip, dns_domain_name,
      serial_command, serial_trigger) = fields
 
+    _is_boot = fw_ver[0] > 100
     return {
         'packet_size':              packet_size,
         'module_type':              module_type.hex(),
         'module_name':              _cstr_to_str(module_name),
         'fw_ver':                   fw_ver,
-        'fw_str':                   f'{fw_ver[0]}.{fw_ver[1]}.{fw_ver[2]}',
+        'is_boot':                  _is_boot,
+        'fw_str':                   (f'Bootloader {fw_ver[0]-100}.{fw_ver[1]}.{fw_ver[2]}'
+                                     if _is_boot else
+                                     f'{fw_ver[0]}.{fw_ver[1]}.{fw_ver[2]}'),
         'mac':                      ':'.join(f'{b:02X}' for b in mac),
         'local_ip':                 _ip_bytes_to_str(local_ip),
         'gateway':                  _ip_bytes_to_str(gateway),
@@ -286,12 +290,16 @@ def parse_web(data: bytes) -> dict:
      uart1_baud_rate, uart1_data_bits, uart1_parity, uart1_stop_bits, uart1_flow_control,
      pw_setting, dhcp_use, dns_use, dns_server_ip, dns_domain_name) = fields
 
+    _is_boot = fw_ver[0] > 100
     return {
         'packet_size':          packet_size,
         'module_type':          module_type.hex(),
         'module_name':          _cstr_to_str(module_name),
         'fw_ver':               fw_ver,
-        'fw_str':               f'{fw_ver[0]}.{fw_ver[1]}.{fw_ver[2]}',
+        'is_boot':              _is_boot,
+        'fw_str':               (f'Bootloader {fw_ver[0]-100}.{fw_ver[1]}.{fw_ver[2]}'
+                                 if _is_boot else
+                                 f'{fw_ver[0]}.{fw_ver[1]}.{fw_ver[2]}'),
         'mac':                  ':'.join(f'{b:02X}' for b in mac),
         'local_ip':             _ip_bytes_to_str(local_ip),
         'gateway':              _ip_bytes_to_str(gateway),

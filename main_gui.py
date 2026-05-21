@@ -3341,7 +3341,7 @@ class WIZWindow(QMainWindow, main_window):
             device_type = d.get('device_type', 'WIZ550SR')
             self.curr_dev = device_type
             self.curr_ver = d.get('fw_str', '')
-            self.curr_st = DeviceStatus.app
+            self.curr_st = DeviceStatus.boot if d.get('is_boot') else DeviceStatus.app
             # hide wiz1x0 panel and restore generalTab
             self._show_wiz1x0_panel(False)
             self.btn_setting.setEnabled(True)  # _show_wiz1x0_panel(False) disables btn_setting — restore it
@@ -3480,7 +3480,7 @@ class WIZWindow(QMainWindow, main_window):
         self.gateway.setText(d.get('gateway', ''))
         self.dns_addr.setText(d.get('dns_server_ip', ''))
 
-        # Working mode → ch0 operation mode (0=TCP Client, 1=TCP Server, 2=UDP)
+        # Working mode (Java 원본: 0=Client, 1=Server, 2=TCP Mixed, 3=UDP, 4=MQTT)
         for rb in (self.ch0_tcpclient, self.ch0_tcpserver, self.ch0_tcpmixed, self.ch0_udp):
             rb.setEnabled(True)
         wmode = d.get('working_mode', 0)
@@ -3489,7 +3489,11 @@ class WIZWindow(QMainWindow, main_window):
         elif wmode == 1:
             self.ch0_tcpserver.setChecked(True)
         elif wmode == 2:
+            self.ch0_tcpmixed.setChecked(True)
+        elif wmode == 3:
             self.ch0_udp.setChecked(True)
+        elif wmode == 4:
+            self.ch0_mqttclient.setChecked(True)
         self.event_opmode()
 
         # Ports
@@ -3555,13 +3559,17 @@ class WIZWindow(QMainWindow, main_window):
         d['gateway'] = self.gateway.text().strip()
         d['dns_server_ip'] = self.dns_addr.text().strip()
 
-        # Working mode
+        # Working mode (Java 원본: 0=Client, 1=Server, 2=TCP Mixed, 3=UDP, 4=MQTT)
         if self.ch0_tcpclient.isChecked():
             d['working_mode'] = 0
         elif self.ch0_tcpserver.isChecked():
             d['working_mode'] = 1
-        elif self.ch0_udp.isChecked():
+        elif self.ch0_tcpmixed.isChecked():
             d['working_mode'] = 2
+        elif self.ch0_udp.isChecked():
+            d['working_mode'] = 3
+        elif self.ch0_mqttclient.isChecked():
+            d['working_mode'] = 4
 
         # Ports
         try:

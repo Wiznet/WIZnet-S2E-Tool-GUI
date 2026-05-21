@@ -228,13 +228,17 @@ def _parse_discovery_reply(data: bytes):
     else:
         return None  # WIZ550 계열 아님 → 무시 (D-03)
 
-    mac_str = ':'.join(f'{b:02X}' for b in mac_bytes)
-    fw_str  = f'{fw_version[0]}.{fw_version[1]}.{fw_version[2]}'
+    mac_str  = ':'.join(f'{b:02X}' for b in mac_bytes)
+    _is_boot = fw_version[0] > 100
+    fw_str   = (f'Bootloader {fw_version[0]-100}.{fw_version[1]}.{fw_version[2]}'
+                if _is_boot else
+                f'{fw_version[0]}.{fw_version[1]}.{fw_version[2]}')
 
     return {
         'device_type':  device_type,
         'product_code': product_code,
         'fw_version':   fw_version,
+        'is_boot':      _is_boot,
         'fw_str':       fw_str,
         'mac':          mac_str,
         'mac_bytes':    mac_bytes,
