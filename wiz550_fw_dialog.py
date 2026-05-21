@@ -11,7 +11,6 @@ D-07: QProgressBar indeterminate → 완료 100%
 UI-SPEC: fw_git_dialog.py 패턴 계승
 """
 
-import ipaddress
 import os
 import socket
 
@@ -29,23 +28,15 @@ from utils import logger
 
 
 def _best_server_ip(target_ip: str, fallback: str = "") -> str:
-    """target_ip와 같은 서브넷에 있는 로컬 NIC IP 반환. 없으면 fallback."""
+    """target_ip와 같은 /24 서브넷의 로컬 NIC IP 반환. 없으면 fallback."""
     try:
-        target = ipaddress.ip_address(target_ip)
+        # /24 prefix 문자열 비교 — network_prefix 미제공 어댑터도 커버
+        target_prefix = '.'.join(target_ip.split('.')[:3]) + '.'
         for adapter in ifaddr.get_adapters():
             for ip in adapter.ips:
-                if not isinstance(ip.ip, str):
-                    continue
-                prefix = getattr(ip, 'network_prefix', None)
-                if prefix is None:
-                    continue
-                try:
-                    net = ipaddress.ip_network(f"{ip.ip}/{prefix}", strict=False)
-                    if target in net:
-                        logger.debug(f"[WIZ550FW] TFTP server IP 자동선택: {ip.ip}/{prefix} ← target {target_ip}")
-                        return ip.ip
-                except Exception:
-                    continue
+                if isinstance(ip.ip, str) and ip.ip.startswith(target_prefix):
+                    logger.debug(f"[WIZ550FW] TFTP server IP 자동선택: {ip.ip} ← target {target_ip}")
+                    return ip.ip
     except Exception as e:
         logger.debug(f"[WIZ550FW] NIC 서브넷 매칭 실패: {e}")
     return fallback
