@@ -202,13 +202,13 @@ class WIZMSGHandler(QThread):
 
         try:
             if t_send is not None:
-                self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s initial select(timeout={self.timeout}s) 시작")
+                # self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s initial select(timeout={self.timeout}s) 시작")
             _t_sel0 = time.time()
             readready, writeready, errorready = select.select(
                 self.inputs, self.outputs, self.errors, self.timeout
             )
             if t_send is not None:
-                self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s initial select 완료 ({(time.time()-_t_sel0)*1000:.0f}ms 소요, ready={len(readready)})")
+                pass  # self.logger.info(f"[TIMING] +{time.time()-t_send:.3f}s initial select 완료 ({(time.time()-_t_sel0)*1000:.0f}ms 소요, ready={len(readready)})")
 
             replylists = None
 

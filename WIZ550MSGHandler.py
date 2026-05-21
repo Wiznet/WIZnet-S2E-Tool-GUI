@@ -430,14 +430,14 @@ class WIZ550Getter(QThread):
 
             pkt = _build_get_info(self.target_mac)
             sock.sendto(pkt, ('255.255.255.255', WIZ550_PORT))  # Java 원본 동일 (Pitfall 4)
-            logger.info(f"[WIZ550] GET_INFO → {self.target_mac} (type={self.device_type})")
+            # logger.info(f"[WIZ550] GET_INFO → {self.target_mac} (type={self.device_type})")
 
             ready, _, _ = select.select([sock], [], [], self.timeout)
             if ready:
                 data, _ = sock.recvfrom(1024)
                 result = _parse_get_info_reply(data, self.device_type)
                 if result:
-                    logger.info(f"[WIZ550] GET_INFO 응답 파싱 완료: {self.target_mac}")
+                    pass  # logger.info(f"[WIZ550] GET_INFO 응답 파싱 완료: {self.target_mac}")
                 else:
                     logger.warning(f"[WIZ550] GET_INFO 응답 파싱 실패: {self.target_mac}")
             else:

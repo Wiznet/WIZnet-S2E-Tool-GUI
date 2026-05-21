@@ -2221,7 +2221,7 @@ class WIZWindow(QMainWindow, main_window):
         # 새 검색 시작 - 반복 검색 카운터 리셋 및 타이머 시작
         self.retry_search_current = 0
         self._timing_t0 = time.time()
-        self.logger.info("[TIMING] System timer started at button click")
+        # self.logger.info("[TIMING] System timer started at button click")
 
         # 실제 검색 함수 호출
         self.do_search_normal()
@@ -2271,17 +2271,17 @@ class WIZWindow(QMainWindow, main_window):
 
     def search_pre(self):
         # 타이밍은 do_search_normal()에서 이미 설정됨
-        self.logger.info(f"[TIMING] {self._T()} search_pre() 진입 (retry #{self.retry_search_current})")
+        # self.logger.info(f"[TIMING] {self._T()} search_pre() 진입 (retry #{self.retry_search_current})")
 
         if self.wizmsghandler is not None and self.wizmsghandler.isRunning():
-            self.logger.info(f"[TIMING] {self._T()} wizmsghandler 아직 실행 중 → wait() 대기")
+            # self.logger.info(f"[TIMING] {self._T()} wizmsghandler 아직 실행 중 → wait() 대기")
             self.wizmsghandler.wait()
-            self.logger.info(f"[TIMING] {self._T()} wizmsghandler.wait() 완료")
+            # self.logger.info(f"[TIMING] {self._T()} wizmsghandler.wait() 완료")
             # print('wait')
         else:
             # 기존 연결 close
             self.sock_close()
-            self.logger.info(f"[TIMING] {self._T()} sock_close() 완료")
+            # self.logger.info(f"[TIMING] {self._T()} sock_close() 완료")
 
             # 첫 검색 시작 시 설정 읽기 (유지/갱신 모드 + UDP broadcast)
             if self.retry_search_current == 0 and self.cumulative_mode and self.broadcast.isChecked():
@@ -2344,12 +2344,12 @@ class WIZWindow(QMainWindow, main_window):
             self.list_device.setHorizontalHeaderItem(2, item_detected)
 
             # Set socket for search
-            self.logger.info(f"[TIMING] {self._T()} socket_config() 시작")
+            # self.logger.info(f"[TIMING] {self._T()} socket_config() 시작")
             _t_sock = time.time()
             self.socket_config()
-            self.logger.info(f"[TIMING] {self._T()} socket_config() 완료 ({(time.time() - _t_sock) * 1000:.1f}ms 소요)")
+            # self.logger.info(f"[TIMING] {self._T()} socket_config() 완료 ({(time.time() - _t_sock) * 1000:.1f}ms 소요)")
             _conf_sock = "None" if not hasattr(self, "conf_sock") else self.conf_sock
-            self.logger.info(f"search: conf_sock: {_conf_sock}")
+            # self.logger.info(f"search: conf_sock: {_conf_sock}")
 
             # Search devices
             if self.isConnected or self.broadcast.isChecked():
@@ -2391,7 +2391,7 @@ class WIZWindow(QMainWindow, main_window):
                     )
                     self.wizmsghandler.search_result.connect(self.get_search_result)
                     self.wizmsghandler.start()
-                    self.logger.info(f"[TIMING] {self._T()} wizmsghandler.start() 완료 → search_pre() 종료")
+                    # self.logger.info(f"[TIMING] {self._T()} wizmsghandler.start() 완료 → search_pre() 종료")
 
                 # WIZ1x0SR 검색 (체크박스 ON 시)
                 # 이전 searcher가 아직 실행 중이면 새로 시작하지 않음
@@ -2407,9 +2407,9 @@ class WIZWindow(QMainWindow, main_window):
                         )
                         self.wiz1x0_searcher.search_done.connect(self._merge_wiz1x0_results)
                         self.wiz1x0_searcher.start()
-                        self.logger.info(f"[TIMING] {self._T()} WIZ1x0Searcher.start() 완료")
+                        # self.logger.info(f"[TIMING] {self._T()} WIZ1x0Searcher.start() 완료")
                     else:
-                        self.logger.info(f"[TIMING] {self._T()} WIZ1x0Searcher 이미 실행 중 — skip")
+                        pass  # self.logger.info(f"[TIMING] {self._T()} WIZ1x0Searcher 이미 실행 중 — skip")
                 else:
                     self._wiz1x0_search_pending = False
 
@@ -2423,9 +2423,9 @@ class WIZWindow(QMainWindow, main_window):
                     )
                     self.wiz550_searcher.search_done.connect(self._merge_wiz550_results)
                     self.wiz550_searcher.start()
-                    self.logger.info(f"[TIMING] {self._T()} WIZ550Searcher.start() 완료")
+                    # self.logger.info(f"[TIMING] {self._T()} WIZ550Searcher.start() 완료")
                 else:
-                    self.logger.info(f"[TIMING] {self._T()} WIZ550Searcher 이미 실행 중 — skip")
+                    pass  # self.logger.info(f"[TIMING] {self._T()} WIZ550Searcher 이미 실행 중 — skip")
 
     def _merge_wiz1x0_results(self, results: list):
         """WIZ1x0Searcher 완료 콜백 — 결과를 기존 device list에 병합."""
@@ -2551,7 +2551,7 @@ class WIZWindow(QMainWindow, main_window):
             d for d in dev_info_list
             if self.dev_profile.get(d[0], {}).get('_proto') not in _binary_proto
         ]
-        self.logger.info(f"search_each_dev() dev_info_list: {dev_info_list}")
+        # self.logger.info(f"search_each_dev() dev_info_list: {dev_info_list}")
         total_devs = len(dev_info_list)
 
         # pgbar 최적화: 갱신 간격 계산
@@ -2652,7 +2652,7 @@ class WIZWindow(QMainWindow, main_window):
         # System time 즉시 계산 (auto_hide_delay 전)
         if hasattr(self, '_timing_t0') and self._timing_t0 is not None:
             final_system_time = time.time() - self._timing_t0
-            self.logger.info(f"[TIMING] Phase 3 완료 System time: {final_system_time:.2f}s")
+            # self.logger.info(f"[TIMING] Phase 3 완료 System time: {final_system_time:.2f}s")
 
             # show_timing_in_statusbar 활성화 시 statusbar 메시지에 System time 반영
             show_timing = self.timing_config.get('logging', 'show_timing_in_statusbar', default=False)
@@ -2775,7 +2775,7 @@ class WIZWindow(QMainWindow, main_window):
             self.msg_error("[ERROR] getsearch_each_dev(): {}".format(e))
 
     def get_search_result(self, devnum):
-        self.logger.info(f"[TIMING] {self._T()} get_search_result() 진입 (devnum={devnum}, emit→진입 시각)")
+        # self.logger.info(f"[TIMING] {self._T()} get_search_result() 진입 (devnum={devnum}, emit→진입 시각)")
 
         # CSV Load 모드 체크
         csv_load_mode = getattr(self, 'csv_load_mode', False)
@@ -2807,9 +2807,9 @@ class WIZWindow(QMainWindow, main_window):
         if not csv_load_mode and self.wizmsghandler is not None:
             data_source = self.wizmsghandler
             if self.wizmsghandler.isRunning():
-                self.logger.info(f"[TIMING] {self._T()} wizmsghandler.wait() 시작 (get_search_result에서 아직 실행 중)")
+                # self.logger.info(f"[TIMING] {self._T()} wizmsghandler.wait() 시작 (get_search_result에서 아직 실행 중)")
                 self.wizmsghandler.wait()
-                self.logger.info(f"[TIMING] {self._T()} wizmsghandler.wait() 완료")
+                # self.logger.info(f"[TIMING] {self._T()} wizmsghandler.wait() 완료")
 
         if devnum >= 0:
             self.searched_devnum = devnum
@@ -2878,9 +2878,9 @@ class WIZWindow(QMainWindow, main_window):
 
                     # 유지/갱신 모드 처리
                     if self.cumulative_mode:
-                        self.logger.info(f"[TIMING] {self._T()} _merge_search_results() 시작")
+                        # self.logger.info(f"[TIMING] {self._T()} _merge_search_results() 시작")
                         self._merge_search_results(new_mac_list, new_mn_list, new_vr_list, new_st_list, new_mode_list)
-                        self.logger.info(f"[TIMING] {self._T()} _merge_search_results() 완료")
+                        # self.logger.info(f"[TIMING] {self._T()} _merge_search_results() 완료")
                         # all_response도 병합 (기존 + 신규)
                         for rcv in new_rcv_list:
                             if rcv not in self.all_response:
@@ -2908,7 +2908,7 @@ class WIZWindow(QMainWindow, main_window):
                     self.logger.warning(f"[DIAG] self 리스트 길이 불일치! {_self_lens}")
 
                 # row length = the number of searched devices
-                self.logger.info(f"[TIMING] {self._T()} 테이블 업데이트 시작 ({len(self.mac_list)}행)")
+                # self.logger.info(f"[TIMING] {self._T()} 테이블 업데이트 시작 ({len(self.mac_list)}행)")
                 self.list_device.setRowCount(len(self.mac_list))
 
                 _loading_color = QtGui.QColor(200, 80, 0)  # 주황-빨강: Phase 3 수집 중
@@ -2953,7 +2953,7 @@ class WIZWindow(QMainWindow, main_window):
                 # row/column resize disable
                 self.list_device.horizontalHeader().setSectionResizeMode(2)
                 self.list_device.verticalHeader().setSectionResizeMode(2)
-                self.logger.info(f"[TIMING] {self._T()} 테이블 업데이트 완료 (resize 포함: {(time.time() - _t_resize) * 1000:.1f}ms)")
+                # self.logger.info(f"[TIMING] {self._T()} 테이블 업데이트 완료 (resize 포함: {(time.time() - _t_resize) * 1000:.1f}ms)")
 
             # mac_list 기반으로 카운트 재동기화 — WIZ550/_merge_wiz550_results가 먼저
             # 완료됐을 때 devnum(일반 프로토콜 수)이 전체 수를 덮어쓰는 것을 방지
@@ -2992,7 +2992,7 @@ class WIZWindow(QMainWindow, main_window):
                 if should_continue:
                     self.logger.info(f"반복 검색 계속: {self.retry_search_current + 1}회차 시작")
                     # 약간의 딜레이 후 재검색 (상수 사용)
-                    self.logger.info(f"[TIMING] {self._T()} QTimer.singleShot({RetrySearchLimits.RETRY_DELAY_MS}ms) 설정 → _continue_retry_search 예약")
+                    # self.logger.info(f"[TIMING] {self._T()} QTimer.singleShot({RetrySearchLimits.RETRY_DELAY_MS}ms) 설정 → _continue_retry_search 예약")
                     QtCore.QTimer.singleShot(RetrySearchLimits.RETRY_DELAY_MS, self._continue_retry_search)
                     return  # get_dev_list() 호출하지 않음
                 else:
@@ -3053,7 +3053,7 @@ class WIZWindow(QMainWindow, main_window):
         - _merge_search_results()에서 새로 발견된 장비만 True로 업데이트
         """
         try:
-            self.logger.info(f"[TIMING] {self._T()} _continue_retry_search() 진입 (QTimer 발화)")
+            # self.logger.info(f"[TIMING] {self._T()} _continue_retry_search() 진입 (QTimer 발화)")
             # search_pre 재호출 (detected_list는 유지)
             self.search_pre()
         except Exception as e:
@@ -3538,7 +3538,7 @@ class WIZWindow(QMainWindow, main_window):
 
         # dev_profile에 병합 (Discovery 정보 보존)
         self.dev_profile.setdefault(macaddr, {}).update(cfg)
-        self.logger.info(f"[WIZ550] GET_INFO 완료: {macaddr} ({device_type})")
+        # self.logger.info(f"[WIZ550] GET_INFO 완료: {macaddr} ({device_type})")
 
         # B-02 Stage 2: GET_INFO 완료 후에 위젯에 값 채우기
         self.fill_devinfo_wiz550(cfg)
@@ -7273,7 +7273,7 @@ class WIZWindow(QMainWindow, main_window):
         # Device Search와 동일한 초기화
         self.retry_search_current = 0
         self._timing_t0 = time.time()
-        self.logger.info("[TIMING] System timer started (CSV Load → Phase 2)")
+        # self.logger.info("[TIMING] System timer started (CSV Load → Phase 2)")
 
         # CSV Load 모드 플래그 설정
         # - get_search_result()에서 wizmsghandler 데이터 로드 건너뜀

@@ -234,7 +234,7 @@ class WIZMakeCMD:
             for cmd in cmd_2p_default:
                 cmd_list.append([cmd, ""])
         elif devname in SECURITY_DEVICE:
-            self.logger.info(f'[Search] Security device: {devname}')
+            # self.logger.info(f'[Search] Security device: {devname}')
             if 'WIZ510SSL' in devname:
                 for cmd in cmd_wiz510ssl:
                     cmd_list.append([cmd, ""])
