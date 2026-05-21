@@ -222,7 +222,7 @@ class WIZ550FWDialog(QDialog):
         if tab == 0:
             mode        = 'auto'
             fw_path     = self._fw_path
-            server_ip   = self._localip_addr or "0.0.0.0"
+            server_ip   = ""   # OS 라우팅 프로브로 자동 결정 (target_ip 기준 최적 NIC)
             server_port = 69
             password    = self.edit_pw.text()
         else:
