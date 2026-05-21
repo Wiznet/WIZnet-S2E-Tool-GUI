@@ -57,8 +57,7 @@ class WIZ550FWDialog(QDialog):
                  parent=None):
         super().__init__(parent)
         self._target_ip     = target_ip
-        # target_ip 서브넷과 일치하는 NIC IP 자동선택; 매칭 없으면 전달받은 값 사용
-        self._localip_addr  = _best_server_ip(target_ip, fallback=localip_addr)
+        self._localip_addr  = localip_addr   # 업로드 시점에 재계산 (fallback 보관)
         self._target_mac    = target_mac
         self._upload_thread = None
         self._fw_path       = ""
@@ -243,7 +242,8 @@ class WIZ550FWDialog(QDialog):
         if tab == 0:
             mode        = 'auto'
             fw_path     = self._fw_path
-            server_ip   = self._localip_addr or "0.0.0.0"
+            # 업로드 직전 target_ip 서브넷 기준 NIC 재선택 (다이얼로그 열린 후 NIC 변경 대응)
+            server_ip   = _best_server_ip(self._target_ip, fallback=self._localip_addr) or "0.0.0.0"
             server_port = 69
             password    = self.edit_pw.text()
         else:
