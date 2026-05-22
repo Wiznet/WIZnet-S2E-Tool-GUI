@@ -3686,7 +3686,8 @@ class WIZWindow(QMainWindow, main_window):
             self.statusbar.showMessage(f" WIZ550 Apply Error: {e}")
             return
 
-        target_ip = d.get('local_ip', '')
+        # 현재 장비 IP (검색 시 수집된 값) — 폼의 새 IP가 아니라 장비가 실제 있는 IP로 전송
+        target_ip = d_profile.get('local_ip', '') or d.get('local_ip', '')
         if not target_ip:
             self.statusbar.showMessage(" WIZ550 Apply Error: No IP address")
             return
