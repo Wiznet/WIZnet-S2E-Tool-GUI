@@ -27,22 +27,48 @@ from WIZ550FWUploadThread import WIZ550FWUploadThread
 from utils import logger
 
 
-def _best_server_ip(target_ip: str, fallback: str = "") -> str:
-    """target_ip와 같은 /24 서브넷의 로컬 NIC IP 반환. 없으면 fallback."""
+def _best_server_ip(target_ip: str) -> tuple:
+    """Returns (matched_ip: str, all_ipv4: list[str]).
+    matched_ip='' when no local NIC shares the /24 subnet with target_ip."""
+    target_prefix = '.'.join(target_ip.split('.')[:3]) + '.'
+    all_ipv4 = []
     try:
-        target_prefix = '.'.join(target_ip.split('.')[:3]) + '.'
-        all_ips = []
         for adapter in ifaddr.get_adapters():
             for ip in adapter.ips:
-                if isinstance(ip.ip, str):
-                    all_ips.append(ip.ip)
+                if isinstance(ip.ip, str) and not ip.ip.startswith('127.'):
+                    all_ipv4.append(ip.ip)
                     if ip.ip.startswith(target_prefix):
-                        logger.info(f"[WIZ550FW] TFTP server IP 자동선택: {ip.ip} (target={target_ip})")
-                        return ip.ip
-        logger.warning(f"[WIZ550FW] {target_prefix}* NIC 없음 — 전체 NIC: {all_ips} — fallback={fallback}")
+                        logger.info(f"[WIZ550FW] TFTP server IP: {ip.ip} (target={target_ip})")
+                        return ip.ip, all_ipv4
     except Exception as e:
-        logger.warning(f"[WIZ550FW] NIC 서브넷 매칭 실패: {e}")
-    return fallback
+        logger.warning(f"[WIZ550FW] NIC subnet matching failed: {e}")
+    logger.warning(f"[WIZ550FW] No NIC on {target_prefix}* — available: {all_ipv4}")
+    return "", all_ipv4
+
+
+def _warn_no_nic(parent, target_ip: str, all_ips: list) -> bool:
+    """NIC 서브넷 불일치 경고 다이얼로그. 사용자가 Proceed 선택 시 True 반환."""
+    prefix = '.'.join(target_ip.split('.')[:3]) + '.0'
+    nic_list = '\n'.join(f'  • {ip}' for ip in all_ips) or '  (none found)'
+    msg = (
+        f"No local NIC is on the target device's subnet.\n\n"
+        f"Target device:  {target_ip}\n"
+        f"Target subnet:  {prefix}/24\n\n"
+        f"Available local NICs:\n{nic_list}\n\n"
+        f"WIZ550 is a LAN-only device. Packets sent from a different subnet "
+        f"cannot reach it without a gateway.\n\n"
+        f"The upload will almost certainly fail with a 30-second timeout.\n\n"
+        f"Recommended: click Cancel and connect a NIC to the {prefix}/24 network."
+    )
+    box = QMessageBox(parent)
+    box.setIcon(QMessageBox.Warning)
+    box.setWindowTitle("Network Mismatch — Upload Will Likely Fail")
+    box.setText(msg)
+    cancel_btn  = box.addButton("Cancel (Recommended)", QMessageBox.RejectRole)
+    proceed_btn = box.addButton("Proceed Anyway",       QMessageBox.AcceptRole)
+    box.setDefaultButton(cancel_btn)
+    box.exec_()
+    return box.clickedButton() == proceed_btn
 
 
 def _is_boot_file(filename: str) -> bool:
@@ -243,7 +269,11 @@ class WIZ550FWDialog(QDialog):
             mode        = 'auto'
             fw_path     = self._fw_path
             # 업로드 직전 target_ip 서브넷 기준 NIC 재선택 (다이얼로그 열린 후 NIC 변경 대응)
-            server_ip   = _best_server_ip(self._target_ip, fallback=self._localip_addr) or "0.0.0.0"
+            server_ip, all_ips = _best_server_ip(self._target_ip)
+            if not server_ip:
+                if not _warn_no_nic(self, self._target_ip, all_ips):
+                    return
+                server_ip = ""
             server_port = 69
             password    = self.edit_pw.text()
         else:
