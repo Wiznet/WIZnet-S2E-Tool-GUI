@@ -2115,32 +2115,27 @@ class WIZWindow(QMainWindow, main_window):
                     self.conf_sock = WIZUDPSock(5000, 50001, "")
                     self.conf_sock.open()
 
-            # TCP unicast
+            # IP Address unicast
             elif self.unicast_ip.isChecked():
                 ip_addr = self.search_ipaddr.text()
                 port = int(self.search_port.text())
-                self.logger.info("unicast: ip: %r, port: %r" % (ip_addr, port))
+                self.logger.debug(f"unicast: ip={ip_addr!r}, port={port}")
 
-                # network check
                 net_response = self.net_check_ping(ip_addr)
-
                 if net_response == 0:
+                    # WIZ5xxSR: TCP unicast 연결 시도
                     self.conf_sock = self.connect_over_tcp(ip_addr, port)
-
                     if self.conf_sock is None:
                         self.isConnected = False
-                        self.logger.info("TCP connection failed!: %s" % self.conf_sock)
-                        self.statusbar.showMessage(
-                            " TCP connection failed: %s" % ip_addr
-                        )
-                        self.msg_connection_failed()
+                        self.logger.debug(f"TCP connection failed: {ip_addr}")
+                        self.statusbar.showMessage(f" Searching: {ip_addr} (WIZ5xxSR TCP failed, trying WIZ550 UDP...)")
                     else:
                         self.isConnected = True
-                    self.btn_search.setEnabled(True)
                 else:
-                    self.statusbar.showMessage(" Network unreachable: %s" % ip_addr)
-                    self.btn_search.setEnabled(True)
-                    self.msg_not_connected(ip_addr)
+                    # Ping 실패 → TCP 생략, WIZ550Searcher가 UDP:6550으로 처리
+                    self.logger.debug(f"No ping response: {ip_addr}, proceeding with WIZ550 UDP:6550")
+                    self.statusbar.showMessage(f" Searching: {ip_addr} (no ping response, trying WIZ550 UDP...)")
+                self.btn_search.setEnabled(True)
 
         except Exception as e:
             self.logger.error(f"socket_config error: {e}")

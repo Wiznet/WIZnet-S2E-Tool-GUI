@@ -467,7 +467,7 @@
                   </font>
                  </property>
                  <property name="text">
-                  <string>TCP unicast</string>
+                  <string>IP Address</string>
                  </property>
                 </widget>
                </item>
