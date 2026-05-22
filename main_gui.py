@@ -688,6 +688,14 @@ class WIZWindow(QMainWindow, main_window):
         self.actionExit.setShortcut(QtGui.QKeySequence("Ctrl+Q"))
         self.actionExit.setShortcutContext(Qt.ApplicationShortcut)
 
+        self._sc_apply = QtWidgets.QShortcut(QtGui.QKeySequence("F4"), self)
+        self._sc_apply.setContext(Qt.WindowShortcut)
+        self._sc_apply.activated.connect(self.btn_setting.click)
+
+        self._sc_fw_upload = QtWidgets.QShortcut(QtGui.QKeySequence("F8"), self)
+        self._sc_fw_upload.setContext(Qt.WindowShortcut)
+        self._sc_fw_upload.activated.connect(self.btn_upload.click)
+
         self._action_terminal = QAction("Terminal", self)
         self._action_terminal.setCheckable(True)
         self._action_terminal.setShortcut(QtGui.QKeySequence("Ctrl+T"))
