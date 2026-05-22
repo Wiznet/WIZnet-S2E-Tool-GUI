@@ -2121,33 +2121,29 @@ class WIZWindow(QMainWindow, main_window):
                 port = int(self.search_port.text())
                 self.logger.debug(f"unicast: ip={ip_addr!r}, port={port}")
 
-                # 현재 선택 장치가 WIZ5xxSR이면 원래 TCP 동작 유지, 아니면 WIZ550Searcher에 위임
+                # 현재 선택 장치가 WIZ5xxSR이면 원래 TCP 동작 유지, WIZ550/미선택은 TCP 완전 생략
                 _proto = self.dev_profile.get(self.curr_mac or '', {}).get('_proto', '')
                 _tcp_mode = bool(self.curr_mac and _proto not in ('wiz550', 'wiz1x0', ''))
 
-                net_response = self.net_check_ping(ip_addr)
-                if net_response == 0:
-                    self.conf_sock = self.connect_over_tcp(ip_addr, port)
-                    if self.conf_sock is None:
-                        self.isConnected = False
-                        if _tcp_mode:
+                if _tcp_mode:
+                    # WIZ5xxSR: ping → TCP → 원래 다이얼로그 동작
+                    net_response = self.net_check_ping(ip_addr)
+                    if net_response == 0:
+                        self.conf_sock = self.connect_over_tcp(ip_addr, port)
+                        if self.conf_sock is None:
+                            self.isConnected = False
                             self.logger.info("TCP connection failed!: %s" % ip_addr)
                             self.statusbar.showMessage(" TCP connection failed: %s" % ip_addr)
                             self.msg_connection_failed()
                         else:
-                            self.logger.debug(f"TCP failed: {ip_addr}, WIZ550Searcher proceeds via UDP:6550")
-                            self.statusbar.showMessage(f" Searching: {ip_addr} (TCP failed, trying WIZ550 UDP...)")
+                            self.isConnected = True
                     else:
-                        self.isConnected = True
-                else:
-                    if _tcp_mode:
-                        # WIZ5xxSR 선택 상태: 원래 동작 (차단 다이얼로그)
                         self.statusbar.showMessage(" Network unreachable: %s" % ip_addr)
                         self.msg_not_connected(ip_addr)
-                    else:
-                        # WIZ550 또는 미선택: ping 실패해도 UDP:6550으로 계속 탐색
-                        self.logger.debug(f"No ping response: {ip_addr}, WIZ550Searcher proceeds via UDP:6550")
-                        self.statusbar.showMessage(f" Searching: {ip_addr} (no ping, trying WIZ550 UDP...)")
+                else:
+                    # WIZ550 또는 미선택: ping·TCP 완전 생략, WIZ550Searcher가 UDP:6550으로 처리
+                    self.logger.debug(f"WIZ550 unicast: skip ping/TCP, UDP:6550 search for {ip_addr}")
+                    self.statusbar.showMessage(f" Searching WIZ550: {ip_addr} via UDP:6550...")
                 self.btn_search.setEnabled(True)
 
         except Exception as e:
