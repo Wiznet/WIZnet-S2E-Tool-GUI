@@ -543,11 +543,18 @@ class WIZWindow(QMainWindow, main_window):
         WIZMSGHandler.skip_phase1_emit_delay = self.timing_config.is_skip_phase1_emit_delay()
 
         # 로그 레벨 초기 적용 + config 파일 실시간 감시
-        self.logger.setLevel(self.timing_config.get_log_level())
+        _init_level = self.timing_config.get_log_level()
+        self.logger.setLevel(_init_level)
+        self.logger.info(f"[Config] Log level: {logging.getLevelName(_init_level)} (from {self.timing_config.config_file_path})")
         self._config_watcher = QtCore.QFileSystemWatcher(
             [str(self.timing_config.config_file_path)], self
         )
         self._config_watcher.fileChanged.connect(self._on_config_file_changed)
+        # Windows에서 atomic save(temp→rename) 방식 편집기가 fileChanged를 못 올리는 경우 폴링으로 보완
+        self._config_poll_mtime = os.path.getmtime(str(self.timing_config.config_file_path))
+        self._config_poll_timer = QtCore.QTimer(self)
+        self._config_poll_timer.timeout.connect(self._poll_config_file)
+        self._config_poll_timer.start(2000)
 
         self.localip_addr = None
 
@@ -692,6 +699,18 @@ class WIZWindow(QMainWindow, main_window):
         self._action_fw_dl_path = QAction("FW Download Path...", self)
         self._action_fw_dl_path.triggered.connect(self.event_set_fw_download_path)
         self.menuOption.addAction(self._action_fw_dl_path)
+
+        self.menuOption.addSeparator()
+        self._log_level_menu = QMenu("Log Level", self)
+        self._log_level_actions = {}
+        for lvl in ("DEBUG", "INFO", "WARNING", "ERROR"):
+            act = QAction(lvl, self)
+            act.setCheckable(True)
+            self._log_level_menu.addAction(act)
+            self._log_level_actions[lvl] = act
+        self._sync_log_level_menu(logging.getLevelName(self.logger.level))
+        self._log_level_menu.triggered.connect(self._on_log_level_menu)
+        self.menuOption.addMenu(self._log_level_menu)
 
         self.actionSave.triggered.connect(self.dialog_save_file)
         self.actionLoad.triggered.connect(self.dialog_load_file)
@@ -6621,6 +6640,40 @@ class WIZWindow(QMainWindow, main_window):
                 f"An error occurred while configuring advanced search options:\n{e}"
             )
 
+    def _poll_config_file(self):
+        """QFileSystemWatcher 미감지 보완용 2초 폴링"""
+        path = str(self.timing_config.config_file_path)
+        try:
+            mtime = os.path.getmtime(path)
+        except OSError:
+            return
+        if mtime != self._config_poll_mtime:
+            self._config_poll_mtime = mtime
+            self._on_config_file_changed(path)
+
+    def _sync_log_level_menu(self, level_str: str):
+        """Log Level 메뉴 체크 상태를 현재 레벨에 맞게 동기화"""
+        for lvl, act in self._log_level_actions.items():
+            act.setChecked(lvl == level_str.upper())
+
+    def _on_log_level_menu(self, action: QAction):
+        """Log Level 메뉴 선택 → 즉시 반영 + YAML 저장"""
+        import yaml
+        level_str = action.text().upper()
+        level = getattr(logging, level_str, logging.INFO)
+        self.logger.setLevel(level)
+        self.logger.info(f"[Config] Log level: {level_str}")
+        self._sync_log_level_menu(level_str)
+        path = str(self.timing_config.config_file_path)
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f) or {}
+            data.setdefault('logging', {})['level'] = level_str
+            with open(path, 'w', encoding='utf-8') as f:
+                yaml.dump(data, f, allow_unicode=True, default_flow_style=False)
+        except Exception as e:
+            self.logger.warning(f"[Config] YAML 저장 실패: {e}")
+
     def _on_config_file_changed(self, path: str):
         """config 파일 변경 감지 → 로그 레벨 즉시 반영"""
         import yaml
@@ -6631,6 +6684,7 @@ class WIZWindow(QMainWindow, main_window):
             level = getattr(__import__('logging'), level_str, __import__('logging').INFO)
             self.logger.setLevel(level)
             self.logger.info(f"[Config] 로그 레벨 변경: {level_str}")
+            self._sync_log_level_menu(level_str)
         except Exception as e:
             self.logger.warning(f"[Config] 로그 레벨 변경 실패: {e}")
         # 일부 에디터는 파일을 삭제 후 재생성 → watcher에서 제거됨, 재등록
