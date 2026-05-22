@@ -2551,12 +2551,14 @@ class WIZWindow(QMainWindow, main_window):
         else:
             self.logger.debug("[WIZ550] 신규 장치 없음 (모두 중복 또는 결과 없음)")
 
-        # WIZMSGHandler(Phase 3)가 실행되지 않은 경우(WIZ550 unicast 전용 경로)
-        # pgbar를 멈출 트리거가 없으므로 여기서 직접 hide
+        # WIZMSGHandler가 실행되지 않은 경로(WIZ550 unicast 전용)에서는
+        # get_search_result()가 호출되지 않으므로 get_dev_list()가 누락됨.
+        # TCP unicast 흐름과 동일하게 get_dev_list()를 트리거해
+        # search_each_dev() → _finalize_timer → pgbar.hide() 경로를 밟게 한다.
         _msghandler_done = (self.wizmsghandler is None or
                             not self.wizmsghandler.isRunning())
-        if _msghandler_done and not self._wiz1x0_search_pending:
-            self.pgbar.hide()
+        if _msghandler_done:
+            QTimer.singleShot(0, self.get_dev_list)
 
     def mac_list_str(self):
         """self.mac_list를 str 집합으로 반환 (중복 체크용)."""
