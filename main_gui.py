@@ -2447,19 +2447,15 @@ class WIZWindow(QMainWindow, main_window):
                 else:
                     self._wiz1x0_search_pending = False
 
-                # WIZ550 검색 — 항상 병행 시작 (체크박스 없이, D-07)
-                # 이전 searcher 실행 중이면 새로 시작하지 않음 (WinError 10048 방지)
-                if self.wiz550_searcher is None or not self.wiz550_searcher.isRunning():
-                    self._wiz550_search_pending = True
-                    self.wiz550_searcher = WIZ550Searcher(
-                        iface_ip=self.selected_eth if self.selected_eth else "",
-                        timeout=self.search_pre_wait_time,
-                    )
-                    self.wiz550_searcher.search_done.connect(self._merge_wiz550_results)
-                    self.wiz550_searcher.start()
-                    # self.logger.info(f"[TIMING] {self._T()} WIZ550Searcher.start() 완료")
-                else:
-                    pass  # self.logger.info(f"[TIMING] {self._T()} WIZ550Searcher 이미 실행 중 — skip")
+            # WIZ550 검색 — TCP unicast 모드에서도 항상 병행 실행 (WIZ550은 UDP 6550 전용)
+            if self.wiz550_searcher is None or not self.wiz550_searcher.isRunning():
+                self._wiz550_search_pending = True
+                self.wiz550_searcher = WIZ550Searcher(
+                    iface_ip=self.selected_eth if self.selected_eth else "",
+                    timeout=self.search_pre_wait_time,
+                )
+                self.wiz550_searcher.search_done.connect(self._merge_wiz550_results)
+                self.wiz550_searcher.start()
 
     def _merge_wiz1x0_results(self, results: list):
         """WIZ1x0Searcher 완료 콜백 — 결과를 기존 device list에 병합."""
