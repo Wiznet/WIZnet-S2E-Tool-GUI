@@ -440,37 +440,66 @@ class WIZ550Getter(QThread):
 
     def run(self):
         result = {}
-        sock = None
+        bind_ips = []
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
+            for adapter in ifaddr.get_adapters():
+                for ip in adapter.ips:
+                    if isinstance(ip.ip, str) and not ip.ip.startswith('127.'):
+                        bind_ips.append(ip.ip)
+        except Exception:
+            pass
+        if not bind_ips:
+            bind_ips = [self.iface_ip] if self.iface_ip else ['']
 
-            bind_ip = self.iface_ip if self.iface_ip else ''
-            sock.bind((bind_ip, 0))
+        pkt = _build_get_info(self.target_mac)
+        socks = []
+        try:
+            for bind_ip in bind_ips:
+                try:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
+                    s.bind((bind_ip, 0))
+                    s.sendto(pkt, ('255.255.255.255', WIZ550_PORT))
+                    logger.debug(f"[WIZ550] GET_INFO → {self.target_mac} (NIC={bind_ip})")
+                    socks.append(s)
+                except OSError as e:
+                    logger.debug(f"[WIZ550] Getter NIC {bind_ip} skip: {e}")
 
-            pkt = _build_get_info(self.target_mac)
-            sock.sendto(pkt, ('255.255.255.255', WIZ550_PORT))  # Java 원본 동일 (Pitfall 4)
-            # logger.info(f"[WIZ550] GET_INFO → {self.target_mac} (type={self.device_type})")
+            if not socks:
+                logger.error(f"[WIZ550] Getter: 사용 가능한 소켓 없음")
+                self.get_done.emit({})
+                return
 
-            ready, _, _ = select.select([sock], [], [], self.timeout)
-            if ready:
-                data, _ = sock.recvfrom(1024)
-                result = _parse_get_info_reply(data, self.device_type)
-                if result:
-                    pass  # logger.info(f"[WIZ550] GET_INFO 응답 파싱 완료: {self.target_mac}")
-                else:
-                    logger.warning(f"[WIZ550] GET_INFO 응답 파싱 실패: {self.target_mac}")
-            else:
-                logger.warning(f"[WIZ550] GET_INFO 응답 타임아웃: {self.target_mac}")
+            deadline = time.time() + self.timeout
+            while True:
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    break
+                ready, _, _ = select.select(socks, [], [], remaining)
+                if not ready:
+                    logger.warning(f"[WIZ550] GET_INFO 응답 타임아웃: {self.target_mac}")
+                    break
+                for s in ready:
+                    try:
+                        data, _ = s.recvfrom(1024)
+                    except OSError:
+                        continue
+                    result = _parse_get_info_reply(data, self.device_type)
+                    if result:
+                        logger.debug(f"[WIZ550] GET_INFO 파싱 완료: {self.target_mac}")
+                        self.get_done.emit(result)
+                        return
+                    else:
+                        logger.warning(f"[WIZ550] GET_INFO 응답 파싱 실패: {self.target_mac}")
 
         except Exception as e:
             logger.error(f"[WIZ550] Getter 오류: {e}")
         finally:
-            if sock:
+            for s in socks:
                 try:
-                    sock.close()
+                    s.close()
                 except OSError:
                     pass
 
