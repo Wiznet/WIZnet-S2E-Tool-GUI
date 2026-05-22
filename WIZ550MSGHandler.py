@@ -19,6 +19,7 @@ import time
 import random
 import struct
 
+import ifaddr
 from PyQt5.QtCore import QThread, pyqtSignal
 
 from utils import logger
@@ -347,50 +348,71 @@ class WIZ550Searcher(QThread):
 
     def run(self):
         results = {}   # mac_str → device_dict (MAC 기반 중복 제거)
-        sock = None
+
+        # 모든 non-loopback NIC에서 브로드캐스트 전송
+        # selected_eth가 다른 서브넷에 바인딩되어 있어도 WIZ550을 발견하기 위함
+        bind_ips = []
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  # D-05, Pitfall 2
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)  # D-05: 1MB
+            for adapter in ifaddr.get_adapters():
+                for ip in adapter.ips:
+                    if isinstance(ip.ip, str) and not ip.ip.startswith('127.'):
+                        bind_ips.append(ip.ip)
+        except Exception as e:
+            logger.warning(f"[WIZ550] NIC 열거 실패: {e}")
+        if not bind_ips:
+            bind_ips = [self.iface_ip] if self.iface_ip else ['']
 
-            bind_ip = self.iface_ip if self.iface_ip else ''
-            sock.bind((bind_ip, 0))  # 임시 포트 (장치가 src port로 응답 전송)
-            logger.debug(f"[WIZ550] Searcher bind {bind_ip or 'INADDR_ANY'}")
+        pkt = _build_discovery_all()
+        socks = []
+        try:
+            for bind_ip in bind_ips:
+                try:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
+                    s.bind((bind_ip, 0))
+                    s.sendto(pkt, ('255.255.255.255', WIZ550_PORT))
+                    logger.debug(f"[WIZ550] DISCOVERY_ALL → 255.255.255.255:{WIZ550_PORT} (NIC={bind_ip})")
+                    socks.append(s)
+                except OSError as e:
+                    logger.debug(f"[WIZ550] NIC {bind_ip} skip: {e}")
 
-            pkt = _build_discovery_all()
-            sock.sendto(pkt, ('255.255.255.255', WIZ550_PORT))
-            logger.debug(f"[WIZ550] DISCOVERY_ALL 브로드캐스트 → 255.255.255.255:{WIZ550_PORT}")
+            if not socks:
+                logger.error("[WIZ550] 사용 가능한 소켓 없음")
+                self.search_done.emit([])
+                return
 
             deadline = time.time() + self.timeout
             while True:
                 remaining = deadline - time.time()
                 if remaining <= 0:
                     break
-                ready, _, _ = select.select([sock], [], [], remaining)
+                ready, _, _ = select.select(socks, [], [], remaining)
                 if not ready:
                     break
-                try:
-                    data, addr = sock.recvfrom(512)
-                except OSError:
-                    break
+                for s in ready:
+                    try:
+                        data, addr = s.recvfrom(512)
+                    except OSError:
+                        continue
 
-                info = _parse_discovery_reply(data)
-                if info is None:
-                    logger.debug(f"[WIZ550] Discovery 무시: {addr}")
-                    continue
+                    info = _parse_discovery_reply(data)
+                    if info is None:
+                        logger.debug(f"[WIZ550] Discovery 무시: {addr}")
+                        continue
 
-                mac = info['mac']
-                if mac not in results:
-                    logger.debug(f"[WIZ550] 발견: {mac} ({addr[0]}) type={info['device_type']} fw={info['fw_str']}")
-                    results[mac] = info
+                    mac = info['mac']
+                    if mac not in results:
+                        logger.debug(f"[WIZ550] 발견: {mac} ({addr[0]}) type={info['device_type']} fw={info['fw_str']}")
+                        results[mac] = info
 
         except Exception as e:
             logger.error(f"[WIZ550] Searcher 오류: {e}")
         finally:
-            if sock:
+            for s in socks:
                 try:
-                    sock.close()
+                    s.close()
                 except OSError:
                     pass
 
