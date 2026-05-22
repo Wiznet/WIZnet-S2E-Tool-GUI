@@ -2558,7 +2558,7 @@ class WIZWindow(QMainWindow, main_window):
         _msghandler_done = (self.wizmsghandler is None or
                             not self.wizmsghandler.isRunning())
         if _msghandler_done:
-            QTimer.singleShot(0, self.get_dev_list)
+            QtCore.QTimer.singleShot(0, self.get_dev_list)
 
     def mac_list_str(self):
         """self.mac_list를 str 집합으로 반환 (중복 체크용)."""
