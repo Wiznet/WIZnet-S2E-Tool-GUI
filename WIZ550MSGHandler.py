@@ -109,17 +109,17 @@ def _mac_str_to_bytes(mac_str: str) -> bytes:
     return bytes(int(x, 16) for x in mac_str.replace('-', ':').split(':'))
 
 
-def _build_discovery_all() -> bytes:
+def _build_discovery_all(unicast: bool = False) -> bytes:
     """
     DISCOVERY_ALL(0xA1) 패킷 — 7B, payload 없음 (PROTO-04).
-    브로드캐스트용: unicast=0x00.
+    unicast=False: 브로드캐스트용(0x00), unicast=True: IP Address 직접 전송용(0x01).
     payload 없으므로 암호화 불필요.
     """
     valid, _ = _make_valid_and_key()
     buf = bytearray(7)
     buf[0] = STX
     buf[1] = valid
-    buf[2] = 0x00        # 브로드캐스트
+    buf[2] = 0x01 if unicast else 0x00
     buf[3] = OP_DISCOVERY_ALL
     buf[4] = WIZNET_REQUEST
     buf[5] = 0x00        # length LSB
@@ -341,10 +341,12 @@ class WIZ550Searcher(QThread):
     """
     search_done = pyqtSignal(list)
 
-    def __init__(self, iface_ip: str = "", timeout: float = 15.0):
+    def __init__(self, iface_ip: str = "", timeout: float = 15.0,
+                 target_ip: str = ""):
         super().__init__()
-        self.iface_ip = iface_ip
-        self.timeout  = timeout  # D-05: 브로드캐스트 검색은 15초 (여러 장치 응답 수집)
+        self.iface_ip  = iface_ip
+        self.timeout   = timeout   # D-05: 브로드캐스트 검색은 15초 (여러 장치 응답 수집)
+        self.target_ip = target_ip  # 비어있으면 broadcast, 설정 시 unicast 추가 전송
 
     def run(self):
         results = {}   # mac_str → device_dict (MAC 기반 중복 제거)
@@ -362,7 +364,8 @@ class WIZ550Searcher(QThread):
         if not bind_ips:
             bind_ips = [self.iface_ip] if self.iface_ip else ['']
 
-        pkt = _build_discovery_all()
+        pkt_bcast   = _build_discovery_all(unicast=False)
+        pkt_unicast = _build_discovery_all(unicast=True)
         socks = []
         try:
             for bind_ip in bind_ips:
@@ -372,11 +375,31 @@ class WIZ550Searcher(QThread):
                     s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
                     s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
                     s.bind((bind_ip, 0))
-                    s.sendto(pkt, ('255.255.255.255', WIZ550_PORT))
+                    s.sendto(pkt_bcast, ('255.255.255.255', WIZ550_PORT))
                     logger.debug(f"[WIZ550] DISCOVERY_ALL → 255.255.255.255:{WIZ550_PORT} (NIC={bind_ip})")
                     socks.append(s)
                 except OSError as e:
                     logger.debug(f"[WIZ550] NIC {bind_ip} skip: {e}")
+
+            # IP Address 유니캐스트 모드: 지정 IP로 직접 전송 (브로드캐스트와 병행)
+            if self.target_ip:
+                try:
+                    su = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    su.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    su.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
+                    try:
+                        _probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                        _probe.connect((self.target_ip, 1))
+                        bind_ip = _probe.getsockname()[0]
+                        _probe.close()
+                    except Exception:
+                        bind_ip = ''
+                    su.bind((bind_ip, 0))
+                    su.sendto(pkt_unicast, (self.target_ip, WIZ550_PORT))
+                    logger.debug(f"[WIZ550] DISCOVERY_ALL(unicast) → {self.target_ip}:{WIZ550_PORT} (NIC={bind_ip})")
+                    socks.append(su)
+                except OSError as e:
+                    logger.debug(f"[WIZ550] unicast 소켓 skip: {e}")
 
             if not socks:
                 logger.error("[WIZ550] 사용 가능한 소켓 없음")

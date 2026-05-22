@@ -2450,9 +2450,14 @@ class WIZWindow(QMainWindow, main_window):
             # WIZ550 검색 — TCP unicast 모드에서도 항상 병행 실행 (WIZ550은 UDP 6550 전용)
             if self.wiz550_searcher is None or not self.wiz550_searcher.isRunning():
                 self._wiz550_search_pending = True
+                _wiz550_target_ip = (
+                    self.search_ipaddr.text().strip()
+                    if self.unicast_ip.isChecked() else ""
+                )
                 self.wiz550_searcher = WIZ550Searcher(
                     iface_ip=self.selected_eth if self.selected_eth else "",
                     timeout=self.search_pre_wait_time,
+                    target_ip=_wiz550_target_ip,
                 )
                 self.wiz550_searcher.search_done.connect(self._merge_wiz550_results)
                 self.wiz550_searcher.start()
