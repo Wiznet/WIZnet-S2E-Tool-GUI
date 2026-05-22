@@ -5283,13 +5283,16 @@ class WIZWindow(QMainWindow, main_window):
             if dev_name_item:
                 self.curr_dev = dev_name_item.text()
 
-        # IP Address 유니캐스트 포트 자동 갱신: WIZ550 ↔ WIZ5xxSR
+        # IP Address 유니캐스트 라벨·포트 자동 갱신: WIZ550 ↔ WIZ5xxSR
         if self.curr_mac:
             _proto = self.dev_profile.get(self.curr_mac, {}).get('_proto', '')
             if _proto == 'wiz550':
+                self.unicast_ip.setText("IP Address")
                 self.search_port.setText("6550")
-            elif self.search_port.text() == "6550":
-                self.search_port.setText("50001")
+            else:
+                self.unicast_ip.setText("TCP unicast")
+                if self.search_port.text() == "6550":
+                    self.search_port.setText("50001")
 
         self.statusbar.showMessage(
             " Current device [%s : %s], %s"
