@@ -541,6 +541,7 @@ class WIZWindow(QMainWindow, main_window):
         WIZMSGHandler.loop_select_timeout = self.timing_config.get_phase1_loop_select_timeout()
         WIZMSGHandler.emit_stabilization_ms = self.timing_config.get_phase1_emit_stabilization_ms()
         WIZMSGHandler.skip_phase1_emit_delay = self.timing_config.is_skip_phase1_emit_delay()
+        WIZMSGHandler.set_command_delay_ms = self.timing_config.get_phase3_set_command_delay_ms()
 
         # 로그 레벨 초기 적용 + config 파일 실시간 감시
         _init_level = self.timing_config.get_log_level()
@@ -3555,13 +3556,14 @@ class WIZWindow(QMainWindow, main_window):
         idx = self.ch0_baud.findText(str(baud))
         if idx >= 0:
             self.ch0_baud.setCurrentIndex(idx)
-        # WIZ550 data_bits encoding: 2=7bit, 3=8bit / UI combo: index 0="7", index 1="8"
-        _db_text = {2: '7', 3: '8'}.get(d.get('data_bits', 3), '8')
+        # WIZ550 data_bits: 실제값 그대로 저장 (7=7bit, 8=8bit) — 인덱스 아님
+        _db_text = {7: '7', 8: '8'}.get(d.get('data_bits', 8), '8')
         _db_idx = self.ch0_databit.findText(_db_text)
         if _db_idx >= 0:
             self.ch0_databit.setCurrentIndex(_db_idx)
         self.ch0_parity.setCurrentIndex(d.get('parity', 0))
-        self.ch0_stopbit.setCurrentIndex(d.get('stop_bits', 0))
+        # WIZ550 stop_bits: 실제값 저장 (1=1bit, 2=2bits) → UI 콤보 인덱스로 변환
+        self.ch0_stopbit.setCurrentIndex(max(0, d.get('stop_bits', 1) - 1))
         self.ch0_flow.setCurrentIndex(d.get('flow_control', 0))
 
         # Packing / Timer
@@ -3636,10 +3638,12 @@ class WIZWindow(QMainWindow, main_window):
             d['baud_rate'] = int(self.ch0_baud.currentText())
         except ValueError:
             pass
-        # reverse-map UI combo text "7"→2, "8"→3 back to WIZ550 protocol encoding
-        d['data_bits'] = {'7': 2, '8': 3}.get(self.ch0_databit.currentText(), 3)
+        # WIZ550 data_bits: 실제값 그대로 저장 (7 또는 8) — 인덱스 아님
+        _db_str = self.ch0_databit.currentText()
+        d['data_bits'] = int(_db_str) if _db_str.isdigit() else 8
         d['parity'] = self.ch0_parity.currentIndex()
-        d['stop_bits'] = self.ch0_stopbit.currentIndex()
+        # WIZ550 stop_bits: UI 콤보 인덱스 → 실제값 (index 0→1, index 1→2)
+        d['stop_bits'] = self.ch0_stopbit.currentIndex() + 1
         d['flow_control'] = self.ch0_flow.currentIndex()
 
         # Packing / Timer
@@ -6458,6 +6462,21 @@ class WIZWindow(QMainWindow, main_window):
         )
         phase3_layout.addRow("Device Query Timeout:", dialog.spin_query_timeout)
 
+        # SET Command Post-Response Delay
+        dialog.spin_set_delay = QSpinBox()
+        dialog.spin_set_delay.setRange(0, 2000)
+        dialog.spin_set_delay.setSingleStep(100)
+        dialog.spin_set_delay.setSuffix(" ms")
+        dialog.spin_set_delay.setValue(current_values['phase3_set_command_delay_ms'])
+        dialog.spin_set_delay.setToolTip(
+            "Wait time after SET response before re-querying the device.\n"
+            "The device reboots immediately after SET, and dev_clicked() queries it\n"
+            "right after — without this delay the device is mid-reboot and won't respond.\n\n"
+            "Default: 500 ms (recommended — do not reduce for older/slow devices).\n"
+            "Reducing below 200 ms risks SET-after-reboot query failures."
+        )
+        phase3_layout.addRow("SET Response Delay:", dialog.spin_set_delay)
+
         phase3_group.setLayout(phase3_layout)
         main_layout.addWidget(phase3_group)
 
@@ -6551,6 +6570,7 @@ class WIZWindow(QMainWindow, main_window):
             'phase1_emit_stabilization_ms': dialog.spin_emit_delay.value(),
             'skip_phase1_emit_delay': dialog.check_skip_delay.isChecked(),
             'phase3_device_query_timeout': dialog.spin_query_timeout.value(),
+            'phase3_set_command_delay_ms': dialog.spin_set_delay.value(),
             'tcp_max_parallel_workers': dialog.spin_tcp_workers.value(),
             'pgbar_update_percent': dialog.spin_pgbar_percent.value(),
             'pgbar_auto_hide_delay_ms': dialog.spin_pgbar_hide.value()
@@ -6576,6 +6596,7 @@ class WIZWindow(QMainWindow, main_window):
             WIZMSGHandler.loop_select_timeout = new_values['phase1_loop_select_timeout']
             WIZMSGHandler.emit_stabilization_ms = new_values['phase1_emit_stabilization_ms']
             WIZMSGHandler.skip_phase1_emit_delay = new_values['skip_phase1_emit_delay']
+            WIZMSGHandler.set_command_delay_ms = new_values['phase3_set_command_delay_ms']
 
             # 3. 인스턴스 변수 업데이트 (다음 검색 시 사용)
             self.search_wait_time_each = new_values['phase3_device_query_timeout']
@@ -6619,6 +6640,7 @@ class WIZWindow(QMainWindow, main_window):
                 dialog.spin_emit_delay.setValue(defaults['phase1_emit_stabilization_ms'])
                 dialog.check_skip_delay.setChecked(defaults['skip_phase1_emit_delay'])
                 dialog.spin_query_timeout.setValue(defaults['phase3_device_query_timeout'])
+                dialog.spin_set_delay.setValue(defaults['phase3_set_command_delay_ms'])
                 dialog.spin_tcp_workers.setValue(defaults['tcp_max_parallel_workers'])
                 dialog.spin_pgbar_percent.setValue(defaults['pgbar_update_percent'])
                 dialog.spin_pgbar_hide.setValue(defaults['pgbar_auto_hide_delay_ms'])
@@ -6628,6 +6650,7 @@ class WIZWindow(QMainWindow, main_window):
                 WIZMSGHandler.loop_select_timeout = defaults['phase1_loop_select_timeout']
                 WIZMSGHandler.emit_stabilization_ms = defaults['phase1_emit_stabilization_ms']
                 WIZMSGHandler.skip_phase1_emit_delay = defaults['skip_phase1_emit_delay']
+                WIZMSGHandler.set_command_delay_ms = defaults['phase3_set_command_delay_ms']
 
                 # 4. 인스턴스 변수 업데이트
                 self.search_wait_time_each = defaults['phase3_device_query_timeout']

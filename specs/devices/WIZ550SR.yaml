@@ -32,10 +32,12 @@ ui:
         - id: working_mode
           label: "Working Mode"
           type: dropdown
+          # 원본 C 펌웨어 기준: 0=TCP Client, 1=TCP Server, 2=TCP Mixed, 3=UDP (MQTT 없음)
           choices:
             0: "TCP Client"
             1: "TCP Server"
-            2: "UDP"
+            2: "TCP Mixed"
+            3: "UDP"
         - {id: local_port,  label: "Local Port",   type: uint16}
         - {id: remote_ip,   label: "Remote IP",    type: ip}
         - {id: remote_port, label: "Remote Port",  type: uint16}
@@ -72,16 +74,17 @@ ui:
         - id: stop_bits
           label: "Stop Bits"
           type: dropdown
+          # 원본 기준: 실제값 저장 (1=1bit, 2=2bits) — 인덱스 아님
           choices:
-            0: "1 bit"
-            1: "2 bits"
+            1: "1 bit"
+            2: "2 bits"
         - id: flow_control
           label: "Flow Control"
           type: dropdown
-          # PROF-01: XON/XOFF(1) 지원 안 함 — 0(None)과 2(RTS/CTS)만 포함
+          # 원본 기준: 0=None, 1=RTS/CTS, 2=RS422, 3=RS485
           choices:
             0: "None"
-            2: "RTS/CTS"
+            1: "RTS/CTS"
 
     - id: options
       label: "Options"
