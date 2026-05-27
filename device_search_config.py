@@ -417,6 +417,7 @@ class DeviceSearchConfig:
             'phase1_emit_stabilization_ms': self.get_phase1_emit_stabilization_ms(),
             'skip_phase1_emit_delay': self.is_skip_phase1_emit_delay(),
             'phase3_device_query_timeout': self.get_phase3_device_query_timeout(),
+            'phase3_set_command_delay_ms': self.get_phase3_set_command_delay_ms(),
             'tcp_max_parallel_workers': self.get_tcp_max_parallel_workers(),
             'pgbar_update_percent': self.get_pgbar_update_percent(),
             'pgbar_auto_hide_delay_ms': self.get_pgbar_auto_hide_delay_ms(),
@@ -491,6 +492,12 @@ class DeviceSearchConfig:
                 if not (0.5 <= value <= 5.0):
                     raise ValueError(f"phase3_device_query_timeout must be 0.5~5.0, got {value}")
                 self.config['search']['phase3']['device_query_timeout_sec'] = value
+
+            if 'phase3_set_command_delay_ms' in updates:
+                value = int(updates['phase3_set_command_delay_ms'])
+                if not (0 <= value <= 2000):
+                    raise ValueError(f"phase3_set_command_delay_ms must be 0~2000, got {value}")
+                self.config['search']['phase3']['set_command_delay_ms'] = value
 
             if 'tcp_max_parallel_workers' in updates:
                 value = int(updates['tcp_max_parallel_workers'])

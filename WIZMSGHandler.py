@@ -67,6 +67,10 @@ class WIZMSGHandler(QThread):
     loop_select_timeout = 0.5  # Default: Phase 1 loop select timeout (sec)
     emit_stabilization_ms = 50  # Default: emit stabilization delay (ms)
     skip_phase1_emit_delay = False  # Default: do NOT skip (experimental)
+    # SET 응답 수신 후 대기(ms). 장치는 SET 직후 리부트하고, 완료 직후 dev_clicked()가
+    # 재조회를 보내므로 이 여유가 없으면 리부트 중인 장치가 응답하지 못한다.
+    # 기본값 500ms 유지 권장 — 줄이면 구형/느린 장치에서 SET 후 재조회 실패 가능.
+    set_command_delay_ms = 500
 
     def __init__(self, udpsock, cmd_list, what_sock, op_code, timeout, presearch=False):
         QThread.__init__(self)
@@ -355,7 +359,7 @@ class WIZMSGHandler(QThread):
 
                     self.search_result.emit(len(self.mac_list))
                 if self.opcode == Opcode.OP_SETCOMMAND:
-                    self.msleep(500)
+                    self.msleep(WIZMSGHandler.set_command_delay_ms)
                     if len(self.rcv_list) > 0:
                         if self.setting_pw_wrong:
                             self.set_result.emit(-3)
