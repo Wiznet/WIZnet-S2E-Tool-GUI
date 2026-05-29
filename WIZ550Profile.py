@@ -204,6 +204,13 @@ def _parse_base_162(data: bytes) -> dict:
         'data_bits':                data_bits,
         'parity':                   parity,
         'stop_bits':                stop_bits,
+        # BUG NOTE (flow_control): WIZ550SR FW v1.2.2 (commit 698108d) 기준,
+        # uartHandler.c serial_info_init() 의 Flow Control switch 문이
+        # serial->flow_control 대신 serial->parity 를 잘못 참조함.
+        # 이 필드는 구조체에 저장·전송되지만 실제 UART HW 에 적용되지 않음.
+        # 실제 HW flow control 은 parity 값에 의해 결정됨 (parity_none=0→None, parity_odd=1→RTS/CTS).
+        # 단종 제품으로 FW 수정 계획 없음. config tool 은 값 그대로 전송.
+        # WIZ550S2E / WIZ550WEB 도 동일 uartHandler 공유 가능성 있으므로 동일 버그 존재 가능.
         'flow_control':             flow_control,
         'pw_setting':               _cstr_to_str(pw_setting),
         'pw_connect':               _cstr_to_str(pw_connect),

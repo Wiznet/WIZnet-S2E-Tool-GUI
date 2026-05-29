@@ -3513,6 +3513,33 @@ class WIZWindow(QMainWindow, main_window):
     # WIZ550 UI fill (reusing existing generalTab widgets)
     # ──────────────────────────────────────────────────────────────
 
+    def _load_wiz550_baud_items(self, device_name: str) -> list:
+        """WIZ550 YAML spec 의 baud_rate choices 키(실제 bps 정수값)를 str 목록으로 반환.
+
+        YAML choices 의 키가 실제 bps 정수값이므로 str(key) 형태로 반환한다.
+        ch0_baud 는 findText(str(baud)) 방식으로 조회하므로 "115200" 형태와 호환된다.
+        YAML 수정 시 자동 반영되며, _apply_serial_from_spec() 이 일반 장치 선택 시
+        ch0_baud 를 재구성하므로 WIZ550 → 일반 장치 전환 시 별도 복원 불필요.
+        """
+        try:
+            import yaml as _yaml
+            from device_spec_loader import DEVICES_DIR
+            path = DEVICES_DIR / f"{device_name}.yaml"
+            if path.exists():
+                with open(path, encoding='utf-8') as f:
+                    data = _yaml.safe_load(f)
+                for section in (data.get('ui') or {}).get('sections', []):
+                    if section.get('id') == 'serial':
+                        for fld in section.get('fields', []):
+                            if fld.get('id') == 'baud_rate':
+                                choices = fld.get('choices') or {}
+                                return [str(k) for k in sorted(int(k) for k in choices.keys())]
+        except Exception as e:
+            self.logger.warning(f"[WIZ550] baud_items 로드 실패 ({device_name}): {e}")
+        # fallback: WIZ550S2E 기본값 (300 포함)
+        return ['300', '600', '1200', '2400', '4800', '9600',
+                '19200', '38400', '57600', '115200', '230400', '460800']
+
     def fill_devinfo_wiz550(self, d: dict):
         """Fill existing generalTab widgets directly from parse_sr/s2e/web result dict."""
         # Device info
@@ -3551,8 +3578,19 @@ class WIZWindow(QMainWindow, main_window):
         self.ch0_remoteip.setText(d.get('remote_ip', ''))
         self.ch0_remoteport.setText(str(d.get('remote_port', 0)))
 
-        # Serial — baud_rate is actual bps int (e.g. 115200), ch0_baud combo stores it as text "115200"
+        # Serial — baud_rate: YAML spec 기반으로 ch0_baud 재구성 (device_type 별 지원 범위 적용)
+        # WIZ550SR: 600~460800 (300 제외), WIZ550S2E/WEB: 300~460800 (YAML choices 그대로)
+        # 일반 장치로 전환 시 _apply_serial_from_spec() 이 ch0_baud 를 재구성하므로 복원 불필요.
         baud = d.get('baud_rate', 115200)
+        _baud_items = self._load_wiz550_baud_items(d.get('device_type', 'WIZ550SR'))
+        self.ch0_baud.blockSignals(True)
+        self.ch0_baud.clear()
+        for _item in _baud_items:
+            self.ch0_baud.addItem(_item)
+        self.ch0_baud.blockSignals(False)
+        # baud 값이 지원 목록에 없으면 가장 가까운 값으로 클램핑 (legacy 장치 방어)
+        if self.ch0_baud.findText(str(baud)) < 0:
+            baud = min((int(x) for x in _baud_items), key=lambda x: abs(x - baud), default=115200)
         idx = self.ch0_baud.findText(str(baud))
         if idx >= 0:
             self.ch0_baud.setCurrentIndex(idx)
@@ -3564,6 +3602,10 @@ class WIZWindow(QMainWindow, main_window):
         self.ch0_parity.setCurrentIndex(d.get('parity', 0))
         # WIZ550 stop_bits: 실제값 저장 (1=1bit, 2=2bits) → UI 콤보 인덱스로 변환
         self.ch0_stopbit.setCurrentIndex(max(0, d.get('stop_bits', 1) - 1))
+        # BUG NOTE (flow_control): WIZ550SR FW v1.2.2 — uartHandler.c serial_info_init() 의
+        # Flow Control switch 가 serial->flow_control 대신 serial->parity 를 잘못 참조.
+        # flow_control 필드는 구조체에 저장·전송되지만 UART HW 에 적용되지 않음.
+        # config tool 은 값 그대로 전송 (변경하지 않음). 상세: WIZ550SR.yaml flow_control 주석 참조.
         self.ch0_flow.setCurrentIndex(d.get('flow_control', 0))
 
         # Packing / Timer
