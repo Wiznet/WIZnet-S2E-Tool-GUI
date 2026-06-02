@@ -6,6 +6,7 @@
     - [Pre-programmed MCU](#pre-programmed-mcu)
 - [What's New](#whats-new)
 - [CLI Configuration Tool](#cli-configuration-tool)
+- [For Developers](#for-developers)
 - [TroubleShooting](#troubleshooting)
   - [Report](#report)
 
@@ -123,6 +124,22 @@ With just a few options, you can easily set up your device.
 One of the features of the CLI tool is that **it supports multi device configuration**. If you have multiple devices, try it.
 
 CLI configuration tool can be refer from [WIZnet-S2E-Tool github page.](https://github.com/Wiznet/WIZnet-S2E-Tool)
+
+
+# For Developers
+
+Want to modify the source code, add a device, or build the EXE yourself?
+**New here? Start with the [Developer Guide](doc/dev/DEV_GUIDE-ko.md)** — it walks the docs below in order.
+
+| Document | Description |
+|----------|-------------|
+| DEV_GUIDE ([한국어](doc/dev/DEV_GUIDE-ko.md)) | Where to start — ordered reading path for developers |
+| ARCHITECTURE ([한국어](doc/dev/ARCHITECTURE-ko.md)) | Codebase map: entry point, device protocols, data flows |
+| SETUP_DEV ([한국어](doc/dev/SETUP_DEV-ko.md)) | Set up Python environment and build EXE |
+| QT_DESIGNER ([한국어](doc/dev/QT_DESIGNER-ko.md)) | Edit the GUI layout with Qt Designer |
+| ADD_DEVICE ([한국어](doc/dev/ADD_DEVICE-ko.md)) | Add support for a new device via DeviceSpec YAML |
+| TESTING ([한국어](doc/dev/TESTING-ko.md)) | Run automated tests, schema validation, UDP simulators |
+| RELEASE ([한국어](doc/dev/RELEASE-ko.md)) | Version rules, code signing, GitHub Release procedure |
 
 
 # TroubleShooting
