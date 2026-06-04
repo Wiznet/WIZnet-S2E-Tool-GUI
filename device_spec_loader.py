@@ -389,8 +389,14 @@ def _load_device_impl(device_name: str, fw_version: str | None) -> DeviceSpec:
     dev = _load_yaml(path)
     fw_ver = _parse_version(fw_version)
 
-    # 0. device YAML 스키마 검증
-    _validate_yaml_schema(dev, "device.schema.json", f"devices/{device_name}.yaml")
+    # 0. device YAML 스키마 검증 — family로 스키마 선택 (validate_schemas.py 와 동일 기준).
+    #    WIZ550 계열은 바이너리 프로토콜이라 command_groups 가 없고 protocol/sections 구조를
+    #    쓰므로 전용 스키마로 검증해야 한다. (표준 스키마로 검증하면 command_groups 누락 오탐)
+    _device_schema = (
+        "device.wiz550.schema.json" if dev.get("family") == "wiz550"
+        else "device.schema.json"
+    )
+    _validate_yaml_schema(dev, _device_schema, f"devices/{device_name}.yaml")
 
     # 1. 커맨드 그룹 병합
     cmdset: dict[str, CmdEntry] = {}

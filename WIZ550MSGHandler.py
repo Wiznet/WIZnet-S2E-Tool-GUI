@@ -367,6 +367,7 @@ class WIZ550Searcher(QThread):
         pkt_bcast   = _build_discovery_all(unicast=False)
         pkt_unicast = _build_discovery_all(unicast=True)
         socks = []
+        skipped = []   # 실패 NIC 수집 — 유효 소켓이 하나라도 있으면 출력 안 함(노이즈 억제)
         try:
             for bind_ip in bind_ips:
                 try:
@@ -379,7 +380,7 @@ class WIZ550Searcher(QThread):
                     logger.debug(f"[WIZ550] DISCOVERY_ALL → 255.255.255.255:{WIZ550_PORT} (NIC={bind_ip})")
                     socks.append(s)
                 except OSError as e:
-                    logger.debug(f"[WIZ550] NIC {bind_ip} skip: {e}")
+                    skipped.append((bind_ip, e))
 
             # IP Address 유니캐스트 모드: 지정 IP로 직접 전송 (브로드캐스트와 병행)
             if self.target_ip:
@@ -399,9 +400,12 @@ class WIZ550Searcher(QThread):
                     logger.debug(f"[WIZ550] DISCOVERY_ALL(unicast) → {self.target_ip}:{WIZ550_PORT} (NIC={bind_ip})")
                     socks.append(su)
                 except OSError as e:
-                    logger.debug(f"[WIZ550] unicast 소켓 skip: {e}")
+                    skipped.append(('unicast', e))
 
             if not socks:
+                # 유효 NIC 0개일 때만 수집된 실패를 출력 (이 경우 진단에 유용)
+                for bind_ip, e in skipped:
+                    logger.debug(f"[WIZ550] NIC {bind_ip} skip: {e}")
                 logger.error("[WIZ550] 사용 가능한 소켓 없음")
                 self.search_done.emit([])
                 return
@@ -476,6 +480,7 @@ class WIZ550Getter(QThread):
 
         pkt = _build_get_info(self.target_mac)
         socks = []
+        skipped = []   # NIC bind/send 실패 수집 — 유효 소켓이 하나라도 있으면 출력 안 함(노이즈 억제)
         try:
             for bind_ip in bind_ips:
                 try:
@@ -488,9 +493,12 @@ class WIZ550Getter(QThread):
                     logger.debug(f"[WIZ550] GET_INFO → {self.target_mac} (NIC={bind_ip})")
                     socks.append(s)
                 except OSError as e:
-                    logger.debug(f"[WIZ550] Getter NIC {bind_ip} skip: {e}")
+                    skipped.append((bind_ip, e))
 
             if not socks:
+                # 유효 NIC 0개일 때만 수집된 실패를 출력 (이 경우 진단에 유용)
+                for bind_ip, e in skipped:
+                    logger.debug(f"[WIZ550] Getter NIC {bind_ip} skip: {e}")
                 logger.error(f"[WIZ550] Getter: 사용 가능한 소켓 없음")
                 self.get_done.emit({})
                 return

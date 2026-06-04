@@ -20,6 +20,13 @@ protocol:
   builder: build_s2e
 
 ui:
+  # SR과 달리 S2E는 data_bits 7/8 활성, MQTT(working_mode 4)·Modbus(variant) 지원 → 숨기지 않음.
+  # 전 WIZ550 공통 미지원만 숨김. 근거: research/2026-06-02-wiz550-series-characteristics.md
+  widget_overrides:
+    ch0_uart_name:   # uart_interface(Serial interface) 필드 없음 (전 WIZ550 미지원)
+      visible: false
+    ip_pppoe:        # 구조체에 PPPoE 없음
+      visible: false
   sections:
     - id: network
       label: "Network"
@@ -51,8 +58,10 @@ ui:
         - id: baud_rate
           label: "Baud Rate"
           type: dropdown
-          # D-03 override: D-03 예시는 인덱스 기반(0~11)이나 WIZ550Profile.py의
-          # baud_rate 필드가 실제 bps 정수값(115200)을 저장하므로 choices 키도 bps 정수값으로 작성
+          # baud choices 키 = 실제 bps 정수값 (WIZ550Profile.py가 bps 정수 저장).
+          # S2E baud_table = {300,600,...,230400} (11값, 300 포함, SR과 달리 300 지원).
+          # 460800 은 baud_table 에 없음 → 전송 시 fallback. 제외. (factory default 115200)
+          # 근거: uartHandler_wiz550s2e.c baud_table, research/2026-06-02-wiz550-series-characteristics.md
           choices:
             300: "300 bps"
             600: "600 bps"
@@ -65,8 +74,15 @@ ui:
             57600: "57600 bps"
             115200: "115200 bps"
             230400: "230400 bps"
-            460800: "460800 bps"
-        - {id: data_bits,    label: "Data Bits",    type: readonly, value: "8-bit"}
+        - id: data_bits
+          label: "Data Bits"
+          type: dropdown
+          # FW: S2E는 7·8 둘 다 지원 (uartHandler_wiz550s2e.c:58~69, DATA7BIT 가드 없음).
+          # SR(DATA7BIT_ENABLE=0, 8 고정)과 반대. 값=실제 bit수(7/8). 인덱스 아님.
+          # 근거: doc/dev/WIZ550-serial-fw-reference-ko.md
+          choices:
+            7: "7-bit"
+            8: "8-bit"
         - id: parity
           label: "Parity"
           type: dropdown

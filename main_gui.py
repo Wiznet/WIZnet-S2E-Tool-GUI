@@ -1497,6 +1497,19 @@ class WIZWindow(QMainWindow, main_window):
         self._config_status_pin_for_device()
         self._config_security_options()
 
+    def _apply_widget_override(self, widget, spec, name, default_enabled=True):
+        """spec.ui_config.widget_overrides[name] 의 enabled/tooltip 을 위젯에 적용.
+
+        YAML(`ui.widget_overrides`)이 위젯 활성 상태의 단일 기준이다.
+        override 가 없으면 default_enabled(기본 활성)로 둔다 → 장치 전환 시 잔류 방지.
+        예: WIZ550SR 은 data_bits 8 고정(FW DATA7BIT_ENABLE=0)이라 ch0_databit override(enabled:false).
+        근거: doc/dev/WIZ550-serial-fw-reference-ko.md
+        """
+        wo = spec.ui_config.widget_overrides.get(name) if spec else None
+        enabled = wo.enabled if (wo and wo.enabled is not None) else default_enabled
+        widget.setEnabled(enabled)
+        widget.setToolTip((wo.tooltip or "") if (wo and not enabled) else "")
+
     def _apply_serial_from_spec(self, spec) -> None:
         """DeviceSpec 기반으로 시리얼 포트 UI 설정."""
         # 1. ch0_baud
@@ -1556,6 +1569,10 @@ class WIZWindow(QMainWindow, main_window):
                 self.ch0_databit.removeItem(2)
             self.ch0_parity.setEnabled(True)
             self.ch0_stopbit.setEnabled(True)
+
+        # 4b. ch0_databit — widget_override 기준 (WIZ550SR=8 고정 잠금, 그 외=활성).
+        #     일반 장치 선택 시 항상 호출되어 SR 잠금 후 전환 잔류를 방지한다.
+        self._apply_widget_override(self.ch0_databit, spec, 'ch0_databit')
 
         # 5. tcp_timeout — TR in search_cmd_list + widget_override
         tr_in_spec = 'TR' in spec.search_cmd_list
@@ -3599,6 +3616,13 @@ class WIZWindow(QMainWindow, main_window):
         _db_idx = self.ch0_databit.findText(_db_text)
         if _db_idx >= 0:
             self.ch0_databit.setCurrentIndex(_db_idx)
+        # data_bits 잠금: WIZ550SR=8 고정(FW DATA7BIT_ENABLE=0), S2E=7/8 활성.
+        # YAML widget_override(ch0_databit)가 단일 기준. 근거: doc/dev/WIZ550-serial-fw-reference-ko.md (BUG-W550-5)
+        try:
+            _w550_spec = load_device(d.get('device_type', 'WIZ550SR'), self.curr_ver)
+            self._apply_widget_override(self.ch0_databit, _w550_spec, 'ch0_databit')
+        except Exception as e:
+            self.logger.warning(f"[WIZ550] ch0_databit override 적용 실패: {e}")
         self.ch0_parity.setCurrentIndex(d.get('parity', 0))
         # WIZ550 stop_bits: 실제값 저장 (1=1bit, 2=2bits) → UI 콤보 인덱스로 변환
         self.ch0_stopbit.setCurrentIndex(max(0, d.get('stop_bits', 1) - 1))

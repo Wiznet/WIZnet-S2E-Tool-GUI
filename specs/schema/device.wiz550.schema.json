@@ -46,6 +46,29 @@
               }
             }
           }
+        },
+        "widget_overrides": {
+          "type": "object",
+          "description": "위젯 상태 예외 선언 (일반 device.schema.json과 동일 의미). 키 = UI 위젯 objectName.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "visible": {"type": "boolean"},
+              "enabled": {
+                "oneOf": [
+                  {"type": "boolean"},
+                  {
+                    "type": "object",
+                    "required": ["min_version"],
+                    "additionalProperties": false,
+                    "properties": {"min_version": {"type": "string"}}
+                  }
+                ]
+              },
+              "tooltip": {"type": "string"}
+            }
+          }
         }
       }
     }
