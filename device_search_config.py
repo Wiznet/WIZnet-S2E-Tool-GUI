@@ -14,6 +14,7 @@ Example:
 
 import os
 import sys
+import copy
 import shutil
 import yaml
 import logging
@@ -169,6 +170,12 @@ class DeviceSearchConfig:
         ('logging', 'level'): {'DEBUG', 'INFO', 'WARNING', 'ERROR'},
     }
 
+    # 스키마 마이그레이션 step 레지스트리 {target_version: fn(cfg) -> cfg}.
+    # 현재는 키 이름·단위·의미가 깨진 변경이 없어 비어 있다.
+    # 그런 변경이 처음 생기는 날 해당 버전 step을 추가하고 schema_version을 올린다
+    # (골든 fixture 테스트 동반 — 개발자 규약). 엔진은 빈 체인이어도 테스트로 깨어 있다.
+    _MIGRATIONS = {}
+
     @staticmethod
     def get_defaults():
         """기본값 dict 반환 (다이얼로그 Reset 버튼용)"""
@@ -201,30 +208,34 @@ class DeviceSearchConfig:
         if not config_path:
             self._provision_user_config()
 
-        paths = []
+        user_path = Path(config_path) if config_path else _user_config_path()
+        bundled = self._load_yaml(_bundled_default_path())
+        user = self._load_yaml(user_path)
 
-        if config_path:
-            paths.append(Path(config_path))
+        # 기준 = DEFAULTS + 번들 default → 항상 완전한 키 집합 (불변식의 base)
+        reference = self._merge_config(self.DEFAULTS, bundled or {})
 
-        # 우선순위: 사용자 설정(~/.wizconfig) → 번들 기본값(default.yaml)
-        paths.extend([
-            _user_config_path(),
-            _bundled_default_path(),
-        ])
+        if not isinstance(user, dict):
+            print("[Config] No user config; using bundled default")
+            return reference
 
-        for path in paths:
-            if path.exists():
-                try:
-                    with open(path, 'r', encoding='utf-8') as f:
-                        loaded = yaml.load(f, Loader=DecimalSafeLoader)
-                        merged = self._merge_config(self.DEFAULTS, loaded or {})
-                        print(f"[Config] Loaded: {path}")
-                        return merged
-                except Exception as e:
-                    print(f"[Config] Warning: Failed to load {path}: {e}")
+        # 스키마 마이그레이션 후 기준 위에 병합(fill)하여 누락 키를 채운다
+        migrated = self._migrate(user, reference, user_path)
+        merged = self._merge_config(reference, migrated)
+        print(f"[Config] Loaded: {user_path}")
+        return merged
 
-        print("[Config] Using hardcoded defaults (no config file found)")
-        return self.DEFAULTS.copy()
+    def _load_yaml(self, path):
+        """YAML 파일 로드. 부재/실패 시 None."""
+        try:
+            p = Path(path)
+            if not p.exists():
+                return None
+            with open(p, 'r', encoding='utf-8') as f:
+                return yaml.load(f, Loader=DecimalSafeLoader)
+        except Exception as e:
+            print(f"[Config] Warning: Failed to load {path}: {e}")
+            return None
 
     def _provision_user_config(self):
         """사용자 설정 파일이 없으면 생성한다.
@@ -323,6 +334,51 @@ class DeviceSearchConfig:
                 + ', '.join(r[0] for r in resets)
             )
         return resets
+
+    def _migrate(self, user, reference, user_path):
+        """user 설정을 기준 schema_version까지 순차 마이그레이션한다.
+
+        - 동일 버전: 그대로 (대부분의 실행)
+        - 미래 버전(다운그레이드): 원본 백업 후 기준값 사용 (안전 우선)
+        - 과거 버전: .bak 백업 후 등록 step을 버전 순서대로 적용
+        현재 _MIGRATIONS는 비어 있어 step 없이 schema_version만 정규화된다.
+        어떤 버전에서 점프해도 한 단계씩 올라오므로 오래된 고객 설정도 안전하다.
+        """
+        try:
+            uv = int(user.get('schema_version', 0))
+            tv = int(reference.get('schema_version', 0))
+        except (TypeError, ValueError):
+            return user
+
+        if uv == tv:
+            return user
+        if uv > tv:
+            self._backup_file(user_path, f'.v{uv}.bak')
+            self.logger.warning(
+                f"설정 schema_version({uv}) > 앱({tv}); 기준값으로 대체, 원본 백업"
+            )
+            return copy.deepcopy(reference)
+
+        # 과거 → 현재: 순차 업그레이드
+        self._backup_file(user_path, f'.v{uv}.bak')
+        cfg = copy.deepcopy(user)
+        for v in range(uv + 1, tv + 1):
+            step = self._MIGRATIONS.get(v)
+            if step is not None:
+                cfg = step(cfg)
+            cfg['schema_version'] = v
+        self.logger.info(f"설정 마이그레이션: v{uv} → v{tv}")
+        return cfg
+
+    def _backup_file(self, path, suffix):
+        """user 설정 파일을 suffix 붙여 백업한다 (롤백·복구용)."""
+        try:
+            p = Path(path)
+            if p.exists():
+                shutil.copyfile(str(p), str(p) + suffix)
+                self.logger.info(f"설정 백업: {p}{suffix}")
+        except Exception as e:
+            self.logger.warning(f"설정 백업 실패: {e}")
 
     def _merge_config(self, defaults: Dict, user_config: Dict) -> Dict:
         """재귀적으로 기본값과 사용자 설정 병합

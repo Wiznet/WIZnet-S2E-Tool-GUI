@@ -145,3 +145,63 @@ def test_valid_config_no_resets():
     """정상(번들 default) 설정은 복귀가 발생하지 않는다."""
     cfg = DeviceSearchConfig(config_path=str(_bundled_default_path()))
     assert cfg.last_resets == []
+
+
+# ─────────────────────────────────────────────────────────────────
+# P4: 스키마 마이그레이션 엔진
+# ─────────────────────────────────────────────────────────────────
+
+def test_legacy_config_migrates_without_crash(tmp_path):
+    """schema_version 없는 legacy 설정 → 현재 버전, 무crash + 튜닝값 보존."""
+    legacy = tmp_path / "legacy.yaml"
+    # active_preset 비활성 — 개별 튜닝값이 살아있는 시나리오
+    legacy.write_text(
+        "active_preset: ''\n"
+        "search:\n  phase1:\n    broadcast_timeout_sec: 5.0\n",
+        encoding="utf-8",
+    )
+    cfg = DeviceSearchConfig(config_path=str(legacy))
+    # 모든 무인자 접근자가 KeyError 없이 동작 (fill 불변식)
+    for name in _zero_arg_accessors(cfg):
+        getattr(cfg, name)()
+    # legacy 튜닝값 보존
+    assert cfg.get_phase1_broadcast_timeout() == 5.0
+
+
+def test_migration_runs_registered_steps_in_order(tmp_path):
+    """등록 step이 버전 순서대로 적용된다 (가상 시나리오로 빈 엔진을 검증)."""
+    cfg = DeviceSearchConfig(config_path=str(_bundled_default_path()))
+    calls = []
+
+    def s2(c):
+        calls.append(2)
+        c["marker"] = "v2"
+        return c
+
+    def s3(c):
+        calls.append(3)
+        c["marker"] = "v3"
+        return c
+
+    cfg._MIGRATIONS = {2: s2, 3: s3}  # 인스턴스 오버라이드로 엔진만 검증
+    result = cfg._migrate(
+        {"schema_version": 1, "marker": "start"},
+        {"schema_version": 3},
+        tmp_path / "noexist.yaml",
+    )
+    assert calls == [2, 3]
+    assert result["marker"] == "v3"
+    assert result["schema_version"] == 3
+
+
+def test_downgrade_backs_up_and_uses_reference(tmp_path):
+    """미래 버전 설정(다운그레이드)은 백업 후 기준값으로 대체된다."""
+    user = tmp_path / "future.yaml"
+    user.write_text(
+        "schema_version: 99\n"
+        "search:\n  phase1:\n    broadcast_timeout_sec: 7.0\n",
+        encoding="utf-8",
+    )
+    cfg = DeviceSearchConfig(config_path=str(user))
+    assert (tmp_path / "future.yaml.v99.bak").exists()  # 원본 백업
+    assert cfg.get_phase1_broadcast_timeout() != 7.0     # 기준값으로 대체
