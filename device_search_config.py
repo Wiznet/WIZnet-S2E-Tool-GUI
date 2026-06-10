@@ -12,11 +12,30 @@ Example:
     ...     multiplier = config.get_auto_tune_rtt_multiplier()
 """
 
+import os
+import sys
+import shutil
 import yaml
 import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
 from decimal import Decimal
+
+
+def _resource_path(relative_path: str) -> str:
+    """PyInstaller 번들/개발 환경 모두에서 리소스 절대경로 반환"""
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, relative_path)
+
+
+def _bundled_default_path() -> Path:
+    """번들된 기본값 파일 (읽기전용 기준). onefile exe에서는 _MEIPASS 내부."""
+    return Path(_resource_path(os.path.join("config", "device_search_timing.default.yaml")))
+
+
+def _user_config_path() -> Path:
+    """사용자 설정 파일 (쓰기·영속) — ~/.wizconfig/ (로그와 동일 루트)"""
+    return Path(os.path.expanduser("~")) / ".wizconfig" / "device_search_timing.yaml"
 
 
 # YAML Decimal 지원: float를 Decimal로 로드/저장
@@ -145,7 +164,8 @@ class DeviceSearchConfig:
         self.logger = logging.getLogger(__name__)
         self.config = self._load_config(config_path)
         self._apply_active_preset()
-        self.config_file_path = Path('config/device_search_timing.yaml')  # 사용자 설정 파일 경로
+        # 사용자 설정 파일 경로 (지정 시 그것을, 아니면 ~/.wizconfig/)
+        self.config_file_path = Path(config_path) if config_path else _user_config_path()
 
     def _load_config(self, config_path: Optional[str]) -> Dict[str, Any]:
         """YAML 파일 로드 (우선순위 순서)
@@ -156,15 +176,19 @@ class DeviceSearchConfig:
         Returns:
             dict: 병합된 설정 값
         """
+        # 최초 실행 시 사용자 설정 파일 프로비저닝 (자동 이주 또는 번들 복사)
+        if not config_path:
+            self._provision_user_config()
+
         paths = []
 
         if config_path:
             paths.append(Path(config_path))
 
-        # config 폴더에서 탐색
+        # 우선순위: 사용자 설정(~/.wizconfig) → 번들 기본값(default.yaml)
         paths.extend([
-            Path('config/device_search_timing.yaml'),
-            Path('config/device_search_timing.default.yaml'),
+            _user_config_path(),
+            _bundled_default_path(),
         ])
 
         for path in paths:
@@ -180,6 +204,27 @@ class DeviceSearchConfig:
 
         print("[Config] Using hardcoded defaults (no config file found)")
         return self.DEFAULTS.copy()
+
+    def _provision_user_config(self):
+        """사용자 설정 파일이 없으면 생성한다.
+
+        우선순위:
+        1. 기존 로컬 config/device_search_timing.yaml (구버전·개발 위치) → 자동 이주
+        2. 번들 기본값(default.yaml) → 복사
+        파일이 이미 있으면 아무 것도 하지 않는다.
+        """
+        user_path = _user_config_path()
+        if user_path.exists():
+            return
+        try:
+            user_path.parent.mkdir(parents=True, exist_ok=True)
+            legacy = Path('config/device_search_timing.yaml')
+            src = legacy if legacy.exists() else _bundled_default_path()
+            if Path(src).exists():
+                shutil.copyfile(str(src), str(user_path))
+                print(f"[Config] Provisioned user config: {src} -> {user_path}")
+        except Exception as e:
+            print(f"[Config] Warning: failed to provision user config: {e}")
 
     def _merge_config(self, defaults: Dict, user_config: Dict) -> Dict:
         """재귀적으로 기본값과 사용자 설정 병합
@@ -435,10 +480,8 @@ class DeviceSearchConfig:
             bool: 성공 여부
         """
         try:
-            # config 디렉토리 확인/생성
-            config_dir = Path('config')
-            if not config_dir.exists():
-                config_dir.mkdir(parents=True)
+            # 사용자 설정 디렉토리 확인/생성 (~/.wizconfig)
+            Path(self.config_file_path).parent.mkdir(parents=True, exist_ok=True)
 
             # YAML 파일 쓰기 (Decimal 지원)
             with open(self.config_file_path, 'w', encoding='utf-8') as f:
@@ -556,8 +599,8 @@ class DeviceSearchConfig:
             bool: 성공 여부
         """
         try:
-            # 1. 기본값 YAML 파일 읽기
-            default_path = Path('config/device_search_timing.default.yaml')
+            # 1. 기본값 YAML 파일 읽기 (번들 default — exe에서도 동작)
+            default_path = _bundled_default_path()
 
             if default_path.exists():
                 with open(default_path, 'r', encoding='utf-8') as f:
