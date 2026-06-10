@@ -12,7 +12,6 @@
 
 import inspect
 import yaml
-import pytest
 
 from device_search_config import (
     DeviceSearchConfig,
@@ -114,3 +113,35 @@ def test_user_config_path_under_wizconfig():
 def test_bundled_default_exists():
     """번들 기준 파일이 실제로 접근 가능하다 (개발 환경)."""
     assert _bundled_default_path().exists()
+
+
+# ─────────────────────────────────────────────────────────────────
+# P3: 로드 시 검증(validate) — 범위/enum 위반 교정
+# ─────────────────────────────────────────────────────────────────
+
+def test_out_of_range_value_reset_to_default(tmp_path):
+    """범위 위반 값(손편집·구버전)은 로드 시 기준값으로 복귀 + 복귀 목록 기록."""
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        "search:\n  phase1:\n    broadcast_timeout_sec: 999.0\n",
+        encoding="utf-8",
+    )
+    cfg = DeviceSearchConfig(config_path=str(bad))
+    v = cfg.get_phase1_broadcast_timeout()
+    assert v != 999.0
+    assert 0.5 <= v <= 10.0
+    assert any("broadcast_timeout_sec" in r[0] for r in cfg.last_resets)
+
+
+def test_invalid_enum_level_reset(tmp_path):
+    """logging.level enum 위반 시 기준값으로 복귀."""
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("logging:\n  level: BOGUS\n", encoding="utf-8")
+    cfg = DeviceSearchConfig(config_path=str(bad))
+    assert any("logging.level" in r[0] for r in cfg.last_resets)
+
+
+def test_valid_config_no_resets():
+    """정상(번들 default) 설정은 복귀가 발생하지 않는다."""
+    cfg = DeviceSearchConfig(config_path=str(_bundled_default_path()))
+    assert cfg.last_resets == []

@@ -150,6 +150,25 @@ class DeviceSearchConfig:
         },
     }
 
+    # 로드 시 검증 규칙 — update_config_values()의 범위와 동일하게 유지한다.
+    # 위반 시 기준값(번들 default)으로 복귀시켜 구버전 값·손편집 오류로 인한 오작동을 막는다.
+    _RANGE_VALIDATORS = {
+        ('search', 'phase1', 'broadcast_timeout_sec'): (0.5, 10.0),
+        ('search', 'phase1', 'loop_select_timeout_sec'): (0.1, 5.0),
+        ('search', 'phase1', 'emit_stabilization_ms'): (0, 500),
+        ('search', 'phase3', 'device_query_timeout_sec'): (0.5, 5.0),
+        ('search', 'phase3', 'set_command_delay_ms'): (0, 2000),
+        ('search', 'tcp', 'max_parallel_workers'): (1, 50),
+        ('ui', 'progress_bar', 'update_percent'): (1, 100),
+        ('ui', 'progress_bar', 'auto_hide_delay_ms'): (0, 10000),
+        ('search', 'options', 'expected_device_count'): (0, 1000),
+        ('search', 'options', 'max_retry_count'): (1, 100),
+        ('search', 'retry', 'delay_between_retries_ms'): (0, 5000),
+    }
+    _ENUM_VALIDATORS = {
+        ('logging', 'level'): {'DEBUG', 'INFO', 'WARNING', 'ERROR'},
+    }
+
     @staticmethod
     def get_defaults():
         """기본값 dict 반환 (다이얼로그 Reset 버튼용)"""
@@ -163,6 +182,8 @@ class DeviceSearchConfig:
         """
         self.logger = logging.getLogger(__name__)
         self.config = self._load_config(config_path)
+        # 범위/enum 위반 항목을 기준값으로 교정 (구버전 값·손편집 방어). 복귀 목록은 통지용.
+        self.last_resets = self._validate_loaded()
         self._apply_active_preset()
         # 사용자 설정 파일 경로 (지정 시 그것을, 아니면 ~/.wizconfig/)
         self.config_file_path = Path(config_path) if config_path else _user_config_path()
@@ -225,6 +246,83 @@ class DeviceSearchConfig:
                 print(f"[Config] Provisioned user config: {src} -> {user_path}")
         except Exception as e:
             print(f"[Config] Warning: failed to provision user config: {e}")
+
+    @staticmethod
+    def _dig(d, path):
+        """중첩 dict에서 경로로 값 조회. (found, value) 반환."""
+        cur = d
+        for k in path:
+            if not isinstance(cur, dict) or k not in cur:
+                return False, None
+            cur = cur[k]
+        return True, cur
+
+    @staticmethod
+    def _put(d, path, value):
+        """중첩 dict 경로에 값 설정 (없는 중간 dict는 생성)."""
+        cur = d
+        for k in path[:-1]:
+            cur = cur.setdefault(k, {})
+        cur[path[-1]] = value
+
+    def _build_reference(self):
+        """검증 기준 — 번들 default(없으면 하드코딩 DEFAULTS)."""
+        bundled = _bundled_default_path()
+        if bundled.exists():
+            try:
+                with open(bundled, 'r', encoding='utf-8') as f:
+                    loaded = yaml.load(f, Loader=DecimalSafeLoader)
+                return self._merge_config(self.DEFAULTS, loaded or {})
+            except Exception:
+                pass
+        return self.DEFAULTS
+
+    def _validate_loaded(self):
+        """로드된 config의 범위/enum 위반 항목을 기준값으로 교정한다.
+
+        파일은 저장하지 않는다 (변형·저장은 schema_version 변경 시에만 — 고정2).
+        메모리상의 config만 교정해 즉시 crash/오작동을 막고, 복귀 목록은 통지용으로 반환.
+
+        Returns:
+            list[(key, bad_value, restored_value)]
+        """
+        try:
+            ref = self._build_reference()
+        except Exception as e:
+            self.logger.warning(f"config validate skipped: {e}")
+            return []
+
+        resets = []
+        # 범위 검증
+        for path, (lo, hi) in self._RANGE_VALIDATORS.items():
+            found, val = self._dig(self.config, path)
+            if not found:
+                continue
+            try:
+                num = float(val)
+            except (TypeError, ValueError):
+                num = None
+            if num is None or not (lo <= num <= hi):
+                rfound, rval = self._dig(ref, path)
+                if rfound:
+                    self._put(self.config, path, rval)
+                    resets.append(('.'.join(path), val, rval))
+        # enum 검증
+        for path, allowed in self._ENUM_VALIDATORS.items():
+            found, val = self._dig(self.config, path)
+            if not found:
+                continue
+            if str(val).upper() not in allowed:
+                rfound, rval = self._dig(ref, path)
+                if rfound:
+                    self._put(self.config, path, rval)
+                    resets.append(('.'.join(path), val, rval))
+        if resets:
+            self.logger.warning(
+                f"설정 검증: {len(resets)}개 항목을 기준값으로 복귀 — "
+                + ', '.join(r[0] for r in resets)
+            )
+        return resets
 
     def _merge_config(self, defaults: Dict, user_config: Dict) -> Dict:
         """재귀적으로 기본값과 사용자 설정 병합
