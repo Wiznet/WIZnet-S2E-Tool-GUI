@@ -70,7 +70,15 @@ search:
     max_retry_count_limit: 100
 
     # 기본 최대 반복 횟수
-    default_max_retry: 1
+    default_max_retry: 3
+
+  # 검색 옵션 (Search Options)
+  options:
+    # 예상 장비 수 (0 = 미지정, 누적 검색 종료 조건)
+    expected_device_count: 0
+
+    # 최대 반복 횟수 (누적 검색)
+    max_retry_count: 3
 
 # ============================================================
 # UI 응답성 (UI Responsiveness)
@@ -79,7 +87,7 @@ ui:
   # Progress Bar 설정
   progress_bar:
     # 자동 숨김 딜레이 (밀리초)
-    auto_hide_delay_ms: 2000
+    auto_hide_delay_ms: 1000
 
     # 갱신 퍼센트 (1~100)
     # - 값이 작을수록 자주 갱신 (부드럽지만 느림)
@@ -137,6 +145,11 @@ experimental:
   # - 0: 무제한
   # - N: 최대 N개 소켓 동시 사용
   max_parallel_sockets: 0
+
+  # Phase 3 온디맨드 쿼리 (기본: false)
+  # - true: 장비 선택 시점에 개별 쿼리
+  # - false: 검색 시 일괄 쿼리
+  phase3_on_demand: false
 
 # ============================================================
 # 네트워크 프리셋 (Network Presets)
@@ -200,3 +213,6 @@ logging:
   # - true: 모든 debug 로그 출력
   # - false: info 이상만 출력
   verbose_debug: false
+
+  # 상태바에 타이밍 표시 (기본: false)
+  show_timing_in_statusbar: false
