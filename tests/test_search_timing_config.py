@@ -205,3 +205,27 @@ def test_downgrade_backs_up_and_uses_reference(tmp_path):
     cfg = DeviceSearchConfig(config_path=str(user))
     assert (tmp_path / "future.yaml.v99.bak").exists()  # 원본 백업
     assert cfg.get_phase1_broadcast_timeout() != 7.0     # 기준값으로 대체
+
+
+# ─────────────────────────────────────────────────────────────────
+# P5: 검증 교정 영속화 (반복 방지)
+# ─────────────────────────────────────────────────────────────────
+
+def test_reset_persists_corrected_config(tmp_path):
+    """검증 위반 교정분이 파일에 저장되고 원본은 .invalid.bak로 백업된다."""
+    f = tmp_path / "u.yaml"
+    f.write_text(
+        "active_preset: ''\n"
+        "search:\n  phase1:\n    broadcast_timeout_sec: 999.0\n",
+        encoding="utf-8",
+    )
+    cfg = DeviceSearchConfig(config_path=str(f))
+    assert cfg.last_resets  # 위반 감지
+
+    # config_path 인스턴스는 자동 저장을 하지 않으므로 수동 호출로 영속화 검증
+    cfg.config_file_path = f
+    cfg._persist_after_reset()
+
+    assert (tmp_path / "u.yaml.invalid.bak").exists()
+    reloaded = yaml.safe_load(f.read_text(encoding="utf-8"))
+    assert reloaded["search"]["phase1"]["broadcast_timeout_sec"] != 999.0

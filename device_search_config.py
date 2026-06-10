@@ -189,11 +189,14 @@ class DeviceSearchConfig:
         """
         self.logger = logging.getLogger(__name__)
         self.config = self._load_config(config_path)
-        # 범위/enum 위반 항목을 기준값으로 교정 (구버전 값·손편집 방어). 복귀 목록은 통지용.
-        self.last_resets = self._validate_loaded()
-        self._apply_active_preset()
         # 사용자 설정 파일 경로 (지정 시 그것을, 아니면 ~/.wizconfig/)
         self.config_file_path = Path(config_path) if config_path else _user_config_path()
+        # 범위/enum 위반 항목을 기준값으로 교정 (구버전 값·손편집 방어). 복귀 목록은 통지용.
+        self.last_resets = self._validate_loaded()
+        # 위반 교정분을 user 파일에 반영 (반복 방지). 지정 경로(테스트)는 건드리지 않음.
+        if self.last_resets and not config_path:
+            self._persist_after_reset()
+        self._apply_active_preset()
 
     def _load_config(self, config_path: Optional[str]) -> Dict[str, Any]:
         """YAML 파일 로드 (우선순위 순서)
@@ -379,6 +382,18 @@ class DeviceSearchConfig:
                 self.logger.info(f"설정 백업: {p}{suffix}")
         except Exception as e:
             self.logger.warning(f"설정 백업 실패: {e}")
+
+    def _persist_after_reset(self):
+        """검증 위반 교정분을 user 파일에 저장한다 (원본 .invalid.bak 백업).
+
+        다음 실행에서 같은 위반이 반복되지 않도록 한다.
+        preset 적용 전 raw 상태를 저장한다 (preset 덮어쓴 값이 굳지 않도록).
+        """
+        try:
+            self._backup_file(self.config_file_path, '.invalid.bak')
+            self.save_config()
+        except Exception as e:
+            self.logger.warning(f"검증 교정 저장 실패: {e}")
 
     def _merge_config(self, defaults: Dict, user_config: Dict) -> Dict:
         """재귀적으로 기본값과 사용자 설정 병합
