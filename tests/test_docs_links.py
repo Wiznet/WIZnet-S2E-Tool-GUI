@@ -23,6 +23,15 @@ DEV_DIR = ROOT / "doc" / "dev"
 # 검증 대상: 루트 README + 개발 문서 시리즈
 DOC_FILES = [ROOT / "README.md"] + sorted(DEV_DIR.glob("*.md"))
 
+# 커리큘럼 시리즈 (DEV_GUIDE 순서) — 공통 "개발 문서 목차" footer 필수.
+# 레퍼런스/보조 문서(예: *-fw-reference-ko.md)는 커리큘럼 단계가 아니므로 제외.
+CURRICULUM_DOCS = [
+    DEV_DIR / name for name in (
+        "DEV_GUIDE-ko.md", "SETUP_DEV-ko.md", "ARCHITECTURE-ko.md",
+        "QT_DESIGNER-ko.md", "ADD_DEVICE-ko.md", "TESTING-ko.md", "RELEASE-ko.md",
+    )
+]
+
 # [text](url) 및 ![alt](url) 의 url 부분을 캡처 (인라인 링크 기준)
 _LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 
@@ -65,10 +74,10 @@ def test_local_links_resolve(md_path: Path):
     assert not broken, f"{md_path.name} 의 깨진 링크: {broken}"
 
 
-@pytest.mark.parametrize(
-    "md_path", sorted(DEV_DIR.glob("*.md")), ids=lambda p: p.name
-)
+@pytest.mark.parametrize("md_path", CURRICULUM_DOCS, ids=lambda p: p.name)
 def test_dev_docs_have_toc_footer(md_path: Path):
-    """개발 문서 시리즈는 모두 공통 '개발 문서 목차' footer를 갖는다."""
+    """커리큘럼 시리즈 문서는 모두 공통 '개발 문서 목차' footer를 갖는다.
+    (레퍼런스/보조 문서는 제외 — CURRICULUM_DOCS 참고)
+    """
     text = md_path.read_text(encoding="utf-8")
     assert "개발 문서 목차" in text, f"{md_path.name} 에 '개발 문서 목차' footer 없음"
