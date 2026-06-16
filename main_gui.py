@@ -1510,8 +1510,38 @@ class WIZWindow(QMainWindow, main_window):
         widget.setEnabled(enabled)
         widget.setToolTip((wo.tooltip or "") if (wo and not enabled) else "")
 
+    def _apply_visible_override(self, widget, spec, name, default_visible=True):
+        """spec.ui_config.widget_overrides[name] 의 visible 만 위젯에 적용 (enabled/tooltip 불간섭).
+
+        override 가 없으면 default_visible(기본 보임)로 리셋 → 장치 전환 시 직전 잔류 제거.
+        enabled 상태는 다른 로직이 관리하므로 여기서 건드리지 않는다 (회귀 방지).
+        """
+        wo = spec.ui_config.widget_overrides.get(name) if spec else None
+        visible = wo.visible if (wo and wo.visible is not None) else default_visible
+        widget.setVisible(visible)
+
+    def _apply_common_gating(self, spec) -> None:
+        """장치 전환 시 'visible override 대상이지만 다른 곳에서 가시성을 재설정하지 않는'
+        위젯을 baseline(보임)으로 리셋한 뒤 YAML override 를 적용한다. anti-stale 단일 지점.
+
+        대상 4개:
+          - ch0_mqttclient / ch0_modbus_protocol / ch0_uart_name: 코드 어디서도 setVisible 미호출
+            → 한 장치(예: WIZ550SR)가 숨기면 복원할 곳이 없어 stale. 여기서 리셋이 필수.
+          - ip_pppoe: 일반 경로(_apply_serial_from_spec)가 has_pppoe 로 최종 결정하므로
+            여기선 wiz550 경로의 override(숨김) 적용 + 일반 경로용 리셋(보임)만 담당.
+            (일반 경로에서는 이 호출 직후 has_pppoe 로직이 다시 좁힌다 → 순서 의존)
+        override 없으면 default_visible=True. 위젯 누락 시 getattr 가드로 크래시 방지.
+        """
+        for name in ('ch0_mqttclient', 'ch0_modbus_protocol', 'ch0_uart_name', 'ip_pppoe'):
+            w = getattr(self, name, None)
+            if w is not None:
+                self._apply_visible_override(w, spec, name)
+
     def _apply_serial_from_spec(self, spec) -> None:
         """DeviceSpec 기반으로 시리얼 포트 UI 설정."""
+        # 0. 공통 게이팅 리셋 (anti-stale) — ip_pppoe 는 아래 has_pppoe 로직이 다시 좁히므로
+        #    반드시 그 전에 호출한다. 나머지 3개는 여기서만 가시성이 복원된다.
+        self._apply_common_gating(spec)
         # 1. ch0_baud
         br_entry = spec.cmdset.get('BR')
         if br_entry:
@@ -3621,8 +3651,10 @@ class WIZWindow(QMainWindow, main_window):
         try:
             _w550_spec = load_device(d.get('device_type', 'WIZ550SR'), self.curr_ver)
             self._apply_widget_override(self.ch0_databit, _w550_spec, 'ch0_databit')
+            # 공통 게이팅: WIZ550 미지원 기능(mqtt/modbus/uart_interface/pppoe) 위젯 숨김 (YAML override 기준)
+            self._apply_common_gating(_w550_spec)
         except Exception as e:
-            self.logger.warning(f"[WIZ550] ch0_databit override 적용 실패: {e}")
+            self.logger.warning(f"[WIZ550] widget override 적용 실패: {e}")
         self.ch0_parity.setCurrentIndex(d.get('parity', 0))
         # WIZ550 stop_bits: 실제값 저장 (1=1bit, 2=2bits) → UI 콤보 인덱스로 변환
         self.ch0_stopbit.setCurrentIndex(max(0, d.get('stop_bits', 1) - 1))
