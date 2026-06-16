@@ -1869,6 +1869,18 @@ class WIZWindow(QMainWindow, main_window):
             # else:
             #     self.generalTab.removeTab(2)
 
+        # WIZ550S2E: MQTT 지원하나 SECURITY_DEVICE 미포함 → 위 분기서 mqtt 탭 누락.
+        # app 상태일 때만 mqtt 탭 직접 추가 (중복 방지). SR/WEB 은 MQTT 미지원이라 제외.
+        if self.curr_dev == 'WIZ550S2E' and self.curr_st not in DeviceStatusMinimum:
+            _names = [self.generalTab.widget(i).objectName()
+                      for i in range(self.generalTab.count())]
+            if self.mqtt_tab.objectName() not in _names:
+                _mqtt = self.tab_structure.get("mqtt_tab")
+                if _mqtt is not None:
+                    self.generalTab.insertTab(
+                        self.generalTab.count(), _mqtt.object, _mqtt.ui_text
+                    )
+
     def channel_tab_config(self):
         if not self.curr_dev:
             return
@@ -3617,6 +3629,10 @@ class WIZWindow(QMainWindow, main_window):
         # Working mode (Java 원본: 0=Client, 1=Server, 2=TCP Mixed, 3=UDP, 4=MQTT)
         for rb in (self.ch0_tcpclient, self.ch0_tcpserver, self.ch0_tcpmixed, self.ch0_udp):
             rb.setEnabled(True)
+        # WIZ550S2E 만 MQTT(working_mode=4) 지원 → ch0_mqttclient enable.
+        # 일반 경로는 _config_security_options 의 op_vals('5')로 enable 하나 WIZ550 은
+        # 바이너리라 OP cmdset 부재 → 여기서 device_type 기준 직접 enable. (SR/WEB 구조체 미존재)
+        self.ch0_mqttclient.setEnabled(d.get('device_type') == 'WIZ550S2E')
         wmode = d.get('working_mode', 0)
         if wmode == 0:
             self.ch0_tcpclient.setChecked(True)
