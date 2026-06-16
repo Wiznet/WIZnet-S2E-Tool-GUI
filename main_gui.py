@@ -1869,17 +1869,7 @@ class WIZWindow(QMainWindow, main_window):
             # else:
             #     self.generalTab.removeTab(2)
 
-        # WIZ550S2E: MQTT 지원하나 SECURITY_DEVICE 미포함 → 위 분기서 mqtt 탭 누락.
-        # app 상태일 때만 mqtt 탭 직접 추가 (중복 방지). SR/WEB 은 MQTT 미지원이라 제외.
-        if self.curr_dev == 'WIZ550S2E' and self.curr_st not in DeviceStatusMinimum:
-            _names = [self.generalTab.widget(i).objectName()
-                      for i in range(self.generalTab.count())]
-            if self.mqtt_tab.objectName() not in _names:
-                _mqtt = self.tab_structure.get("mqtt_tab")
-                if _mqtt is not None:
-                    self.generalTab.insertTab(
-                        self.generalTab.count(), _mqtt.object, _mqtt.ui_text
-                    )
+        # WIZ550S2E mqtt 탭은 fill_devinfo_wiz550 에서 fw_ver 홀짝 확인 후 추가/제거.
 
     def channel_tab_config(self):
         if not self.curr_dev:
@@ -3631,10 +3621,23 @@ class WIZWindow(QMainWindow, main_window):
         # Working mode (Java 원본: 0=Client, 1=Server, 2=TCP Mixed, 3=UDP, 4=MQTT)
         for rb in (self.ch0_tcpclient, self.ch0_tcpserver, self.ch0_tcpmixed, self.ch0_udp):
             rb.setEnabled(True)
-        # WIZ550S2E 만 MQTT(working_mode=4) 지원 → ch0_mqttclient enable.
-        # 일반 경로는 _config_security_options 의 op_vals('5')로 enable 하나 WIZ550 은
-        # 바이너리라 OP cmdset 부재 → 여기서 device_type 기준 직접 enable. (SR/WEB 구조체 미존재)
-        self.ch0_mqttclient.setEnabled(d.get('device_type') == 'WIZ550S2E')
+        # MQTT 지원: WIZ550S2E + fw_ver[1] 홀수 (v1.1.x/v1.3.x) 조건.
+        # fw_ver[1] 짝수(v1.2.x/v1.4.x)는 Modbus 빌드 → MQTT 미지원.
+        # Java 원본 판별 로직과 동일: (fw_ver[1] % 2) != 0 → MQTT.
+        _fw_ver = d.get('fw_ver', b'\x00\x00\x00')
+        _is_mqtt_fw = (
+            d.get('device_type') == 'WIZ550S2E'
+            and len(_fw_ver) >= 2
+            and (_fw_ver[1] % 2 != 0)
+        )
+        self.ch0_mqttclient.setEnabled(_is_mqtt_fw)
+        if d.get('device_type') == 'WIZ550S2E' and not _is_mqtt_fw:
+            self.ch0_mqttclient.setToolTip(
+                f"MQTT는 FW 홀수 minor 버전(v1.1/v1.3.x)만 지원합니다. "
+                f"현재: {d.get('fw_str', '?')} (Modbus 빌드)"
+            )
+        else:
+            self.ch0_mqttclient.setToolTip("")
         wmode = d.get('working_mode', 0)
         if wmode == 0:
             self.ch0_tcpclient.setChecked(True)
@@ -3710,12 +3713,28 @@ class WIZWindow(QMainWindow, main_window):
         self.connect_pw.setText(pw_c)
         self.at_enable.setChecked(bool(d.get('serial_command', 0)))
 
-        # MQTT (BUG-W550-6): WIZ550Profile 이 s2e_variant=='mqtt' 응답에서 d 에 채움.
-        # variant 가 아니면 키 부재 → 빈값 표시(anti-stale). WIZ550 sub_topic 은 1개(subtopic_0).
+        # MQTT 필드: s2e_variant=='mqtt' 응답에서만 값 있음. 아니면 빈값(anti-stale).
         self.lineedit_mqtt_username.setText(d.get('mqtt_user', ''))
         self.lineedit_mqtt_password.setText(d.get('mqtt_pw', ''))
         self.lineedit_mqtt_pubtopic.setText(d.get('mqtt_pub_topic', ''))
         self.lineedit_mqtt_subtopic_0.setText(d.get('mqtt_sub_topic', ''))
+
+        # mqtt 탭: fw_ver 홀짝 확인 후 추가/제거 (Modbus FW면 탭 불필요)
+        _mqtt_tab_obj = self.tab_structure.get("mqtt_tab")
+        if _mqtt_tab_obj is not None:
+            _tab_names = [self.generalTab.widget(i).objectName()
+                          for i in range(self.generalTab.count())]
+            _mqtt_name = _mqtt_tab_obj.object.objectName()
+            if _is_mqtt_fw:
+                if _mqtt_name not in _tab_names:
+                    self.generalTab.insertTab(
+                        self.generalTab.count(), _mqtt_tab_obj.object, _mqtt_tab_obj.ui_text
+                    )
+            else:
+                for i in range(self.generalTab.count()):
+                    if self.generalTab.widget(i).objectName() == _mqtt_name:
+                        self.generalTab.removeTab(i)
+                        break
 
     def _on_wiz550_get_done(self, cfg: dict, macaddr: str, device_type: str):
         """WIZ550Getter completion callback — merge GET_INFO response into dev_profile and fill UI."""
