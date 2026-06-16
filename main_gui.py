@@ -3708,7 +3708,11 @@ class WIZWindow(QMainWindow, main_window):
 
         # dev_profile에 병합 (Discovery 정보 보존)
         self.dev_profile.setdefault(macaddr, {}).update(cfg)
-        # self.logger.info(f"[WIZ550] GET_INFO 완료: {macaddr} ({device_type})")
+        self.logger.info(
+            f"[WIZ550] GET {macaddr} ({device_type}): wmode={cfg.get('working_mode')} "
+            f"flow={cfg.get('flow_control')} variant={cfg.get('s2e_variant')} "
+            f"mqtt_user={cfg.get('mqtt_user', '')!r}"
+        )
 
         # B-02 Stage 2: GET_INFO 완료 후에 위젯에 값 채우기
         self.fill_devinfo_wiz550(cfg)
@@ -3825,6 +3829,11 @@ class WIZWindow(QMainWindow, main_window):
         # collect values from widgets (based on dev_profile copy — readonly fields preserved automatically)
         d = self.fill_setinfo_wiz550()
         d['pw_setting'] = pw  # dialog input takes precedence
+        self.logger.info(
+            f"[WIZ550] SET build: wmode={d.get('working_mode')} "
+            f"flow={d.get('flow_control')} variant={d.get('s2e_variant', 'base')} "
+            f"mqtt_user={d.get('mqtt_user', '')!r}"
+        )
 
         # Profile bytes 빌드
         try:
@@ -3860,6 +3869,7 @@ class WIZWindow(QMainWindow, main_window):
 
     def _on_wiz550_set_done(self, success: bool):
         """WIZ550Setter 완료 콜백 — 성공/실패 메시지 표시 (D-05 컬러)."""
+        self.logger.info(f"[WIZ550] SET done: success={success}")
         from PyQt5.QtWidgets import QMessageBox
         if success:
             # D-05: 성공 색상 #5db872
