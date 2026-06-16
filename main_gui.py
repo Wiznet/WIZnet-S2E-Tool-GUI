@@ -448,6 +448,12 @@ class WIZWindow(QMainWindow, main_window):
         super().__init__()
         self.setupUi(self)
 
+        # ch0_flow .ui 정적 항목 보존 (BUG-W550-AC anti-stale 복원용).
+        # WIZ550 진입 시 콤보를 enum 2항목으로 재구성하므로, 일반 장치 복귀 시 되돌린다.
+        self._default_flow_items = [
+            self.ch0_flow.itemText(i) for i in range(self.ch0_flow.count())
+        ]
+
         self.setWindowTitle(f"WIZnet S2E Configuration Tool {VERSION}")
 
         self.logger = logger
@@ -3666,6 +3672,11 @@ class WIZWindow(QMainWindow, main_window):
         # Flow Control switch 가 serial->flow_control 대신 serial->parity 를 잘못 참조.
         # flow_control 필드는 구조체에 저장·전송되지만 UART HW 에 적용되지 않음.
         # config tool 은 값 그대로 전송 (변경하지 않음). 상세: WIZ550SR.yaml flow_control 주석 참조.
+        # BUG-W550-AC: ch0_flow .ui 정적 항목(NONE/XON-XOFF/RTS-CTS/...)은 WIZ550 enum
+        # ({0:None,1:RTS/CTS})과 인덱스 의미가 달라, flow값을 그대로 인덱스로 쓰면 표시·저장이
+        # 어긋난다(S2E 실버그). WIZ550 진입 시 콤보를 enum 항목으로 재구성한다.
+        self.ch0_flow.clear()
+        self.ch0_flow.addItems(["None", "RTS/CTS"])
         self.ch0_flow.setCurrentIndex(d.get('flow_control', 0))
 
         # Packing / Timer
@@ -4405,6 +4416,11 @@ class WIZWindow(QMainWindow, main_window):
             if "SB" in dev_data:
                 self.ch0_stopbit.setCurrentIndex(int(dev_data["SB"]))
             if "FL" in dev_data:
+                # BUG-W550-AC anti-stale: WIZ550 경로가 콤보를 2항목으로 재구성했을 수 있으므로
+                # 일반 장치 진입 시 .ui 원래 flow 항목으로 복원한 뒤 FL 인덱스 적용.
+                if self.ch0_flow.count() != len(self._default_flow_items):
+                    self.ch0_flow.clear()
+                    self.ch0_flow.addItems(self._default_flow_items)
                 self.ch0_flow.setCurrentIndex(int(dev_data["FL"]))
             if "PT" in dev_data:
                 self.ch0_pack_time.setText(dev_data["PT"])
