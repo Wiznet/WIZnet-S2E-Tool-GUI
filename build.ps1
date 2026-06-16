@@ -3,11 +3,22 @@
 #   .\build.ps1                → 빌드 + 서명 둘 다 생성 (기본)
 #   .\build.ps1 -NoSign        → 빌드만 (서명 건너뜀)
 #   .\build.ps1 -PfxPath "C:\my.pfx"  → 커스텀 PFX로 서명
+#
+# ── 빌드 환경 경로 (검증: 2026-06-15) ──────────────────────────────────────
+#   이 PC는 표준 Windows SDK/VS 미설치. 대신 portable MSVC+SDK 묶음을 사용.
+#   루트:  D:\user\src\github\WIZnet-S2E-Tool-GUI\msvc\
+#     · cl.exe / link.exe : msvc\VC\Tools\MSVC\14.40.33807\bin\Hostx64\x64
+#     · MSVC include/lib   : msvc\VC\Tools\MSVC\14.40.33807\{include, lib\x64}
+#     · SDK  include/lib   : msvc\Windows Kits\10\{Include, Lib}\10.0.26100.0
+#     · signtool.exe       : msvc\Windows Kits\bin\10.0.28000.0\x64  (← 아래 $SignTool)
+#   PyInstaller : 표준 wheel 금지. custom bootloader 컴파일 후 .venv에 설치.
+#                 (절차: doc/dev/SETUP_DEV-ko.md 파트 B — 위 MSVC 경로로 INCLUDE/LIB 구성)
 
 param(
     [switch]$NoSign,
     [string]$PfxPath        = "C:\Users\user\wiznet_codesign.pfx",
-    [string]$SignTool       = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe"
+    # signtool: portable Windows SDK BuildTools(10.0.28000.0) 내 x64 빌드
+    [string]$SignTool       = "D:\user\src\github\WIZnet-S2E-Tool-GUI\msvc\Windows Kits\bin\10.0.28000.0\x64\signtool.exe"
 )
 
 $_version = Get-Content .\version -Raw
@@ -39,8 +50,21 @@ if (-not (Test-Path $PfxPath)) {
     Write-Error "PFX not found: $PfxPath"
     exit 1
 }
+# signtool: 기본 경로에 없으면 Everything(find_build_env.py)으로 자동 탐색
 if (-not (Test-Path $SignTool)) {
-    Write-Error "signtool.exe not found: $SignTool"
+    Write-Output "signtool not at default path; discovering via Everything ..."
+    $py = "$PSScriptRoot\.venv\Scripts\python.exe"
+    if (-not (Test-Path $py)) { $py = "python" }
+    try {
+        $be = & $py "$PSScriptRoot\find_build_env.py" | ConvertFrom-Json
+        if ($be.ok -and $be.SIGNTOOL -and (Test-Path $be.SIGNTOOL)) {
+            $SignTool = $be.SIGNTOOL
+            Write-Output "  found: $SignTool"
+        }
+    } catch { }
+}
+if (-not (Test-Path $SignTool)) {
+    Write-Error "signtool.exe not found: $SignTool (Everything auto-discovery also failed)"
     exit 1
 }
 
