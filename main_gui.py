@@ -703,6 +703,12 @@ class WIZWindow(QMainWindow, main_window):
         self._sc_apply.setContext(Qt.WindowShortcut)
         self._sc_apply.activated.connect(self.btn_setting.click)
 
+        self._action_apply = QAction("Apply Settings", self)
+        self._action_apply.setShortcut(QtGui.QKeySequence("F4"))
+        self._action_apply.triggered.connect(self.btn_setting.click)
+        self.menuFile.insertAction(self.actionExit, self._action_apply)
+        self.menuFile.insertSeparator(self.actionExit)
+
         self._sc_fw_upload = QtWidgets.QShortcut(QtGui.QKeySequence("F8"), self)
         self._sc_fw_upload.setContext(Qt.WindowShortcut)
         self._sc_fw_upload.activated.connect(self.btn_upload.click)
