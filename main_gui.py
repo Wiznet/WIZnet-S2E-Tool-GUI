@@ -2588,6 +2588,7 @@ class WIZWindow(QMainWindow, main_window):
         self.logger.info(f"[WIZ550] 검색 완료: {len(results)}개")
 
         existing_macs = self.mac_list_str()
+        self.logger.debug(f"[WIZ550] existing_macs={existing_macs}, results_macs={[d['mac'] for d in results]}")
         new_results = [d for d in results if d['mac'] not in existing_macs]
         if new_results:
             _wiz550_bg = QtGui.QColor(0xD0, 0xFF, 0xD0)  # 연한 녹색 배경 (WIZ1x0 하늘색과 구분)
@@ -2838,7 +2839,8 @@ class WIZWindow(QMainWindow, main_window):
             mc = profile.get("MC")
             if mc:
                 self.dev_profile[mc] = profile
-                self.logger.debug(f"dev_profile 갱신: {mc}")
+                self.logger.info(f"[GET] {mc} ({profile.get('MN','?')}) ip={profile.get('LI','?')}")
+                self.logger.debug(f"[GET] {mc}: {profile}")
 
                 # Phase 3 완료: 해당 행 색 복원 (주황-빨강 → 정상)
                 for idx, mac_bytes in enumerate(self.mac_list):
@@ -3724,11 +3726,7 @@ class WIZWindow(QMainWindow, main_window):
 
         # dev_profile에 병합 (Discovery 정보 보존)
         self.dev_profile.setdefault(macaddr, {}).update(cfg)
-        self.logger.info(
-            f"[WIZ550] GET {macaddr} ({device_type}): wmode={cfg.get('working_mode')} "
-            f"flow={cfg.get('flow_control')} variant={cfg.get('s2e_variant')} "
-            f"mqtt_user={cfg.get('mqtt_user', '')!r}"
-        )
+        self.logger.info(f"[WIZ550] GET {macaddr} ({device_type}): {cfg}")
 
         # B-02 Stage 2: GET_INFO 완료 후에 위젯에 값 채우기
         self.fill_devinfo_wiz550(cfg)
