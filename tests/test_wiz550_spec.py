@@ -106,18 +106,25 @@ def test_wiz550web_schema_valid():
     assert result.returncode == 0, f"validate_schemas.py failed:\n{result.stdout}"
 
 
-def test_web_disabled_fields():
-    """WIZ550WEB YAML 에 disabled:true 필드 5개가 명시적으로 포함된다 (SPEC-03)."""
+def test_web_phantom_fields_removed():
+    """WIZ550WEB YAML 에 펌웨어 미존재 필드가 제거되어 있다 (2026-06-04 정정).
+
+    working_mode/remote_ip/remote_port/local_port/serial_command 는 WEB 구조체
+    (__network_info 통째 주석, serial_command 주석)에 없고 parse_web 도 미반환한다.
+    옛 SPEC-03 의 disabled:true 유지 방식 → '지원하는 기능만 표시' 원칙으로 아예 제외.
+    """
     data = _load_yaml(WEB_YAML)
-    disabled_ids = {
-        f["id"]
-        for section in data["ui"]["sections"]
-        for f in section["fields"]
-        if f.get("disabled") is True
-    }
-    required_disabled = {"working_mode", "remote_ip", "remote_port", "local_port", "serial_command"}
-    missing = required_disabled - disabled_ids
-    assert not missing, f"WEB YAML 에서 disabled:true 미포함 필드: {missing}"
+    all_ids = {f["id"] for s in data["ui"]["sections"] for f in s["fields"]}
+    phantom = {"working_mode", "remote_ip", "remote_port", "local_port", "serial_command"}
+    leaked = phantom & all_ids
+    assert not leaked, f"WEB YAML 에 펌웨어 미존재 유령 필드 잔존: {leaked}"
+
+
+def test_web_dns_domain_present():
+    """WIZ550WEB YAML 에 dns_domain_name 편집 필드가 있다 (struct 50B, parse_web 반환)."""
+    data = _load_yaml(WEB_YAML)
+    all_ids = {f["id"] for s in data["ui"]["sections"] for f in s["fields"]}
+    assert "dns_domain_name" in all_ids, "WEB YAML 에 dns_domain_name 누락 — struct 에 존재함"
 
 
 def test_web_no_pw_connect():
