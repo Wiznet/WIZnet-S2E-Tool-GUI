@@ -557,6 +557,10 @@ class WIZWindow(QMainWindow, main_window):
         self._config_poll_timer.timeout.connect(self._poll_config_file)
         self._config_poll_timer.start(2000)
 
+        # 검증으로 기준값 복구된 설정이 있으면 GUI 표시 후 1회 통지 (P5)
+        if getattr(self.timing_config, 'last_resets', None):
+            QtCore.QTimer.singleShot(0, self._notify_config_resets)
+
         self.localip_addr = None
 
         # last selected firmware file name/size (include path)
@@ -6794,6 +6798,19 @@ class WIZWindow(QMainWindow, main_window):
                 "Error",
                 f"An error occurred while configuring advanced search options:\n{e}"
             )
+
+    def _notify_config_resets(self):
+        """검증으로 기준값 복구된 설정 항목을 GUI 표시 후 1회 통지한다 (P5)."""
+        resets = getattr(self.timing_config, 'last_resets', None)
+        if not resets:
+            return
+        lines = "\n".join(f"  - {k}: {bad} -> {good}" for k, bad, good in resets)
+        QMessageBox.warning(
+            self,
+            "설정값 자동 복구",
+            "일부 검색 설정값이 허용 범위를 벗어나 기준값으로 복구되었습니다:\n\n"
+            f"{lines}\n\n원본은 .invalid.bak 으로 백업되었습니다.",
+        )
 
     def _poll_config_file(self):
         """QFileSystemWatcher 미감지 보완용 2초 폴링"""
