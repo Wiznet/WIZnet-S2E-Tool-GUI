@@ -3692,6 +3692,13 @@ class WIZWindow(QMainWindow, main_window):
         self.connect_pw.setText(pw_c)
         self.at_enable.setChecked(bool(d.get('serial_command', 0)))
 
+        # MQTT (BUG-W550-6): WIZ550Profile 이 s2e_variant=='mqtt' 응답에서 d 에 채움.
+        # variant 가 아니면 키 부재 → 빈값 표시(anti-stale). WIZ550 sub_topic 은 1개(subtopic_0).
+        self.lineedit_mqtt_username.setText(d.get('mqtt_user', ''))
+        self.lineedit_mqtt_password.setText(d.get('mqtt_pw', ''))
+        self.lineedit_mqtt_pubtopic.setText(d.get('mqtt_pub_topic', ''))
+        self.lineedit_mqtt_subtopic_0.setText(d.get('mqtt_sub_topic', ''))
+
     def _on_wiz550_get_done(self, cfg: dict, macaddr: str, device_type: str):
         """WIZ550Getter completion callback — merge GET_INFO response into dev_profile and fill UI."""
         if not cfg:
@@ -3781,6 +3788,15 @@ class WIZWindow(QMainWindow, main_window):
         d['pw_setting'] = self.searchcode.text()
         d['pw_connect'] = self.connect_pw.text() if self.enable_connect_pw.isChecked() else ''
         d['serial_command'] = 1 if self.at_enable.isChecked() else 0
+
+        # MQTT (BUG-W550-6): working_mode=4(mqtt)면 variant 지정해야 build 가 MQTT_FORMAT 사용.
+        # 미지정 시 WIZ550Profile build 가 base(162B)로 처리 → mqtt 필드 전송 누락.
+        if d.get('working_mode') == 4:
+            d['s2e_variant'] = 'mqtt'
+            d['mqtt_user']      = self.lineedit_mqtt_username.text()
+            d['mqtt_pw']        = self.lineedit_mqtt_password.text()
+            d['mqtt_pub_topic'] = self.lineedit_mqtt_pubtopic.text()
+            d['mqtt_sub_topic'] = self.lineedit_mqtt_subtopic_0.text()
 
         return d
 
