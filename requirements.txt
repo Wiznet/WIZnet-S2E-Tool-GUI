@@ -16,6 +16,6 @@ packaging==26.0
 # ── requests transitive deps ─────────────────────────────────────
 certifi==2026.1.4
 charset-normalizer==3.4.4
-idna==3.11
+idna==3.15
 urllib3==2.6.3
 pyserial==3.5
