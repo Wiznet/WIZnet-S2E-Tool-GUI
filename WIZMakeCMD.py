@@ -27,6 +27,7 @@ SECURITY_DEVICE = [
     "WIZ5XXSR-RP_E-SAVE",
     "W55RP20-S2E",
     "W55RP20-S2E-2CH",
+    "W55RP20-S2E-3CH",
     "W232N",
     "IP20",
 ]
@@ -121,6 +122,34 @@ cmd_w55rp20_2ch_ch1 = [
     'EE',  # Channel 1 ethernet connected data
 ]
 
+# W55RP20-S2E-3CH channel 2 specific commands (CH1 미러 — 2글자 코드만 치환)
+cmd_w55rp20_3ch_ch2 = [
+    'GS',  # Channel 2 status
+    'WN',  # Channel 2 UART interface
+    'TO',  # Channel 2 operation mode (extended)
+    'GL',  # Channel 2 local port
+    'GH',  # Channel 2 remote host
+    'TP',  # Channel 2 remote port
+    'WB',  # Channel 2 baud rate
+    'WD',  # Channel 2 data bit
+    'WP',  # Channel 2 parity
+    'WS',  # Channel 2 stop bit
+    'WF',  # Channel 2 flow control
+    'HD',  # Channel 2 packing delimiter
+    'HS',  # Channel 2 packing size
+    'TT',  # Channel 2 packing time
+    'XV',  # Channel 2 inactivity timer
+    'XA',  # Channel 2 keep-alive enable
+    'XS',  # Channel 2 keep-alive initial interval
+    'XE',  # Channel 2 keep-alive retry interval
+    'XR',  # Channel 2 reconnection interval
+    'XO',  # Channel 2 SSL timeout
+    'WO',  # Channel 2 Modbus option
+    'XD',  # Channel 2 serial connected data
+    'XF',  # Channel 2 serial disconnected data
+    'WE',  # Channel 2 ethernet connected data
+]
+
 # WIZ5XXSR-RP_E-SAVE commands
 #cmd_wiz5xxsr_esave = ['U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9']
 
@@ -138,6 +167,7 @@ cmd_wiz510ssl = cmd_security_base + cmd_wiz510ssl_added
 cmd_wiz5xxsr = cmd_security_base + cmd_wiz5xxsr_added
 cmd_w55rp20 = cmd_security_base + cmd_wiz5xxsr_added + cmd_w55rp20_added
 cmd_w55rp20_2ch = cmd_w55rp20 + cmd_w55rp20_2ch_ch1
+cmd_w55rp20_3ch = cmd_w55rp20_2ch + cmd_w55rp20_3ch_ch2
 
 
 # @TODO:@BUG 아래 경우 1을 반환해야 하는데 -1을 반환함
@@ -263,6 +293,23 @@ class WIZMakeCMD:
                 #if 'E-SAVE' in devname:
                 #    for cmd in cmd_wiz5xxsr_esave:
                 #        cmd_list.append([cmd, ""])
+            elif 'W55RP20-S2E-3CH' in devname:
+                self.logger.debug(f"search::devstatus={devstatus}")
+                if devstatus == 'BOOT':
+                    for cmd in cmd_1p_boot:
+                        cmd_list.append([cmd, ""])
+                    self.logger.debug(f"search::cmd_list={cmd_list}")
+                    return cmd_list
+
+                if version_compare(version, "1.1.8") >= 0:
+                    temp_cmd_w55rp20_3ch = cmd_w55rp20_3ch
+                else:
+                    # 하위 버전은 채널1/2 확장 명령 대신 기본 명령으로 구성
+                    temp_cmd_w55rp20_3ch = cmd_security_base + cmd_wiz5xxsr_added
+                for cmd in temp_cmd_w55rp20_3ch:
+                    cmd_list.append([cmd, ""])
+                self.logger.debug(f"search::cmd_list2={cmd_list}")
+
             elif 'W55RP20-S2E-2CH' in devname:
                 self.logger.debug(f"search::devstatus={devstatus}")
                 if devstatus == 'BOOT':
@@ -367,6 +414,17 @@ class WIZMakeCMD:
                 if 'WIZ510SSL' in devname:
                     for cmd in cmd_wiz510ssl:
                         cmd_list.append([cmd, ""])
+                elif 'W55RP20-S2E-3CH' in devname:
+                    if status != "BOOT":
+                        if version_compare(version, "1.1.8") >= 0:
+                            for cmd in cmd_w55rp20_3ch:
+                                cmd_list.append([cmd, ""])
+                        else:
+                            for cmd in cmd_security_base + cmd_wiz5xxsr_added:
+                                cmd_list.append([cmd, ""])
+                    else:
+                        for cmd in cmd_1p_boot:
+                            cmd_list.append([cmd, ""])
                 elif 'W55RP20-S2E-2CH' in devname:
                     if status != "BOOT":
                         if version_compare(version, "1.1.8") >= 0:
