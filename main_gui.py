@@ -438,7 +438,7 @@ class WIZWindow(QMainWindow, main_window):
         super().__init__()
         self.setupUi(self)
 
-        self.setWindowTitle(f"WIZnet S2E Configuration Tool {VERSION}")
+        self.setWindowTitle(f"WIZnet S2E Configuration Tool {VERSION} (BETA)")
 
         self.logger = logger
         if "Dev" in VERSION:
