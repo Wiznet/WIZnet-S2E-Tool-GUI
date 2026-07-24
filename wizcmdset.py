@@ -12,6 +12,7 @@ common_cmdset (기본 명령어 집합, BR: 0-15)
         ├─ W55RP20-S2E, IP20 ← 단일채널
         └─ W55RP20_2CH_CMDSET (2채널, BR/EB: 0-19)
             └─ W55RP20_3CH_CMDSET (3채널, BR/EB/WB: 0-19)
+                └─ W55RP20_4CH_CMDSET (4채널, BR/EB/WB/YB: 0-19)
 
 장치별 Baudrate 지원:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -20,6 +21,7 @@ common_cmdset (기본 명령어 집합, BR: 0-15)
 - W55RP20-S2E:       BR 0-19     (최대 8M bps, FW >= 1.2.1)
 - W55RP20-S2E-2CH:   BR/EB 0-19  (최대 8M bps, FW >= 1.2.1)
 - W55RP20-S2E-3CH:   BR/EB/WB 0-19 (최대 8M bps, FW >= 1.2.1)
+- W55RP20-S2E-4CH:   BR/EB/WB/YB 0-19 (최대 8M bps, FW >= 1.2.1)
 - IP20:              BR 0-19     (최대 8M bps, FW >= 1.2.1)
 """
 
@@ -296,6 +298,45 @@ W55RP20_3CH_CMDSET = {
     "WE": ["Channel 2 Ethernet Connected Data", "^.{0,30}$", {}, "RW"],
 }
 
+# ==================== W55RP20 4-Channel CMDSET ====================
+# 적용 장치: W55RP20-S2E-4CH
+# 상속: W55RP20_3CH_CMDSET (CH0~CH2) + CH3 커맨드 24개
+# 특징: 4채널 지원, CH3은 CH2의 순수 미러 (2글자 코드만 치환)
+#       소스: 펌웨어 GreenCS segcp.h/segcp.c ch3 (25) 블록
+W55RP20_4CH_CMDSET = {
+    **W55RP20_3CH_CMDSET,
+    "CS": ["Operation status for channel 3", "", {}, "RO"],
+    "YN": ["UART Interface(Str) for channel 3", "", {}, "RO"],
+    "JO": [
+        "Network Operation Mode for channel 3 - Extended",
+        "^[0-6]$",
+        {**opmode_option, "4": "SSL TCP Client mode", "5": "MQTT Client", "6": "MQTTS Client"},
+        "RW",
+    ],
+    "CL": ["Local port number for channel 3", port_pattern, {}, "RW"],
+    "CH": ["Remote Host IP address for channel 3", ip_pattern, {}, "RW"],
+    "JP": ["Remote Host Port number for channel 3", port_pattern, {}, "RW"],
+    # YB: BR/EB/WB와 동일한 고속 패턴 사용 (w55rp20_baudrate_pattern, 0-19 지원)
+    "YB": ["UART channel 3 Baud rate", w55rp20_baudrate_pattern, baudrate_option, "RW"],
+    "YD": ["UART channel 3 Data bit length", "^[0-1]$", {"0": "7-bit", "1": "8-bit"}, "RW"],
+    "YP": ["UART channel 3 Parity bit", "^[0-2]$", {"0": "NONE", "1": "ODD", "2": "EVEN"}, "RW"],
+    "YS": ["UART channel 3 Stop bit length", "^[0-1]$", {"0": "1-bit", "1": "2-bit"}, "RW"],
+    "YF": ["UART channel 3 Flow Control", "^[0-2]$", {"0": "NONE", "1": "XON/XOFF", "2": "RTS/CTS"}, "RW"],
+    "UD": ["Char Delimiter for channel 3", "^([0-9a-fA-F][0-9a-fA-F])$", {}, "RW"],
+    "US": ["Size Delimiter for channel 3", "^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$", {}, "RW"],
+    "JT": ["Time Delimiter for channel 3", port_pattern, {}, "RW"],
+    "ZV": ["Inactivity Timer Value for channel 3", port_pattern, {}, "RW"],
+    "ZA": ["TCP Keep-alive Enable for channel 3", "^[0-1]$", {}, "RW"],
+    "ZS": ["TCP Keep-alive Initial Interval for channel 3", port_pattern, {}, "RW"],
+    "ZE": ["TCP Keep-alive Retry Interval for channel 3", port_pattern, {}, "RW"],
+    "ZR": ["TCP Reconnection Interval for channel 3", port_pattern, {}, "RW"],
+    "ZO": ["Channel 3 SSL receive timeout", "", {}, "RW"],
+    "YO": ["Channel 3 Modbus protocol", "^[0-2]$", {}, "RW"],
+    "ZD": ["Channel 3 Serial Connected Data", "^.{0,30}$", {}, "RW"],
+    "ZF": ["Channel 3 Serial Disconnected Data", "^.{0,30}$", {}, "RW"],
+    "YE": ["Channel 3 Ethernet Connected Data", "^.{0,30}$", {}, "RW"],
+}
+
 # ==================== WIZ107SR / WIZ108SR CMDSET ====================
 # 적용 장치: WIZ107SR, WIZ108SR
 # 특징:
@@ -426,6 +467,10 @@ class Wizcmdset():
                     # 3채널, BR/EB/WB 0-19 (최대 8Mbps)
                     logger.debug("Security device (W55RP20-S2E-3CH)")
                     self.cmdset = W55RP20_3CH_CMDSET.copy()
+                elif name == "W55RP20-S2E-4CH":
+                    # 4채널, BR/EB/WB/YB 0-19 (최대 8Mbps)
+                    logger.debug("Security device (W55RP20-S2E-4CH)")
+                    self.cmdset = W55RP20_4CH_CMDSET.copy()
                 elif name in ("W55RP20-S2E", "IP20"):
                     # 단일채널, BR 0-19 (최대 8Mbps)
                     # IP20은 W55RP20 칩 사용하므로 동일한 CMDSET 사용
@@ -485,7 +530,7 @@ class Wizcmdset():
 
         # W55RP20 Family: 펌웨어 버전 1.2.0 이하는 고속 보드레이트 미지원
         # BR/EB 패턴을 0-15 (최대 921600)로 제한
-        if name in ("W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-3CH", "IP20") and version_compare(version, "1.2.1") < 0:
+        if name in ("W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-3CH", "W55RP20-S2E-4CH", "IP20") and version_compare(version, "1.2.1") < 0:
             updated_cmdset = self.cmdset.copy()
             # BR 패턴을 표준 패턴(0-15)으로 재정의
             if "BR" in updated_cmdset:
@@ -495,18 +540,26 @@ class Wizcmdset():
                     baudrate_option,
                     "RW"
                 ]
-            # 2CH/3CH의 경우 EB(채널1)도 제한
-            if name in ("W55RP20-S2E-2CH", "W55RP20-S2E-3CH") and "EB" in updated_cmdset:
+            # 2CH/3CH/4CH의 경우 EB(채널1)도 제한
+            if name in ("W55RP20-S2E-2CH", "W55RP20-S2E-3CH", "W55RP20-S2E-4CH") and "EB" in updated_cmdset:
                 updated_cmdset["EB"] = [
                     "UART channel 1 Baud rate",
                     r"^([0-9]|1[0-5])$",  # 0-15 only
                     baudrate_option,
                     "RW"
                 ]
-            # 3CH의 경우 WB(채널2)도 제한
-            if name == "W55RP20-S2E-3CH" and "WB" in updated_cmdset:
+            # 3CH/4CH의 경우 WB(채널2)도 제한
+            if name in ("W55RP20-S2E-3CH", "W55RP20-S2E-4CH") and "WB" in updated_cmdset:
                 updated_cmdset["WB"] = [
                     "UART channel 2 Baud rate",
+                    r"^([0-9]|1[0-5])$",  # 0-15 only
+                    baudrate_option,
+                    "RW"
+                ]
+            # 4CH의 경우 YB(채널3)도 제한
+            if name == "W55RP20-S2E-4CH" and "YB" in updated_cmdset:
+                updated_cmdset["YB"] = [
+                    "UART channel 3 Baud rate",
                     r"^([0-9]|1[0-5])$",  # 0-15 only
                     baudrate_option,
                     "RW"

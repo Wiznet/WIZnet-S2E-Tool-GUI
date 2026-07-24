@@ -78,15 +78,13 @@ from csv_mru_manager import CSVMRUManager
 from terminal.terminal_panel import TerminalPanel
 
 
-# 멀티채널 보안 장치 (CH1 이상 보유). 3CH는 2CH의 CH1 처리를 그대로 상속한다.
-SECURITY_TWO_PORT_DEV = ("W55RP20-S2E-2CH", "W55RP20-S2E-3CH")
+# 멀티채널 보안 장치 (CH1 이상 보유). 상위 채널 장치는 하위 채널 처리를 그대로 상속한다.
+SECURITY_TWO_PORT_DEV = ("W55RP20-S2E-2CH", "W55RP20-S2E-3CH", "W55RP20-S2E-4CH")
 # CH2 탭(3번째 채널)을 보유한 장치
-SECURITY_THREE_PORT_DEV = ("W55RP20-S2E-3CH",)
-# CH3 탭(4번째 채널)을 보유한 장치 — UI/배관 준비 완료.
-# 4CH 펌웨어의 CH3 SEGCP 코드 확정 시 ("W55RP20-S2E-4CH",) 등록 +
-# SECURITY_TWO_PORT_DEV/THREE_PORT_DEV/W55RP20_FAMILY에도 추가할 것.
-SECURITY_FOUR_PORT_DEV = ()
-W55RP20_FAMILY = ("W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-3CH")
+SECURITY_THREE_PORT_DEV = ("W55RP20-S2E-3CH", "W55RP20-S2E-4CH")
+# CH3 탭(4번째 채널)을 보유한 장치
+SECURITY_FOUR_PORT_DEV = ("W55RP20-S2E-4CH",)
+W55RP20_FAMILY = ("W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-3CH", "W55RP20-S2E-4CH")
 
 
 class RetrySearchLimits:
@@ -1528,9 +1526,26 @@ class WIZWindow(QMainWindow, main_window):
                     if idx >= 0:
                         self.ch2_baud.setCurrentIndex(idx)
 
-        # 2-2. ch3_baud (4채널 장치 대비 — UI 준비 완료)
-        # 펌웨어 CH3 baud SEGCP 코드 확정 시 위 WB 블록을 미러링해 채운다.
-        # (spec.channels >= 4 + 신규 코드 → self.ch3_baud)
+        # 2-2. ch3_baud (4채널 장치 — YB)
+        if spec.channels >= 4:
+            yb_entry = spec.cmdset.get('YB')
+            if yb_entry:
+                sorted_yb = sorted(yb_entry.values.items(), key=lambda x: int(x[0]))
+                yb_strings = [v for _, v in sorted_yb]
+                current_yb = None
+                if self.curr_mac in self.dev_profile:
+                    yb_raw = self.dev_profile[self.curr_mac].get('YB')
+                    if yb_raw is not None:
+                        try:
+                            current_yb = yb_entry.values.get(str(int(yb_raw)))
+                        except (ValueError, TypeError):
+                            pass
+                self.ch3_baud.clear()
+                self.ch3_baud.addItems(yb_strings)
+                if current_yb:
+                    idx = self.ch3_baud.findText(current_yb)
+                    if idx >= 0:
+                        self.ch3_baud.setCurrentIndex(idx)
 
         # 3. ip_pppoe — IM['2'] 존재 여부
         im_entry = spec.cmdset.get('IM')
@@ -4335,11 +4350,99 @@ class WIZWindow(QMainWindow, main_window):
                         else:
                             self.ch2_ethernet_connection_condition.setText(dev_data["WE"])
 
-                # ── Channel 3 (4채널 장치 대비 — UI 위젯 ch3_* 준비 완료) ──
-                # 펌웨어 CH3 SEGCP 코드 확정 시:
-                #   1. SECURITY_FOUR_PORT_DEV에 장치 등록
-                #   2. 위 CH2 블록을 미러링해 `if self.curr_dev in SECURITY_FOUR_PORT_DEV:` 로 추가
-                #   (wizcmdset/WIZMakeCMD/specs 에도 동일하게 코드 등록 필요)
+                # ── Channel 3 (4채널 장치 전용, CH2 미러 — 코드만 치환) ──
+                if self.curr_dev in SECURITY_FOUR_PORT_DEV:
+                    self.lineedit_ch3_ssl_recv_timeout.setText("0")
+                    self.ch3_modbus_protocol.setCurrentIndex(0)
+                    self.ch3_serial_connection_condition_connect.clear()
+                    self.ch3_serial_connection_condition_disconnect.clear()
+                    self.ch3_ethernet_connection_condition.clear()
+
+                    if "CS" in dev_data:
+                        self.ch3_status.setText(dev_data["CS"])
+                    if "YN" in dev_data:
+                        self.ch3_uart_name.setText(dev_data["YN"])
+
+                    if "JO" in dev_data:
+                        jo_val = dev_data["JO"]
+                        if jo_val == "0":
+                            self.ch3_tcpclient.setChecked(True)
+                        elif jo_val == "1":
+                            self.ch3_tcpserver.setChecked(True)
+                        elif jo_val == "2":
+                            self.ch3_tcpmixed.setChecked(True)
+                        elif jo_val == "3":
+                            self.ch3_udp.setChecked(True)
+                        elif jo_val == "4":
+                            self.ch3_ssl_tcpclient.setChecked(True)
+                        elif jo_val == "5":
+                            self.ch3_mqttclient.setChecked(True)
+                        elif jo_val == "6":
+                            self.ch3_mqtts_client.setChecked(True)
+
+                    if "CL" in dev_data:
+                        self.ch3_localport.setText(dev_data["CL"])
+                    if "CH" in dev_data:
+                        self.ch3_remoteip.setText(dev_data["CH"])
+                    if "JP" in dev_data:
+                        self.ch3_remoteport.setText(dev_data["JP"])
+
+                    if "YB" in dev_data and len(dev_data["YB"]) <= 4:
+                        self.ch3_baud.setCurrentIndex(int(dev_data["YB"]))
+                    if "YD" in dev_data and len(dev_data["YD"]) <= 2:
+                        self.ch3_databit.setCurrentIndex(int(dev_data["YD"]))
+                    if "YP" in dev_data:
+                        self.ch3_parity.setCurrentIndex(int(dev_data["YP"]))
+                    if "YS" in dev_data:
+                        self.ch3_stopbit.setCurrentIndex(int(dev_data["YS"]))
+                    if "YF" in dev_data and len(dev_data["YF"]) <= 2:
+                        self.ch3_flow.setCurrentIndex(int(dev_data["YF"]))
+
+                    if "JT" in dev_data:
+                        self.ch3_pack_time.setText(dev_data["JT"])
+                    if "US" in dev_data:
+                        self.ch3_pack_size.setText(dev_data["US"])
+                    if "UD" in dev_data and len(dev_data["UD"]) <= 2:
+                        self.ch3_pack_char.setText(dev_data["UD"])
+
+                    if "ZV" in dev_data:
+                        self.ch3_inact_timer.setText(dev_data["ZV"])
+
+                    if "ZA" in dev_data:
+                        self.ch3_keepalive_enable.setChecked(dev_data["ZA"] == "1")
+                    if "ZS" in dev_data:
+                        self.ch3_keepalive_initial.setText(dev_data["ZS"])
+                    if "ZE" in dev_data:
+                        self.ch3_keepalive_retry.setText(dev_data["ZE"])
+                    if "ZR" in dev_data:
+                        self.ch3_reconnection.setText(dev_data["ZR"])
+
+                    if "ZO" in dev_data:
+                        self.lineedit_ch3_ssl_recv_timeout.setText(dev_data["ZO"])
+
+                    if "YO" in dev_data:
+                        try:
+                            self.ch3_modbus_protocol.setCurrentIndex(int(dev_data["YO"]))
+                        except Exception as ex:
+                            self.logger.error(f"Error parsing YO: {dev_data['YO']} -> {ex}")
+
+                    if "ZD" in dev_data:
+                        if dev_data["ZD"] == " ":
+                            self.ch3_serial_connection_condition_connect.clear()
+                        else:
+                            self.ch3_serial_connection_condition_connect.setText(dev_data["ZD"])
+
+                    if "ZF" in dev_data:
+                        if dev_data["ZF"] == " ":
+                            self.ch3_serial_connection_condition_disconnect.clear()
+                        else:
+                            self.ch3_serial_connection_condition_disconnect.setText(dev_data["ZF"])
+
+                    if "YE" in dev_data:
+                        if dev_data["YE"] == " ":
+                            self.ch3_ethernet_connection_condition.clear()
+                        else:
+                            self.ch3_ethernet_connection_condition.setText(dev_data["YE"])
 
             # SECURITY_TWO_PORT_DEV도 SECURITY_DEVICE에 속하므로 elif가 아닌 if 사용
             if (
@@ -4809,9 +4912,68 @@ class WIZWindow(QMainWindow, main_window):
                         self.ch2_ethernet_connection_condition.setText(we_data)
                     setcmd["WE"] = we_data if we_data else " "
 
-                # ── Channel 3 (4채널 장치 대비 — UI 위젯 ch3_* 준비 완료) ──
-                # 펌웨어 CH3 SEGCP 코드 확정 시 위 CH2 블록을 미러링해
-                # `if self.curr_dev in SECURITY_FOUR_PORT_DEV:` 로 추가한다.
+                # ── Channel 3 (4채널 장치 전용, CH2 미러 — 코드만 치환) ──
+                if self.curr_dev in SECURITY_FOUR_PORT_DEV:
+                    if self.ch3_tcpclient.isChecked():
+                        setcmd["JO"] = "0"
+                    elif self.ch3_tcpserver.isChecked():
+                        setcmd["JO"] = "1"
+                    elif self.ch3_tcpmixed.isChecked():
+                        setcmd["JO"] = "2"
+                    elif self.ch3_udp.isChecked():
+                        setcmd["JO"] = "3"
+                    elif self.ch3_ssl_tcpclient.isChecked():
+                        setcmd["JO"] = "4"
+                    elif self.ch3_mqttclient.isChecked():
+                        setcmd["JO"] = "5"
+                    elif self.ch3_mqtts_client.isChecked():
+                        setcmd["JO"] = "6"
+
+                    setcmd["CL"] = self.ch3_localport.text()
+                    setcmd["CH"] = self.ch3_remoteip.text()
+                    setcmd["JP"] = self.ch3_remoteport.text()
+
+                    setcmd["YB"] = str(self.ch3_baud.currentIndex())
+                    setcmd["YD"] = str(self.ch3_databit.currentIndex())
+                    setcmd["YP"] = str(self.ch3_parity.currentIndex())
+                    setcmd["YS"] = str(self.ch3_stopbit.currentIndex())
+                    setcmd["YF"] = str(self.ch3_flow.currentIndex())
+
+                    setcmd["JT"] = self.ch3_pack_time.text()
+                    setcmd["US"] = self.ch3_pack_size.text()
+                    setcmd["UD"] = self.ch3_pack_char.text()
+
+                    setcmd["ZV"] = self.ch3_inact_timer.text()
+
+                    if self.ch3_keepalive_enable.isChecked():
+                        setcmd["ZA"] = "1"
+                        setcmd["ZS"] = self.ch3_keepalive_initial.text()
+                        setcmd["ZE"] = self.ch3_keepalive_retry.text()
+                    else:
+                        setcmd["ZA"] = "0"
+
+                    setcmd["ZR"] = self.ch3_reconnection.text()
+
+                    setcmd["ZO"] = self.lineedit_ch3_ssl_recv_timeout.text()
+                    setcmd["YO"] = str(self.ch3_modbus_protocol.currentIndex())
+
+                    zd_data = self.ch3_serial_connection_condition_connect.text()
+                    if len(zd_data) > 30:
+                        zd_data = zd_data[:30]
+                        self.ch3_serial_connection_condition_connect.setText(zd_data)
+                    setcmd["ZD"] = zd_data if zd_data else " "
+
+                    zf_data = self.ch3_serial_connection_condition_disconnect.text()
+                    if len(zf_data) > 30:
+                        zf_data = zf_data[:30]
+                        self.ch3_serial_connection_condition_disconnect.setText(zf_data)
+                    setcmd["ZF"] = zf_data if zf_data else " "
+
+                    ye_data = self.ch3_ethernet_connection_condition.text()
+                    if len(ye_data) > 30:
+                        ye_data = ye_data[:30]
+                        self.ch3_ethernet_connection_condition.setText(ye_data)
+                    setcmd["YE"] = ye_data if ye_data else " "
 
             if self.curr_dev in SECURITY_DEVICE:
                 # New options for WIZ510SSL (Security devices)
