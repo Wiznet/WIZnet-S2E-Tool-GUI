@@ -82,6 +82,10 @@ from terminal.terminal_panel import TerminalPanel
 SECURITY_TWO_PORT_DEV = ("W55RP20-S2E-2CH", "W55RP20-S2E-3CH")
 # CH2 탭(3번째 채널)을 보유한 장치
 SECURITY_THREE_PORT_DEV = ("W55RP20-S2E-3CH",)
+# CH3 탭(4번째 채널)을 보유한 장치 — UI/배관 준비 완료.
+# 4CH 펌웨어의 CH3 SEGCP 코드 확정 시 ("W55RP20-S2E-4CH",) 등록 +
+# SECURITY_TWO_PORT_DEV/THREE_PORT_DEV/W55RP20_FAMILY에도 추가할 것.
+SECURITY_FOUR_PORT_DEV = ()
 W55RP20_FAMILY = ("W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-3CH")
 
 
@@ -608,6 +612,7 @@ class WIZWindow(QMainWindow, main_window):
         self.ch0_keepalive_enable.stateChanged.connect(self.event_keepalive)
         self.ch1_keepalive_enable.stateChanged.connect(self.event_keepalive)
         self.ch2_keepalive_enable.stateChanged.connect(self.event_keepalive)
+        self.ch3_keepalive_enable.stateChanged.connect(self.event_keepalive)
         self.ip_dhcp.clicked.connect(self.event_ip_alloc)
         self.ip_static.clicked.connect(self.event_ip_alloc)
         self.ip_pppoe.clicked.connect(self.event_ip_alloc)
@@ -640,6 +645,10 @@ class WIZWindow(QMainWindow, main_window):
         self.ch2_tcpserver.clicked.connect(self.event_opmode)
         self.ch2_tcpmixed.clicked.connect(self.event_opmode)
         self.ch2_udp.clicked.connect(self.event_opmode)
+        self.ch3_tcpclient.clicked.connect(self.event_opmode)
+        self.ch3_tcpserver.clicked.connect(self.event_opmode)
+        self.ch3_tcpmixed.clicked.connect(self.event_opmode)
+        self.ch3_udp.clicked.connect(self.event_opmode)
 
         # Event: Search method
         self.broadcast.clicked.connect(self._on_broadcast_selected)
@@ -805,6 +814,7 @@ class WIZWindow(QMainWindow, main_window):
         self.certificate_tab_text = self.generalTab.tabText(5)
         self.ch1_tab_text = self.channel_tab.tabText(1)
         self.ch2_tab_text = self.channel_tab.tabText(2)
+        self.ch3_tab_text = self.channel_tab.tabText(3)
         inital_tab_count = self.generalTab.count()
         for _i in range(inital_tab_count):
             self.logger.debug(f"({_i}:{self.generalTab.tabText(_i)})")
@@ -833,6 +843,7 @@ class WIZWindow(QMainWindow, main_window):
         self.generalTab.removeTab(3)
         self.generalTab.removeTab(2)
         # default: one port device — 높은 인덱스부터 제거
+        self.channel_tab.removeTab(3)
         self.channel_tab.removeTab(2)
         self.channel_tab.removeTab(1)
 
@@ -850,21 +861,26 @@ class WIZWindow(QMainWindow, main_window):
         # group_packing_13은 기본적으로 숨김 (W55RP20-S2E, W232N, IP20일 때만 표시)
         self.group_packing_13.hide()
 
-        # Channel 1/2 Modbus 옵션 그룹은 기본적으로 숨김
+        # Channel 1/2/3 Modbus 옵션 그룹은 기본적으로 숨김
         self.ch1_group_modbus_option.hide()
         self.ch2_group_modbus_option.hide()
+        self.ch3_group_modbus_option.hide()
 
-        # Channel 1/2(탭) 연결/패킹 그룹 기본 숨김
+        # Channel 1/2/3(탭) 연결/패킹 그룹 기본 숨김
         self.group_packing_14.hide()
         self.group_packing_15.hide()
         self.group_packing_14_ch2.hide()
         self.group_packing_15_ch2.hide()
+        self.group_packing_14_ch3.hide()
+        self.group_packing_15_ch3.hide()
 
-        # Channel #1/#2 Timeout group is only used for multi-channel security models
+        # Channel #1/#2/#3 Timeout group is only used for multi-channel security models
         self.groupbox_ch1_timeout.hide()
         self.groupbox_ch1_timeout.setEnabled(False)
         self.groupbox_ch2_timeout.hide()
         self.groupbox_ch2_timeout.setEnabled(False)
+        self.groupbox_ch3_timeout.hide()
+        self.groupbox_ch3_timeout.setEnabled(False)
 
         self.ch0_serial_connection_condition_connect.setMaxLength(30)
         self.ch0_serial_connection_condition_disconnect.setMaxLength(30)
@@ -875,6 +891,9 @@ class WIZWindow(QMainWindow, main_window):
         self.ch2_ethernet_connection_condition.setMaxLength(30)
         self.ch2_serial_connection_condition_connect.setMaxLength(30)
         self.ch2_serial_connection_condition_disconnect.setMaxLength(30)
+        self.ch3_ethernet_connection_condition.setMaxLength(30)
+        self.ch3_serial_connection_condition_connect.setMaxLength(30)
+        self.ch3_serial_connection_condition_disconnect.setMaxLength(30)
 
         # DeviceSearchConfig 초기화 (앱 시작 시)
         if not hasattr(self, 'device_search_config'):
@@ -1359,6 +1378,7 @@ class WIZWindow(QMainWindow, main_window):
 
         is_security_two_port = self.curr_dev in SECURITY_TWO_PORT_DEV
         is_security_three_port = self.curr_dev in SECURITY_THREE_PORT_DEV
+        is_security_four_port = self.curr_dev in SECURITY_FOUR_PORT_DEV
         is_legacy_two_port = (
             (self.curr_dev in TWO_PORT_DEV or "WIZ752" in self.curr_dev)
             and not is_security_two_port
@@ -1384,6 +1404,13 @@ class WIZWindow(QMainWindow, main_window):
             self.groupbox_ch2_timeout.hide()
             self.groupbox_ch2_timeout.setEnabled(False)
 
+        if is_security_four_port:
+            self.groupbox_ch3_timeout.show()
+            self.groupbox_ch3_timeout.setEnabled(True)
+        else:
+            self.groupbox_ch3_timeout.hide()
+            self.groupbox_ch3_timeout.setEnabled(False)
+
         self.logger.debug(
             f"model={self.curr_dev},ver={self.curr_ver},version compare={version_compare(self.curr_ver, '1.0.8')},status={self.curr_st}"
         )
@@ -1392,6 +1419,7 @@ class WIZWindow(QMainWindow, main_window):
             self.ch0_modbus_protocol.setCurrentIndex(0)
             self.ch1_group_modbus_option.hide()
             self.ch2_group_modbus_option.hide()
+            self.ch3_group_modbus_option.hide()
             return
 
         supports_modbus = not is_legacy_two_port and self._modbus_supported()
@@ -1420,6 +1448,17 @@ class WIZWindow(QMainWindow, main_window):
             self.ch2_modbus_protocol.setCurrentIndex(0)
             self.group_packing_14_ch2.hide()
             self.group_packing_15_ch2.hide()
+
+        if is_security_four_port:
+            self.ch3_group_modbus_option.show()
+            self.ch3_modbus_protocol.setEnabled(True)
+            self.group_packing_14_ch3.show()
+            self.group_packing_15_ch3.show()
+        else:
+            self.ch3_group_modbus_option.hide()
+            self.ch3_modbus_protocol.setCurrentIndex(0)
+            self.group_packing_14_ch3.hide()
+            self.group_packing_15_ch3.hide()
 
         self._config_serial_for_device()
         self._config_status_pin_for_device()
@@ -1488,6 +1527,10 @@ class WIZWindow(QMainWindow, main_window):
                     idx = self.ch2_baud.findText(current_wb)
                     if idx >= 0:
                         self.ch2_baud.setCurrentIndex(idx)
+
+        # 2-2. ch3_baud (4채널 장치 대비 — UI 준비 완료)
+        # 펌웨어 CH3 baud SEGCP 코드 확정 시 위 WB 블록을 미러링해 채운다.
+        # (spec.channels >= 4 + 신규 코드 → self.ch3_baud)
 
         # 3. ip_pppoe — IM['2'] 존재 여부
         im_entry = spec.cmdset.get('IM')
@@ -1622,13 +1665,16 @@ class WIZWindow(QMainWindow, main_window):
         if bank_visible:
             self.combobox_current_bank.setEnabled(False)
 
-        # CH1/CH2 ssl/mqtt: 항상 비활성 (이전과 동일)
+        # CH1/CH2/CH3 ssl/mqtt: 항상 비활성 (이전과 동일)
         self.ch1_ssl_tcpclient.setEnabled(False)
         self.ch1_mqttclient.setEnabled(False)
         self.ch1_mqtts_client.setEnabled(False)
         self.ch2_ssl_tcpclient.setEnabled(False)
         self.ch2_mqttclient.setEnabled(False)
         self.ch2_mqtts_client.setEnabled(False)
+        self.ch3_ssl_tcpclient.setEnabled(False)
+        self.ch3_mqttclient.setEnabled(False)
+        self.ch3_mqtts_client.setEnabled(False)
 
     def general_tab_config(self):
         """버튼 아래 일반 탭을 장비 종류와 상태에 따라 다르게 설정합니다.
@@ -1801,6 +1847,7 @@ class WIZWindow(QMainWindow, main_window):
         extra_tabs = [
             (self.tab_ch1, self.ch1_tab_text),
             (self.tab_ch2, self.ch2_tab_text),
+            (self.tab_ch3, self.ch3_tab_text),
         ]
         channels = self._get_device_channels()
         want = max(0, min(channels - 1, len(extra_tabs)))
@@ -1879,6 +1926,13 @@ class WIZWindow(QMainWindow, main_window):
         else:
             self.ch2_keepalive_initial.setEnabled(False)
             self.ch2_keepalive_retry.setEnabled(False)
+
+        if self.ch3_keepalive_enable.isChecked():
+            self.ch3_keepalive_initial.setEnabled(True)
+            self.ch3_keepalive_retry.setEnabled(True)
+        else:
+            self.ch3_keepalive_initial.setEnabled(False)
+            self.ch3_keepalive_retry.setEnabled(False)
 
     def event_atmode(self):
         if self.at_enable.isChecked():
@@ -2037,6 +2091,30 @@ class WIZWindow(QMainWindow, main_window):
             self.ch2_remote.setEnabled(True)
             self.ch2_group_modbus_option.setEnabled(False)
             self.ch2_modbus_protocol.setCurrentIndex(0)
+
+        # channel 3 (4채널 장치 대비 — 다른 장치에서는 탭 자체가 제거되어 있음)
+        if self.ch3_tcpclient.isChecked():
+            self.ch3_remote.setEnabled(True)
+            self.ch3_group_modbus_option.setEnabled(False)
+            self.ch3_modbus_protocol.setCurrentIndex(0)
+        elif self.ch3_tcpserver.isChecked():
+            self.ch3_remote.setEnabled(False)
+            self.ch3_group_modbus_option.setEnabled(True)
+        elif self.ch3_tcpmixed.isChecked():
+            self.ch3_remote.setEnabled(True)
+            self.ch3_group_modbus_option.setEnabled(False)
+            self.ch3_modbus_protocol.setCurrentIndex(0)
+        elif self.ch3_udp.isChecked():
+            self.ch3_remote.setEnabled(True)
+            self.ch3_group_modbus_option.setEnabled(True)
+        elif (
+            self.ch3_ssl_tcpclient.isChecked()
+            or self.ch3_mqttclient.isChecked()
+            or self.ch3_mqtts_client.isChecked()
+        ):
+            self.ch3_remote.setEnabled(True)
+            self.ch3_group_modbus_option.setEnabled(False)
+            self.ch3_modbus_protocol.setCurrentIndex(0)
 
     def _on_broadcast_selected(self):
         self.search_ipaddr.setEnabled(False)
@@ -4257,6 +4335,12 @@ class WIZWindow(QMainWindow, main_window):
                         else:
                             self.ch2_ethernet_connection_condition.setText(dev_data["WE"])
 
+                # ── Channel 3 (4채널 장치 대비 — UI 위젯 ch3_* 준비 완료) ──
+                # 펌웨어 CH3 SEGCP 코드 확정 시:
+                #   1. SECURITY_FOUR_PORT_DEV에 장치 등록
+                #   2. 위 CH2 블록을 미러링해 `if self.curr_dev in SECURITY_FOUR_PORT_DEV:` 로 추가
+                #   (wizcmdset/WIZMakeCMD/specs 에도 동일하게 코드 등록 필요)
+
             # SECURITY_TWO_PORT_DEV도 SECURITY_DEVICE에 속하므로 elif가 아닌 if 사용
             if (
                 self.curr_dev in SECURITY_DEVICE
@@ -4724,6 +4808,10 @@ class WIZWindow(QMainWindow, main_window):
                         we_data = we_data[:30]
                         self.ch2_ethernet_connection_condition.setText(we_data)
                     setcmd["WE"] = we_data if we_data else " "
+
+                # ── Channel 3 (4채널 장치 대비 — UI 위젯 ch3_* 준비 완료) ──
+                # 펌웨어 CH3 SEGCP 코드 확정 시 위 CH2 블록을 미러링해
+                # `if self.curr_dev in SECURITY_FOUR_PORT_DEV:` 로 추가한다.
 
             if self.curr_dev in SECURITY_DEVICE:
                 # New options for WIZ510SSL (Security devices)
@@ -6041,6 +6129,7 @@ class WIZWindow(QMainWindow, main_window):
         self.ch0_reconnection_label.setFont(self.smallfont)
         self.ch1_reconnection_label.setFont(self.smallfont)
         self.ch2_reconnection_label.setFont(self.smallfont)
+        self.ch3_reconnection_label.setFont(self.smallfont)
         self.gpioa_label.setFont(self.smallfont)
         self.gpiob_label.setFont(self.smallfont)
         self.gpioc_label.setFont(self.smallfont)
