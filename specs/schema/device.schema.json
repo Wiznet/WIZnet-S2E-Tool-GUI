@@ -27,8 +27,8 @@
     "channels": {
       "type": "integer",
       "minimum": 1,
-      "maximum": 2,
-      "description": "Number of serial channels"
+      "maximum": 5,
+      "description": "Number of serial channels (CH0..CH4)"
     },
     "search_cmd_order": {
       "type": "array",
@@ -40,7 +40,8 @@
       "items": {
         "type": "string",
         "enum": ["base", "ddns", "gpio", "modbus", "pppoe", "retransmit",
-                 "security", "telnet", "two_port", "w55rp20_ext", "w55rp20_two_port"]
+                 "security", "telnet", "two_port", "w55rp20_ext", "w55rp20_two_port",
+                 "w55rp20_three_port"]
       },
       "minItems": 1,
       "description": "Command group names. Must match specs/commands/*.yaml filenames."
