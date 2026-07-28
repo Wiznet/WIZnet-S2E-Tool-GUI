@@ -31,7 +31,11 @@ Get-ChildItem .\*.spec | Where-Object { $_.Name -ne "$target_bin_name.spec" } | 
 Write-Output "Cleaned up old .spec files"
 
 # Run build via uv to use the .venv environment
-uv run python -m PyInstaller -w -F -n $target_bin_name --add-data ".\\gui\\*;.\\gui" --add-data ".\\version;.\\" --add-data ".\\config\\device_search_timing.default.yaml;.\\config" --add-data ".\\config\\*.json;.\\config" .\main_gui.py
+# --noupx: UPX 압축 명시적으로 끔 — Defender 등 백신이 UPX 압축 실행파일을
+#          악성코드 패킹 패턴으로 오탐하는 사례가 많아 기본값으로 비활성화.
+#          (2026-07-15: upx.exe를 PATH에 설치한 뒤 실측 — 켰을 때 32.7MB, 껐을 때 40.7MB.
+#           용량 20% 절감보다 오탐 회피를 우선)
+uv run python -m PyInstaller -w -F -n $target_bin_name --icon ".\\gui\\icon.ico" --hidden-import jsonschema --noupx --add-data ".\\specs\\*;.\\specs" --add-data ".\\gui\\*;.\\gui" --add-data ".\\version;.\\" --add-data ".\\config\\device_search_timing.default.yaml;.\\config" --add-data ".\\config\\*.json;.\\config" .\main_gui.py
 
 if ($NoSign) {
     Write-Output "Build complete (unsigned): dist\$target_bin_name.exe"
