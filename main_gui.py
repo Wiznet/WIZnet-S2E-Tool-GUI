@@ -90,6 +90,11 @@ from terminal.terminal_panel import TerminalPanel
 
 SECURITY_TWO_PORT_DEV = ("W55RP20-S2E-2CH",)
 W55RP20_FAMILY = ("W55RP20-S2E", "W55RP20-S2E-2CH")
+# User I/O 탭(GPIO) 지원 장치 — ONE_PORT_DEV 중 WIZ107SR/108SR(GPIO 미지원)만 제외하고 TWO_PORT_DEV(752 계열) 합침
+# TODO(꼼수): 신규 장치 추가 시 이 목록도 수동 갱신 필요 — 근본 해법은 specs/devices/*.yaml의
+# command_groups(gpio) 기반 판단으로 전환하는 것. object_config_for_device()가 아직 spec 미사용이라
+# 지금은 보류. 검증 충분히 하고 나서 spec 기반 전환 예정 (관련: WIZ752SR-12x.yaml gpio 그룹 추가함).
+IO_TAB_DEV_FAMILY = (frozenset(ONE_PORT_DEV) - {"WIZ107SR", "WIZ108SR"}) | frozenset(TWO_PORT_DEV)
 
 
 class RetrySearchLimits:
@@ -1832,7 +1837,13 @@ class WIZWindow(QMainWindow, main_window):
         - WIZ5XXSR-RP (only use A,B)
         """
         # if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
-        if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev or "W7500" in self.curr_dev:
+        if (
+            "WIZ750" in self.curr_dev
+            or "WIZ750SR-T1L" in self.curr_dev
+            or "W7500" in self.curr_dev
+            or self.curr_dev in TWO_PORT_DEV
+            or "WIZ752" in self.curr_dev
+        ):
             # ! Check current tab length
             # self.logger.debug(f'totalTab: {len(self.generalTab)}, currentTab: {self.generalTab.currentIndex()}')
             # self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)

@@ -67,6 +67,7 @@ search_cmd_order:
 command_groups:
   - base
   - two_port
+  - gpio  # TODO: 실장치 테스트 후 확인 — WIZ750SR과 동일 4핀(A~D)인지, 2핀(A,B)만 지원인지 미확정
 
 overrides:
   # WIZ752SR BR 최대 230400 (0-13)
@@ -115,6 +116,10 @@ ui:
         - ch1_serial
         - ch1_packing
         - ch1_options
+    - id: userio
+      label: "User I/O"
+      groups:
+        - gpio
     - id: options
       label: "Options"
       groups:
