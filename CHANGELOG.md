@@ -4,6 +4,104 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
 
 ---
 
+## [1.6.2.8] – 2026-07-02
+
+### Security
+- Dependency updates: `requests`, `idna`, `certifi`, `charset-normalizer`.
+
+---
+
+## [1.6.2.7] – 2026-06-16
+
+### Features
+- File menu: **Apply Settings (F4)** entry added.
+- WIZ550 unicast **"IP Address" search mode** added (equivalent to the Java tool's IP Address
+  mode); blocking ping/TCP dialog removed, multi-NIC broadcast applied to `WIZ550Getter`
+  (GET_INFO) and `WIZ550Searcher`.
+- **Config validation system (P3–P5)**: range/enum validation + baseline restore on load, schema
+  migration engine, violation-correction persistence with repeat prevention, GUI notification of
+  restored baseline values, `set_command_delay_ms` exposed in the Advanced dialog.
+- WIZ550: widget visibility gating driven by YAML `widget_overrides.visible` for unsupported
+  features.
+
+### Bug Fixes
+- WIZ550 YAML firmware alignment corrections (`baud_rate`, `data_bits`/`stop_bits` encoding,
+  `working_mode`/`flow_control` mislabeling) — groundwork for widget-override-based gating.
+- WIZ550SR: baud 300 removed (SR only supports 600+) + 3 FW v1.2.2 dead-field comments added.
+- `ch0_flow` combo enum restructured to fix index mismatch (BUG-W550-AC).
+- WIZ550 MQTT: field wiring, entry-UI (radio enable + tab visibility), and FW-version
+  (`fw_ver[1]` odd/even) gating for MQTT-capable builds.
+- WIZ550 GET/SET verification logs promoted to INFO (previously hidden at INFO level); received-
+  value logging split into summary (INFO) / full (DEBUG).
+- Search/unicast label switching fixed (WIZ550 → "IP Address", WIZ5xxSR → "TCP unicast");
+  unicast radio default restored to TCP unicast except when WIZ550 is selected.
+- `QTimer` `NameError` fixed (missing `QtCore.` prefix).
+- Config path separated to `~/.wizconfig` with auto-migration (fixes first-run crash);
+  `default.yaml` keys aligned with code access keys; `auto_hide` staleness fixed.
+
+### Build / Docs
+- Build tooling: Everything-based search-tool auto-discovery + bootloader wheel cache.
+- Developer hand-off documentation set added under `doc/`.
+
+### Tests
+- Accessor-key ⊆ baseline invariant test (T1); WIZ550 WEB YAML ghost-field removal +
+  `dns_domain` validation updated; changelog footer test scope narrowed to curriculum docs.
+
+---
+
+## [1.6.2.6] – 2026-05-22
+
+### Features
+- Log Level submenu added under the Options menu.
+- F4 (Apply Settings) / F8 (FW Upload) keyboard shortcuts added.
+
+### Bug Fixes
+- `WIZ550Searcher` now broadcasts on all NICs.
+- SET_INFO now sent to the device's current IP rather than the newly-assigned IP.
+
+---
+
+## [1.6.2.5] – 2026-05-22
+
+### Features
+- Warn-and-confirm dialog when no NIC exists on the target subnet (WIZ550).
+- Runtime log-level switching via a watched YAML config file.
+- GUI strings translated Korean → English throughout.
+
+### Bug Fixes
+- WIZ550 FW upload: NIC auto-selection for TFTP server binding and upload socket; server IP now
+  resolved via OS routing probe / target-IP subnet match, call moved to just before upload.
+- WIZ550: firewall rules auto-added/removed around FW upload.
+- WIZ550: BOOT-state detection and `working_mode` mapping overhaul; Apply button disabled while
+  in BOOT state.
+- WIZ550: SET_INFO/RESET now auto-select NIC via OS routing.
+- `WIZMSGHandler`: fixed two syntax/indentation errors (empty `if` block).
+
+### Refactoring
+- Search-related verbose/TIMING/DIAG logs commented out (multiple rounds); temporary FW-upload
+  debug logs removed.
+
+---
+
+## [1.6.2.4] – 2026-05-20
+
+### Features
+- WIZ550 FW from Git: TFTP upload integrated into a single dialog (`FWGitDialog`) — separate
+  upload window removed. `wiz550_config` carries `target_ip`/`mac`/`pw_setting`; password field
+  shown conditionally; download completion auto-triggers TFTP upload, dialog closes 1.5s after
+  success.
+
+### Bug Fixes
+- 0xD1 unicast: switched from broadcast to per-device IP unicast (per Java reference §4.3).
+- WIZ550 FW from Git device-type filter: prevents SR↔S2E cross-flashing.
+- `fill_devinfo_wiz550`: fixed missing IP-field disable on DHCP selection.
+- Searched-results count re-syncs to include WIZ550 devices after re-search.
+
+### Refactoring
+- `WIZ550FWUploadThread` logging reduced (verbose → DEBUG; tftpy → WARNING+).
+
+---
+
 ## [1.6.2.3] – 2026-05-19
 
 ### Bug Fixes
