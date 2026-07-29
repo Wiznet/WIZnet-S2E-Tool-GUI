@@ -1,0 +1,152 @@
+# specs/devices/WIZ550WEB.yaml
+# WIZ550WEB DeviceSpec — Phase 5 (SPEC-03)
+# 133B 구조체: network + UART0/UART1 시리얼 + pw_setting + dhcp/dns
+# WEB 미존재 필드(working_mode/remote_ip/remote_port/local_port/serial_command/pw_connect):
+#   펌웨어 구조체에서 주석처리 → parse_web 미반환 → UI 제외 (2026-06-04, "지원 기능만 표시")
+# field.id 기준: WIZ550Profile.parse_web() 반환 dict 키
+
+name: WIZ550WEB
+display_name: "WIZ550WEB"
+aliases:
+  - "WIZ550WEB"
+family: wiz550
+channels: 2
+
+protocol:
+  handler: WIZ550MSGHandler
+  port: 6550
+  # WIZ550Profile.py WEB_FORMAT module_type hex='010200' -> [0x01, 0x02, 0x00]
+  product_code: [0x01, 0x02, 0x00]
+  config_size: 133
+  parser: parse_web
+  builder: build_web
+
+ui:
+  sections:
+    - id: network
+      label: "Network"
+      fields:
+        - {id: mac,           label: "MAC Address",  type: readonly}
+        - {id: dhcp_use,      label: "DHCP",         type: checkbox}
+        - {id: local_ip,      label: "IP Address",   type: ip}
+        - {id: subnet,        label: "Subnet Mask",  type: ip}
+        - {id: gateway,       label: "Gateway",      type: ip}
+        - {id: dns_server_ip,   label: "DNS Server",   type: ip}
+        - {id: dns_use,         label: "DNS Enable",   type: checkbox}
+        - {id: dns_domain_name, label: "DNS Domain",   type: text}
+        # working_mode/remote_ip/remote_port/local_port 제거 (2026-06-04):
+        # WEB 펌웨어 __network_info 구조체가 통째 주석처리(ConfigData.h:115) → 필드 자체 없음.
+        # parse_web 도 미반환 → "지원하는 기능만 표시" 원칙대로 UI 제외.
+
+    - id: uart0
+      label: "UART0"
+      fields:
+        - id: uart0_baud_rate
+          label: "Baud Rate"
+          type: dropdown
+          # bps 정수값 키 (parse_web uart0_baud_rate = 실제 bps int)
+          # FW baud_table[10] = {600,1200,2400,4800,9600,19200,38400,57600,115200,230400}
+          # (uartHandler.c:19, Rev1.0/1.1 동일). 300·460800 둘 다 table 밖 → 전송 시 115200 fallback.
+          # SR과 동일 table. 단종 제품으로 FW 수정 계획 없음.
+          choices:
+            600: "600 bps"
+            1200: "1200 bps"
+            2400: "2400 bps"
+            4800: "4800 bps"
+            9600: "9600 bps"
+            19200: "19200 bps"
+            38400: "38400 bps"
+            57600: "57600 bps"
+            115200: "115200 bps"
+            230400: "230400 bps"
+        # FW: word_len7 case 없음 → 8 fallback (uartHandler.c:200). DATA7BIT 매크로 없음 = 8 고정 (SR과 동일)
+        - {id: uart0_data_bits,    label: "Data Bits",    type: readonly, value: "8-bit"}
+        - id: uart0_parity
+          label: "Parity"
+          type: dropdown
+          choices:
+            0: "None"
+            1: "Odd"
+            2: "Even"
+        - id: uart0_stop_bits
+          label: "Stop Bits"
+          type: dropdown
+          # 실제값 저장 (1=1bit, 2=2bits) — 인덱스 아님. FW switch case stop_bit1/2 (uartHandler.c:214)
+          choices:
+            1: "1 bit"
+            2: "2 bits"
+        - id: uart0_flow_control
+          label: "Flow Control"
+          type: dropdown
+          # flow enum: 0=None,1=RTS/CTS,2=RS422,3=RS485 (ConfigData.h:50) 이나 — WEB은 DEAD 필드.
+          #
+          # ── SR과 동일한 dead-field 버그 (인과 사슬) ──
+          # 1. FW 버그: uartHandler.c:245 Flow Control switch 가 serial->flow_control 이 아니라
+          #    serial->parity 를 잘못 참조 (원저자 실수, SR과 동일). → flow 값 HW 미적용, parity 가 HW flow 결정.
+          # 2. WEB(HW Rev1.0/1.1)은 구형/단종 → FW 영구 미수정 → dead 영구.
+          # 3. 따라서 값 그대로 전송만. case 도 none/rts_cts 만 존재 → {None, RTS/CTS} 2개로 고정.
+          # 확인: Rev1.0/1.1 App 동일. 상세: research/2026-06-02-wiz550-series-characteristics.md
+          # ※ SR 과 같은 dead. WIZ550S2E 만 flow switch 정상(RS422/485 실동작).
+          choices:
+            0: "None"
+            1: "RTS/CTS"
+
+    - id: uart1
+      label: "UART1"
+      fields:
+        - id: uart1_baud_rate
+          label: "Baud Rate"
+          type: dropdown
+          # bps 정수값 키 (parse_web uart1_baud_rate = 실제 bps int)
+          # FW baud_table[10] = {600,1200,2400,4800,9600,19200,38400,57600,115200,230400}
+          # (uartHandler.c:19, Rev1.0/1.1 동일). 300·460800 둘 다 table 밖 → 전송 시 115200 fallback.
+          # SR과 동일 table. 단종 제품으로 FW 수정 계획 없음.
+          choices:
+            600: "600 bps"
+            1200: "1200 bps"
+            2400: "2400 bps"
+            4800: "4800 bps"
+            9600: "9600 bps"
+            19200: "19200 bps"
+            38400: "38400 bps"
+            57600: "57600 bps"
+            115200: "115200 bps"
+            230400: "230400 bps"
+        # FW: word_len7 case 없음 → 8 fallback (uartHandler.c:200). DATA7BIT 매크로 없음 = 8 고정 (SR과 동일)
+        - {id: uart1_data_bits,    label: "Data Bits",    type: readonly, value: "8-bit"}
+        - id: uart1_parity
+          label: "Parity"
+          type: dropdown
+          choices:
+            0: "None"
+            1: "Odd"
+            2: "Even"
+        - id: uart1_stop_bits
+          label: "Stop Bits"
+          type: dropdown
+          # 실제값 저장 (1=1bit, 2=2bits) — 인덱스 아님. FW switch case stop_bit1/2 (uartHandler.c:214)
+          choices:
+            1: "1 bit"
+            2: "2 bits"
+        - id: uart1_flow_control
+          label: "Flow Control"
+          type: dropdown
+          # flow enum: 0=None,1=RTS/CTS,2=RS422,3=RS485 (ConfigData.h:50) 이나 — WEB은 DEAD 필드.
+          #
+          # ── SR과 동일한 dead-field 버그 (인과 사슬) ──
+          # 1. FW 버그: uartHandler.c:245 Flow Control switch 가 serial->flow_control 이 아니라
+          #    serial->parity 를 잘못 참조 (원저자 실수, SR과 동일). → flow 값 HW 미적용, parity 가 HW flow 결정.
+          # 2. WEB(HW Rev1.0/1.1)은 구형/단종 → FW 영구 미수정 → dead 영구.
+          # 3. 따라서 값 그대로 전송만. case 도 none/rts_cts 만 존재 → {None, RTS/CTS} 2개로 고정.
+          # 확인: Rev1.0/1.1 App 동일. 상세: research/2026-06-02-wiz550-series-characteristics.md
+          # ※ SR 과 같은 dead. WIZ550S2E 만 flow switch 정상(RS422/485 실동작).
+          choices:
+            0: "None"
+            1: "RTS/CTS"
+
+    - id: options
+      label: "Options"
+      fields:
+        - {id: pw_setting,     label: "Search Password", type: text}
+        # pw_connect / serial_command 제거 (2026-06-04): 둘 다 WEB 구조체에서 주석처리(미존재),
+        # parse_web 미반환 → UI 제외. (pw_connect=ConfigData.h:96, serial_command=ConfigData.h:105)

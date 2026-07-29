@@ -3,6 +3,16 @@
 # 지원 장비: WIZ750SR, WIZ750SR-1xx (4핀), 일부 장비 (2핀)
 # 소스 기준: wizcmdset.py::common_cmdset CA/CB/CC/CD/GA/GB/GC/GD/SC/S0/S1
 
+meta:
+  id: gpio
+  name: "GPIO / User I/O"
+  category: hardware
+  description: "User I/O 핀 방향/상태 제어 커맨드 (WIZ750SR 계열 전용)"
+  requires:
+    - base
+  conflicts: []
+
+
 CA:
   description: "Type and Direction of User I/O pin A"
   regex: "^[0-2]$"

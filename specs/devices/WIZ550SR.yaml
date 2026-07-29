@@ -1,0 +1,132 @@
+# specs/devices/WIZ550SR.yaml
+# WIZ550SR DeviceSpec — Phase 5 (SPEC-01)
+# field.id 기준: WIZ550Profile._parse_base_162() 반환 dict 키
+# Phase 6: _build_wiz550_panel('WIZ550SR') 이 이 파일을 로드하여 UI 동적 생성
+
+name: WIZ550SR
+display_name: "WIZ550SR"
+aliases:
+  - "WIZ550SR"
+family: wiz550
+channels: 1
+
+protocol:
+  handler: WIZ550MSGHandler
+  port: 6550
+  product_code: [0x02, 0x00, 0x00]
+  config_size: 162
+  parser: parse_sr
+  builder: build_sr
+
+ui:
+  # FW: WIZ550SR은 data_bits 8 고정 (uartHandler.h:23 DATA7BIT_ENABLE=0 → 7-bit 컴파일 제외).
+  # ch0_databit 콤보 비활성화로 8 고정. 근거: doc/dev/WIZ550-serial-fw-reference-ko.md
+  # (S2E는 7/8 지원 → override 없음 = 활성)
+  widget_overrides:
+    # data_bits: SR은 8 고정 (uartHandler.h:23 DATA7BIT_ENABLE=0 → 7-bit 컴파일 제외)
+    ch0_databit:
+      enabled: false
+      tooltip: "WIZ550SR is fixed to 8-bit (firmware does not support 7-bit)"
+    # 아래는 SR 펌웨어 S2E_Packet 구조체에 필드 자체가 없는 기능 → 숨김.
+    # 근거: WIZ550SR_App/src/Configuration/ConfigData.h, doc/dev/WIZ550-serial-fw-reference-ko.md
+    ch0_mqttclient:        # working_mode #define = 0~3 (TCP Client/Server/Mixed/UDP). MQTT(4) 없음
+      visible: false
+    ip_pppoe:              # 구조체에 PPPoE 필드 없음
+      visible: false
+    ch0_modbus_protocol:   # 구조체에 modbus 없음 (Modbus는 WIZ550S2E-Modbus 펌웨어 전용)
+      visible: false
+    ch0_uart_name:         # uart_interface(Serial interface) 필드 없음 (W55RP20 계열 전용)
+      visible: false
+  sections:
+    - id: network
+      label: "Network"
+      fields:
+        - {id: mac,           label: "MAC Address",  type: readonly}
+        - {id: dhcp_use,      label: "DHCP",         type: checkbox}
+        - {id: local_ip,      label: "IP Address",   type: ip}
+        - {id: subnet,        label: "Subnet Mask",  type: ip}
+        - {id: gateway,       label: "Gateway",      type: ip}
+        - {id: dns_server_ip, label: "DNS Server",   type: ip}
+        - id: working_mode
+          label: "Working Mode"
+          type: dropdown
+          # 원본 C 펌웨어 기준: 0=TCP Client, 1=TCP Server, 2=TCP Mixed, 3=UDP (MQTT 없음)
+          choices:
+            0: "TCP Client"
+            1: "TCP Server"
+            2: "TCP Mixed"
+            3: "UDP"
+        - {id: local_port,  label: "Local Port",   type: uint16}
+        - {id: remote_ip,   label: "Remote IP",    type: ip}
+        - {id: remote_port, label: "Remote Port",  type: uint16}
+
+    - id: serial
+      label: "Serial"
+      fields:
+        - id: baud_rate
+          label: "Baud Rate"
+          type: dropdown
+          # D-03 override: D-03 예시는 인덱스 기반(0~11)이나 WIZ550Profile.py의
+          # baud_rate 필드가 실제 bps 정수값(115200)을 저장하므로 choices 키도 bps 정수값으로 작성
+          #
+          # BUG NOTE (baud_rate): uartHandler.c baud_table = {600,1200,2400,4800,9600,
+          # 19200,38400,57600,115200,230400} (10값). enum baud 엔 baud_300 이 있으나 table 에 없고,
+          # 460800 은 enum/table 둘 다 없음. table 에 없는 값 전송 시 valid_arg 실패 → 115200 fallback.
+          # 따라서 300·460800 둘 다 choices 에서 제외. (factory default = 115200)
+          # 확인 버전: WIZ550SR FW v1.2.2 (commit 698108d, github.com/Wiznet/WIZ550SR)
+          # 단종 제품으로 FW 수정 계획 없음.
+          choices:
+            600: "600 bps"
+            1200: "1200 bps"
+            2400: "2400 bps"
+            4800: "4800 bps"
+            9600: "9600 bps"
+            19200: "19200 bps"
+            38400: "38400 bps"
+            57600: "57600 bps"
+            115200: "115200 bps"
+            230400: "230400 bps"
+        - {id: data_bits,    label: "Data Bits",    type: readonly, value: "8-bit"}
+        - id: parity
+          label: "Parity"
+          type: dropdown
+          choices:
+            0: "None"
+            1: "Odd"
+            2: "Even"
+        - id: stop_bits
+          label: "Stop Bits"
+          type: dropdown
+          # 원본 기준: 실제값 저장 (1=1bit, 2=2bits) — 인덱스 아님
+          choices:
+            1: "1 bit"
+            2: "2 bits"
+        - id: flow_control
+          label: "Flow Control"
+          type: dropdown
+          # flow enum 정의상 0=None,1=RTS/CTS,2=RS422,3=RS485 이나 — SR은 아래 버그로 이 필드가 dead.
+          #
+          # ── 왜 이 콤보를 {None, RTS/CTS} 2개로만 두고 손대지 않는가 (인과 사슬) ──
+          # 1. FW 버그: uartHandler.c serial_info_init() 의 Flow Control switch 가
+          #    serial->flow_control 이 아니라 serial->parity 를 잘못 참조 (원저자 실수).
+          #    → flow_control 값은 저장·전송되나 UART HW 에는 미적용. 실제 HW flow 는 parity 가 결정.
+          # 2. WIZ550SR 은 **단종** → FW 가 영구히 수정되지 않음 → 이 버그/dead 상태는 영구적.
+          # 3. 그러므로 config tool 은 장치가 실제 하는 대로 — flow_control 값을 그대로 전송만 한다.
+          #    UI 에서 RS422/485 까지 "정상인 척" 노출/매핑하면 화면과 장치 실동작이 어긋나 더 혼란.
+          # 4. 따라서 콤보 항목·인덱스 매핑을 변경하지 않는다 (어차피 HW 무효, 손대면 거짓 인상만).
+          # 확인: WIZ550SR FW v1.2.2 (commit 698108d). 상세: memory wiz550-flow-control-wontfix,
+          #       research/2026-06-02-wiz550-series-characteristics.md
+          # ※ 이 금지는 SR 전용. WIZ550S2E 는 flow switch 정상이라 RS422/485 실제 동작(별도 판단).
+          choices:
+            0: "None"
+            1: "RTS/CTS"
+
+    - id: options
+      label: "Options"
+      fields:
+        - {id: pw_setting,     label: "Search Password",       type: text}
+        - {id: pw_connect,     label: "Connect Password",      type: text}
+        - {id: serial_command, label: "AT Command Mode",       type: checkbox}
+        - {id: dns_use,        label: "DNS Enable",            type: checkbox}
+        - {id: inactivity,     label: "Inactivity Timeout",    type: uint16}
+        - {id: reconnection,   label: "Reconnection Interval", type: uint16}

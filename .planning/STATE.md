@@ -3,34 +3,34 @@ gsd_state_version: 1.0
 milestone: v1.6.3
 milestone_name: milestone
 status: executing
-stopped_at: v1.6.3 ROADMAP.md + STATE.md 작성 완료, Phase 1 planning 대기
-last_updated: "2026-05-13T02:05:13.352Z"
-last_activity: 2026-05-13
+stopped_at: Phase 7 plans created (07-00 ~ 07-03)
+last_updated: "2026-05-19T10:10:31.690Z"
+last_activity: 2026-05-19 -- Phase 7 planning complete
 progress:
-  total_phases: 3
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 100
+  total_phases: 5
+  completed_phases: 3
+  total_plans: 13
+  completed_plans: 9
+  percent: 69
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-12)
+See: .planning/PROJECT.md (updated 2026-05-18)
 
 **Core value:** 현장 엔지니어가 WIZnet S2E 장치를 네트워크로 검색·설정할 수 있는 신뢰할 수 있는 도구
-**Current focus:** Phase 01 — Schema Definition
+**Current focus:** Phase 07 — TFTP FW Upload (planning complete, ready for execution)
 
 ## Current Position
 
-Phase: 2
-Plan: Not started
-Status: Executing Phase 01
-Last activity: 2026-05-13
+Phase: 07 (tftp-fw-upload) — PLANNED
+Plan: 0 of 4
+Status: Ready to execute
+Last activity: 2026-05-19 -- Phase 7 planning complete
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███████████████░░░░░] 9/13 plans (69%)
 
 ## Performance Metrics
 
@@ -40,30 +40,23 @@ Progress: [░░░░░░░░░░] 0%
 
 ### Decisions
 
+- 2026-05-18: WIZ550 별도 JSON Schema (device.wiz550.schema.json) 채택 — binary protocol이 기존 command_groups 구조와 불일치
+- 2026-05-18: WIZ550 YAML ui.sections 구조 채택 — Phase 6 spec.sections.items() 코드와 직접 매핑
+- 2026-05-18: WIZ550S2E condition 필드 (mqtt/modbus) — 단일 YAML로 3 변형 표현
+- 2026-05-18: WIZ550WEB disabled:true 마커 — SPEC-03 "명시적으로 정의됨" 충족
 - 2026-05-12: DeviceSpec YAML → 장치별 UI 빌드의 단일 진실 소스로 확립
-- 2026-05-12: main_gui.py 줄번호 맵 폐기 → Grep 즉시 확인 원칙
-- 2026-05-12: GSD 도입 — STATE.md 강제 읽기로 정보 전파 문제 해결
-- 2026-05-12: v1.6.3 페이즈 순서 확정 — SCH-01(스키마 정의) → MOD-01(메타 추가) → MOD-02/03+SCH-02(로더 통합)
-- 2026-05-12: jsonschema Python 패키지 의존성 추가 여부 Phase 3 착수 전 확인 필요
 
 ### Pending Todos
 
-TASKS.md → `.planning/todos/pending/` 이관 예정
-
-현재 주요 항목:
-
-- TCPMulticastScanner.py 삭제 (deprecated)
-- main_gui.py:4908 TODO 처리
-- device_spec_loader import 중복 제거
-- ch2_baud EB 목록 관리 개선
-- version_compare_old() 삭제
+- TASKS.md 참조 (이슈 추적 단일 소스)
 
 ### Blockers/Concerns
 
-- jsonschema 패키지 의존성 추가 필요 여부 확인 필요 (Phase 3 착수 전)
+- ⚠️ CR-01 (비긴급): getter/setter/resetter QThread 로컬 변수 — self._wiz550_getter 등으로 저장 권장 (현재 PyQt5 C++ 레이어가 유지)
+- ⚠️ CR-02 (비긴급): _wiz550_field_widgets setParent(None) 후 dict 미정리
 
 ## Session Continuity
 
-Last session: 2026-05-12
-Stopped at: v1.6.3 ROADMAP.md + STATE.md 작성 완료, Phase 1 planning 대기
-Resume file: None
+Last session: 2026-05-19T14:47:00.000Z
+Stopped at: Phase 7 plans created (07-00 ~ 07-03)
+Resume file: .planning/phases/07-tftp-fw-upload/07-03-PLAN.md

@@ -35,6 +35,58 @@
       ]
     },
     {
+      "id": "wiz550sr",
+      "display_name": "WIZ550SR",
+      "repo": "Wiznet/WIZ550SR",
+      "exclude_asset_keywords": ["boot"],
+      "devices": [
+        {
+          "name_pattern": "WIZ550SR",
+          "asset_pattern": "Binary_v*.zip",
+          "extract_file": "WIZ550SR_App.bin"
+        }
+      ]
+    },
+    {
+      "id": "wiz550s2e",
+      "display_name": "WIZ550S2E",
+      "repo": "Wiznet/WIZ550S2E",
+      "exclude_asset_keywords": ["boot"],
+      "devices": [
+        {
+          "name_pattern": "WIZ550S2E",
+          "asset_pattern": "Binary_v*.zip",
+          "extract_file": "WIZ550S2E_App.bin"
+        }
+      ]
+    },
+    {
+      "id": "wiz550s2e_modbus",
+      "display_name": "WIZ550S2E-Modbus",
+      "repo": "Wiznet/WIZ550S2E-Modbus",
+      "exclude_asset_keywords": ["boot"],
+      "devices": [
+        {
+          "name_pattern": "WIZ550S2E-Modbus",
+          "asset_pattern": "Binary_v*.zip",
+          "extract_file": "WIZ550S2E_App.bin"
+        }
+      ]
+    },
+    {
+      "id": "wiz550web",
+      "display_name": "WIZ550WEB",
+      "repo": "Wiznet/WIZ550web",
+      "exclude_asset_keywords": ["boot", "hex"],
+      "devices": [
+        {
+          "name_pattern": "WIZ550WEB",
+          "asset_pattern": "WIZ550web_App.bin",
+          "extract_file": null
+        }
+      ]
+    },
+    {
       "id": "wiz750sr",
       "display_name": "WIZ750SR Series",
       "repo": "Wiznet/WIZ750SR",

@@ -2,6 +2,16 @@
 # Modbus 프로토콜 커맨드
 # 지원 장비: WIZ2000, WIZ5XXSR-RP 계열, W55RP20-S2E
 # 소스 기준: wizcmdset.py PO/MB 항목 (WIZ5XX_RP_CMDSET)
+
+meta:
+  id: modbus
+  name: "Modbus"
+  category: protocol
+  description: "Modbus 프로토콜 모드 선택 커맨드 (WIZ5XXSR-RP / W55RP20-S2E 계열)"
+  requires:
+    - base
+  conflicts: []
+
 #
 # 주의: WIZ5XX-RP계열의 PO/MB는 Modbus 관련이지만,
 # WIZ107/108의 PO는 TCP/Telnet 프로토콜 선택으로 의미가 완전히 다름.

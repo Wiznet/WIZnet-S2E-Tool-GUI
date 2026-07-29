@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WIZnet WIZ550 Device Spec",
+  "description": "Schema for specs/devices/WIZ550*.yaml files. Binary protocol devices without command_groups.",
+  "type": "object",
+  "required": ["name", "family", "channels", "protocol", "ui"],
+  "additionalProperties": false,
+  "properties": {
+    "name":         {"type": "string"},
+    "display_name": {"type": "string"},
+    "aliases":      {"type": "array", "items": {"type": "string"}},
+    "family":       {"type": "string", "const": "wiz550"},
+    "channels":     {"type": "integer", "minimum": 1, "maximum": 2},
+    "protocol": {
+      "type": "object",
+      "required": ["handler", "port", "product_code", "config_size", "parser", "builder"],
+      "additionalProperties": false,
+      "properties": {
+        "handler":      {"type": "string"},
+        "port":         {"type": "integer"},
+        "product_code": {"type": "array", "items": {"type": "integer"}, "minItems": 3, "maxItems": 3},
+        "config_size":  {"type": "integer"},
+        "parser":       {"type": "string"},
+        "builder":      {"type": "string"}
+      }
+    },
+    "ui": {
+      "type": "object",
+      "required": ["sections"],
+      "additionalProperties": false,
+      "properties": {
+        "sections": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "label", "fields"],
+            "additionalProperties": false,
+            "properties": {
+              "id":        {"type": "string"},
+              "label":     {"type": "string"},
+              "condition": {"type": "string"},
+              "fields":    {
+                "type": "array",
+                "items": {"$ref": "#/definitions/field"}
+              }
+            }
+          }
+        },
+        "widget_overrides": {
+          "type": "object",
+          "description": "위젯 상태 예외 선언 (일반 device.schema.json과 동일 의미). 키 = UI 위젯 objectName.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "visible": {"type": "boolean"},
+              "enabled": {
+                "oneOf": [
+                  {"type": "boolean"},
+                  {
+                    "type": "object",
+                    "required": ["min_version"],
+                    "additionalProperties": false,
+                    "properties": {"min_version": {"type": "string"}}
+                  }
+                ]
+              },
+              "tooltip": {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "field": {
+      "type": "object",
+      "required": ["id", "label", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id":       {"type": "string"},
+        "label":    {"type": "string"},
+        "type":     {"type": "string", "enum": ["ip", "text", "uint16", "dropdown", "checkbox", "readonly"]},
+        "choices":  {"type": "object", "additionalProperties": {"type": "string"}},
+        "disabled": {"type": "boolean"},
+        "value":    {}
+      }
+    }
+  }
+}

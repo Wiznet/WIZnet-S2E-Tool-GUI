@@ -15,9 +15,12 @@ command_groups:
   - w55rp20_ext
 
 overrides:
-  # BR: IP20 최대 921600 (index 0-15)
+  # 고속 Baudrate (FW >= 1.2.1에서 index 0-19 지원, W55RP20-S2E와 동일 — IP20은 W55RP20 칩 사용)
+  # 근거: wizcmdset.py get_cmdset() name in ("W55RP20-S2E", "IP20") → W55RP20_CMDSET (BR 0-19)
+  #       + 커밋 5a638bb "Integrate IP20 into W55RP20_CMDSET for high-speed baudrate support" (2026-02-10)
+  # FW 버전에 따라 device_spec_loader가 런타임에 조정
   BR:
-    regex: "^([0-9]|1[0-5])$"
+    regex: "^([0-9]|1[0-9])$"
     values:
       "0": "300"
       "1": "600"
@@ -35,6 +38,10 @@ overrides:
       "13": "230400"
       "14": "460800"
       "15": "921600"
+      "16": {value: "1M", min_version: "1.2.1"}
+      "17": {value: "2M", min_version: "1.2.1"}
+      "18": {value: "4M", min_version: "1.2.1"}
+      "19": {value: "8M", min_version: "1.2.1"}
   OP:
     regex: "^[0-6]$"
     values:

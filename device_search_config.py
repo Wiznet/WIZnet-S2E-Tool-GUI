@@ -12,11 +12,31 @@ Example:
     ...     multiplier = config.get_auto_tune_rtt_multiplier()
 """
 
+import os
+import sys
+import copy
+import shutil
 import yaml
 import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
 from decimal import Decimal
+
+
+def _resource_path(relative_path: str) -> str:
+    """PyInstaller 번들/개발 환경 모두에서 리소스 절대경로 반환"""
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, relative_path)
+
+
+def _bundled_default_path() -> Path:
+    """번들된 기본값 파일 (읽기전용 기준). onefile exe에서는 _MEIPASS 내부."""
+    return Path(_resource_path(os.path.join("config", "device_search_timing.default.yaml")))
+
+
+def _user_config_path() -> Path:
+    """사용자 설정 파일 (쓰기·영속) — ~/.wizconfig/ (로그와 동일 루트)"""
+    return Path(os.path.expanduser("~")) / ".wizconfig" / "device_search_timing.yaml"
 
 
 # YAML Decimal 지원: float를 Decimal로 로드/저장
@@ -124,11 +144,37 @@ class DeviceSearchConfig:
         },
         'active_preset': 'normal',
         'logging': {
+            'level': 'INFO',
             'enable_timing_logs': True,
             'verbose_debug': False,
             'show_timing_in_statusbar': False,
         },
     }
+
+    # 로드 시 검증 규칙 — update_config_values()의 범위와 동일하게 유지한다.
+    # 위반 시 기준값(번들 default)으로 복귀시켜 구버전 값·손편집 오류로 인한 오작동을 막는다.
+    _RANGE_VALIDATORS = {
+        ('search', 'phase1', 'broadcast_timeout_sec'): (0.5, 10.0),
+        ('search', 'phase1', 'loop_select_timeout_sec'): (0.1, 5.0),
+        ('search', 'phase1', 'emit_stabilization_ms'): (0, 500),
+        ('search', 'phase3', 'device_query_timeout_sec'): (0.5, 5.0),
+        ('search', 'phase3', 'set_command_delay_ms'): (0, 2000),
+        ('search', 'tcp', 'max_parallel_workers'): (1, 50),
+        ('ui', 'progress_bar', 'update_percent'): (1, 100),
+        ('ui', 'progress_bar', 'auto_hide_delay_ms'): (0, 10000),
+        ('search', 'options', 'expected_device_count'): (0, 1000),
+        ('search', 'options', 'max_retry_count'): (1, 100),
+        ('search', 'retry', 'delay_between_retries_ms'): (0, 5000),
+    }
+    _ENUM_VALIDATORS = {
+        ('logging', 'level'): {'DEBUG', 'INFO', 'WARNING', 'ERROR'},
+    }
+
+    # 스키마 마이그레이션 step 레지스트리 {target_version: fn(cfg) -> cfg}.
+    # 현재는 키 이름·단위·의미가 깨진 변경이 없어 비어 있다.
+    # 그런 변경이 처음 생기는 날 해당 버전 step을 추가하고 schema_version을 올린다
+    # (골든 fixture 테스트 동반 — 개발자 규약). 엔진은 빈 체인이어도 테스트로 깨어 있다.
+    _MIGRATIONS = {}
 
     @staticmethod
     def get_defaults():
@@ -143,8 +189,14 @@ class DeviceSearchConfig:
         """
         self.logger = logging.getLogger(__name__)
         self.config = self._load_config(config_path)
+        # 사용자 설정 파일 경로 (지정 시 그것을, 아니면 ~/.wizconfig/)
+        self.config_file_path = Path(config_path) if config_path else _user_config_path()
+        # 범위/enum 위반 항목을 기준값으로 교정 (구버전 값·손편집 방어). 복귀 목록은 통지용.
+        self.last_resets = self._validate_loaded()
+        # 위반 교정분을 user 파일에 반영 (반복 방지). 지정 경로(테스트)는 건드리지 않음.
+        if self.last_resets and not config_path:
+            self._persist_after_reset()
         self._apply_active_preset()
-        self.config_file_path = Path('config/device_search_timing.yaml')  # 사용자 설정 파일 경로
 
     def _load_config(self, config_path: Optional[str]) -> Dict[str, Any]:
         """YAML 파일 로드 (우선순위 순서)
@@ -155,30 +207,193 @@ class DeviceSearchConfig:
         Returns:
             dict: 병합된 설정 값
         """
-        paths = []
+        # 최초 실행 시 사용자 설정 파일 프로비저닝 (자동 이주 또는 번들 복사)
+        if not config_path:
+            self._provision_user_config()
 
-        if config_path:
-            paths.append(Path(config_path))
+        user_path = Path(config_path) if config_path else _user_config_path()
+        bundled = self._load_yaml(_bundled_default_path())
+        user = self._load_yaml(user_path)
 
-        # config 폴더에서 탐색
-        paths.extend([
-            Path('config/device_search_timing.yaml'),
-            Path('config/device_search_timing.default.yaml'),
-        ])
+        # 기준 = DEFAULTS + 번들 default → 항상 완전한 키 집합 (불변식의 base)
+        reference = self._merge_config(self.DEFAULTS, bundled or {})
 
-        for path in paths:
-            if path.exists():
-                try:
-                    with open(path, 'r', encoding='utf-8') as f:
-                        loaded = yaml.load(f, Loader=DecimalSafeLoader)
-                        merged = self._merge_config(self.DEFAULTS, loaded or {})
-                        print(f"[Config] Loaded: {path}")
-                        return merged
-                except Exception as e:
-                    print(f"[Config] Warning: Failed to load {path}: {e}")
+        if not isinstance(user, dict):
+            print("[Config] No user config; using bundled default")
+            return reference
 
-        print("[Config] Using hardcoded defaults (no config file found)")
-        return self.DEFAULTS.copy()
+        # 스키마 마이그레이션 후 기준 위에 병합(fill)하여 누락 키를 채운다
+        migrated = self._migrate(user, reference, user_path)
+        merged = self._merge_config(reference, migrated)
+        print(f"[Config] Loaded: {user_path}")
+        return merged
+
+    def _load_yaml(self, path):
+        """YAML 파일 로드. 부재/실패 시 None."""
+        try:
+            p = Path(path)
+            if not p.exists():
+                return None
+            with open(p, 'r', encoding='utf-8') as f:
+                return yaml.load(f, Loader=DecimalSafeLoader)
+        except Exception as e:
+            print(f"[Config] Warning: Failed to load {path}: {e}")
+            return None
+
+    def _provision_user_config(self):
+        """사용자 설정 파일이 없으면 생성한다.
+
+        우선순위:
+        1. 기존 로컬 config/device_search_timing.yaml (구버전·개발 위치) → 자동 이주
+        2. 번들 기본값(default.yaml) → 복사
+        파일이 이미 있으면 아무 것도 하지 않는다.
+        """
+        user_path = _user_config_path()
+        if user_path.exists():
+            return
+        try:
+            user_path.parent.mkdir(parents=True, exist_ok=True)
+            legacy = Path('config/device_search_timing.yaml')
+            src = legacy if legacy.exists() else _bundled_default_path()
+            if Path(src).exists():
+                shutil.copyfile(str(src), str(user_path))
+                print(f"[Config] Provisioned user config: {src} -> {user_path}")
+        except Exception as e:
+            print(f"[Config] Warning: failed to provision user config: {e}")
+
+    @staticmethod
+    def _dig(d, path):
+        """중첩 dict에서 경로로 값 조회. (found, value) 반환."""
+        cur = d
+        for k in path:
+            if not isinstance(cur, dict) or k not in cur:
+                return False, None
+            cur = cur[k]
+        return True, cur
+
+    @staticmethod
+    def _put(d, path, value):
+        """중첩 dict 경로에 값 설정 (없는 중간 dict는 생성)."""
+        cur = d
+        for k in path[:-1]:
+            cur = cur.setdefault(k, {})
+        cur[path[-1]] = value
+
+    def _build_reference(self):
+        """검증 기준 — 번들 default(없으면 하드코딩 DEFAULTS)."""
+        bundled = _bundled_default_path()
+        if bundled.exists():
+            try:
+                with open(bundled, 'r', encoding='utf-8') as f:
+                    loaded = yaml.load(f, Loader=DecimalSafeLoader)
+                return self._merge_config(self.DEFAULTS, loaded or {})
+            except Exception:
+                pass
+        return self.DEFAULTS
+
+    def _validate_loaded(self):
+        """로드된 config의 범위/enum 위반 항목을 기준값으로 교정한다.
+
+        파일은 저장하지 않는다 (변형·저장은 schema_version 변경 시에만 — 고정2).
+        메모리상의 config만 교정해 즉시 crash/오작동을 막고, 복귀 목록은 통지용으로 반환.
+
+        Returns:
+            list[(key, bad_value, restored_value)]
+        """
+        try:
+            ref = self._build_reference()
+        except Exception as e:
+            self.logger.warning(f"config validate skipped: {e}")
+            return []
+
+        resets = []
+        # 범위 검증
+        for path, (lo, hi) in self._RANGE_VALIDATORS.items():
+            found, val = self._dig(self.config, path)
+            if not found:
+                continue
+            try:
+                num = float(val)
+            except (TypeError, ValueError):
+                num = None
+            if num is None or not (lo <= num <= hi):
+                rfound, rval = self._dig(ref, path)
+                if rfound:
+                    self._put(self.config, path, rval)
+                    resets.append(('.'.join(path), val, rval))
+        # enum 검증
+        for path, allowed in self._ENUM_VALIDATORS.items():
+            found, val = self._dig(self.config, path)
+            if not found:
+                continue
+            if str(val).upper() not in allowed:
+                rfound, rval = self._dig(ref, path)
+                if rfound:
+                    self._put(self.config, path, rval)
+                    resets.append(('.'.join(path), val, rval))
+        if resets:
+            self.logger.warning(
+                f"설정 검증: {len(resets)}개 항목을 기준값으로 복귀 — "
+                + ', '.join(r[0] for r in resets)
+            )
+        return resets
+
+    def _migrate(self, user, reference, user_path):
+        """user 설정을 기준 schema_version까지 순차 마이그레이션한다.
+
+        - 동일 버전: 그대로 (대부분의 실행)
+        - 미래 버전(다운그레이드): 원본 백업 후 기준값 사용 (안전 우선)
+        - 과거 버전: .bak 백업 후 등록 step을 버전 순서대로 적용
+        현재 _MIGRATIONS는 비어 있어 step 없이 schema_version만 정규화된다.
+        어떤 버전에서 점프해도 한 단계씩 올라오므로 오래된 고객 설정도 안전하다.
+        """
+        try:
+            uv = int(user.get('schema_version', 0))
+            tv = int(reference.get('schema_version', 0))
+        except (TypeError, ValueError):
+            return user
+
+        if uv == tv:
+            return user
+        if uv > tv:
+            self._backup_file(user_path, f'.v{uv}.bak')
+            self.logger.warning(
+                f"설정 schema_version({uv}) > 앱({tv}); 기준값으로 대체, 원본 백업"
+            )
+            return copy.deepcopy(reference)
+
+        # 과거 → 현재: 순차 업그레이드
+        self._backup_file(user_path, f'.v{uv}.bak')
+        cfg = copy.deepcopy(user)
+        for v in range(uv + 1, tv + 1):
+            step = self._MIGRATIONS.get(v)
+            if step is not None:
+                cfg = step(cfg)
+            cfg['schema_version'] = v
+        self.logger.info(f"설정 마이그레이션: v{uv} → v{tv}")
+        return cfg
+
+    def _backup_file(self, path, suffix):
+        """user 설정 파일을 suffix 붙여 백업한다 (롤백·복구용)."""
+        try:
+            p = Path(path)
+            if p.exists():
+                shutil.copyfile(str(p), str(p) + suffix)
+                self.logger.info(f"설정 백업: {p}{suffix}")
+        except Exception as e:
+            self.logger.warning(f"설정 백업 실패: {e}")
+
+    def _persist_after_reset(self):
+        """검증 위반 교정분을 user 파일에 저장한다 (원본 .invalid.bak 백업).
+
+        다음 실행에서 같은 위반이 반복되지 않도록 한다.
+        preset 적용 전 raw 상태를 저장한다 (preset 덮어쓴 값이 굳지 않도록).
+        """
+        try:
+            self._backup_file(self.config_file_path, '.invalid.bak')
+            self.save_config()
+        except Exception as e:
+            self.logger.warning(f"검증 교정 저장 실패: {e}")
 
     def _merge_config(self, defaults: Dict, user_config: Dict) -> Dict:
         """재귀적으로 기본값과 사용자 설정 병합
@@ -345,6 +560,11 @@ class DeviceSearchConfig:
         """
         return float(self.config['experimental']['auto_tune']['max_timeout_sec'])
 
+    def get_log_level(self) -> int:
+        """로그 레벨 반환 (logging.DEBUG / INFO / WARNING)"""
+        level_str = self.config.get('logging', {}).get('level', 'INFO').upper()
+        return getattr(logging, level_str, logging.INFO)
+
     def is_skip_phase1_emit_delay(self) -> bool:
         """Phase 1 emit 전 msleep 건너뛰기 여부
 
@@ -411,6 +631,7 @@ class DeviceSearchConfig:
             'phase1_emit_stabilization_ms': self.get_phase1_emit_stabilization_ms(),
             'skip_phase1_emit_delay': self.is_skip_phase1_emit_delay(),
             'phase3_device_query_timeout': self.get_phase3_device_query_timeout(),
+            'phase3_set_command_delay_ms': self.get_phase3_set_command_delay_ms(),
             'tcp_max_parallel_workers': self.get_tcp_max_parallel_workers(),
             'pgbar_update_percent': self.get_pgbar_update_percent(),
             'pgbar_auto_hide_delay_ms': self.get_pgbar_auto_hide_delay_ms(),
@@ -428,10 +649,8 @@ class DeviceSearchConfig:
             bool: 성공 여부
         """
         try:
-            # config 디렉토리 확인/생성
-            config_dir = Path('config')
-            if not config_dir.exists():
-                config_dir.mkdir(parents=True)
+            # 사용자 설정 디렉토리 확인/생성 (~/.wizconfig)
+            Path(self.config_file_path).parent.mkdir(parents=True, exist_ok=True)
 
             # YAML 파일 쓰기 (Decimal 지원)
             with open(self.config_file_path, 'w', encoding='utf-8') as f:
@@ -485,6 +704,12 @@ class DeviceSearchConfig:
                 if not (0.5 <= value <= 5.0):
                     raise ValueError(f"phase3_device_query_timeout must be 0.5~5.0, got {value}")
                 self.config['search']['phase3']['device_query_timeout_sec'] = value
+
+            if 'phase3_set_command_delay_ms' in updates:
+                value = int(updates['phase3_set_command_delay_ms'])
+                if not (0 <= value <= 2000):
+                    raise ValueError(f"phase3_set_command_delay_ms must be 0~2000, got {value}")
+                self.config['search']['phase3']['set_command_delay_ms'] = value
 
             if 'tcp_max_parallel_workers' in updates:
                 value = int(updates['tcp_max_parallel_workers'])
@@ -543,8 +768,8 @@ class DeviceSearchConfig:
             bool: 성공 여부
         """
         try:
-            # 1. 기본값 YAML 파일 읽기
-            default_path = Path('config/device_search_timing.default.yaml')
+            # 1. 기본값 YAML 파일 읽기 (번들 default — exe에서도 동작)
+            default_path = _bundled_default_path()
 
             if default_path.exists():
                 with open(default_path, 'r', encoding='utf-8') as f:
