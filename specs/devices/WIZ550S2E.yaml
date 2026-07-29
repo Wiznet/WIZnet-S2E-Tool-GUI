@@ -1,0 +1,138 @@
+# specs/devices/WIZ550S2E.yaml
+# WIZ550S2E DeviceSpec — Phase 5 (SPEC-02)
+# 가변 구조: 기본 162B + MQTT 70B(condition:mqtt) 또는 Modbus 2B(condition:modbus)
+# field.id 기준: WIZ550Profile.parse_s2e() 반환 dict 키
+# Phase 6: _build_wiz550_panel('WIZ550S2E') 가 이 파일을 로드하여 UI 동적 생성
+
+name: WIZ550S2E
+display_name: "WIZ550S2E"
+aliases:
+  - "WIZ550S2E"
+family: wiz550
+channels: 1
+
+protocol:
+  handler: WIZ550MSGHandler
+  port: 6550
+  product_code: [0x00, 0x00, 0x00]
+  config_size: 162
+  parser: parse_s2e
+  builder: build_s2e
+
+ui:
+  # SR과 달리 S2E는 data_bits 7/8 활성, MQTT(working_mode 4)·Modbus(variant) 지원 → 숨기지 않음.
+  # 전 WIZ550 공통 미지원만 숨김. 근거: research/2026-06-02-wiz550-series-characteristics.md
+  widget_overrides:
+    ch0_uart_name:   # uart_interface(Serial interface) 필드 없음 (전 WIZ550 미지원)
+      visible: false
+    ip_pppoe:        # 구조체에 PPPoE 없음
+      visible: false
+  sections:
+    - id: network
+      label: "Network"
+      fields:
+        - {id: mac,           label: "MAC Address",  type: readonly}
+        - {id: dhcp_use,      label: "DHCP",         type: checkbox}
+        - {id: local_ip,      label: "IP Address",   type: ip}
+        - {id: subnet,        label: "Subnet Mask",  type: ip}
+        - {id: gateway,       label: "Gateway",      type: ip}
+        - {id: dns_server_ip, label: "DNS Server",   type: ip}
+        - id: working_mode
+          label: "Working Mode"
+          type: dropdown
+          # 원본 C 펌웨어 기준: 0=TCP Client, 1=TCP Server, 2=TCP Mixed, 3=UDP
+          # MQTT FW(fw_ver[1] 홀수)에서만 4=MQTT 추가됨
+          choices:
+            0: "TCP Client"
+            1: "TCP Server"
+            2: "TCP Mixed"
+            3: "UDP"
+            4: "MQTT"
+        - {id: local_port,  label: "Local Port",   type: uint16}
+        - {id: remote_ip,   label: "Remote IP",    type: ip}
+        - {id: remote_port, label: "Remote Port",  type: uint16}
+
+    - id: serial
+      label: "Serial"
+      fields:
+        - id: baud_rate
+          label: "Baud Rate"
+          type: dropdown
+          # baud choices 키 = 실제 bps 정수값 (WIZ550Profile.py가 bps 정수 저장).
+          # S2E baud_table = {300,600,...,230400} (11값, 300 포함, SR과 달리 300 지원).
+          # 460800 은 baud_table 에 없음 → 전송 시 fallback. 제외. (factory default 115200)
+          # 근거: uartHandler_wiz550s2e.c baud_table, research/2026-06-02-wiz550-series-characteristics.md
+          choices:
+            300: "300 bps"
+            600: "600 bps"
+            1200: "1200 bps"
+            2400: "2400 bps"
+            4800: "4800 bps"
+            9600: "9600 bps"
+            19200: "19200 bps"
+            38400: "38400 bps"
+            57600: "57600 bps"
+            115200: "115200 bps"
+            230400: "230400 bps"
+        - id: data_bits
+          label: "Data Bits"
+          type: dropdown
+          # FW: S2E는 7·8 둘 다 지원 (uartHandler_wiz550s2e.c:58~69, DATA7BIT 가드 없음).
+          # SR(DATA7BIT_ENABLE=0, 8 고정)과 반대. 값=실제 bit수(7/8). 인덱스 아님.
+          # 근거: doc/dev/WIZ550-serial-fw-reference-ko.md
+          choices:
+            7: "7-bit"
+            8: "8-bit"
+        - id: parity
+          label: "Parity"
+          type: dropdown
+          choices:
+            0: "None"
+            1: "Odd"
+            2: "Even"
+        - id: stop_bits
+          label: "Stop Bits"
+          type: dropdown
+          # 원본 기준: 실제값 저장 (1=1bit, 2=2bits) — 인덱스 아님
+          choices:
+            1: "1 bit"
+            2: "2 bits"
+        - id: flow_control
+          label: "Flow Control"
+          type: dropdown
+          # 원본 기준: 0=None, 1=RTS/CTS, 2=RS422, 3=RS485
+          choices:
+            0: "None"
+            1: "RTS/CTS"
+
+    - id: options
+      label: "Options"
+      fields:
+        - {id: pw_setting,     label: "Search Password",       type: text}
+        - {id: pw_connect,     label: "Connect Password",      type: text}
+        - {id: serial_command, label: "AT Command Mode",       type: checkbox}
+        - {id: dns_use,        label: "DNS Enable",            type: checkbox}
+        - {id: inactivity,     label: "Inactivity Timeout",    type: uint16}
+        - {id: reconnection,   label: "Reconnection Interval", type: uint16}
+
+    - id: mqtt
+      label: "MQTT"
+      condition: mqtt
+      fields:
+        # RESEARCH.md Pitfall: publish_topic/subscribe_topic 아님 — parse_s2e() 실제 키명 사용
+        - {id: mqtt_user,      label: "MQTT Username",   type: text}
+        - {id: mqtt_pw,        label: "MQTT Password",   type: text}
+        - {id: mqtt_pub_topic, label: "Publish Topic",   type: text}
+        - {id: mqtt_sub_topic, label: "Subscribe Topic", type: text}
+
+    - id: modbus
+      label: "Modbus"
+      condition: modbus
+      fields:
+        - {id: modbus_use,  label: "Modbus Enable", type: checkbox}
+        - id: modbus_mode
+          label: "Modbus Mode"
+          type: dropdown
+          choices:
+            0: "RTU"
+            1: "ASCII"

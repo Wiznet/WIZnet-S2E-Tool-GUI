@@ -2,6 +2,14 @@
 # 모든 WIZnet S2E 장비에 공통인 커맨드 정의
 # 소스 기준: wizcmdset.py::common_cmdset + WIZ107/108 clsSEC.COMMANDS 교집합
 
+meta:
+  id: base
+  name: "Base Commands"
+  category: core
+  description: "모든 WIZnet S2E 장비에 공통인 네트워크/시리얼/시스템 커맨드"
+  requires: []
+  conflicts: []
+
 # ------- Read-Only (장치 정보) -------
 
 MC:

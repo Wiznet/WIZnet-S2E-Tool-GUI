@@ -21,6 +21,8 @@ parts/
 sdist/
 var/
 wheels/
+# custom PyInstaller bootloader build (local, see setup_bootloader.ps1)
+_pyinstaller_src/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -130,3 +132,9 @@ _workspace/
 
 # Claude AI work documents
 .claude/
+
+# GSD planning config (local only)
+.planning/config.json
+
+# Task list (local only)
+TASKS.md

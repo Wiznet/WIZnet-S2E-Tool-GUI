@@ -3,6 +3,17 @@
 # 채널 0 커맨드는 base.yaml 공통 사용
 # 소스 기준: wizcmdset.py::WIZ752_CMDSET
 
+meta:
+  id: two_port
+  name: "Two-Port Channel 1"
+  category: channel
+  description: "WIZ752SR-12x 채널 1 전용 커맨드 (채널 0은 base.yaml 사용)"
+  requires:
+    - base
+  conflicts:
+    - w55rp20_two_port
+
+
 QS:
   description: "Operation status for channel 1"
   regex: ""

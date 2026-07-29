@@ -1,0 +1,409 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+wiz550_fw_dialog.py — WIZ550 TFTP FW 업로드 다이얼로그
+
+D-01: 탭 2개 구조 (자동/수동)
+D-02: 포트 69 바인딩 실패 시 오류 메시지 후 중단
+D-03: 수동 탭 서버 IP = NIC IP 자동채움
+D-04: pw 입력 필드 optional
+D-07: QProgressBar indeterminate → 완료 100%
+UI-SPEC: fw_git_dialog.py 패턴 계승
+"""
+
+import os
+import socket
+
+import ifaddr
+
+from PyQt5.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout,
+    QTabWidget, QWidget, QLabel, QLineEdit,
+    QPushButton, QProgressBar, QFrame,
+    QFileDialog, QMessageBox,
+)
+
+from WIZ550FWUploadThread import WIZ550FWUploadThread
+from utils import logger
+
+
+def _best_server_ip(target_ip: str) -> tuple:
+    """Returns (matched_ip: str, all_ipv4: list[str]).
+    matched_ip='' when no local NIC shares the /24 subnet with target_ip."""
+    target_prefix = '.'.join(target_ip.split('.')[:3]) + '.'
+    all_ipv4 = []
+    try:
+        for adapter in ifaddr.get_adapters():
+            for ip in adapter.ips:
+                if isinstance(ip.ip, str) and not ip.ip.startswith('127.'):
+                    all_ipv4.append(ip.ip)
+                    if ip.ip.startswith(target_prefix):
+                        logger.info(f"[WIZ550FW] TFTP server IP: {ip.ip} (target={target_ip})")
+                        return ip.ip, all_ipv4
+    except Exception as e:
+        logger.warning(f"[WIZ550FW] NIC subnet matching failed: {e}")
+    logger.warning(f"[WIZ550FW] No NIC on {target_prefix}* — available: {all_ipv4}")
+    return "", all_ipv4
+
+
+def _warn_no_nic(parent, target_ip: str, all_ips: list) -> bool:
+    """NIC 서브넷 불일치 경고 다이얼로그. 사용자가 Proceed 선택 시 True 반환."""
+    prefix = '.'.join(target_ip.split('.')[:3]) + '.0'
+    nic_list = '\n'.join(f'  • {ip}' for ip in all_ips) or '  (none found)'
+    msg = (
+        f"No local NIC is on the target device's subnet.\n\n"
+        f"Target device:  {target_ip}\n"
+        f"Target subnet:  {prefix}/24\n\n"
+        f"Available local NICs:\n{nic_list}\n\n"
+        f"WIZ550 is a LAN-only device. Packets sent from a different subnet "
+        f"cannot reach it without a gateway.\n\n"
+        f"The upload will almost certainly fail with a 30-second timeout.\n\n"
+        f"Recommended: click Cancel and connect a NIC to the {prefix}/24 network."
+    )
+    box = QMessageBox(parent)
+    box.setIcon(QMessageBox.Warning)
+    box.setWindowTitle("Network Mismatch — Upload Will Likely Fail")
+    box.setText(msg)
+    cancel_btn  = box.addButton("Cancel (Recommended)", QMessageBox.RejectRole)
+    proceed_btn = box.addButton("Proceed Anyway",       QMessageBox.AcceptRole)
+    box.setDefaultButton(cancel_btn)
+    box.exec_()
+    return box.clickedButton() == proceed_btn
+
+
+def _is_boot_file(filename: str) -> bool:
+    """파일명에 'BOOT' 포함 시 True (대소문자 무관)."""
+    return 'BOOT' in os.path.basename(filename).upper()
+
+
+class WIZ550FWDialog(QDialog):
+    def __init__(self, localip_addr: str = "",
+                 target_ip: str = "",
+                 target_mac: str = "",
+                 parent=None):
+        super().__init__(parent)
+        self._target_ip     = target_ip
+        self._localip_addr  = localip_addr   # 업로드 시점에 재계산 (fallback 보관)
+        self._target_mac    = target_mac
+        self._upload_thread = None
+        self._fw_path       = ""
+        self._build_ui()
+        self._connect_signals()
+
+    # ── UI 구성 ───────────────────────────────────────────────────────
+
+    def _build_ui(self):
+        self.setWindowTitle("WIZ550 FW Upload")
+        self.setFixedWidth(480)
+        self.setModal(True)
+
+        root = QVBoxLayout(self)
+        root.setSpacing(8)
+        root.setContentsMargins(12, 12, 12, 12)
+
+        self.tab_widget = QTabWidget()
+        root.addWidget(self.tab_widget)
+
+        self._build_auto_tab()
+        self._build_manual_tab()
+
+        self.lbl_status = QLabel("")
+        self.lbl_status.setFixedHeight(20)
+        root.addWidget(self.lbl_status)
+
+        btn_row = QHBoxLayout()
+        btn_row.addStretch()
+
+        self.btn_upload = QPushButton("Upload")
+        self.btn_upload.setDefault(True)
+        self.btn_upload.setFixedWidth(90)
+        self.btn_upload.setStyleSheet("""
+            QPushButton {
+                background-color: #cc785c;
+                color: white;
+                border-radius: 6px;
+                padding: 6px 16px;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #a9583e;
+            }
+            QPushButton:disabled {
+                background-color: #e6dfd8;
+                color: #6c6a64;
+            }
+        """)
+        self.btn_cancel = QPushButton("Close")
+        self.btn_cancel.setFixedWidth(90)
+
+        btn_row.addWidget(self.btn_upload)
+        btn_row.addWidget(self.btn_cancel)
+        root.addLayout(btn_row)
+
+    def _build_auto_tab(self):
+        auto_widget = QWidget()
+        auto_layout = QVBoxLayout(auto_widget)
+        auto_layout.setSpacing(8)
+        auto_layout.setContentsMargins(12, 12, 12, 12)
+
+        # FW 파일 선택 행
+        file_row = QHBoxLayout()
+        lbl_file = QLabel("FW File:")
+        lbl_file.setFixedWidth(80)
+        self.edit_file = QLineEdit()
+        self.edit_file.setReadOnly(True)
+        self.edit_file.setPlaceholderText("No file selected")
+        self.btn_browse = QPushButton("Browse...")
+        self.btn_browse.setFixedWidth(70)
+        file_row.addWidget(lbl_file)
+        file_row.addWidget(self.edit_file, 1)
+        file_row.addWidget(self.btn_browse)
+        auto_layout.addLayout(file_row)
+
+        # 비밀번호 행
+        pw_row = QHBoxLayout()
+        lbl_pw = QLabel("Password:")
+        lbl_pw.setFixedWidth(80)
+        self.edit_pw = QLineEdit()
+        self.edit_pw.setEchoMode(QLineEdit.Password)
+        self.edit_pw.setPlaceholderText("Optional")
+        pw_row.addWidget(lbl_pw)
+        pw_row.addWidget(self.edit_pw, 1)
+        auto_layout.addLayout(pw_row)
+
+        # 구분선
+        sep = QFrame()
+        sep.setFrameShape(QFrame.HLine)
+        sep.setFrameShadow(QFrame.Sunken)
+        auto_layout.addWidget(sep)
+
+        # 진행 바 (업로드 중에만 표시)
+        self.pgbar_auto = QProgressBar()
+        self.pgbar_auto.setRange(0, 100)
+        self.pgbar_auto.setValue(0)
+        self.pgbar_auto.setVisible(False)
+        auto_layout.addWidget(self.pgbar_auto)
+
+        auto_layout.addStretch()
+        self.tab_widget.addTab(auto_widget, "Auto (Built-in TFTP)")
+
+    def _build_manual_tab(self):
+        manual_widget = QWidget()
+        manual_layout = QVBoxLayout(manual_widget)
+        manual_layout.setSpacing(8)
+        manual_layout.setContentsMargins(12, 12, 12, 12)
+
+        # 서버 IP 행
+        ip_row = QHBoxLayout()
+        lbl_ip = QLabel("Server IP:")
+        lbl_ip.setFixedWidth(80)
+        self.edit_ip = QLineEdit(self._localip_addr)
+        ip_row.addWidget(lbl_ip)
+        ip_row.addWidget(self.edit_ip, 1)
+        manual_layout.addLayout(ip_row)
+
+        # 포트 행
+        port_row = QHBoxLayout()
+        lbl_port = QLabel("Port:")
+        lbl_port.setFixedWidth(80)
+        self.edit_port = QLineEdit("69")
+        port_row.addWidget(lbl_port)
+        port_row.addWidget(self.edit_port, 1)
+        manual_layout.addLayout(port_row)
+
+        # 파일명 행
+        fname_row = QHBoxLayout()
+        lbl_fname = QLabel("File Name:")
+        lbl_fname.setFixedWidth(80)
+        self.edit_fname = QLineEdit()
+        fname_row.addWidget(lbl_fname)
+        fname_row.addWidget(self.edit_fname, 1)
+        manual_layout.addLayout(fname_row)
+
+        # 비밀번호 행
+        pw_row = QHBoxLayout()
+        lbl_pw_m = QLabel("Password:")
+        lbl_pw_m.setFixedWidth(80)
+        self.edit_pw_manual = QLineEdit()
+        self.edit_pw_manual.setEchoMode(QLineEdit.Password)
+        self.edit_pw_manual.setPlaceholderText("Optional")
+        pw_row.addWidget(lbl_pw_m)
+        pw_row.addWidget(self.edit_pw_manual, 1)
+        manual_layout.addLayout(pw_row)
+
+        manual_layout.addStretch()
+        self.tab_widget.addTab(manual_widget, "Manual (External TFTP)")
+
+    # ── 시그널 연결 ───────────────────────────────────────────────────
+
+    def _connect_signals(self):
+        self.btn_browse.clicked.connect(self._on_browse)
+        self.btn_upload.clicked.connect(self._on_upload)
+        self.btn_cancel.clicked.connect(self._on_cancel)
+
+    # ── 이벤트 핸들러 ─────────────────────────────────────────────────
+
+    def _on_browse(self):
+        fname, _ = QFileDialog.getOpenFileName(
+            self, "Select Firmware File", "", "Binary Files (*.bin);;All Files (*)"
+        )
+        if not fname:
+            return
+        if _is_boot_file(fname):
+            QMessageBox.warning(
+                self, "File Error",
+                "Cannot upload BOOT firmware file. Please select an APP firmware file only."
+            )
+            return
+        self._fw_path = fname
+        self.edit_file.setText(os.path.basename(fname))
+
+    def _on_upload(self):
+        valid, err_msg = self._validate_inputs()
+        if not valid:
+            self._set_status(err_msg, error=True)
+            return
+
+        tab = self.tab_widget.currentIndex()
+        if tab == 0:
+            mode        = 'auto'
+            fw_path     = self._fw_path
+            # 업로드 직전 target_ip 서브넷 기준 NIC 재선택 (다이얼로그 열린 후 NIC 변경 대응)
+            server_ip, all_ips = _best_server_ip(self._target_ip)
+            if not server_ip:
+                if not _warn_no_nic(self, self._target_ip, all_ips):
+                    return
+                server_ip = ""
+            server_port = 69
+            password    = self.edit_pw.text()
+        else:
+            mode        = 'manual'
+            fw_path     = ""
+            server_ip   = self.edit_ip.text().strip()
+            server_port = int(self.edit_port.text().strip())
+            password    = self.edit_pw_manual.text()
+
+        self._set_uploading_state(True)
+        self._set_status("Sending firmware upload request...", muted=True)
+
+        self._upload_thread = WIZ550FWUploadThread(
+            mode=mode,
+            fw_path=fw_path,
+            target_ip=self._target_ip,
+            target_mac=self._target_mac,
+            server_ip=server_ip,
+            server_port=server_port,
+            password=password,
+            iface_ip=self._localip_addr or "",
+        )
+        self._upload_thread.progress.connect(self._on_progress)
+        self._upload_thread.finished.connect(self._on_finished)
+        self._upload_thread.error.connect(self._on_error)
+        self._upload_thread.start()
+        logger.info(f"[WIZ550FW] 업로드 시작 mode={mode} target={self._target_ip}")
+
+    def _on_cancel(self):
+        if self._upload_thread is not None and self._upload_thread.isRunning():
+            self._upload_thread.stop()
+            self._upload_thread.wait(3000)
+            self._upload_thread = None
+        self.reject()
+
+    # ── 스레드 시그널 핸들러 ──────────────────────────────────────────
+
+    def _on_progress(self, msg: str):
+        self._set_status(msg, muted=True)
+
+    def _on_finished(self, success: bool):
+        self._set_uploading_state(False)
+        if success:
+            self._set_status("Upload complete!", success=True)
+        else:
+            current = self.lbl_status.text()
+            progress_msgs = {
+                "Sending firmware upload request...",
+                "Waiting for device response...",
+            }
+            if not current or current in progress_msgs:
+                self._set_status(
+                    "Upload timed out. No response from device. "
+                    "Please retry or check the device connection.",
+                    error=True,
+                )
+
+    def _on_error(self, msg: str):
+        self._set_uploading_state(False)
+        if "timed out" in msg.lower() or "no response" in msg.lower():
+            self._set_status(
+                "Upload timed out. No response from device. "
+                "Please retry or check the device connection.",
+                error=True,
+            )
+        else:
+            self._set_status(msg, error=True)
+
+    # ── 상태 관리 ─────────────────────────────────────────────────────
+
+    def _set_uploading_state(self, uploading: bool):
+        """D-07 + UI-SPEC Interaction States."""
+        self.btn_upload.setEnabled(not uploading)
+        self.tab_widget.setEnabled(not uploading)
+        if uploading:
+            self.btn_cancel.setText("Stop Upload")
+            self.pgbar_auto.setRange(0, 0)   # indeterminate
+            self.pgbar_auto.setValue(0)
+            self.pgbar_auto.setVisible(True)
+        else:
+            self.btn_cancel.setText("Close")
+            self.pgbar_auto.setRange(0, 100)
+            self.pgbar_auto.setValue(100)
+
+    def _set_status(self, msg: str, *, error: bool = False,
+                    success: bool = False, muted: bool = False):
+        self.lbl_status.setText(msg)
+        if error:
+            self.lbl_status.setStyleSheet("color: #c64545;")
+        elif success:
+            self.lbl_status.setStyleSheet("color: #5db872;")
+        elif muted:
+            self.lbl_status.setStyleSheet("color: #6c6a64;")
+        else:
+            self.lbl_status.setStyleSheet("")
+
+    # ── 입력 유효성 검증 ──────────────────────────────────────────────
+
+    def _validate_inputs(self) -> tuple:
+        tab = self.tab_widget.currentIndex()
+        if tab == 0:
+            if not self._fw_path:
+                return False, "Please select a firmware file."
+            if len(os.path.basename(self._fw_path)) > 50:
+                return False, "File name is too long (max 50 characters)."
+            return True, ""
+        else:
+            ip_text    = self.edit_ip.text().strip()
+            port_text  = self.edit_port.text().strip()
+            fname_text = self.edit_fname.text().strip()
+            try:
+                socket.inet_aton(ip_text)
+            except OSError:
+                return False, "Invalid server IP address."
+            try:
+                port = int(port_text)
+                if not (1 <= port <= 65535):
+                    raise ValueError
+            except ValueError:
+                return False, "Port must be between 1 and 65535."
+            if not fname_text:
+                return False, "Please enter the firmware file name on the TFTP server."
+            if len(fname_text) > 50:
+                return False, "File name is too long (max 50 characters)."
+            return True, ""
+
+    # ── 닫기 안전 정리 ────────────────────────────────────────────────
+
+    def closeEvent(self, event):
+        if self._upload_thread is not None and self._upload_thread.isRunning():
+            self._upload_thread.stop()
+            self._upload_thread.wait(3000)
+        event.accept()
