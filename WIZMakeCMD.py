@@ -131,7 +131,7 @@ Command Set
 cmd_1p_boot = cmd_boot
 cmd_1p_default = cmd_ch1
 cmd_1p_advanced = cmd_ch1 + cmd_wiz75xsr + cmd_added
-cmd_2p_default = cmd_ch1 + cmd_ch2
+cmd_2p_default = cmd_ch1 + cmd_ch2 + cmd_wiz75xsr + ["SC"]
 
 # Security devices
 cmd_wiz510ssl = cmd_security_base + cmd_wiz510ssl_added

@@ -63,6 +63,9 @@ search_cmd_order:
   - SS
   - NP
   - SP
+  - S0
+  - S1
+  - SC
 
 command_groups:
   - base

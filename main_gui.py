@@ -967,7 +967,7 @@ class WIZWindow(QMainWindow, main_window):
         # btn_upload → 드롭다운 메뉴 (FW from local PC / FW from Git)
         upload_menu = QMenu(self)
         self._act_fw_local = upload_menu.addAction("FW from local PC")
-        self._act_fw_git   = upload_menu.addAction("FW from Git")
+        self._act_fw_git = upload_menu.addAction("FW from Git")
         self.btn_upload.setMenu(upload_menu)
         self._act_fw_local.triggered.connect(self.event_upload_clicked)
         self._act_fw_git.triggered.connect(self.event_fw_from_git)
@@ -1004,31 +1004,38 @@ class WIZWindow(QMainWindow, main_window):
         self.btn_factory.addAction(self.factory_firmware_action)
 
     # @funclog(logger)
+    def _sync_userio_tab_state(self):
+        """User I/O 탭 활성 상태에 따라 GPIO 실시간 리프레시 시작/중지.
+
+        dev_clicked()/tab_changed() 공용 — 둘 다 '탭==2면 시작'이 필요하고,
+        tab_changed()는 그 외 탭 전환 시 정지까지 담당해서 한 곳으로 합침.
+        """
+        if not self.curr_dev or self.curr_dev not in IO_TAB_DEV_FAMILY:
+            return
+        if self.generalTab.currentIndex() == 2:
+            self.logger.debug(
+                f"Start DataRefresh: {self.curr_dev}, currentTab: {self.generalTab.currentIndex()}"
+            )
+            # Expansion GPIO tab
+            self.gpio_check()
+            self.get_refresh_time()
+        else:
+            try:
+                if self.datarefresh is not None:
+                    self.logger.debug(
+                        f"Stop DataRefresh: {self.curr_dev}, currentTab: {self.generalTab.currentIndex()}"
+                    )
+                    if self.datarefresh.isRunning():
+                        self.datarefresh.terminate()
+            except Exception as e:
+                self.logger.error(e)
+
     def tab_changed(self):
         """
         When tab changed
         - check user IO tab
         """
-        if not self.curr_dev:
-            return
-        if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev:
-            if self.generalTab.currentIndex() == 2:
-                self.logger.debug(
-                    f"Start DataRefresh: {self.curr_dev}, currentTab: {self.generalTab.currentIndex()}"
-                )
-                # Expansion GPIO tab
-                self.gpio_check()
-                self.get_refresh_time()
-            else:
-                try:
-                    if self.datarefresh is not None:
-                        self.logger.debug(
-                            f"Stop DataRefresh: {self.curr_dev}, currentTab: {self.generalTab.currentIndex()}"
-                        )
-                        if self.datarefresh.isRunning():
-                            self.datarefresh.terminate()
-                except Exception as e:
-                    self.logger.error(e)
+        self._sync_userio_tab_state()
 
     @funclog(logger)
     def net_ifs_selected(self, netifs):
@@ -1088,7 +1095,6 @@ class WIZWindow(QMainWindow, main_window):
 
         self.statusbar.showMessage(f"Selected eth: {selected_ip} - {selected_name}")
         self.selected_eth = selected_ip
-
 
     # Get network adapter & IP list
     def net_adapter_info(self):
@@ -1837,13 +1843,7 @@ class WIZWindow(QMainWindow, main_window):
         - WIZ5XXSR-RP (only use A,B)
         """
         # if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
-        if (
-            "WIZ750" in self.curr_dev
-            or "WIZ750SR-T1L" in self.curr_dev
-            or "W7500" in self.curr_dev
-            or self.curr_dev in TWO_PORT_DEV
-            or "WIZ752" in self.curr_dev
-        ):
+        if self.curr_dev in IO_TAB_DEV_FAMILY:
             # ! Check current tab length
             # self.logger.debug(f'totalTab: {len(self.generalTab)}, currentTab: {self.generalTab.currentIndex()}')
             # self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
@@ -2309,12 +2309,16 @@ class WIZWindow(QMainWindow, main_window):
 
                         if b"GA" in cmdset_list[i]:
                             self.gpioa_get.setText(cmdset_list[i][2:].decode())
+                            self.gpioa_set.setCurrentIndex(int(cmdset_list[i][2:]))
                         if b"GB" in cmdset_list[i]:
                             self.gpiob_get.setText(cmdset_list[i][2:].decode())
+                            self.gpiob_set.setCurrentIndex(int(cmdset_list[i][2:]))
                         if b"GC" in cmdset_list[i]:
                             self.gpioc_get.setText(cmdset_list[i][2:].decode())
+                            self.gpioc_set.setCurrentIndex(int(cmdset_list[i][2:]))
                         if b"GD" in cmdset_list[i]:
                             self.gpiod_get.setText(cmdset_list[i][2:].decode())
+                            self.gpiod_set.setCurrentIndex(int(cmdset_list[i][2:]))
                 except Exception as e:
                     self.logger.error(e)
 
@@ -2460,10 +2464,10 @@ class WIZWindow(QMainWindow, main_window):
 
             # Set socket for search
             # self.logger.info(f"[TIMING] {self._T()} socket_config() 시작")
-            _t_sock = time.time()
+            # _t_sock = time.time()
             self.socket_config()
             # self.logger.info(f"[TIMING] {self._T()} socket_config() 완료 ({(time.time() - _t_sock) * 1000:.1f}ms 소요)")
-            _conf_sock = "None" if not hasattr(self, "conf_sock") else self.conf_sock
+            # _conf_sock = "None" if not hasattr(self, "conf_sock") else self.conf_sock
             # self.logger.info(f"search: conf_sock: {_conf_sock}")
 
             # Search devices
@@ -3434,10 +3438,7 @@ class WIZWindow(QMainWindow, main_window):
         # dev_info = []
         # clicked_mac = ""
         # if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
-        if self.curr_dev and ("WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev):
-            if self.generalTab.currentIndex() == 2:
-                self.gpio_check()
-                self.get_refresh_time()
+        self._sync_userio_tab_state()
         # for currentItem in self.list_device.selectedItems():
         # print('Click info:', currentItem, currentItem.row(), currentItem.column(), currentItem.text())
         # print('clicked', self.list_device.selectedItems()[0].text())
@@ -5057,7 +5058,7 @@ class WIZWindow(QMainWindow, main_window):
             if self.curr_st in DeviceStatusMinimum:
                 pass
             else:
-                if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev:
+                if self.curr_dev in IO_TAB_DEV_FAMILY:
                     setcmd["CA"] = str(self.gpioa_config.currentIndex())
                     setcmd["CB"] = str(self.gpiob_config.currentIndex())
                     setcmd["CC"] = str(self.gpioc_config.currentIndex())
@@ -5070,8 +5071,6 @@ class WIZWindow(QMainWindow, main_window):
                         setcmd["GC"] = str(self.gpioc_set.currentIndex())
                     if self.gpiod_config.currentIndex() == 1:
                         setcmd["GD"] = str(self.gpiod_set.currentIndex())
-                elif "WIZ752" in self.curr_dev:
-                    pass
 
             # for channel 2
             if self.curr_dev in TWO_PORT_DEV or "WIZ752" in self.curr_dev:
