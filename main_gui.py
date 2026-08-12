@@ -3882,6 +3882,25 @@ class WIZWindow(QMainWindow, main_window):
 
     # ──────────────────────────────────────────────────────────────
 
+    def _apply_uart_interface(self, combo, dev_data, code_key, str_key, writable):
+        """Serial interface 콤보박스 표시.
+        writable(W55RP20 계열)이면 UI/EI/WI/YI 코드값으로 선택 가능한 항목을 세팅하고,
+        아니면(다른 장치, RO) UN/EN/WN/YN 문자열을 그대로 표시만 한다(편집 불가).
+        """
+        if writable and code_key in dev_data and dev_data[code_key].isdigit():
+            idx = int(dev_data[code_key])
+            combo.setEditable(False)
+            if 0 <= idx < combo.count():
+                combo.setCurrentIndex(idx)
+            combo.setEnabled(True)
+        else:
+            combo.setEnabled(False)
+            combo.setEditable(True)
+            if combo.lineEdit() is not None:
+                combo.lineEdit().setReadOnly(True)
+            if str_key in dev_data:
+                combo.setEditText(dev_data[str_key])
+
     def fill_devinfo(self, dev_data):
         if not self.curr_dev or not self.curr_ver:
             return
@@ -3895,8 +3914,10 @@ class WIZWindow(QMainWindow, main_window):
             # device info - channel 1
             if "ST" in dev_data:
                 self.ch0_status.setText(dev_data["ST"])
-            if "UN" in dev_data:
-                self.ch0_uart_name.setText(dev_data["UN"])
+            if "UN" in dev_data or "UI" in dev_data:
+                self._apply_uart_interface(
+                    self.ch0_uart_name, dev_data, "UI", "UN", self.curr_dev in W55RP20_FAMILY
+                )
             # Network - general
             if "IM" in dev_data:
                 if dev_data["IM"] == "0":
@@ -4098,7 +4119,7 @@ class WIZWindow(QMainWindow, main_window):
                 if "QS" in dev_data:
                     self.ch1_status.setText(dev_data["QS"])
                 if "EN" in dev_data:
-                    self.ch1_uart_name.setText(dev_data["EN"])
+                    self._apply_uart_interface(self.ch1_uart_name, dev_data, "EI", "EN", False)
                 # Network - channel 2
                 if "QO" in dev_data:
                     if dev_data["QO"] == "0":
@@ -4171,8 +4192,8 @@ class WIZWindow(QMainWindow, main_window):
 
                 if "QS" in dev_data:
                     self.ch1_status.setText(dev_data["QS"])
-                if "EN" in dev_data:
-                    self.ch1_uart_name.setText(dev_data["EN"])
+                if "EN" in dev_data or "EI" in dev_data:
+                    self._apply_uart_interface(self.ch1_uart_name, dev_data, "EI", "EN", True)
 
                 if "AO" in dev_data:
                     ao_val = dev_data["AO"]
@@ -4266,8 +4287,8 @@ class WIZWindow(QMainWindow, main_window):
 
                     if "GS" in dev_data:
                         self.ch2_status.setText(dev_data["GS"])
-                    if "WN" in dev_data:
-                        self.ch2_uart_name.setText(dev_data["WN"])
+                    if "WN" in dev_data or "WI" in dev_data:
+                        self._apply_uart_interface(self.ch2_uart_name, dev_data, "WI", "WN", True)
 
                     if "TO" in dev_data:
                         to_val = dev_data["TO"]
@@ -4360,8 +4381,8 @@ class WIZWindow(QMainWindow, main_window):
 
                     if "CS" in dev_data:
                         self.ch3_status.setText(dev_data["CS"])
-                    if "YN" in dev_data:
-                        self.ch3_uart_name.setText(dev_data["YN"])
+                    if "YN" in dev_data or "YI" in dev_data:
+                        self._apply_uart_interface(self.ch3_uart_name, dev_data, "YI", "YN", True)
 
                     if "JO" in dev_data:
                         jo_val = dev_data["JO"]
@@ -4517,10 +4538,12 @@ class WIZWindow(QMainWindow, main_window):
                     if "SO" in dev_data:
                         self.lineedit_ch0_ssl_recv_timeout.setText(dev_data["SO"])
 
-            self.object_config()
         except Exception as e:
             self.logger.error(e)
             self.msg_error("Get device information error {}".format(e))
+        finally:
+            # 필드 채우기 도중 예외가 나도 탭 구성(CH2/CH3 표시)은 항상 실행
+            self.object_config()
 
     def msg_error(self, error):
         msgbox = QMessageBox(self)
@@ -4623,6 +4646,8 @@ class WIZWindow(QMainWindow, main_window):
             setcmd["PR"] = str(self.ch0_parity.currentIndex())
             setcmd["SB"] = str(self.ch0_stopbit.currentIndex())
             setcmd["FL"] = str(self.ch0_flow.currentIndex())
+            if self.curr_dev in W55RP20_FAMILY:
+                setcmd["UI"] = str(self.ch0_uart_name.currentIndex())
             # 문맥으로 보면 ch0_modbus_protocol.isEnabled() 로 처리하는게 맞지만 항상 False 가 나와서 모델&버전 비교로 대체 #36
             if self._modbus_supported():
                 modbus_key = self._modbus_param_key()
@@ -4810,6 +4835,7 @@ class WIZWindow(QMainWindow, main_window):
                 setcmd["EP"] = str(self.ch1_parity.currentIndex())
                 setcmd["ES"] = str(self.ch1_stopbit.currentIndex())
                 setcmd["EF"] = str(self.ch1_flow.currentIndex())
+                setcmd["EI"] = str(self.ch1_uart_name.currentIndex())
 
                 setcmd["AT"] = self.ch1_pack_time.text()
                 setcmd["NS"] = self.ch1_pack_size.text()
@@ -4875,6 +4901,7 @@ class WIZWindow(QMainWindow, main_window):
                     setcmd["WP"] = str(self.ch2_parity.currentIndex())
                     setcmd["WS"] = str(self.ch2_stopbit.currentIndex())
                     setcmd["WF"] = str(self.ch2_flow.currentIndex())
+                    setcmd["WI"] = str(self.ch2_uart_name.currentIndex())
 
                     setcmd["TT"] = self.ch2_pack_time.text()
                     setcmd["HS"] = self.ch2_pack_size.text()
@@ -4938,6 +4965,7 @@ class WIZWindow(QMainWindow, main_window):
                     setcmd["YP"] = str(self.ch3_parity.currentIndex())
                     setcmd["YS"] = str(self.ch3_stopbit.currentIndex())
                     setcmd["YF"] = str(self.ch3_flow.currentIndex())
+                    setcmd["YI"] = str(self.ch3_uart_name.currentIndex())
 
                     setcmd["JT"] = self.ch3_pack_time.text()
                     setcmd["US"] = self.ch3_pack_size.text()
@@ -5129,6 +5157,7 @@ class WIZWindow(QMainWindow, main_window):
         from WIZMakeCMD import (
             cmd_107sr, cmd_1p_advanced, cmd_1p_default, cmd_2p_default,
             cmd_security_base, cmd_wiz5xxsr_added, cmd_w55rp20_added,
+            cmd_w55rp20_2ch, cmd_w55rp20_3ch, cmd_w55rp20_4ch,
             ONE_PORT_DEV, TWO_PORT_DEV, SECURITY_DEVICE,
             version_compare,
         )
@@ -5136,6 +5165,12 @@ class WIZWindow(QMainWindow, main_window):
             n = len(cmd_107sr)                          # 42
         elif devname in TWO_PORT_DEV or "752" in devname:
             n = len(cmd_2p_default)
+        elif "W55RP20-S2E-4CH" in devname:
+            n = len(cmd_w55rp20_4ch)
+        elif "W55RP20-S2E-3CH" in devname:
+            n = len(cmd_w55rp20_3ch)
+        elif "W55RP20-S2E-2CH" in devname:
+            n = len(cmd_w55rp20_2ch)
         elif devname in SECURITY_DEVICE:
             n = len(cmd_security_base + cmd_wiz5xxsr_added)
         elif devname in ONE_PORT_DEV:

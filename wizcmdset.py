@@ -219,6 +219,20 @@ W55RP20_CMDSET = {
     **WIZ5XX_RP_CMDSET,
     # BR을 고속 baudrate로 재정의 (w55rp20_baudrate_pattern 사용)
     "BR": ["UART Baud rate", w55rp20_baudrate_pattern, baudrate_option, "RW"],
+    # FL: DTR/DSR(5) 추가 (firmware uartHandler.h flow_ctrl enum 기준, 0-5)
+    "FL": [
+        "UART Flow Control",
+        "^[0-5]$",
+        {"0": "NONE", "1": "XON/XOFF", "2": "RTS/CTS", "3": "RTS on TX", "4": "RTS on TX (invert)", "5": "DTR/DSR"},
+        "RW",
+    ],
+    # UI: RO(코드만 조회) → RW로 재정의. firmware uartHandler.h UART_IF_* 정의 기준 (0-3)
+    "UI": [
+        "UART Interface(Code)",
+        "^[0-3]$",
+        {"0": "TTL/RS-232", "1": "RS-422", "2": "RS-485", "3": "RS-485 (Reverse)"},
+        "RW",
+    ],
 }
 
 # ==================== W55RP20 2-Channel CMDSET ====================
@@ -229,6 +243,12 @@ W55RP20_2CH_CMDSET = {
     **W55RP20_CMDSET,
     "QS": ["Operation status for channel 1", "", {}, "RO"],
     "EN": ["UART Interface(Str) for channel 1", "", {}, "RO"],
+    "EI": [
+        "UART Interface(Code) for channel 1",
+        "^[0-3]$",
+        {"0": "TTL/RS-232", "1": "RS-422", "2": "RS-485", "3": "RS-485 (Reverse)"},
+        "RW",
+    ],
     "AO": [
         "Network Operation Mode for channel 1 - Extended",
         "^[0-6]$",
@@ -243,7 +263,12 @@ W55RP20_2CH_CMDSET = {
     "ED": ["UART channel 1 Data bit length", "^[0-1]$", {"0": "7-bit", "1": "8-bit"}, "RW"],
     "EP": ["UART channel 1 Parity bit", "^[0-2]$", {"0": "NONE", "1": "ODD", "2": "EVEN"}, "RW"],
     "ES": ["UART channel 1 Stop bit length", "^[0-1]$", {"0": "1-bit", "1": "2-bit"}, "RW"],
-    "EF": ["UART channel 1 Flow Control", "^[0-2]$", {"0": "NONE", "1": "XON/XOFF", "2": "RTS/CTS"}, "RW"],
+    "EF": [
+        "UART channel 1 Flow Control",
+        "^[0-5]$",
+        {"0": "NONE", "1": "XON/XOFF", "2": "RTS/CTS", "3": "RTS on TX", "4": "RTS on TX (invert)", "5": "DTR/DSR"},
+        "RW",
+    ],
     "ND": ["Char Delimiter for channel 1", "^([0-9a-fA-F][0-9a-fA-F])$", {}, "RW"],
     "NS": ["Size Delimiter for channel 1", "^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$", {}, "RW"],
     "AT": ["Time Delimiter for channel 1", port_pattern, {}, "RW"],
@@ -268,6 +293,12 @@ W55RP20_3CH_CMDSET = {
     **W55RP20_2CH_CMDSET,
     "GS": ["Operation status for channel 2", "", {}, "RO"],
     "WN": ["UART Interface(Str) for channel 2", "", {}, "RO"],
+    "WI": [
+        "UART Interface(Code) for channel 2",
+        "^[0-3]$",
+        {"0": "TTL/RS-232", "1": "RS-422", "2": "RS-485", "3": "RS-485 (Reverse)"},
+        "RW",
+    ],
     "TO": [
         "Network Operation Mode for channel 2 - Extended",
         "^[0-6]$",
@@ -282,7 +313,12 @@ W55RP20_3CH_CMDSET = {
     "WD": ["UART channel 2 Data bit length", "^[0-1]$", {"0": "7-bit", "1": "8-bit"}, "RW"],
     "WP": ["UART channel 2 Parity bit", "^[0-2]$", {"0": "NONE", "1": "ODD", "2": "EVEN"}, "RW"],
     "WS": ["UART channel 2 Stop bit length", "^[0-1]$", {"0": "1-bit", "1": "2-bit"}, "RW"],
-    "WF": ["UART channel 2 Flow Control", "^[0-2]$", {"0": "NONE", "1": "XON/XOFF", "2": "RTS/CTS"}, "RW"],
+    "WF": [
+        "UART channel 2 Flow Control",
+        "^[0-5]$",
+        {"0": "NONE", "1": "XON/XOFF", "2": "RTS/CTS", "3": "RTS on TX", "4": "RTS on TX (invert)", "5": "DTR/DSR"},
+        "RW",
+    ],
     "HD": ["Char Delimiter for channel 2", "^([0-9a-fA-F][0-9a-fA-F])$", {}, "RW"],
     "HS": ["Size Delimiter for channel 2", "^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$", {}, "RW"],
     "TT": ["Time Delimiter for channel 2", port_pattern, {}, "RW"],
@@ -307,6 +343,12 @@ W55RP20_4CH_CMDSET = {
     **W55RP20_3CH_CMDSET,
     "CS": ["Operation status for channel 3", "", {}, "RO"],
     "YN": ["UART Interface(Str) for channel 3", "", {}, "RO"],
+    "YI": [
+        "UART Interface(Code) for channel 3",
+        "^[0-3]$",
+        {"0": "TTL/RS-232", "1": "RS-422", "2": "RS-485", "3": "RS-485 (Reverse)"},
+        "RW",
+    ],
     "JO": [
         "Network Operation Mode for channel 3 - Extended",
         "^[0-6]$",
@@ -321,7 +363,12 @@ W55RP20_4CH_CMDSET = {
     "YD": ["UART channel 3 Data bit length", "^[0-1]$", {"0": "7-bit", "1": "8-bit"}, "RW"],
     "YP": ["UART channel 3 Parity bit", "^[0-2]$", {"0": "NONE", "1": "ODD", "2": "EVEN"}, "RW"],
     "YS": ["UART channel 3 Stop bit length", "^[0-1]$", {"0": "1-bit", "1": "2-bit"}, "RW"],
-    "YF": ["UART channel 3 Flow Control", "^[0-2]$", {"0": "NONE", "1": "XON/XOFF", "2": "RTS/CTS"}, "RW"],
+    "YF": [
+        "UART channel 3 Flow Control",
+        "^[0-5]$",
+        {"0": "NONE", "1": "XON/XOFF", "2": "RTS/CTS", "3": "RTS on TX", "4": "RTS on TX (invert)", "5": "DTR/DSR"},
+        "RW",
+    ],
     "UD": ["Char Delimiter for channel 3", "^([0-9a-fA-F][0-9a-fA-F])$", {}, "RW"],
     "US": ["Size Delimiter for channel 3", "^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$", {}, "RW"],
     "JT": ["Time Delimiter for channel 3", port_pattern, {}, "RW"],
@@ -502,8 +549,9 @@ class Wizcmdset():
 
         if self.isvalidcommand(cmdstr):
             prog = re.compile(self.cmdset[cmdstr][1])
-            # for domain name
-            if cmdstr == "RH":
+            # Remote Host 필드는 IP 외에 DNS 도메인 이름도 허용 (firmware: remote_ip or dns_domain_name)
+            # RH(CH0)/QH(CH1)/GH(CH2)/CH(CH3) 모두 동일하게 적용
+            if cmdstr in ("RH", "QH", "GH", "CH"):
                 # ! Need check size
                 return True
             if prog.match(param):

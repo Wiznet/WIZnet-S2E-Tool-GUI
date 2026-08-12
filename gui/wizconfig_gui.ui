@@ -6592,6 +6592,11 @@ interval</string>
                          <string>RTS on TX (invert)</string>
                         </property>
                        </item>
+                       <item>
+                        <property name="text">
+                         <string>DTR/DSR</string>
+                        </property>
+                       </item>
                       </widget>
                      </item>
                     </layout>
@@ -6923,7 +6928,7 @@ interval</string>
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <widget class="QLineEdit" name="ch0_uart_name">
+                   <widget class="QComboBox" name="ch0_uart_name">
                     <property name="minimumSize">
                      <size>
                       <width>100</width>
@@ -6944,24 +6949,38 @@ interval</string>
                       <bold>true</bold>
                      </font>
                     </property>
-                    <property name="inputMask">
-                     <string notr="true"/>
+                    <property name="currentText">
+                     <string>TTL/RS-232</string>
                     </property>
-                    <property name="text">
-                     <string notr="true"/>
+                    <property name="currentIndex">
+                     <number>0</number>
                     </property>
-                    <property name="alignment">
-                     <set>Qt::AlignCenter</set>
+                    <property name="sizeAdjustPolicy">
+                     <enum>QComboBox::AdjustToContents</enum>
                     </property>
-                    <property name="readOnly">
-                     <bool>true</bool>
+                    <property name="modelColumn">
+                     <number>0</number>
                     </property>
-                    <property name="placeholderText">
-                     <string notr="true"/>
-                    </property>
-                    <property name="clearButtonEnabled">
-                     <bool>false</bool>
-                    </property>
+                    <item>
+                     <property name="text">
+                      <string>TTL/RS-232</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>RS-422</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>RS-485</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>RS-485 (Reverse)</string>
+                     </property>
+                    </item>
                    </widget>
                   </item>
                  </layout>
@@ -8148,7 +8167,7 @@ interval</string>
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <widget class="QLineEdit" name="ch1_uart_name">
+                   <widget class="QComboBox" name="ch1_uart_name">
                     <property name="minimumSize">
                      <size>
                       <width>100</width>
@@ -8169,24 +8188,38 @@ interval</string>
                       <bold>true</bold>
                      </font>
                     </property>
-                    <property name="inputMask">
-                     <string notr="true"/>
+                    <property name="currentText">
+                     <string>TTL/RS-232</string>
                     </property>
-                    <property name="text">
-                     <string notr="true"/>
+                    <property name="currentIndex">
+                     <number>0</number>
                     </property>
-                    <property name="alignment">
-                     <set>Qt::AlignCenter</set>
+                    <property name="sizeAdjustPolicy">
+                     <enum>QComboBox::AdjustToContents</enum>
                     </property>
-                    <property name="readOnly">
-                     <bool>true</bool>
+                    <property name="modelColumn">
+                     <number>0</number>
                     </property>
-                    <property name="placeholderText">
-                     <string notr="true"/>
-                    </property>
-                    <property name="clearButtonEnabled">
-                     <bool>false</bool>
-                    </property>
+                    <item>
+                     <property name="text">
+                      <string>TTL/RS-232</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>RS-422</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>RS-485</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>RS-485 (Reverse)</string>
+                     </property>
+                    </item>
                    </widget>
                   </item>
                  </layout>
@@ -8888,6 +8921,11 @@ interval</string>
                        <item>
                         <property name="text">
                          <string>RTS on TX (invert)</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>DTR/DSR</string>
                         </property>
                        </item>
                       </widget>
@@ -10374,7 +10412,7 @@ interval</string>
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <widget class="QLineEdit" name="ch2_uart_name">
+                   <widget class="QComboBox" name="ch2_uart_name">
                     <property name="minimumSize">
                      <size>
                       <width>100</width>
@@ -10395,24 +10433,38 @@ interval</string>
                       <bold>true</bold>
                      </font>
                     </property>
-                    <property name="inputMask">
-                     <string notr="true"/>
+                    <property name="currentText">
+                     <string>TTL/RS-232</string>
                     </property>
-                    <property name="text">
-                     <string notr="true"/>
+                    <property name="currentIndex">
+                     <number>0</number>
                     </property>
-                    <property name="alignment">
-                     <set>Qt::AlignCenter</set>
+                    <property name="sizeAdjustPolicy">
+                     <enum>QComboBox::AdjustToContents</enum>
                     </property>
-                    <property name="readOnly">
-                     <bool>true</bool>
+                    <property name="modelColumn">
+                     <number>0</number>
                     </property>
-                    <property name="placeholderText">
-                     <string notr="true"/>
-                    </property>
-                    <property name="clearButtonEnabled">
-                     <bool>false</bool>
-                    </property>
+                    <item>
+                     <property name="text">
+                      <string>TTL/RS-232</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>RS-422</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>RS-485</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>RS-485 (Reverse)</string>
+                     </property>
+                    </item>
                    </widget>
                   </item>
                  </layout>
@@ -11114,6 +11166,11 @@ interval</string>
                        <item>
                         <property name="text">
                          <string>RTS on TX (invert)</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>DTR/DSR</string>
                         </property>
                        </item>
                       </widget>
@@ -12600,7 +12657,7 @@ interval</string>
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <widget class="QLineEdit" name="ch3_uart_name">
+                   <widget class="QComboBox" name="ch3_uart_name">
                     <property name="minimumSize">
                      <size>
                       <width>100</width>
@@ -12621,24 +12678,38 @@ interval</string>
                       <bold>true</bold>
                      </font>
                     </property>
-                    <property name="inputMask">
-                     <string notr="true"/>
+                    <property name="currentText">
+                     <string>TTL/RS-232</string>
                     </property>
-                    <property name="text">
-                     <string notr="true"/>
+                    <property name="currentIndex">
+                     <number>0</number>
                     </property>
-                    <property name="alignment">
-                     <set>Qt::AlignCenter</set>
+                    <property name="sizeAdjustPolicy">
+                     <enum>QComboBox::AdjustToContents</enum>
                     </property>
-                    <property name="readOnly">
-                     <bool>true</bool>
+                    <property name="modelColumn">
+                     <number>0</number>
                     </property>
-                    <property name="placeholderText">
-                     <string notr="true"/>
-                    </property>
-                    <property name="clearButtonEnabled">
-                     <bool>false</bool>
-                    </property>
+                    <item>
+                     <property name="text">
+                      <string>TTL/RS-232</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>RS-422</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>RS-485</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>RS-485 (Reverse)</string>
+                     </property>
+                    </item>
                    </widget>
                   </item>
                  </layout>
@@ -13340,6 +13411,11 @@ interval</string>
                        <item>
                         <property name="text">
                          <string>RTS on TX (invert)</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>DTR/DSR</string>
                         </property>
                        </item>
                       </widget>

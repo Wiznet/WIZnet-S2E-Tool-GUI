@@ -93,12 +93,13 @@ cmd_wiz510ssl_added = ['BA']
 cmd_wiz5xxsr_added = ['SO', 'UF']
 
 # W55RP20-S2E specific commands
-cmd_w55rp20_added = ['SD', 'DD', 'SE']  # Send Data at Connection, Send Data at Disconnection, Ethernet Data Connection Condition
+cmd_w55rp20_added = ['SD', 'DD', 'SE', 'UI']  # Send Data at Connection, Send Data at Disconnection, Ethernet Data Connection Condition, UART Interface(Code)
 
 # W55RP20-S2E-2CH channel 1 specific commands
 cmd_w55rp20_2ch_ch1 = [
     'QS',  # Channel 1 status
     'EN',  # Channel 1 UART interface
+    'EI',  # Channel 1 UART interface (code, RW)
     'AO',  # Channel 1 operation mode (extended)
     'QL',  # Channel 1 local port
     'QH',  # Channel 1 remote host
@@ -127,6 +128,7 @@ cmd_w55rp20_2ch_ch1 = [
 cmd_w55rp20_3ch_ch2 = [
     'GS',  # Channel 2 status
     'WN',  # Channel 2 UART interface
+    'WI',  # Channel 2 UART interface (code, RW)
     'TO',  # Channel 2 operation mode (extended)
     'GL',  # Channel 2 local port
     'GH',  # Channel 2 remote host
@@ -152,10 +154,11 @@ cmd_w55rp20_3ch_ch2 = [
 ]
 
 # W55RP20-S2E-4CH channel 3 specific commands (CH2 미러 — 2글자 코드만 치환)
-# 소스: 펌웨어 GreenCS segcp.h/segcp.c ch3 (25) 블록 (YI는 WI와 동일 사유로 미포함)
+# 소스: 펌웨어 GreenCS segcp.h/segcp.c ch3 (25) 블록
 cmd_w55rp20_4ch_ch3 = [
     'CS',  # Channel 3 status
     'YN',  # Channel 3 UART interface
+    'YI',  # Channel 3 UART interface (code, RW)
     'JO',  # Channel 3 operation mode (extended)
     'CL',  # Channel 3 local port
     'CH',  # Channel 3 remote host
