@@ -7464,9 +7464,12 @@ class WIZWindow(QMainWindow, main_window):
                 writer = csv.writer(f)
 
                 # 헤더 (Phase 1 모든 정보 포함)
+                # Protocol: dev_profile['_proto'] 영속화 (wiz550/wiz1x0, ASCII는 빈칸).
+                # 로드 시 이 값으로 _proto를 복원해 바이너리 장치 판정이 유지된다
+                # (issue #67 — 없으면 _is_binary_proto_dev의 MN 폴백이 커버)
                 writer.writerow([
                     'Mac Address', 'Device Name', 'Firmware Version', 'Status', 'Operation Mode', 'Detected',
-                    'IP Address', 'Subnet Mask', 'Gateway', 'DNS', 'IP Mode', 'Local Port'
+                    'IP Address', 'Subnet Mask', 'Gateway', 'DNS', 'IP Mode', 'Local Port', 'Protocol'
                 ])
 
                 # 데이터
@@ -7489,10 +7492,11 @@ class WIZWindow(QMainWindow, main_window):
                     dns = profile.get('DS', '')
                     ip_mode = 'DHCP' if profile.get('IM', '0') == '1' else 'Static'
                     local_port = profile.get('LP', '')
+                    proto = profile.get('_proto', '')
 
                     writer.writerow([self._csv_safe(x) for x in [
                         mac, name, version, status, op_mode, detected,
-                        ip_addr, subnet, gateway, dns, ip_mode, local_port
+                        ip_addr, subnet, gateway, dns, ip_mode, local_port, proto
                     ]])
 
             # 저장 성공 시 MRU 업데이트 (Save: 초기화)
@@ -7591,7 +7595,10 @@ class WIZWindow(QMainWindow, main_window):
                         'gateway': row.get('Gateway', ''),
                         'dns': row.get('DNS', ''),
                         'ip_mode': row.get('IP Mode', 'Static'),
-                        'local_port': row.get('Local Port', '')
+                        'local_port': row.get('Local Port', ''),
+                        # Protocol 컬럼(선택): _proto 복원용. 구버전 CSV엔 없음 → 빈값
+                        # (그 경우 _is_binary_proto_dev의 MN 폴백이 판정을 커버)
+                        'proto': row.get('Protocol', ''),
                     })
 
                 # 내부 변수 업데이트
@@ -7632,6 +7639,9 @@ class WIZWindow(QMainWindow, main_window):
                         'IM': '1' if net_info['ip_mode'] == 'DHCP' else '0',
                         'LP': net_info['local_port'],
                     }
+                    # Protocol 컬럼이 있던 CSV면 _proto 복원 (바이너리 장치 판정 유지)
+                    if net_info['proto']:
+                        self.dev_profile[mac_str]['_proto'] = net_info['proto']
 
                     # searched_dev 리스트 초기화
                     self.searched_dev.append([mac_str, name_str, version_str, status_str])
