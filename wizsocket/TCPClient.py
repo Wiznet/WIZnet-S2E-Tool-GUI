@@ -183,8 +183,16 @@ class TCPClient:
 
     @socket_exception_handler(logger)
     def recvfrom(self):
+        """(data, addr) 튜플 반환 — WIZUDPSock.recvfrom()과 동일 계약.
+
+        WIZMSGHandler 등이 UDP/TCP 소켓을 다형적으로 다루며
+        `data, addr = sock.recvfrom()`으로 언팩하므로 반환 형태가
+        일치해야 한다. 과거에는 data 단독 반환이라 TCP 검색 경로에서
+        "too many values to unpack" 크래시 발생 (issue #67 실기기 검증
+        중 발견 — bytes를 변수 2개에 언팩 시도).
+        """
         data, addr = self.sock.recvfrom(2048)
-        return data
+        return data, addr
 
     def close(self):
         if self.sock != 0:

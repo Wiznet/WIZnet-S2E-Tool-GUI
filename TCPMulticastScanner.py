@@ -178,8 +178,8 @@ class TCPMulticastScanner(QThread):
                 # Wait for response
                 time.sleep(0.5)
 
-                # Read response
-                data = client.recvfrom()
+                # Read response — TCPClient.recvfrom은 (data, addr) 계약 (issue #67)
+                data, _ = client.recvfrom()
 
                 # Clean up connection
                 client.shutdown()
