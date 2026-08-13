@@ -1261,7 +1261,7 @@ class WIZWindow(QMainWindow, main_window):
                 and self.dev_profile.get(self.curr_mac, {}).get('_proto') == 'wiz550'):
             self.apply_wiz550()
             return
-        if self.curr_dev == 'WIZ1x0SR':
+        if self.curr_dev == self.WIZ1X0_DISPLAY_NAME:
             self.apply_1x0()
             return
         self.do_setting()
@@ -1272,7 +1272,7 @@ class WIZWindow(QMainWindow, main_window):
                 and self.dev_profile.get(self.curr_mac, {}).get('_proto') == 'wiz550'):
             self.reset_wiz550(op_code=OP_REMOTE_RESET)
             return
-        if self.curr_dev == 'WIZ1x0SR':
+        if self.curr_dev == self.WIZ1X0_DISPLAY_NAME:
             self.show_msgbox("Info", "WIZ1x0SR automatically restarts when Apply is performed.", QMessageBox.Information)
             return
         self.do_reset()
@@ -1306,7 +1306,7 @@ class WIZWindow(QMainWindow, main_window):
             self.upload_wiz550()
             return
         # 기존 WIZ1x0SR 처리 (미지원)
-        if self.curr_dev == 'WIZ1x0SR':
+        if self.curr_dev == self.WIZ1X0_DISPLAY_NAME:
             self.show_msgbox("Info", "WIZ1x0SR firmware upload is not supported.", QMessageBox.Information)
             return
         # 기존 WIZ5xxSR 처리
@@ -2166,6 +2166,43 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.info("Device [%s] TCP connected\r\n" % (serverip))
         return self.cli_sock
 
+    # ── 프로토콜 계열 판정 (issue #67) ──────────────────────────────
+    # 바이너리 설정 프로토콜 장치군 — ASCII 커맨드(TCP/UDP:50001)를 해석하지 못한다.
+    #   'wiz550': UDP:6550 XOR 바이너리 (WIZ550SR/S2E/WEB — WIZ550MSGHandler)
+    #   'wiz1x0': UDP:1460 FIND/SETT 바이너리 (WIZ100/105/110SR — WIZ1x0Profile)
+    # search_each_dev()의 동일 판정과 값을 공유한다 — 수정 시 반드시 함께.
+    BINARY_PROTOS = ('wiz550', 'wiz1x0')
+    # '_proto'는 실시간 검색 결과에만 실리는 휘발성 필드다. CSV 로드
+    # (load_searched_results_from_csv)는 dev_profile을 MC/MN/VR/... 만으로
+    # 재구성하므로 '_proto'가 유실된다. 그 경우 CSV에도 살아남는 'MN'(장치명)으로
+    # 2차 판정한다.
+    # WIZ1x0 계열의 목록 표시명. 프로토콜에 모델명 필드 자체가 없어(100/105/110
+    # 구별 불가) 도구가 붙이는 고정 이름이다. _merge_wiz1x0_results·curr_dev 비교·
+    # BINARY_MN_PREFIXES가 전부 이 상수를 공유한다 — 표시명을 바꾸려면 여기만.
+    WIZ1X0_DISPLAY_NAME = 'WIZ1x0SR'
+    # 이 프리픽스는 "도구가 목록에 표시하는 이름" 기준이다 (CSV Device Name 컬럼의
+    # 실제 출처가 그 표시명이므로):
+    #   WIZ550 계열 → device_type ('WIZ550SR'/'WIZ550S2E'/'WIZ550WEB')
+    #   WIZ1x0 계열 → WIZ1X0_DISPLAY_NAME
+    # 주의: 'WIZ1'로 줄이면 WIZ107SR/108SR(ASCII 계열)까지 잘못 걸린다.
+    BINARY_MN_PREFIXES = ('WIZ550', WIZ1X0_DISPLAY_NAME.upper())
+
+    def _is_binary_proto_dev(self, mac):
+        """mac 장치가 바이너리 설정 프로토콜 계열인지 판정한다.
+
+        미선택(mac이 None/빈값)은 False — "바이너리라고 확인된 바 없음"이라는
+        뜻이다. IP Address 검색은 아직 목록에 없는 장치를 IP로 찾는 기능이므로,
+        정체 미상의 대상에는 ASCII TCP를 시도하는 것이 기본값이어야 한다.
+        """
+        if not mac:
+            return False
+        prof = self.dev_profile.get(mac, {})
+        if prof.get('_proto') in self.BINARY_PROTOS:
+            return True
+        # '_proto' 유실 경로(CSV 로드 등) 대비: 장치명으로 재판정
+        mn = str(prof.get('MN', '')).upper()
+        return mn.startswith(self.BINARY_MN_PREFIXES)
+
     def socket_config(self):
         try:
             # Broadcast
@@ -2187,29 +2224,67 @@ class WIZWindow(QMainWindow, main_window):
                 port = int(self.search_port.text())
                 self.logger.debug(f"unicast: ip={ip_addr!r}, port={port}")
 
-                # 현재 선택 장치가 WIZ5xxSR이면 원래 TCP 동작 유지, WIZ550/미선택은 TCP 완전 생략
-                _proto = self.dev_profile.get(self.curr_mac or '', {}).get('_proto', '')
-                _tcp_mode = bool(self.curr_mac and _proto not in ('wiz550', 'wiz1x0', ''))
+                # (1) TCP를 시도할 것인가 — 장치의 프로토콜 능력만으로 결정한다.
+                # 바이너리 계열(WIZ550/WIZ1x0)은 ASCII 커맨드를 TCP로 해석하지
+                # 못하므로 시도 자체가 낭비다. 그 외(ASCII 계열 + 미선택)는 시도한다.
+                # 미선택을 반드시 포함해야 하는 이유: IP Address 검색은 "아직 목록에
+                # 없는 장치를 IP로 찾는" 기능이라, 선택된 장치(curr_mac)를 전제로
+                # 삼으면 닭-달걀이 되어 최초 검색이 영구히 불가능해진다.
+                # (85f2865가 이 전제를 넣으면서 WIZ107SR 등 ASCII 장치의 TCP unicast
+                # 검색이 통째로 죽었다 — issue #67)
+                _tcp_mode = not self._is_binary_proto_dev(self.curr_mac)
+
+                # (2) 차단 다이얼로그를 띄울 것인가 — (1)과는 별개의 UX 판단이다.
+                # 사용자가 특정 ASCII 장치를 지목해 둔 상태의 실패만 "확정 실패"로
+                # 보고 모달로 알린다. 미선택 상태의 실패는 탐색 시도 중 하나일
+                # 뿐이므로 상태바로만 알리고 흐름을 막지 않는다.
+                # (aa7b467이 복구한 WIZ5xxSR 다이얼로그 동작을 이 플래그가 이어받음.
+                #  85f2865에서 이 두 판단이 _tcp_mode 하나로 합쳐지며 의미가 어긋난
+                #  것이 #67의 근본 원인 — 다시 합치지 말 것)
+                _show_dialog = _tcp_mode and bool(self.curr_mac)
 
                 if _tcp_mode:
-                    # WIZ5xxSR: ping → TCP → 원래 다이얼로그 동작
                     net_response = self.net_check_ping(ip_addr)
                     if net_response == 0:
                         self.conf_sock = self.connect_over_tcp(ip_addr, port)
                         if self.conf_sock is None:
                             self.isConnected = False
                             self.logger.info("TCP connection failed!: %s" % ip_addr)
+                            # 다이얼로그를 띄우지 않는 경로에서도 상태바에는 반드시
+                            # 남긴다. isConnected=False면 search_pre()의 검색 블록이
+                            # 통째로 스킵되어, 사용자에게는 설명 없이 "0 devices"만
+                            # 보이기 때문.
                             self.statusbar.showMessage(" TCP connection failed: %s" % ip_addr)
-                            self.msg_connection_failed()
+                            if _show_dialog:
+                                self.msg_connection_failed()
                         else:
                             self.isConnected = True
                     else:
                         self.statusbar.showMessage(" Network unreachable: %s" % ip_addr)
-                        self.msg_not_connected(ip_addr)
+                        if _show_dialog:
+                            self.msg_not_connected(ip_addr)
                 else:
-                    # WIZ550 또는 미선택: ping·TCP 완전 생략, WIZ550Searcher가 UDP:6550으로 처리
-                    self.logger.debug(f"WIZ550 unicast: skip ping/TCP, UDP:6550 search for {ip_addr}")
-                    self.statusbar.showMessage(f" Searching WIZ550: {ip_addr} via UDP:6550...")
+                    # 바이너리 계열 선택 상태: ping·TCP 생략.
+                    # (85f2865가 없애려던 무의미한 ping/TCP 대기를 이 분기가 유지)
+                    self.logger.debug(f"binary-proto unicast: skip ping/TCP for {ip_addr}")
+                    prof = self.dev_profile.get(self.curr_mac or '', {})
+                    is_wiz1x0 = (
+                        prof.get('_proto') == 'wiz1x0'
+                        or str(prof.get('MN', '')).upper().startswith(
+                            self.WIZ1X0_DISPLAY_NAME.upper()
+                        )
+                    )
+                    if is_wiz1x0:
+                        # WIZ1x0은 IP 지정 검색 채널이 미구현(VB6 TCP:1461 미이식).
+                        # 이 분기 뒤에 도는 것은 WIZ550Searcher(UDP:6550)뿐이라
+                        # WIZ1x0을 찾을 수 없다 — "검색 중" 거짓 안내 대신 사실을 알린다.
+                        self.statusbar.showMessage(
+                            " WIZ1x0SR: IP-address search not supported."
+                            " Use Broadcast + 'WIZ1x0SR search' checkbox."
+                        )
+                    else:
+                        # WIZ550 계열: WIZ550Searcher가 UDP:6550으로 unicast 검색 수행
+                        self.statusbar.showMessage(f" Searching device: {ip_addr} via UDP:6550...")
                 self.btn_search.setEnabled(True)
 
         except Exception as e:
@@ -2542,7 +2617,8 @@ class WIZWindow(QMainWindow, main_window):
         if new_results:
             for mac_str, board_dict in new_results:
                 self.mac_list.append(mac_str.encode())
-                self.mn_list.append("WIZ1x0SR")
+                # 표시명 상수 공유 — BINARY_MN_PREFIXES(CSV 폴백 판정)가 이 값에 의존
+                self.mn_list.append(self.WIZ1X0_DISPLAY_NAME)
                 ver = board_dict.get('appver_str', '0.0')
                 self.vr_list.append(ver.encode())
                 self.st_list.append(b'normal')
@@ -2555,7 +2631,7 @@ class WIZWindow(QMainWindow, main_window):
             for mac_str, board_dict in new_results:
                 row = self.list_device.rowCount()
                 self.list_device.insertRow(row)
-                for col, text in [(0, mac_str), (1, "WIZ1x0SR"), (2, "✓")]:
+                for col, text in [(0, mac_str), (1, self.WIZ1X0_DISPLAY_NAME), (2, "✓")]:
                     item = QTableWidgetItem(text)
                     item.setBackground(_wiz1x0_bg)
                     self.list_device.setItem(row, col, item)
@@ -2661,10 +2737,10 @@ class WIZWindow(QMainWindow, main_window):
         self.code = " "
         # self.all_response = []
         # WIZ1x0SR + WIZ550: 바이너리 프로토콜 장치 → WIZ5xxSR 텍스트 커맨드 제외 (UI-01, Pitfall 3)
-        _binary_proto = ('wiz1x0', 'wiz550')
+        # 판정은 _is_binary_proto_dev로 통일 (issue #67 — MN 폴백 포함)
         dev_info_list = [
             d for d in dev_info_list
-            if self.dev_profile.get(d[0], {}).get('_proto') not in _binary_proto
+            if not self._is_binary_proto_dev(d[0])
         ]
         # self.logger.info(f"search_each_dev() dev_info_list: {dev_info_list}")
         total_devs = len(dev_info_list)
@@ -3445,7 +3521,7 @@ class WIZWindow(QMainWindow, main_window):
         # WIZ1x0SR 전용 UI 패널
         if self.dev_profile.get(macaddr, {}).get('_proto') == 'wiz1x0':
             self.curr_mac = macaddr
-            self.curr_dev = 'WIZ1x0SR'
+            self.curr_dev = self.WIZ1X0_DISPLAY_NAME
             self._show_wiz1x0_panel(True)
             self.fill_devinfo_1x0(self.dev_profile[macaddr])
             return
