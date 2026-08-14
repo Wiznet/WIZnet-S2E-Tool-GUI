@@ -58,8 +58,6 @@ class CmdEntry:
             return value in self.values
         if not self.regex:
             return True
-        if self.cmd == "RH":
-            return True  # 도메인명 허용
         return bool(re.match(self.regex, value))
 
     def get_display(self, value: str) -> str:

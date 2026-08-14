@@ -5302,6 +5302,30 @@ class WIZWindow(QMainWindow, main_window):
         logger.debug(f"setcmd: {setcmd}")
         return setcmd
 
+    def _load_setting_spec(self):
+        """현재 선택 장치의 DeviceSpec 로드. 없으면 None (레거시 검증으로 폴백)."""
+        if not self.curr_dev:
+            return None
+        spec_name = detect_device(self.curr_dev) or self.curr_dev
+        try:
+            return load_device(spec_name, self.curr_ver)
+        except FileNotFoundError:
+            self.logger.warning(
+                f"_load_setting_spec: spec not found for {spec_name!r} — 레거시 검증 사용"
+            )
+            return None
+
+    def _is_valid_setcmd_param(self, spec, cmd, value):
+        """
+        SET 파라미터 검증. 커맨드 단위로 DeviceSpec 우선, 없으면 레거시 cmdset 폴백.
+
+        DeviceSpec(specs/*.yaml)은 FW 소스 기준으로 정비된 값이므로 우선한다.
+        아직 spec에 정의되지 않은 커맨드(GPIO/Modbus 등)는 레거시가 계속 담당한다.
+        """
+        if spec is not None and cmd in spec.cmdset:
+            return bool(spec.cmdset[cmd].is_valid(value)), "spec"
+        return bool(self.cmdset.isvalidparameter(cmd, value)), "legacy"
+
     def do_setting(self):
         self.disable_object()
 
@@ -5324,22 +5348,17 @@ class WIZWindow(QMainWindow, main_window):
             # Update cmdset
             self.cmdset.get_cmdset(self.curr_dev, self.curr_st, self.curr_ver)
             self.logger.info(f"Device setting: {self.curr_dev}")
-            # Parameter validity check
+            # Parameter validity check (DeviceSpec 우선 + 레거시 폴백)
             invalid_flag = 0
-            setcmd_cmd = list(setcmd.keys())
             self.logger.debug(f"do_setting::setcmd={setcmd}")
-            for i in range(len(setcmd)):
-                if (
-                    self.cmdset.isvalidparameter(
-                        setcmd_cmd[i], setcmd.get(setcmd_cmd[i])
-                    )
-                    is False
-                ):
+            spec = self._load_setting_spec()
+            for cmd, value in setcmd.items():
+                is_valid, source = self._is_valid_setcmd_param(spec, cmd, value)
+                if not is_valid:
                     self.logger.warning(
-                        "Invalid parameter: %s %s"
-                        % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i]))
+                        f"Invalid parameter [{source}]: {cmd} {value!r}"
                     )
-                    self.msg_invalid(setcmd.get(setcmd_cmd[i]))
+                    self.msg_invalid(value)
                     invalid_flag += 1
 
             if invalid_flag > 0:

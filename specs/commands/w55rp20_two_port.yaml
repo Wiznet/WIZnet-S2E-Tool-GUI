@@ -77,8 +77,9 @@ QL:
     order: 2
 
 QH:
-  description: "Remote Host IP address for channel 1"
-  regex: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+  # base.yaml RH와 동일 정책: IPv4 | 호스트명·도메인(≤128) | 공백/빈값(SEGCP_NULL)
+  description: "Remote Host IP address / Domain for channel 1"
+  regex: "^(?=.{0,128}$)( ?|(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])|([A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?\\.)*[A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?)$"
   values: {}
   access: RW
   ui:
@@ -186,12 +187,16 @@ ES:
     order: 4
 
 EF:
+  # FW enum flow_ctrl 상한은 flow_reverserts(4) — base.yaml FL과 동일 범위.
+  # 근거: W55RP20-S2E uartHandler.h enum flow_ctrl
   description: "UART channel 1 Flow Control"
-  regex: "^[0-2]$"
+  regex: "^[0-4]$"
   values:
     "0": "NONE"
     "1": "XON/XOFF"
     "2": "RTS/CTS"
+    "3": "RTS on TX"
+    "4": "RTS on TX (invert)"
   access: RW
   ui:
     tab: channel1
