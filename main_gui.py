@@ -535,6 +535,8 @@ class WIZWindow(QMainWindow, main_window):
         self.curr_dev = None
         self.curr_ver = None
         self.curr_st = None
+        # 직전 Apply에서 BOOT/UPGRADE 상태로 인해 축소 전송이 일어났는지
+        self._setcmd_reduced = False
 
         # Load device search timing configuration
         self.timing_config = DeviceSearchConfig()
@@ -4951,9 +4953,21 @@ class WIZWindow(QMainWindow, main_window):
                 setcmd["SP"] = " "
             else:
                 setcmd["SP"] = self.searchcode.text()
-            # 장비 상태가 BOOT 이면 다른 내용은 저장하지 않음.
+            # 장비 상태가 BOOT/UPGRADE 이면 네트워크 기본 설정만 전송한다.
+            # 이 지점 이후의 항목(OP/RH/RP, BR 등 시리얼 전체, 타이머, MQTT, 인증서)은
+            # 패킷에 실리지 않으므로, 조용히 누락되지 않도록 사용자에게 알린다.
             # @TODO: GUI 도 막아야 함
             if self.curr_st in DeviceStatusMinimum:
+                self._setcmd_reduced = True
+                self.logger.warning(
+                    f"Setting: device status is {self.curr_st} — "
+                    f"only network settings are sent ({sorted(setcmd.keys())}). "
+                    "Serial/OP/Remote host and other options are skipped."
+                )
+                self.statusbar.showMessage(
+                    f" Warning: device is in {self.curr_st} state — "
+                    "only network settings will be applied."
+                )
                 logger.debug(f"setcmd: {setcmd}")
                 return setcmd
             # etc - general
@@ -5350,6 +5364,7 @@ class WIZWindow(QMainWindow, main_window):
         self.disable_object()
 
         self.set_reponse = None
+        self._setcmd_reduced = False
 
         self.sock_close()
 
@@ -5450,6 +5465,32 @@ class WIZWindow(QMainWindow, main_window):
         # MA prefix(10) + PW 라인(최소 5) + 커맨드 응답(최소 5 bytes/cmd)
         return 10 + 5 + n * 5
 
+    def _refresh_status_from_set_result(self, set_result):
+        """
+        SET 응답의 ST 값으로 curr_st / dev_data 를 최신화한다.
+
+        curr_st 는 검색 시점(get_dev_list)에만 채워지므로, 재검색 없이 Apply 를
+        반복하면 과거 상태가 남는다. BOOT/UPGRADE 가 남아 있으면
+        get_object_value() 가 네트워크 설정만 담고 조기 반환하여
+        시리얼/OP/Remote host 등이 조용히 누락된다.
+
+        dev_data[mac] 는 [MN, VR, ST] 형태이며, dev_clicked() 가 여기서
+        curr_st 를 다시 읽으므로 dev_data 를 함께 갱신한다.
+        """
+        new_st = set_result.get("ST")
+        if not new_st:
+            return
+        new_st = new_st.strip()
+        if not new_st or new_st == self.curr_st:
+            return
+
+        prev_st = self.curr_st
+        self.curr_st = new_st
+        entry = self.dev_data.get(self.curr_mac)
+        if isinstance(entry, list) and len(entry) >= 3:
+            entry[2] = new_st
+        self.logger.info(f"Device status refreshed from SET response: {prev_st} -> {new_st}")
+
     def get_setting_result(self, resp_len):
         if not self.curr_dev or not self.curr_ver:
             return
@@ -5504,8 +5545,20 @@ class WIZWindow(QMainWindow, main_window):
 
             elif len(mc) == 17:
                 # ── 정상 성공: MAC 유효 (VB.NET: nSec.MC.data.Length == 17) ──
-                self.statusbar.showMessage(" Set device complete!")
+                if self._setcmd_reduced:
+                    self.statusbar.showMessage(
+                        f" Set complete — network settings only "
+                        f"(device was in {self.curr_st} state)."
+                    )
+                else:
+                    self.statusbar.showMessage(" Set device complete!")
                 self.msg_set_success()
+
+                # SET 응답에 포함된 ST 로 장치 상태를 최신화한다.
+                # curr_st 는 원래 검색 시점(dev_data)에만 갱신되어, 재검색 없이 Apply 를
+                # 반복하면 과거 상태(BOOT/UPGRADE)가 남아 설정이 조용히 축소 전송된다.
+                # 응답에 이미 ST 가 들어 있으므로 추가 통신 없이 자가 치유가 가능하다.
+                self._refresh_status_from_set_result(set_result)
 
                 if self.isConnected and self.unicast_ip.isChecked():
                     self.logger.info("close socket")
