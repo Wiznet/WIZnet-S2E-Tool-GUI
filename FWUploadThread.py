@@ -84,10 +84,8 @@ def _fw_send_cmd(sock, cmd_list: list, what_sock: str, timeout: int) -> bytes | 
         while readready:
             for s in readready:
                 if s == raw_sock:
-                    if what_sock == "udp":
-                        data, _addr = sock.recvfrom()
-                    else:
-                        data = sock.recvfrom()
+                    # TCPClient.recvfrom도 이제 (data, addr) 계약 (issue #67)
+                    data, _addr = sock.recvfrom()
                     replylists = data.split(b"\r\n")
                     for item in replylists:
                         if b"FW" in item[:2]:
