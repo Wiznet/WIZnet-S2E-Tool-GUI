@@ -499,17 +499,19 @@ IncludeTabInCommon = ("basic_tab", "advance_tab",)
 IncludeTabIn7xx = ("basic_tab", "advance_tab", "userio_tab",)
 DeviceStatus = __devst("BOOT", "UPGRADE", "APP")
 
-# UI 제한(탭 숨김, channel_tab 비활성화 등)용. UPGRADE 중에는 장치 통신이
-# 불안정하므로 UI를 제한하는 것이 타당하다.
-DeviceStatusMinimum = (DeviceStatus.boot, DeviceStatus.upgrade)
-
-# SET 커맨드 축소 전송 판정용. BOOT(부트로더)만 해당한다.
+# 기능 제한(SET 커맨드 축소 전송, 탭 숨김, channel_tab·Apply 비활성화)을 적용할 상태.
+# 부트로더는 커맨드셋 자체가 축소되어 있으므로 BOOT 만 해당한다.
 #
-# UPGRADE 를 포함하면 안 되는 이유: WIZ5XXSR-RP 펌웨어는 DHCP 대기
+# UPGRADE 를 포함하지 않는 이유: WIZ5XXSR-RP 펌웨어는 DHCP 대기
 # (deviceHandler.c process_dhcp)와 DNS 해석(dnsHandler.c process_dns) 중에도
-# ST_UPGRADE 를 보고한다. 이는 앱이 정상 동작하는 일시 상태이며 모든 커맨드를
-# 수용한다. 여기에 축소 전송을 적용하면 BR/OP/RH 등이 조용히 누락된다.
-DeviceStatusSetMinimum = (DeviceStatus.boot,)
+# ST_UPGRADE 를 보고한다. 실제 펌웨어 업그레이드가 아니라 앱이 정상 동작하는
+# 일시 상태이며 모든 커맨드를 수용한다. 여기에 제한을 걸면
+#   - 전송: BR/OP/RH 등이 조용히 누락되고
+#   - UI:   시리얼 설정을 편집할 수 없어, 잘못된 Remote host 때문에 UPGRADE 에
+#           갇혔을 때 정작 그 값을 고칠 수 없다
+# UPGRADE 안내는 get_clicked_devinfo() 의 팝업(DeviceStatus.upgrade 직접 비교)이
+# 담당한다.
+DeviceStatusMinimum = (DeviceStatus.boot,)
 
 if __name__ == "__main__":
     # wizcmdset = Wizcmdset("WIZ750SR")

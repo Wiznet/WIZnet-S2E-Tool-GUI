@@ -30,7 +30,6 @@ from wizcmdset import (
     Wizcmdset,
     DeviceStatus,
     DeviceStatusMinimum,
-    DeviceStatusSetMinimum,
     SysTabIndex,
     SysTabObjectText,
     ExcludeTabInMinimum,
@@ -1397,7 +1396,7 @@ class WIZWindow(QMainWindow, main_window):
         # 이 판정은 UI enable 뿐 아니라 get_object_value() 의 MB/PO 전송 여부도
         # 결정하므로 BOOT 만 제외한다. UPGRADE(DHCP·DNS 대기)는 앱이 도는
         # 일시 상태라 Modbus 커맨드를 정상 처리한다.
-        if self.curr_st in DeviceStatusSetMinimum:
+        if self.curr_st in DeviceStatusMinimum:
             return False
         if self._uses_mb_modbus():
             if self._is_wiz750sr_series():
@@ -4846,7 +4845,7 @@ class WIZWindow(QMainWindow, main_window):
             if (
                 self.curr_dev in SECURITY_DEVICE
                 and "ST" in dev_data
-                and dev_data["ST"] not in DeviceStatusSetMinimum
+                and dev_data["ST"] not in DeviceStatusMinimum
             ):
                 """
                 Security device options
@@ -4965,12 +4964,8 @@ class WIZWindow(QMainWindow, main_window):
             # 장비 상태가 BOOT(부트로더) 이면 네트워크 기본 설정만 전송한다.
             # 이 지점 이후의 항목(OP/RH/RP, BR 등 시리얼 전체, 타이머, MQTT, 인증서)은
             # 패킷에 실리지 않으므로, 조용히 누락되지 않도록 사용자에게 알린다.
-            #
-            # UPGRADE 는 제외한다(DeviceStatusSetMinimum). 펌웨어가 DHCP 대기·DNS 해석
-            # 중에도 ST_UPGRADE 를 보고하는데, 이는 앱이 정상 동작하는 일시 상태라
-            # 모든 커맨드를 수용한다. UI 제한(DeviceStatusMinimum)은 그대로 유지한다.
-            # @TODO: GUI 도 막아야 함
-            if self.curr_st in DeviceStatusSetMinimum:
+            # UPGRADE 가 제외되는 이유는 wizcmdset.DeviceStatusMinimum 주석 참고.
+            if self.curr_st in DeviceStatusMinimum:
                 self._setcmd_reduced = True
                 self.logger.warning(
                     f"Setting: device status is {self.curr_st} — "
@@ -5147,8 +5142,8 @@ class WIZWindow(QMainWindow, main_window):
 
             # Expansion GPIO
             # BOOT 에서는 GPIO 커맨드가 처리되지 않으므로 제외. UPGRADE 는 포함한다
-            # (위 조기 반환과 동일한 이유 — DeviceStatusSetMinimum 주석 참고).
-            if self.curr_st in DeviceStatusSetMinimum:
+            # (위 조기 반환과 동일한 이유 — DeviceStatusMinimum 주석 참고).
+            if self.curr_st in DeviceStatusMinimum:
                 pass
             else:
                 if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev:
