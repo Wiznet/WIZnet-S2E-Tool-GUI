@@ -47,6 +47,19 @@ search:
     # - 권장: 500 (변경 시 주의)
     set_command_delay_ms: 500
 
+    # SET 명령 응답 대기 타임아웃 (초) — 일반 장치
+    # - Apply 후 장치 응답을 기다리는 시간. 초과 시 "Setting failed" 표시
+    # - 권장: 2.0
+    set_response_timeout_sec: 2.0
+
+    # SET 명령 응답 대기 타임아웃 (초) — WIZ5XXSR-RP 계열 전용
+    # - 기본값은 일반 장치와 동일(2.0). 별도 키로 분리해 둔 이유:
+    #   WIZ5XXSR-RP는 TCP client 접속 실패 시 connect()가 최대 1.8초 블로킹
+    #   (RCR 8 x RTR 200ms) 되고, SET 직후 플래시 저장(4KB 섹터 소거, 최대 400ms급)이
+    #   겹칠 수 있어 이 계열만 따로 올릴 필요가 생길 수 있음
+    # - "Setting failed"가 뜨는데 설정은 반영되어 있다면 5.0 전후로 올려서 확인
+    set_response_timeout_5xx_sec: 2.0
+
   # TCP Multicast / Mixed Search
   tcp:
     # TCP 포트 스캔 타임아웃 (초)

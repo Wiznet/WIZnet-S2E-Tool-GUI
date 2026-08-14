@@ -5315,6 +5315,26 @@ class WIZWindow(QMainWindow, main_window):
             )
             return None
 
+    def _get_set_response_timeout(self):
+        """
+        SET 명령 응답 대기 타임아웃(초). Advanced Search Options에서 조정 가능.
+
+        WIZ5XXSR-RP 계열은 별도 값을 사용한다. 해당 장치는 TCP client 접속 실패 시
+        `connect()`가 최대 1.8초(RCR 8 x RTR 200ms) 블로킹되고, SET 직후 플래시
+        저장(4KB 섹터 소거, 최대 400ms급)이 겹쳐 일반 타임아웃으로는 응답을
+        놓치는 경우가 있다 (TASKS.md BUG-WIZ5XX-SET-NORESP).
+        """
+        try:
+            if self.curr_dev and "WIZ5XXSR" in self.curr_dev:
+                timeout = self.timing_config.get_phase3_set_response_timeout_5xx()
+            else:
+                timeout = self.timing_config.get_phase3_set_response_timeout()
+        except Exception as e:
+            self.logger.warning(f"_get_set_response_timeout: {e} — 기본값 2초 사용")
+            return 2
+        self.logger.debug(f"SET response timeout: {timeout}s (dev={self.curr_dev})")
+        return timeout
+
     def _is_valid_setcmd_param(self, spec, cmd, value):
         """
         SET 파라미터 검증. 커맨드 단위로 DeviceSpec 우선, 없으면 레거시 cmdset 폴백.
@@ -5384,13 +5404,14 @@ class WIZWindow(QMainWindow, main_window):
                 # socket config
                 self.socket_config()
 
+                set_timeout = self._get_set_response_timeout()
                 if self.unicast_ip.isChecked():
                     self.wizmsghandler = WIZMSGHandler(
-                        self.conf_sock, cmd_list, "tcp", Opcode.OP_SETCOMMAND, 2
+                        self.conf_sock, cmd_list, "tcp", Opcode.OP_SETCOMMAND, set_timeout
                     )
                 else:
                     self.wizmsghandler = WIZMSGHandler(
-                        self.conf_sock, cmd_list, "udp", Opcode.OP_SETCOMMAND, 2
+                        self.conf_sock, cmd_list, "udp", Opcode.OP_SETCOMMAND, set_timeout
                     )
                 self.wizmsghandler.set_result.connect(self.get_setting_result)
                 self.wizmsghandler.start()
@@ -6755,6 +6776,38 @@ class WIZWindow(QMainWindow, main_window):
         )
         phase3_layout.addRow("SET Response Delay:", dialog.spin_set_delay)
 
+        # SET Response Timeout (일반 장치)
+        dialog.spin_set_timeout = QDoubleSpinBox()
+        dialog.spin_set_timeout.setRange(1.0, 15.0)
+        dialog.spin_set_timeout.setSingleStep(0.5)
+        dialog.spin_set_timeout.setDecimals(1)
+        dialog.spin_set_timeout.setSuffix(" sec")
+        dialog.spin_set_timeout.setValue(current_values['phase3_set_response_timeout'])
+        dialog.spin_set_timeout.setToolTip(
+            "How long to wait for the device response after Apply.\n"
+            "Exceeding this shows \"Setting failed\" even if the device applied the setting.\n\n"
+            "Default: 2.0 s"
+        )
+        phase3_layout.addRow("SET Response Timeout:", dialog.spin_set_timeout)
+
+        # SET Response Timeout (WIZ5XXSR-RP 전용)
+        dialog.spin_set_timeout_5xx = QDoubleSpinBox()
+        dialog.spin_set_timeout_5xx.setRange(1.0, 30.0)
+        dialog.spin_set_timeout_5xx.setSingleStep(0.5)
+        dialog.spin_set_timeout_5xx.setDecimals(1)
+        dialog.spin_set_timeout_5xx.setSuffix(" sec")
+        dialog.spin_set_timeout_5xx.setValue(current_values['phase3_set_response_timeout_5xx'])
+        dialog.spin_set_timeout_5xx.setToolTip(
+            "SET response timeout applied only to WIZ5XXSR-RP devices.\n\n"
+            "These devices block up to 1.8 s inside connect() when the remote host is\n"
+            "unreachable (RCR 8 x RTR 200 ms), and the flash save right after SET\n"
+            "(4 KB sector erase, up to ~400 ms) can overlap with it. The general 2.0 s\n"
+            "timeout can therefore be too short in some situations.\n\n"
+            "Default: 2.0 s (same as the general value). Raise it toward 5.0 s if\n"
+            "\"Setting failed\" appears while the setting is actually applied."
+        )
+        phase3_layout.addRow("SET Response Timeout (WIZ5XXSR-RP):", dialog.spin_set_timeout_5xx)
+
         phase3_group.setLayout(phase3_layout)
         main_layout.addWidget(phase3_group)
 
@@ -6849,6 +6902,8 @@ class WIZWindow(QMainWindow, main_window):
             'skip_phase1_emit_delay': dialog.check_skip_delay.isChecked(),
             'phase3_device_query_timeout': dialog.spin_query_timeout.value(),
             'phase3_set_command_delay_ms': dialog.spin_set_delay.value(),
+            'phase3_set_response_timeout': dialog.spin_set_timeout.value(),
+            'phase3_set_response_timeout_5xx': dialog.spin_set_timeout_5xx.value(),
             'tcp_max_parallel_workers': dialog.spin_tcp_workers.value(),
             'pgbar_update_percent': dialog.spin_pgbar_percent.value(),
             'pgbar_auto_hide_delay_ms': dialog.spin_pgbar_hide.value()
@@ -6919,6 +6974,8 @@ class WIZWindow(QMainWindow, main_window):
                 dialog.check_skip_delay.setChecked(defaults['skip_phase1_emit_delay'])
                 dialog.spin_query_timeout.setValue(defaults['phase3_device_query_timeout'])
                 dialog.spin_set_delay.setValue(defaults['phase3_set_command_delay_ms'])
+                dialog.spin_set_timeout.setValue(defaults['phase3_set_response_timeout'])
+                dialog.spin_set_timeout_5xx.setValue(defaults['phase3_set_response_timeout_5xx'])
                 dialog.spin_tcp_workers.setValue(defaults['tcp_max_parallel_workers'])
                 dialog.spin_pgbar_percent.setValue(defaults['pgbar_update_percent'])
                 dialog.spin_pgbar_hide.setValue(defaults['pgbar_auto_hide_delay_ms'])
