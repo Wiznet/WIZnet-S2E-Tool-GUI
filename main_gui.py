@@ -4965,6 +4965,8 @@ class WIZWindow(QMainWindow, main_window):
             # 이 지점 이후의 항목(OP/RH/RP, BR 등 시리얼 전체, 타이머, MQTT, 인증서)은
             # 패킷에 실리지 않으므로, 조용히 누락되지 않도록 사용자에게 알린다.
             # UPGRADE 가 제외되는 이유는 wizcmdset.DeviceStatusMinimum 주석 참고.
+            # @TODO: GUI 도 막아야 함 — 일반 장치는 BOOT 에서도 Apply 버튼이 열려 있다.
+            #        (WIZ550 경로만 btn_setting.setEnabled() 로 차단 중)
             if self.curr_st in DeviceStatusMinimum:
                 self._setcmd_reduced = True
                 self.logger.warning(
