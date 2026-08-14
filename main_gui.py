@@ -30,6 +30,7 @@ from wizcmdset import (
     Wizcmdset,
     DeviceStatus,
     DeviceStatusMinimum,
+    DeviceStatusSetMinimum,
     SysTabIndex,
     SysTabObjectText,
     ExcludeTabInMinimum,
@@ -1393,7 +1394,10 @@ class WIZWindow(QMainWindow, main_window):
     def _modbus_supported(self) -> bool:
         if not self.curr_dev or not self.curr_ver:
             return False
-        if self.curr_st in DeviceStatusMinimum:
+        # 이 판정은 UI enable 뿐 아니라 get_object_value() 의 MB/PO 전송 여부도
+        # 결정하므로 BOOT 만 제외한다. UPGRADE(DHCP·DNS 대기)는 앱이 도는
+        # 일시 상태라 Modbus 커맨드를 정상 처리한다.
+        if self.curr_st in DeviceStatusSetMinimum:
             return False
         if self._uses_mb_modbus():
             if self._is_wiz750sr_series():
@@ -4834,10 +4838,15 @@ class WIZWindow(QMainWindow, main_window):
                         self.ch1_ethernet_connection_condition.setText(dev_data["EE"])
 
             # SECURITY_TWO_PORT_DEV도 SECURITY_DEVICE에 속하므로 elif가 아닌 if 사용
+            #
+            # BOOT(부트로더)에서는 MQTT/인증서 커맨드가 응답에 없으므로 건너뛴다.
+            # UPGRADE 는 앱이 도는 일시 상태라 응답에 값이 모두 들어 있고,
+            # get_object_value() 도 이 항목들을 전송하므로 UI 를 채워야 한다.
+            # 채우지 않으면 이전 장치의 값이 남아 그대로 전송될 수 있다.
             if (
                 self.curr_dev in SECURITY_DEVICE
                 and "ST" in dev_data
-                and dev_data["ST"] not in DeviceStatusMinimum
+                and dev_data["ST"] not in DeviceStatusSetMinimum
             ):
                 """
                 Security device options
@@ -4953,11 +4962,15 @@ class WIZWindow(QMainWindow, main_window):
                 setcmd["SP"] = " "
             else:
                 setcmd["SP"] = self.searchcode.text()
-            # 장비 상태가 BOOT/UPGRADE 이면 네트워크 기본 설정만 전송한다.
+            # 장비 상태가 BOOT(부트로더) 이면 네트워크 기본 설정만 전송한다.
             # 이 지점 이후의 항목(OP/RH/RP, BR 등 시리얼 전체, 타이머, MQTT, 인증서)은
             # 패킷에 실리지 않으므로, 조용히 누락되지 않도록 사용자에게 알린다.
+            #
+            # UPGRADE 는 제외한다(DeviceStatusSetMinimum). 펌웨어가 DHCP 대기·DNS 해석
+            # 중에도 ST_UPGRADE 를 보고하는데, 이는 앱이 정상 동작하는 일시 상태라
+            # 모든 커맨드를 수용한다. UI 제한(DeviceStatusMinimum)은 그대로 유지한다.
             # @TODO: GUI 도 막아야 함
-            if self.curr_st in DeviceStatusMinimum:
+            if self.curr_st in DeviceStatusSetMinimum:
                 self._setcmd_reduced = True
                 self.logger.warning(
                     f"Setting: device status is {self.curr_st} — "
@@ -5133,7 +5146,9 @@ class WIZWindow(QMainWindow, main_window):
                     setcmd["TR"] = self.tcp_timeout.text()
 
             # Expansion GPIO
-            if self.curr_st in DeviceStatusMinimum:
+            # BOOT 에서는 GPIO 커맨드가 처리되지 않으므로 제외. UPGRADE 는 포함한다
+            # (위 조기 반환과 동일한 이유 — DeviceStatusSetMinimum 주석 참고).
+            if self.curr_st in DeviceStatusSetMinimum:
                 pass
             else:
                 if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev:
