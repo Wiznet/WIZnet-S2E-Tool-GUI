@@ -535,6 +535,8 @@ class WIZWindow(QMainWindow, main_window):
         self.curr_dev = None
         self.curr_ver = None
         self.curr_st = None
+        # 직전 Apply에서 BOOT/UPGRADE 상태로 인해 축소 전송이 일어났는지
+        self._setcmd_reduced = False
 
         # Load device search timing configuration
         self.timing_config = DeviceSearchConfig()
@@ -1391,6 +1393,9 @@ class WIZWindow(QMainWindow, main_window):
     def _modbus_supported(self) -> bool:
         if not self.curr_dev or not self.curr_ver:
             return False
+        # 이 판정은 UI enable 뿐 아니라 get_object_value() 의 MB/PO 전송 여부도
+        # 결정하므로 BOOT 만 제외한다. UPGRADE(DHCP·DNS 대기)는 앱이 도는
+        # 일시 상태라 Modbus 커맨드를 정상 처리한다.
         if self.curr_st in DeviceStatusMinimum:
             return False
         if self._uses_mb_modbus():
@@ -4832,6 +4837,11 @@ class WIZWindow(QMainWindow, main_window):
                         self.ch1_ethernet_connection_condition.setText(dev_data["EE"])
 
             # SECURITY_TWO_PORT_DEV도 SECURITY_DEVICE에 속하므로 elif가 아닌 if 사용
+            #
+            # BOOT(부트로더)에서는 MQTT/인증서 커맨드가 응답에 없으므로 건너뛴다.
+            # UPGRADE 는 앱이 도는 일시 상태라 응답에 값이 모두 들어 있고,
+            # get_object_value() 도 이 항목들을 전송하므로 UI 를 채워야 한다.
+            # 채우지 않으면 이전 장치의 값이 남아 그대로 전송될 수 있다.
             if (
                 self.curr_dev in SECURITY_DEVICE
                 and "ST" in dev_data
@@ -4951,9 +4961,23 @@ class WIZWindow(QMainWindow, main_window):
                 setcmd["SP"] = " "
             else:
                 setcmd["SP"] = self.searchcode.text()
-            # 장비 상태가 BOOT 이면 다른 내용은 저장하지 않음.
-            # @TODO: GUI 도 막아야 함
+            # 장비 상태가 BOOT(부트로더) 이면 네트워크 기본 설정만 전송한다.
+            # 이 지점 이후의 항목(OP/RH/RP, BR 등 시리얼 전체, 타이머, MQTT, 인증서)은
+            # 패킷에 실리지 않으므로, 조용히 누락되지 않도록 사용자에게 알린다.
+            # UPGRADE 가 제외되는 이유는 wizcmdset.DeviceStatusMinimum 주석 참고.
+            # @TODO: GUI 도 막아야 함 — 일반 장치는 BOOT 에서도 Apply 버튼이 열려 있다.
+            #        (WIZ550 경로만 btn_setting.setEnabled() 로 차단 중)
             if self.curr_st in DeviceStatusMinimum:
+                self._setcmd_reduced = True
+                self.logger.warning(
+                    f"Setting: device status is {self.curr_st} — "
+                    f"only network settings are sent ({sorted(setcmd.keys())}). "
+                    "Serial/OP/Remote host and other options are skipped."
+                )
+                self.statusbar.showMessage(
+                    f" Warning: device is in {self.curr_st} state — "
+                    "only network settings will be applied."
+                )
                 logger.debug(f"setcmd: {setcmd}")
                 return setcmd
             # etc - general
@@ -5119,6 +5143,8 @@ class WIZWindow(QMainWindow, main_window):
                     setcmd["TR"] = self.tcp_timeout.text()
 
             # Expansion GPIO
+            # BOOT 에서는 GPIO 커맨드가 처리되지 않으므로 제외. UPGRADE 는 포함한다
+            # (위 조기 반환과 동일한 이유 — DeviceStatusMinimum 주석 참고).
             if self.curr_st in DeviceStatusMinimum:
                 pass
             else:
@@ -5302,10 +5328,55 @@ class WIZWindow(QMainWindow, main_window):
         logger.debug(f"setcmd: {setcmd}")
         return setcmd
 
+    def _load_setting_spec(self):
+        """현재 선택 장치의 DeviceSpec 로드. 없으면 None (레거시 검증으로 폴백)."""
+        if not self.curr_dev:
+            return None
+        spec_name = detect_device(self.curr_dev) or self.curr_dev
+        try:
+            return load_device(spec_name, self.curr_ver)
+        except FileNotFoundError:
+            self.logger.warning(
+                f"_load_setting_spec: spec not found for {spec_name!r} — 레거시 검증 사용"
+            )
+            return None
+
+    def _get_set_response_timeout(self):
+        """
+        SET 명령 응답 대기 타임아웃(초). Advanced Search Options에서 조정 가능.
+
+        WIZ5XXSR-RP 계열은 별도 값을 사용한다. 해당 장치는 TCP client 접속 실패 시
+        `connect()`가 최대 1.8초(RCR 8 x RTR 200ms) 블로킹되고, SET 직후 플래시
+        저장(4KB 섹터 소거, 최대 400ms급)이 겹쳐 일반 타임아웃으로는 응답을
+        놓치는 경우가 있다 (TASKS.md BUG-WIZ5XX-SET-NORESP).
+        """
+        try:
+            if self.curr_dev and "WIZ5XXSR" in self.curr_dev:
+                timeout = self.timing_config.get_phase3_set_response_timeout_5xx()
+            else:
+                timeout = self.timing_config.get_phase3_set_response_timeout()
+        except Exception as e:
+            self.logger.warning(f"_get_set_response_timeout: {e} — 기본값 2초 사용")
+            return 2
+        self.logger.debug(f"SET response timeout: {timeout}s (dev={self.curr_dev})")
+        return timeout
+
+    def _is_valid_setcmd_param(self, spec, cmd, value):
+        """
+        SET 파라미터 검증. 커맨드 단위로 DeviceSpec 우선, 없으면 레거시 cmdset 폴백.
+
+        DeviceSpec(specs/*.yaml)은 FW 소스 기준으로 정비된 값이므로 우선한다.
+        아직 spec에 정의되지 않은 커맨드(GPIO/Modbus 등)는 레거시가 계속 담당한다.
+        """
+        if spec is not None and cmd in spec.cmdset:
+            return bool(spec.cmdset[cmd].is_valid(value)), "spec"
+        return bool(self.cmdset.isvalidparameter(cmd, value)), "legacy"
+
     def do_setting(self):
         self.disable_object()
 
         self.set_reponse = None
+        self._setcmd_reduced = False
 
         self.sock_close()
 
@@ -5324,22 +5395,17 @@ class WIZWindow(QMainWindow, main_window):
             # Update cmdset
             self.cmdset.get_cmdset(self.curr_dev, self.curr_st, self.curr_ver)
             self.logger.info(f"Device setting: {self.curr_dev}")
-            # Parameter validity check
+            # Parameter validity check (DeviceSpec 우선 + 레거시 폴백)
             invalid_flag = 0
-            setcmd_cmd = list(setcmd.keys())
             self.logger.debug(f"do_setting::setcmd={setcmd}")
-            for i in range(len(setcmd)):
-                if (
-                    self.cmdset.isvalidparameter(
-                        setcmd_cmd[i], setcmd.get(setcmd_cmd[i])
-                    )
-                    is False
-                ):
+            spec = self._load_setting_spec()
+            for cmd, value in setcmd.items():
+                is_valid, source = self._is_valid_setcmd_param(spec, cmd, value)
+                if not is_valid:
                     self.logger.warning(
-                        "Invalid parameter: %s %s"
-                        % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i]))
+                        f"Invalid parameter [{source}]: {cmd} {value!r}"
                     )
-                    self.msg_invalid(setcmd.get(setcmd_cmd[i]))
+                    self.msg_invalid(value)
                     invalid_flag += 1
 
             if invalid_flag > 0:
@@ -5365,13 +5431,14 @@ class WIZWindow(QMainWindow, main_window):
                 # socket config
                 self.socket_config()
 
+                set_timeout = self._get_set_response_timeout()
                 if self.unicast_ip.isChecked():
                     self.wizmsghandler = WIZMSGHandler(
-                        self.conf_sock, cmd_list, "tcp", Opcode.OP_SETCOMMAND, 2
+                        self.conf_sock, cmd_list, "tcp", Opcode.OP_SETCOMMAND, set_timeout
                     )
                 else:
                     self.wizmsghandler = WIZMSGHandler(
-                        self.conf_sock, cmd_list, "udp", Opcode.OP_SETCOMMAND, 2
+                        self.conf_sock, cmd_list, "udp", Opcode.OP_SETCOMMAND, set_timeout
                     )
                 self.wizmsghandler.set_result.connect(self.get_setting_result)
                 self.wizmsghandler.start()
@@ -5409,6 +5476,32 @@ class WIZWindow(QMainWindow, main_window):
 
         # MA prefix(10) + PW 라인(최소 5) + 커맨드 응답(최소 5 bytes/cmd)
         return 10 + 5 + n * 5
+
+    def _refresh_status_from_set_result(self, set_result):
+        """
+        SET 응답의 ST 값으로 curr_st / dev_data 를 최신화한다.
+
+        curr_st 는 검색 시점(get_dev_list)에만 채워지므로, 재검색 없이 Apply 를
+        반복하면 과거 상태가 남는다. BOOT/UPGRADE 가 남아 있으면
+        get_object_value() 가 네트워크 설정만 담고 조기 반환하여
+        시리얼/OP/Remote host 등이 조용히 누락된다.
+
+        dev_data[mac] 는 [MN, VR, ST] 형태이며, dev_clicked() 가 여기서
+        curr_st 를 다시 읽으므로 dev_data 를 함께 갱신한다.
+        """
+        new_st = set_result.get("ST")
+        if not new_st:
+            return
+        new_st = new_st.strip()
+        if not new_st or new_st == self.curr_st:
+            return
+
+        prev_st = self.curr_st
+        self.curr_st = new_st
+        entry = self.dev_data.get(self.curr_mac)
+        if isinstance(entry, list) and len(entry) >= 3:
+            entry[2] = new_st
+        self.logger.info(f"Device status refreshed from SET response: {prev_st} -> {new_st}")
 
     def get_setting_result(self, resp_len):
         if not self.curr_dev or not self.curr_ver:
@@ -5464,8 +5557,20 @@ class WIZWindow(QMainWindow, main_window):
 
             elif len(mc) == 17:
                 # ── 정상 성공: MAC 유효 (VB.NET: nSec.MC.data.Length == 17) ──
-                self.statusbar.showMessage(" Set device complete!")
+                if self._setcmd_reduced:
+                    self.statusbar.showMessage(
+                        f" Set complete — network settings only "
+                        f"(device was in {self.curr_st} state)."
+                    )
+                else:
+                    self.statusbar.showMessage(" Set device complete!")
                 self.msg_set_success()
+
+                # SET 응답에 포함된 ST 로 장치 상태를 최신화한다.
+                # curr_st 는 원래 검색 시점(dev_data)에만 갱신되어, 재검색 없이 Apply 를
+                # 반복하면 과거 상태(BOOT/UPGRADE)가 남아 설정이 조용히 축소 전송된다.
+                # 응답에 이미 ST 가 들어 있으므로 추가 통신 없이 자가 치유가 가능하다.
+                self._refresh_status_from_set_result(set_result)
 
                 if self.isConnected and self.unicast_ip.isChecked():
                     self.logger.info("close socket")
@@ -6736,6 +6841,38 @@ class WIZWindow(QMainWindow, main_window):
         )
         phase3_layout.addRow("SET Response Delay:", dialog.spin_set_delay)
 
+        # SET Response Timeout (일반 장치)
+        dialog.spin_set_timeout = QDoubleSpinBox()
+        dialog.spin_set_timeout.setRange(1.0, 15.0)
+        dialog.spin_set_timeout.setSingleStep(0.5)
+        dialog.spin_set_timeout.setDecimals(1)
+        dialog.spin_set_timeout.setSuffix(" sec")
+        dialog.spin_set_timeout.setValue(current_values['phase3_set_response_timeout'])
+        dialog.spin_set_timeout.setToolTip(
+            "How long to wait for the device response after Apply.\n"
+            "Exceeding this shows \"Setting failed\" even if the device applied the setting.\n\n"
+            "Default: 2.0 s"
+        )
+        phase3_layout.addRow("SET Response Timeout:", dialog.spin_set_timeout)
+
+        # SET Response Timeout (WIZ5XXSR-RP 전용)
+        dialog.spin_set_timeout_5xx = QDoubleSpinBox()
+        dialog.spin_set_timeout_5xx.setRange(1.0, 30.0)
+        dialog.spin_set_timeout_5xx.setSingleStep(0.5)
+        dialog.spin_set_timeout_5xx.setDecimals(1)
+        dialog.spin_set_timeout_5xx.setSuffix(" sec")
+        dialog.spin_set_timeout_5xx.setValue(current_values['phase3_set_response_timeout_5xx'])
+        dialog.spin_set_timeout_5xx.setToolTip(
+            "SET response timeout applied only to WIZ5XXSR-RP devices.\n\n"
+            "These devices block up to 1.8 s inside connect() when the remote host is\n"
+            "unreachable (RCR 8 x RTR 200 ms), and the flash save right after SET\n"
+            "(4 KB sector erase, up to ~400 ms) can overlap with it. The general 2.0 s\n"
+            "timeout can therefore be too short in some situations.\n\n"
+            "Default: 2.0 s (same as the general value). Raise it toward 5.0 s if\n"
+            "\"Setting failed\" appears while the setting is actually applied."
+        )
+        phase3_layout.addRow("SET Response Timeout (WIZ5XXSR-RP):", dialog.spin_set_timeout_5xx)
+
         phase3_group.setLayout(phase3_layout)
         main_layout.addWidget(phase3_group)
 
@@ -6830,6 +6967,8 @@ class WIZWindow(QMainWindow, main_window):
             'skip_phase1_emit_delay': dialog.check_skip_delay.isChecked(),
             'phase3_device_query_timeout': dialog.spin_query_timeout.value(),
             'phase3_set_command_delay_ms': dialog.spin_set_delay.value(),
+            'phase3_set_response_timeout': dialog.spin_set_timeout.value(),
+            'phase3_set_response_timeout_5xx': dialog.spin_set_timeout_5xx.value(),
             'tcp_max_parallel_workers': dialog.spin_tcp_workers.value(),
             'pgbar_update_percent': dialog.spin_pgbar_percent.value(),
             'pgbar_auto_hide_delay_ms': dialog.spin_pgbar_hide.value()
@@ -6900,6 +7039,8 @@ class WIZWindow(QMainWindow, main_window):
                 dialog.check_skip_delay.setChecked(defaults['skip_phase1_emit_delay'])
                 dialog.spin_query_timeout.setValue(defaults['phase3_device_query_timeout'])
                 dialog.spin_set_delay.setValue(defaults['phase3_set_command_delay_ms'])
+                dialog.spin_set_timeout.setValue(defaults['phase3_set_response_timeout'])
+                dialog.spin_set_timeout_5xx.setValue(defaults['phase3_set_response_timeout_5xx'])
                 dialog.spin_tcp_workers.setValue(defaults['tcp_max_parallel_workers'])
                 dialog.spin_pgbar_percent.setValue(defaults['pgbar_update_percent'])
                 dialog.spin_pgbar_hide.setValue(defaults['pgbar_auto_hide_delay_ms'])
