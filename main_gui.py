@@ -5465,7 +5465,7 @@ class WIZWindow(QMainWindow, main_window):
         이 값보다 짧으면 장치가 SearchMsg 처리 전에 리부트한 것 (IM 모드 변경 등).
         """
         from WIZMakeCMD import (
-            cmd_107sr, cmd_1p_advanced, cmd_1p_default, cmd_2p_default,
+            cmd_107sr, cmd_1p_advanced, cmd_1p_default, cmd_2p_setconfirm,
             cmd_security_base, cmd_wiz5xxsr_added, cmd_w55rp20_added,
             ONE_PORT_DEV, TWO_PORT_DEV, SECURITY_DEVICE,
             version_compare,
@@ -5473,7 +5473,8 @@ class WIZWindow(QMainWindow, main_window):
         if "WIZ107SR" in devname or "WIZ108SR" in devname:
             n = len(cmd_107sr)                          # 42
         elif devname in TWO_PORT_DEV or "752" in devname:
-            n = len(cmd_2p_default)
+            # setcommand() 가 붙이는 확인 쿼리 목록과 동일해야 한다
+            n = len(cmd_2p_setconfirm)
         elif devname in SECURITY_DEVICE:
             n = len(cmd_security_base + cmd_wiz5xxsr_added)
         elif devname in ONE_PORT_DEV:

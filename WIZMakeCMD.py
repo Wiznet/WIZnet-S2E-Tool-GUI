@@ -69,6 +69,15 @@ cmd_ch2 = [
     "ND"
 ]
 
+# WIZ752SR-12x SET 확인 쿼리 전용 목록.
+#
+# 완료 판정(get_setting_result 의 len(mc)==17)에 MC 가 필요하므로 cmd_ch2 앞에 MC 만 붙인다.
+# cmd_2p_default(전체 64개)를 쓰면 요청이 627바이트가 되어 펌웨어의
+# CONFIG_BUF_SIZE(512, WIZ752SR-12x/WIZ750SR common.h)를 넘겨 gSEGCPREQ 버퍼를
+# 오버플로시킨다. 실측: 오프셋 ~512 지점의 토큰부터 파싱이 깨지며 엉뚱한 커맨드명으로
+# INVALIDPARAM/NOTAVAIL 이 반환됐다. (2026-08-18, 실기기 확인)
+cmd_2p_setconfirm = ["MC"] + cmd_ch2
+
 # for expansion GPIO
 cmd_gpio_4pin = ["CA", "CB", "CC", "CD", "GA", "GB", "GC", "GD"]  
 cmd_gpio_2pin = ["CA", "CB", "GA", "GB"]
@@ -349,8 +358,11 @@ class WIZMakeCMD:
                         for cmd in cmd_1p_default:
                             cmd_list.append([cmd, ""])
             elif devname in TWO_PORT_DEV or "752" in devname:
-                # for WIZ752SR-12x
-                for cmd in cmd_ch2:
+                # WIZ752SR-12x: cmd_ch2 만 붙이면 MC 가 확인 쿼리에 없어서
+                # get_setting_result() 의 성공 판정(len(mc)==17)이 항상 실패한다
+                # (완료 팝업이 안 뜨던 원인). MC 를 앞에 붙인 전용 목록을 쓴다.
+                # 전체 목록(cmd_2p_default)은 요청이 512바이트 버퍼를 넘겨 쓸 수 없다.
+                for cmd in cmd_2p_setconfirm:
                     cmd_list.append([cmd, ""])
             elif devname in SECURITY_DEVICE:
                 if 'WIZ510SSL' in devname:
