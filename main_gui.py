@@ -707,12 +707,12 @@ class WIZWindow(QMainWindow, main_window):
         self.actionExit.setShortcut(QtGui.QKeySequence("Ctrl+Q"))
         self.actionExit.setShortcutContext(Qt.ApplicationShortcut)
 
-        self._sc_apply = QtWidgets.QShortcut(QtGui.QKeySequence("F4"), self)
-        self._sc_apply.setContext(Qt.WindowShortcut)
-        self._sc_apply.activated.connect(self.btn_setting.click)
-
+        # F4 는 QAction 한 곳에서만 등록한다. QShortcut 과 중복 등록하면 Qt 가
+        # "Ambiguous shortcut overload: F4" 를 내며 어느 쪽도 확실히 발동하지 않는다.
+        # 메뉴에 항목이 노출되고 단축키 힌트도 함께 표시되므로 QAction 쪽을 남긴다.
         self._action_apply = QAction("Apply Settings", self)
         self._action_apply.setShortcut(QtGui.QKeySequence("F4"))
+        self._action_apply.setShortcutContext(Qt.WindowShortcut)
         self._action_apply.triggered.connect(self.btn_setting.click)
         self.menuFile.insertAction(self.actionExit, self._action_apply)
         self.menuFile.insertSeparator(self.actionExit)
