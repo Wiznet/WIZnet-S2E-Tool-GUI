@@ -79,6 +79,9 @@ class WIZMSGHandler(QThread):
     # 기본값 500ms 유지 권장 — 줄이면 구형/느린 장치에서 SET 후 재조회 실패 가능.
     set_command_delay_ms = 500
 
+    # logging.verbose_debug 로 제어 (main_gui 가 설정/갱신)
+    verbose_wire_log = False
+
     def __init__(self, udpsock, cmd_list, what_sock, op_code, timeout, presearch=False):
         QThread.__init__(self)
 
@@ -174,6 +177,16 @@ class WIZMSGHandler(QThread):
                 f"({DEVICE_CONFIG_BUF_SIZE}B)를 초과함 — 펌웨어에서 잘리거나 "
                 f"파싱이 깨질 수 있음. cmd 수={len(self.cmd_list)}"
             )
+
+        # 와이어 바이트 덤프 (logging.verbose_debug 활성 시에만)
+        if WIZMSGHandler.verbose_wire_log:
+            try:
+                self.logger.debug(
+                    f"[WIRE] request opcode={self.opcode} size={self.size}B "
+                    f"bytes={bytes(self.msg[:self.size])!r}"
+                )
+            except Exception as e:
+                self.logger.debug(f"[WIRE] request dump failed: {e}")
 
     def sendcommands(self):
         self.sock.sendto(self.msg)

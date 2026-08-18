@@ -555,6 +555,7 @@ class WIZWindow(QMainWindow, main_window):
         WIZMSGHandler.emit_stabilization_ms = self.timing_config.get_phase1_emit_stabilization_ms()
         WIZMSGHandler.skip_phase1_emit_delay = self.timing_config.is_skip_phase1_emit_delay()
         WIZMSGHandler.set_command_delay_ms = self.timing_config.get_phase3_set_command_delay_ms()
+        WIZMSGHandler.verbose_wire_log = self.timing_config.is_verbose_debug()
 
         # 로그 레벨 초기 적용 + config 파일 실시간 감시
         _init_level = self.timing_config.get_log_level()
@@ -5535,6 +5536,13 @@ class WIZWindow(QMainWindow, main_window):
                 return
             self.set_reponse = self.wizmsghandler.rcv_list[0]
 
+            # 와이어 바이트 덤프 (logging.verbose_debug 활성 시에만)
+            if WIZMSGHandler.verbose_wire_log:
+                self.logger.debug(
+                    f"[WIRE] reply packets={len(self.wizmsghandler.rcv_list)} "
+                    f"len={len(self.set_reponse)}B bytes={self.set_reponse!r}"
+                )
+
             # ── 응답 파싱 (VB.NET parsingMsg() 방식) ──────────────────────
             # MA prefix(10 bytes) 제거 후 \r\n 단위로 분리
             payload = (self.set_reponse[10:]
@@ -7166,6 +7174,10 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.setLevel(level)
             self.logger.info(f"[Config] 로그 레벨 변경: {level_str}")
             self._sync_log_level_menu(level_str)
+            verbose = bool(data.get('logging', {}).get('verbose_debug', False))
+            if verbose != WIZMSGHandler.verbose_wire_log:
+                WIZMSGHandler.verbose_wire_log = verbose
+                self.logger.info(f"[Config] verbose_debug(와이어 덤프): {verbose}")
         except Exception as e:
             self.logger.warning(f"[Config] 로그 레벨 변경 실패: {e}")
         # 일부 에디터는 파일을 삭제 후 재생성 → watcher에서 제거됨, 재등록
