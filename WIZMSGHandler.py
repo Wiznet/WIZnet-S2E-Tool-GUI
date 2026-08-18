@@ -16,6 +16,13 @@ exitflag = 0
 # PACKET_SIZE = 2048
 PACKET_SIZE = 4096
 MAX_REPLY_CHUNKS = 200      # HIGH-03: 비정상 응답 truncation 상한
+
+# 장치 펌웨어의 설정 요청 버퍼 크기.
+# WIZ750SR / WIZ752SR-12x: common.h CONFIG_BUF_SIZE = 512
+# WIZ5XXSR-RP(1.0.6): 2048 로 확장됨
+# 이를 넘는 요청은 펌웨어에서 recvfrom() 이 버퍼를 오버플로시켜 파싱이 깨진다
+# (엉뚱한 커맨드명으로 INVALIDPARAM/NOTAVAIL 반환). 2026-08-18 실기기 확인.
+DEVICE_CONFIG_BUF_SIZE = 512
 EACH_DEV_LOOP_TIMEOUT = 0.15  # Strategy B: 개별 장치 멀티패킷 수집 루프 타임아웃
 
 
@@ -192,6 +199,13 @@ class WIZMSGHandler(QThread):
                     # print(self.size, self.msg)
         except Exception as e:
             self.logger.error("[ERROR] WIZMSGHandler makecommands(): %r" % e)
+
+        if self.size > DEVICE_CONFIG_BUF_SIZE:
+            self.logger.warning(
+                f"[SIZE] 요청 {self.size}B 가 장치 설정 버퍼 한계"
+                f"({DEVICE_CONFIG_BUF_SIZE}B)를 초과함 — 펌웨어에서 잘리거나 "
+                f"파싱이 깨질 수 있음. cmd 수={len(self.cmd_list)}"
+            )
 
     def sendcommands(self):
         self.sock.sendto(self.msg)
