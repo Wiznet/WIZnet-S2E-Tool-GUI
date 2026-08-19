@@ -160,6 +160,39 @@ class FWGitFetcher:
                 return asset
         return None
 
+    # 부트로더 이미지를 가려내는 키워드. 제품·버전마다 파일명 규칙이 달라
+    # (App_main_linker / WIZ5XXSR-RP_main_linker_V108 / App_linker ...)
+    # "앱 파일명" 을 고정할 수 없기 때문에, 확실히 배제할 수 있는 쪽을 건다.
+    # main_gui.firmware_file_open() 이 파일명에 BOOT 가 있으면 거부하는 것과 같은 규칙.
+    BOOT_KEYWORDS = ("boot",)
+
+    @classmethod
+    def _pick_app_binary(cls, names, pattern, asset_path):
+        """
+        zip 안에서 글로브에 맞는 파일 중 앱 이미지 하나를 고른다.
+
+        후보가 여럿이면 부트로더로 보이는 것을 걸러낸다.
+        그래도 하나로 좁혀지지 않으면 추측하지 않고 예외를 던진다 —
+        잘못 고르면 다른 이미지를 장치에 그대로 굽게 된다.
+        """
+        cands = [n for n in names if fnmatch.fnmatch(Path(n).name, pattern)]
+        if len(cands) > 1:
+            filtered = [
+                n for n in cands
+                if not any(k in Path(n).name.lower() for k in cls.BOOT_KEYWORDS)
+            ]
+            if filtered:
+                cands = filtered
+        if not cands:
+            return None
+        if len(cands) > 1:
+            os.remove(asset_path)
+            raise RuntimeError(
+                "zip 안에서 펌웨어 파일을 하나로 특정하지 못했습니다: "
+                + ", ".join(Path(n).name for n in cands)
+            )
+        return cands[0]
+
     def download_and_extract(
         self, asset: dict, dest_dir: str, extract_file
     ):
@@ -188,10 +221,7 @@ class FWGitFetcher:
         with zipfile.ZipFile(asset_path) as zf:
             names = zf.namelist()
             if any(ch in extract_file for ch in "*?["):
-                match = next(
-                    (n for n in names
-                     if fnmatch.fnmatch(Path(n).name, extract_file)), None
-                )
+                match = self._pick_app_binary(names, extract_file, asset_path)
             else:
                 match = next(
                     (n for n in names if Path(n).name == extract_file), None

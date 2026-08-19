@@ -5907,6 +5907,16 @@ class WIZWindow(QMainWindow, main_window):
         dlg.exec_()
 
     def _on_fw_git_ready(self, filepath: str, filesize: int):
+        # firmware_file_open() 의 BOOT 차단과 같은 규칙을 여기에도 건다.
+        # 배포처 설정이 잘못돼 부트로더가 뽑혀 나와도 장치에 굽지 않도록.
+        basename = os.path.basename(filepath)
+        if "BOOT" in basename.upper():
+            self.show_msgbox(
+                "Warning",
+                f"Cannot upload BOOT firmware file.\n\nSelected file: {basename}",
+                QMessageBox.Warning,
+            )
+            return
         if self.localip_addr is None:
             self.show_msgbox(
                 "Warning",

@@ -131,7 +131,7 @@
         {
           "name_pattern": "WIZ5XXSR-RP",
           "asset_pattern": "*output_binaries*.zip",
-          "extract_file": "App_main_linker.bin"
+          "extract_file": "*.bin"
         }
       ]
     },
