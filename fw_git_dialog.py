@@ -20,14 +20,15 @@ class _FetchReleasesThread(QThread):
     done = pyqtSignal(list)
     error = pyqtSignal(str)
 
-    def __init__(self, fetcher, repo):
+    def __init__(self, fetcher, family):
         super().__init__()
         self._fetcher = fetcher
-        self._repo = repo
+        self._family = family
 
     def run(self):
         try:
-            self.done.emit(self._fetcher.get_releases(self._repo))
+            # family 의 source_type 에 따라 GitHub 릴리즈 / docs 페이지로 분기
+            self.done.emit(self._fetcher.get_releases_for(self._family))
         except Exception as e:
             self.error.emit(str(e))
 
@@ -213,7 +214,7 @@ class FWGitDialog(QDialog):
         self._lbl_asset.setStyleSheet("")
         self._releases = []
         self._current_asset = None
-        self._fetch_thread = _FetchReleasesThread(self._fetcher, self._family["repo"])
+        self._fetch_thread = _FetchReleasesThread(self._fetcher, self._family)
         self._fetch_thread.done.connect(self._on_releases_fetched)
         self._fetch_thread.error.connect(self._on_fetch_error)
         self._fetch_thread.start()

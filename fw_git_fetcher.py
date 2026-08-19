@@ -1,13 +1,22 @@
 """
-GitHub 릴리즈에서 펌웨어를 조회·다운로드·추출하는 유틸리티.
+공개 배포처에서 펌웨어를 조회·다운로드·추출하는 유틸리티.
 GUI 의존 없는 순수 로직 모듈.
+
+배포처 종류는 family 의 source_type 으로 구분한다.
+  github_release (기본) — GitHub 릴리즈 API
+  docs_html               — docs.wiznet.io 제품 페이지의 Firmware 링크 파싱
+                            (저장소가 비공개이거나 릴리즈가 없는 구형 제품용)
+두 종류 모두 아래 형태의 release dict 로 정규화되어 이후 처리가 동일하다.
+  {"tag_name", "published_at", "assets": [{"name", "browser_download_url", "size"}]}
 """
 import datetime
 import fnmatch
 import json
 import os
+import re
 import zipfile
 from pathlib import Path
+from urllib.parse import urljoin
 
 import requests
 
@@ -76,6 +85,66 @@ class FWGitFetcher:
         resp.raise_for_status()
         return resp.json()
 
+    def get_releases_for(self, family: dict) -> list:
+        """
+        family 의 source_type 에 맞는 배포처에서 release 목록을 가져온다.
+        source_type 이 없으면 github_release 로 간주(기존 설정 호환).
+        """
+        stype = family.get("source_type", "github_release")
+        if stype == "github_release":
+            return self.get_releases(family["repo"])
+        if stype == "docs_html":
+            return self._get_releases_docs_html(family)
+        raise ValueError(f"Unknown source_type: {stype}")
+
+    def _get_releases_docs_html(self, family: dict) -> list:
+        """
+        docs.wiznet.io 제품 페이지에서 펌웨어 zip 링크를 긁어 release 목록으로 변환.
+
+        페이지가 최신 버전을 위에 두므로 문서 등장 순서를 그대로 유지한다.
+        link_pattern(fnmatch, 파일명 기준)으로 펌웨어만 골라내고,
+        exclude_asset_keywords 로 구형 묶음 파일 등을 제외한다.
+        """
+        docs_url = family["docs_url"]
+        resp = requests.get(docs_url, timeout=15)
+        resp.raise_for_status()
+
+        link_pattern = family.get("link_pattern", "*.zip")
+        exclude = [k.lower() for k in family.get("exclude_asset_keywords", [])]
+        ver_re = family.get("version_regex")
+
+        releases, seen = [], set()
+        for href in re.findall(r'href=["\']([^"\']+\.zip)["\']', resp.text, re.I):
+            url = urljoin(docs_url, href)
+            name = os.path.basename(url)
+            if name.lower() in seen:
+                continue
+            # 문서 페이지는 버전마다 대소문자 표기가 섞여 있어 소문자로 맞춰 비교한다
+            if not fnmatch.fnmatch(name.lower(), link_pattern.lower()):
+                continue
+            if any(k in name.lower() for k in exclude):
+                continue
+            seen.add(name.lower())
+            releases.append({
+                "tag_name": self._docs_version_label(name, ver_re),
+                "published_at": "",
+                "assets": [{
+                    "name": name,
+                    "browser_download_url": url,
+                    "size": 0,
+                }],
+            })
+        return releases
+
+    @staticmethod
+    def _docs_version_label(filename: str, ver_re):
+        """파일명에서 버전 표기를 뽑는다. 실패하면 파일명을 그대로 쓴다."""
+        if ver_re:
+            m = re.search(ver_re, filename, re.I)
+            if m:
+                return "v" + ".".join(g for g in m.groups() if g)
+        return Path(filename).stem
+
     def find_asset(self, release: dict, device: dict, family: dict):
         """
         asset_pattern 글로브 매칭 + exclude_asset_keywords(대소문자 무시) 필터.
@@ -99,6 +168,7 @@ class FWGitFetcher:
 
         extract_file=None  → 다운로드 파일 그대로 사용
         extract_file="App_linker.bin" → zip 에서 해당 파일 추출
+        extract_file="*.bin" → 글로브 매칭(버전마다 파일명이 바뀌는 구형 제품용)
         """
         os.makedirs(dest_dir, exist_ok=True)
         ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -117,15 +187,21 @@ class FWGitFetcher:
 
         with zipfile.ZipFile(asset_path) as zf:
             names = zf.namelist()
-            match = next(
-                (n for n in names if Path(n).name == extract_file), None
-            )
+            if any(ch in extract_file for ch in "*?["):
+                match = next(
+                    (n for n in names
+                     if fnmatch.fnmatch(Path(n).name, extract_file)), None
+                )
+            else:
+                match = next(
+                    (n for n in names if Path(n).name == extract_file), None
+                )
             if match is None:
                 os.remove(asset_path)
                 raise FileNotFoundError(
                     f"{extract_file} not found in zip ({asset['name']})"
                 )
-            bin_path = os.path.join(dest_dir, f"fwgit_{ts}_{extract_file}")
+            bin_path = os.path.join(dest_dir, f"fwgit_{ts}_{Path(match).name}")
             with zf.open(match) as src, open(bin_path, "wb") as dst:
                 dst.write(src.read())
 

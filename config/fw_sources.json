@@ -38,7 +38,9 @@
       "id": "wiz550sr",
       "display_name": "WIZ550SR",
       "repo": "Wiznet/WIZ550SR",
-      "exclude_asset_keywords": ["boot"],
+      "exclude_asset_keywords": [
+        "boot"
+      ],
       "devices": [
         {
           "name_pattern": "WIZ550SR",
@@ -51,7 +53,9 @@
       "id": "wiz550s2e",
       "display_name": "WIZ550S2E",
       "repo": "Wiznet/WIZ550S2E",
-      "exclude_asset_keywords": ["boot"],
+      "exclude_asset_keywords": [
+        "boot"
+      ],
       "devices": [
         {
           "name_pattern": "WIZ550S2E",
@@ -64,7 +68,9 @@
       "id": "wiz550s2e_modbus",
       "display_name": "WIZ550S2E-Modbus",
       "repo": "Wiznet/WIZ550S2E-Modbus",
-      "exclude_asset_keywords": ["boot"],
+      "exclude_asset_keywords": [
+        "boot"
+      ],
       "devices": [
         {
           "name_pattern": "WIZ550S2E-Modbus",
@@ -77,7 +83,10 @@
       "id": "wiz550web",
       "display_name": "WIZ550WEB",
       "repo": "Wiznet/WIZ550web",
-      "exclude_asset_keywords": ["boot", "hex"],
+      "exclude_asset_keywords": [
+        "boot",
+        "hex"
+      ],
       "devices": [
         {
           "name_pattern": "WIZ550WEB",
@@ -90,7 +99,9 @@
       "id": "wiz750sr",
       "display_name": "WIZ750SR Series",
       "repo": "Wiznet/WIZ750SR",
-      "exclude_asset_keywords": ["boot"],
+      "exclude_asset_keywords": [
+        "boot"
+      ],
       "devices": [
         {
           "name_pattern": "WIZ750SR",
@@ -108,6 +119,79 @@
           "extract_file": null
         }
       ]
+    },
+    {
+      "id": "wiz5xxsr_rp",
+      "display_name": "WIZ5XXSR-RP Series",
+      "repo": "Wiznet/WIZ5XXSR-RP-C",
+      "exclude_asset_keywords": [
+        "wiz5xxsr-rp-c"
+      ],
+      "devices": [
+        {
+          "name_pattern": "WIZ5XXSR-RP",
+          "asset_pattern": "*output_binaries*.zip",
+          "extract_file": "App_main_linker.bin"
+        }
+      ]
+    },
+    {
+      "id": "wiz752sr",
+      "display_name": "WIZ752SR Series",
+      "repo": "Wiznet/WIZ752SR-12x",
+      "exclude_asset_keywords": [
+        "boot"
+      ],
+      "devices": [
+        {
+          "name_pattern": "WIZ752SR-12?",
+          "asset_pattern": "W7500x_Application_All.bin",
+          "extract_file": null
+        }
+      ]
+    },
+    {
+      "id": "wiz107sr",
+      "display_name": "WIZ107SR",
+      "source_type": "docs_html",
+      "repo": "docs.wiznet.io / WIZ107SR",
+      "docs_url": "https://docs.wiznet.io/Product/Modules/Serial-to-Ethernet-Module/WIZ107SR",
+      "link_pattern": "wiz107srv*.zip",
+      "version_regex": "v(\\d+)_(\\d+)",
+      "exclude_asset_keywords": [
+        "old",
+        "_hw",
+        "schematic"
+      ],
+      "devices": [
+        {
+          "name_pattern": "WIZ107SR",
+          "asset_pattern": "*.zip",
+          "extract_file": "*.bin"
+        }
+      ]
+    },
+    {
+      "id": "wiz108sr",
+      "display_name": "WIZ108SR",
+      "source_type": "docs_html",
+      "repo": "docs.wiznet.io / WIZ108SR",
+      "docs_url": "https://docs.wiznet.io/Product/Modules/Serial-to-Ethernet-Module/WIZ108SR",
+      "link_pattern": "wiz108srv*.zip",
+      "version_regex": "v(\\d+)_(\\d+)",
+      "exclude_asset_keywords": [
+        "old",
+        "_hw",
+        "schematic"
+      ],
+      "devices": [
+        {
+          "name_pattern": "WIZ108SR",
+          "asset_pattern": "*.zip",
+          "extract_file": "*.bin"
+        }
+      ]
     }
-  ]
+  ],
+  "_source_type": "family 배포처 종류. 생략 시 github_release. docs_html 은 docs.wiznet.io 제품 페이지의 Firmware 링크를 파싱"
 }
