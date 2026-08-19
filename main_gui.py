@@ -5782,6 +5782,61 @@ class WIZWindow(QMainWindow, main_window):
             self._fw_download_path = path
             self._save_fw_download_path(path)
 
+    def _handle_unsupported_fw_device(self):
+        """
+        FW from Git 에 배포처가 등록되지 않은 장치를 만났을 때의 처리.
+        사용자에게 알리고, 동의하면 툴 저장소 이슈로 남긴다.
+        """
+        supported = ", ".join(sorted(set(self._fw_fetcher.supported_devices())))
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle("Unsupported device")
+        box.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        box.setText(
+            f"<b>{self.curr_dev}</b> 의 펌웨어 배포처가 등록되어 있지 않습니다.<br><br>"
+            f"다른 제품의 펌웨어가 잘못 설치되는 것을 막기 위해 진행하지 않습니다.<br>"
+            f"펌웨어 파일을 직접 받아 <b>Firmware Upload</b> 로 진행해 주세요."
+        )
+        box.setDetailedText(f"등록된 장치:\n{supported}")
+        box.setInformativeText("이 장치를 지원 목록에 추가하도록 이슈를 남길까요?")
+        box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        box.setDefaultButton(QMessageBox.Yes)
+        if box.exec_() != QMessageBox.Yes:
+            return
+
+        try:
+            from fw_issue_reporter import FWIssueReporter
+            from fw_git_dialog import ReportUnsupportedThread
+        except Exception as e:
+            self.logger.warning(f"issue reporter import failed: {e}")
+            return
+
+        reporter = FWIssueReporter(
+            "Wiznet/WIZnet-S2E-Tool-GUI", VERSION, logger=self.logger
+        )
+        self._fw_issue_thread = ReportUnsupportedThread(
+            reporter, self.curr_dev, self.curr_ver or ""
+        )
+        self._fw_issue_thread.done.connect(self._on_fw_issue_reported)
+        self._fw_issue_thread.start()
+
+    def _on_fw_issue_reported(self, result: dict):
+        """이슈 보고 결과 안내. manual 이면 사용자가 직접 제출하도록 브라우저를 연다."""
+        action = result.get("action", "")
+        url = result.get("url", "")
+        msg = result.get("message", "")
+        self.logger.info(f"[FW from Git] unsupported device report: {action} {url}")
+
+        if action == "manual" and url:
+            webbrowser.open(url)
+        if action == "error":
+            self.show_msgbox(
+                "Warning", f"이슈 등록에 실패했습니다.\n{msg}", QMessageBox.Warning
+            )
+            return
+        body = msg + (f"\n\n{url}" if url else "")
+        self.show_msgbox("Information", body, QMessageBox.Information)
+
     def event_fw_from_git(self):
         if not self.curr_dev:
             self.show_msgbox("Warning", "Please select a device first.", QMessageBox.Warning)
@@ -5822,20 +5877,11 @@ class WIZWindow(QMainWindow, main_window):
             fw_type_list = []
             family, device_spec = self._fw_fetcher.find_device(self.curr_dev)
             if family is None:
-                dn = self.curr_dev.upper()
-                sources = self._fw_fetcher._sources
-                best_fam = sources["families"][0]
-                best_dev = best_fam["devices"][0]
-                for fam in sources["families"]:
-                    for dev in fam["devices"]:
-                        base = dev["name_pattern"].rstrip("?*").upper()
-                        if base and dn.startswith(base):
-                            best_fam, best_dev = fam, dev
-                            break
-                    else:
-                        continue
-                    break
-                family, device_spec = best_fam, best_dev
+                # 등록되지 않은 장치를 임의의 family 로 대체하면 다른 제품의
+                # 이미지를 그대로 플래싱하게 된다(예: WIZ5XXSR-RP -> IP20).
+                # 추측하지 않고 중단한다.
+                self._handle_unsupported_fw_device()
+                return
             display_name = self.curr_dev
 
         wiz550_config = None

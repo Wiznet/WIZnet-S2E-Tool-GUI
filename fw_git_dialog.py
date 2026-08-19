@@ -16,6 +16,29 @@ from PyQt5.QtWidgets import (
 )
 
 
+class ReportUnsupportedThread(QThread):
+    """
+    미지원 장치 이슈 보고를 백그라운드로 돌린다.
+    검색·등록이 수 초 걸릴 수 있어 GUI 를 붙잡지 않기 위함.
+    done 은 fw_issue_reporter.report_unsupported() 의 결과 dict 를 그대로 전달한다.
+    """
+    done = pyqtSignal(dict)
+
+    def __init__(self, reporter, device_name, fw_version=""):
+        super().__init__()
+        self._reporter = reporter
+        self._device_name = device_name
+        self._fw_version = fw_version
+
+    def run(self):
+        try:
+            self.done.emit(
+                self._reporter.report_unsupported(self._device_name, self._fw_version)
+            )
+        except Exception as e:      # 보고 실패가 툴 동작을 막으면 안 됨
+            self.done.emit({"action": "error", "url": "", "message": str(e)})
+
+
 class _FetchReleasesThread(QThread):
     done = pyqtSignal(list)
     error = pyqtSignal(str)
