@@ -156,31 +156,49 @@ class FWGitFetcher:
             name = asset["name"]
             if any(k in name.lower() for k in exclude):
                 continue
+            # 압축 없이 bin 을 그대로 쓰는 제품은 여기가 마지막 관문이라
+            # 부트로더·병합본 표기를 애셋 단계에서도 본다. zip 애셋은
+            # 이름에 이 표기가 없고 내부 선택에서 다시 걸러진다.
+            if device.get("extract_file") is None and self.is_non_app_name(name):
+                continue
             if fnmatch.fnmatch(name, pattern):
                 return asset
         return None
 
-    # 부트로더 이미지를 가려내는 키워드. 제품·버전마다 파일명 규칙이 달라
-    # (App_main_linker / WIZ5XXSR-RP_main_linker_V108 / App_linker ...)
-    # "앱 파일명" 을 고정할 수 없기 때문에, 확실히 배제할 수 있는 쪽을 건다.
-    # main_gui.firmware_file_open() 이 파일명에 BOOT 가 있으면 거부하는 것과 같은 규칙.
-    BOOT_KEYWORDS = ("boot",)
+    # 앱이 아닌 이미지(부트로더 / 부트+앱 병합본)를 가려내는 표기.
+    # 제품·버전마다 앱 파일명 규칙이 달라 "앱 이름" 은 고정할 수 없다.
+    #   App_main_linker / WIZ5XXSR-RP_main_linker_V108 / App_linker ...
+    # 그래서 확실히 배제할 수 있는 쪽에 규칙을 건다.
+    #   boot          부트로더 (Boot.bin, WIZ750SRv145_incl_boot.bin)
+    #   all           관습적으로 병합본을 뜻함 (W7500x_Application_All.bin)
+    #                 install/small 같은 오탐을 막으려고 토큰 경계를 요구한다
+    #   merge/incl    병합본 (Boot-App_linker_Merged.bin, *_incl_boot.bin)
+    # main_gui.firmware_file_open() 이 파일명에 BOOT 가 있으면 거부하는 것의 확장.
+    NON_APP_PATTERNS = (
+        re.compile(r"boot", re.I),
+        re.compile(r"(?:^|[_\-. ])all(?:[_\-. ]|$)", re.I),
+        re.compile(r"merge", re.I),
+        re.compile(r"(?:^|[_\-. ])incl(?:[_\-. ]|$)", re.I),
+    )
+
+    @classmethod
+    def is_non_app_name(cls, name: str) -> bool:
+        """파일명만으로 '앱 이미지가 아니다' 라고 볼 수 있는지."""
+        base = Path(name).name
+        return any(p.search(base) for p in cls.NON_APP_PATTERNS)
 
     @classmethod
     def _pick_app_binary(cls, names, pattern, asset_path):
         """
         zip 안에서 글로브에 맞는 파일 중 앱 이미지 하나를 고른다.
 
-        후보가 여럿이면 부트로더로 보이는 것을 걸러낸다.
+        후보가 여럿이면 부트로더·병합본으로 보이는 것을 걸러낸다.
         그래도 하나로 좁혀지지 않으면 추측하지 않고 예외를 던진다 —
         잘못 고르면 다른 이미지를 장치에 그대로 굽게 된다.
         """
         cands = [n for n in names if fnmatch.fnmatch(Path(n).name, pattern)]
         if len(cands) > 1:
-            filtered = [
-                n for n in cands
-                if not any(k in Path(n).name.lower() for k in cls.BOOT_KEYWORDS)
-            ]
+            filtered = [n for n in cands if not cls.is_non_app_name(n)]
             if filtered:
                 cands = filtered
         if not cands:
