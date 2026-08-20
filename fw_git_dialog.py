@@ -81,7 +81,7 @@ class FWGitDialog(QDialog):
     firmware_ready = pyqtSignal(str, int)   # (bin_path, filesize)
 
     def __init__(self, parent, device_name, family, device_spec, fetcher, dl_path,
-                 fw_type_list=None, wiz550_config=None):
+                 fw_type_list=None, wiz550_config=None, image_validator=None):
         """
         fw_type_list: [{"label": str, "family": dict, "device_spec": dict}, ...]
           None 또는 빈 리스트면 타입 선택 행 미표시.
@@ -96,6 +96,9 @@ class FWGitDialog(QDialog):
         self._dl_path      = dl_path
         self._fw_type_list = fw_type_list or []
         self._wiz550_config = wiz550_config
+        # WIZ550 은 이 창 안에서 바로 TFTP 업로드하므로 firmware_ready 를 타지 않는다.
+        # 그 경로도 같은 이미지 검증을 받도록 호출자가 검증 함수를 넘겨준다.
+        self._image_validator = image_validator
         self._releases     = []
         self._current_asset = None
         self._fetch_thread  = None
@@ -297,6 +300,12 @@ class FWGitDialog(QDialog):
     def _on_download_done(self, path, size):
         self._tmp_bin_path = path
         if self._wiz550_config is not None:
+            if self._image_validator is not None and not self._image_validator(path):
+                self._set_busy(False)
+                self._cleanup_tmp()
+                self._lbl_asset.setText("Firmware image check failed.")
+                self._lbl_asset.setStyleSheet("color: red;")
+                return
             self._start_wiz550_upload(path)
         else:
             self._set_busy(False)
