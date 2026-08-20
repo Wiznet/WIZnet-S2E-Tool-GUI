@@ -3,78 +3,30 @@
   "title": "WIZnet WIZ550 Device Spec",
   "description": "Schema for specs/devices/WIZ550*.yaml files. Binary protocol devices without command_groups.",
   "type": "object",
-  "required": [
-    "name",
-    "family",
-    "channels",
-    "protocol",
-    "ui"
-  ],
+  "required": ["name", "family", "channels", "protocol", "ui"],
   "additionalProperties": false,
   "properties": {
-    "name": {
-      "type": "string"
-    },
-    "display_name": {
-      "type": "string"
-    },
-    "aliases": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "family": {
-      "type": "string",
-      "const": "wiz550"
-    },
-    "channels": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 2
-    },
+    "name":         {"type": "string"},
+    "display_name": {"type": "string"},
+    "aliases":      {"type": "array", "items": {"type": "string"}},
+    "family":       {"type": "string", "const": "wiz550"},
+    "channels":     {"type": "integer", "minimum": 1, "maximum": 2},
     "protocol": {
       "type": "object",
-      "required": [
-        "handler",
-        "port",
-        "product_code",
-        "config_size",
-        "parser",
-        "builder"
-      ],
+      "required": ["handler", "port", "product_code", "config_size", "parser", "builder"],
       "additionalProperties": false,
       "properties": {
-        "handler": {
-          "type": "string"
-        },
-        "port": {
-          "type": "integer"
-        },
-        "product_code": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          },
-          "minItems": 3,
-          "maxItems": 3
-        },
-        "config_size": {
-          "type": "integer"
-        },
-        "parser": {
-          "type": "string"
-        },
-        "builder": {
-          "type": "string"
-        }
+        "handler":      {"type": "string"},
+        "port":         {"type": "integer"},
+        "product_code": {"type": "array", "items": {"type": "integer"}, "minItems": 3, "maxItems": 3},
+        "config_size":  {"type": "integer"},
+        "parser":       {"type": "string"},
+        "builder":      {"type": "string"}
       }
     },
     "ui": {
       "type": "object",
-      "required": [
-        "sections"
-      ],
+      "required": ["sections"],
       "additionalProperties": false,
       "properties": {
         "sections": {
@@ -82,27 +34,15 @@
           "minItems": 1,
           "items": {
             "type": "object",
-            "required": [
-              "id",
-              "label",
-              "fields"
-            ],
+            "required": ["id", "label", "fields"],
             "additionalProperties": false,
             "properties": {
-              "id": {
-                "type": "string"
-              },
-              "label": {
-                "type": "string"
-              },
-              "condition": {
-                "type": "string"
-              },
-              "fields": {
+              "id":        {"type": "string"},
+              "label":     {"type": "string"},
+              "condition": {"type": "string"},
+              "fields":    {
                 "type": "array",
-                "items": {
-                  "$ref": "#/definitions/field"
-                }
+                "items": {"$ref": "#/definitions/field"}
               }
             }
           }
@@ -114,31 +54,19 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "visible": {
-                "type": "boolean"
-              },
+              "visible": {"type": "boolean"},
               "enabled": {
                 "oneOf": [
-                  {
-                    "type": "boolean"
-                  },
+                  {"type": "boolean"},
                   {
                     "type": "object",
-                    "required": [
-                      "min_version"
-                    ],
+                    "required": ["min_version"],
                     "additionalProperties": false,
-                    "properties": {
-                      "min_version": {
-                        "type": "string"
-                      }
-                    }
+                    "properties": {"min_version": {"type": "string"}}
                   }
                 ]
               },
-              "tooltip": {
-                "type": "string"
-              }
+              "tooltip": {"type": "string"}
             }
           }
         }
@@ -146,70 +74,29 @@
     },
     "fw_image": {
       "type": "object",
-      "description": "펌웨어 이미지(APP/BOOT) 판별 설정. profile 로 config/fw_image_defaults.yaml 의 프로파일을 고르고, 개별 키로 그 값을 덮어쓴다.",
+      "additionalProperties": false,
+      "description": "Firmware image (APP/BOOT) validation settings. 'profile' selects a profile from config/fw_image_defaults.yaml; individual keys override it.",
       "properties": {
-        "profile": {
-          "type": "string",
-          "description": "fw_image_defaults.yaml 의 profiles 키"
-        },
-        "vector_check": {
-          "type": "boolean"
-        },
-        "app_start": {
-          "type": "integer"
-        },
-        "flash_end": {
-          "type": "integer"
-        },
-        "sram": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          },
-          "minItems": 2,
-          "maxItems": 2
-        }
-      },
-      "additionalProperties": false
+        "profile":      {"type": "string"},
+        "vector_check": {"type": "boolean"},
+        "app_start":    {"type": "integer"},
+        "flash_end":    {"type": "integer"},
+        "sram":         {"type": "array", "items": {"type": "integer"}, "minItems": 2, "maxItems": 2}
+      }
     }
   },
   "definitions": {
     "field": {
       "type": "object",
-      "required": [
-        "id",
-        "label",
-        "type"
-      ],
+      "required": ["id", "label", "type"],
       "additionalProperties": false,
       "properties": {
-        "id": {
-          "type": "string"
-        },
-        "label": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string",
-          "enum": [
-            "ip",
-            "text",
-            "uint16",
-            "dropdown",
-            "checkbox",
-            "readonly"
-          ]
-        },
-        "choices": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
-        },
-        "disabled": {
-          "type": "boolean"
-        },
-        "value": {}
+        "id":       {"type": "string"},
+        "label":    {"type": "string"},
+        "type":     {"type": "string", "enum": ["ip", "text", "uint16", "dropdown", "checkbox", "readonly"]},
+        "choices":  {"type": "object", "additionalProperties": {"type": "string"}},
+        "disabled": {"type": "boolean"},
+        "value":    {}
       }
     }
   }
