@@ -54,6 +54,19 @@ class FWGitFetcher:
                 return fam, devices[0] if devices else None
         return None, None
 
+    def find_unsupported(self, device_name: str):
+        """
+        공개 배포처가 없음을 이미 확인한 장치인지 본다.
+
+        "아직 등록 안 한 장치" 와 "없다고 확인한 장치" 를 구분하기 위한 것이다.
+        후자는 이슈로 물어볼 것이 없으므로 사유를 그대로 안내한다.
+        반환: 사유 문자열 또는 None.
+        """
+        for item in self._sources.get("unsupported", []):
+            if fnmatch.fnmatch(device_name, item["name_pattern"]):
+                return item.get("reason", "")
+        return None
+
     def find_all_devices(self, device_name: str) -> list:
         """매칭되는 모든 (family, device) 쌍 반환 — 복수 repo 지원용."""
         results = []

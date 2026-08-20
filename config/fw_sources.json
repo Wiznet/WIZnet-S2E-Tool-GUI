@@ -193,5 +193,20 @@
       ]
     }
   ],
-  "_source_type": "family 배포처 종류. 생략 시 github_release. docs_html 은 docs.wiznet.io 제품 페이지의 Firmware 링크를 파싱"
+  "_source_type": "family 배포처 종류. 생략 시 github_release. docs_html 은 docs.wiznet.io 제품 페이지의 Firmware 링크를 파싱",
+  "_unsupported": "공개 배포처가 없음을 확인한 장치. 여기 걸리면 '미지원' 으로 명확히 안내하고 이슈 등록은 권하지 않는다(이미 아는 사실이므로).",
+  "unsupported": [
+    {
+      "name_pattern": "WIZ510SSL",
+      "reason": "공개 릴리즈가 없습니다 (저장소는 있으나 릴리즈 0건, 2026-08-19 확인)."
+    },
+    {
+      "name_pattern": "WIZ5XXSR-RP_E-SAVE",
+      "reason": "E-SAVE_1.0.0 태그만 있고 릴리즈 애셋이 없습니다 (2026-08-19 확인)."
+    },
+    {
+      "name_pattern": "W55RP20-S2E-2CH",
+      "reason": "W55RP20-S2E 릴리즈에 2CH 전용 이미지가 없습니다 (2026-08-19 확인)."
+    }
+  ]
 }

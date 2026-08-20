@@ -5787,6 +5787,22 @@ class WIZWindow(QMainWindow, main_window):
         FW from Git 에 배포처가 등록되지 않은 장치를 만났을 때의 처리.
         사용자에게 알리고, 동의하면 툴 저장소 이슈로 남긴다.
         """
+        # 공개 배포처가 없음을 이미 확인한 장치는 사유를 그대로 알린다.
+        # 이슈로 물어볼 것이 없으므로 등록 제안도 하지 않는다.
+        reason = self._fw_fetcher.find_unsupported(self.curr_dev)
+        if reason:
+            self.show_msgbox_richtext(
+                "Unsupported device",
+                f"<b>{self.curr_dev}</b> 은 <b>FW from Git</b> 을 지원하지 않습니다.<br><br>"
+                f"{reason}<br><br>"
+                f"펌웨어 파일을 직접 받아 <b>Firmware Upload</b> 로 진행해 주세요.",
+                QMessageBox.Warning,
+            )
+            self.logger.info(
+                f"[FW from Git] {self.curr_dev}: 미지원 장치 (사유: {reason})"
+            )
+            return
+
         supported = ", ".join(sorted(set(self._fw_fetcher.supported_devices())))
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Warning)
