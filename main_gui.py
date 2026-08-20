@@ -5341,6 +5341,53 @@ class WIZWindow(QMainWindow, main_window):
             )
             return None
 
+    def _verify_fw_image(self, filepath: str) -> bool:
+        """
+        업로드 직전 이미지 검증. 통과하면 True, 막으면 False.
+
+        파일명 표기와 벡터 테이블 판정을 대조해 둘이 어긋나거나 APP 이 아니면
+        차단한다. 검증 기준(fw_image.profile)이 없는 장치도 차단한다 —
+        근거 없이 통과시키면 다른 이미지를 그대로 굽게 된다.
+        """
+        try:
+            from fw_image_check import FWImageChecker, OK
+            from fw_git_fetcher import FWGitFetcher
+            if getattr(self, "_fw_image_checker", None) is None:
+                self._fw_image_checker = FWImageChecker(
+                    resource_path("config/fw_image_defaults.yaml"), logger=self.logger
+                )
+            spec = self._load_setting_spec()
+            result = self._fw_image_checker.check(
+                filepath,
+                getattr(spec, "fw_image", None) if spec else None,
+                FWGitFetcher.is_non_app_name,
+            )
+        except Exception as e:
+            # 검증기 자체가 실패하면 판단 근거가 없으므로 막는다
+            self.logger.error(f"_verify_fw_image failed: {e}")
+            self.show_msgbox(
+                "Warning",
+                f"펌웨어 이미지 검증에 실패했습니다.\n{e}",
+                QMessageBox.Warning,
+            )
+            return False
+
+        if result["result"] == OK:
+            return True
+
+        self.logger.warning(
+            f"[FWImageCheck] 업로드 차단 — {result['reason']} / {result['detail']}"
+        )
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle("Firmware image check")
+        box.setText(result["reason"])
+        box.setInformativeText("APP 펌웨어 파일을 선택해 주세요.")
+        box.setDetailedText(result["detail"])
+        box.setStandardButtons(QMessageBox.Ok)
+        box.exec_()
+        return False
+
     def _get_set_response_timeout(self):
         """
         SET 명령 응답 대기 타임아웃(초). Advanced Search Options에서 조정 가능.
@@ -5923,15 +5970,10 @@ class WIZWindow(QMainWindow, main_window):
         dlg.exec_()
 
     def _on_fw_git_ready(self, filepath: str, filesize: int):
-        # firmware_file_open() 의 BOOT 차단과 같은 규칙을 여기에도 건다.
-        # 배포처 설정이 잘못돼 부트로더가 뽑혀 나와도 장치에 굽지 않도록.
-        basename = os.path.basename(filepath)
-        if "BOOT" in basename.upper():
-            self.show_msgbox(
-                "Warning",
-                f"Cannot upload BOOT firmware file.\n\nSelected file: {basename}",
-                QMessageBox.Warning,
-            )
+        # 배포처 설정이 잘못돼 부트로더나 병합본이 뽑혀 나와도 굽지 않도록,
+        # 수동 선택 경로와 같은 검증을 여기에도 건다.
+        if not self._verify_fw_image(filepath):
+            self._cleanup_fw_git_file(filepath)
             return
         if self.localip_addr is None:
             self.show_msgbox(
@@ -6028,13 +6070,8 @@ class WIZWindow(QMainWindow, main_window):
         )
 
         if fname:
-            basename = fname.split('/')[-1]
-            if 'BOOT' in basename.upper():
-                self.show_msgbox(
-                    "Warning",
-                    f"Cannot upload BOOT firmware file.\n\nSelected file: {basename}\n\nPlease select an APP firmware file only.",
-                    QMessageBox.Warning,
-                )
+            # 파일명 표기 + 벡터 테이블 대조. 둘이 어긋나거나 APP 이 아니면 중단.
+            if not self._verify_fw_image(fname):
                 return
 
             self.fw_filename = fname

@@ -3,7 +3,12 @@
   "title": "WIZnet Device Spec",
   "description": "Schema for specs/devices/*.yaml files. Core fields are strict; ui internals are flexible.",
   "type": "object",
-  "required": ["name", "family", "channels", "command_groups"],
+  "required": [
+    "name",
+    "family",
+    "channels",
+    "command_groups"
+  ],
   "additionalProperties": false,
   "properties": {
     "name": {
@@ -16,12 +21,19 @@
     },
     "aliases": {
       "type": "array",
-      "items": {"type": "string"},
+      "items": {
+        "type": "string"
+      },
       "description": "Alternative names for device matching"
     },
     "family": {
       "type": "string",
-      "enum": ["one_port", "security", "two_port", "security_two_port"],
+      "enum": [
+        "one_port",
+        "security",
+        "two_port",
+        "security_two_port"
+      ],
       "description": "Device family — determines available features"
     },
     "channels": {
@@ -32,15 +44,28 @@
     },
     "search_cmd_order": {
       "type": "array",
-      "items": {"type": "string"},
+      "items": {
+        "type": "string"
+      },
       "description": "Command codes sent during device search, in order"
     },
     "command_groups": {
       "type": "array",
       "items": {
         "type": "string",
-        "enum": ["base", "ddns", "gpio", "modbus", "pppoe", "retransmit",
-                 "security", "telnet", "two_port", "w55rp20_ext", "w55rp20_two_port"]
+        "enum": [
+          "base",
+          "ddns",
+          "gpio",
+          "modbus",
+          "pppoe",
+          "retransmit",
+          "security",
+          "telnet",
+          "two_port",
+          "w55rp20_ext",
+          "w55rp20_two_port"
+        ]
       },
       "minItems": 1,
       "description": "Command group names. Must match specs/commands/*.yaml filenames."
@@ -59,6 +84,34 @@
       "type": "object",
       "additionalProperties": true,
       "description": "UI layout hints. Internal structure is flexible to allow editor evolution."
+    },
+    "fw_image": {
+      "type": "object",
+      "description": "펌웨어 이미지(APP/BOOT) 판별 설정. profile 로 config/fw_image_defaults.yaml 의 프로파일을 고르고, 개별 키로 그 값을 덮어쓴다.",
+      "properties": {
+        "profile": {
+          "type": "string",
+          "description": "fw_image_defaults.yaml 의 profiles 키"
+        },
+        "vector_check": {
+          "type": "boolean"
+        },
+        "app_start": {
+          "type": "integer"
+        },
+        "flash_end": {
+          "type": "integer"
+        },
+        "sram": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

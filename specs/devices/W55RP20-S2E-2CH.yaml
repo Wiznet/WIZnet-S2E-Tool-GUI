@@ -122,3 +122,7 @@ ui:
       groups:
         - cert_options
         - cert_upload
+
+# 펌웨어 이미지 판별 프로파일 — config/fw_image_defaults.yaml 참조
+fw_image:
+  profile: rp2040_w55rp20

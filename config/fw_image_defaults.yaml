@@ -1,0 +1,66 @@
+# fw_image_defaults.yaml
+# 펌웨어 이미지(APP/BOOT) 판별 기준값.
+#
+# 판별 방법
+#   ARM Cortex-M 바이너리는 벡터 테이블로 시작한다.
+#     offset 0x00  Initial Stack Pointer (SRAM 주소)
+#     offset 0x04  Reset Handler        (링크된 플래시 주소)
+#   Reset Handler 가 APP 영역을 가리키면 APP, 부트 영역이면 BOOT/병합본이다.
+#   파일명 규칙과 달리 제품·버전이 바뀌어도 흔들리지 않는다.
+#
+# 값 우선순위
+#   장치 YAML 의 fw_image 개별 키  >  profile 값  >  아래 defaults
+#
+# 프로파일이 지정되지 않은 장치는 검증할 근거가 없으므로 업로드를 차단한다.
+# 벡터 테이블이 없는 계열(8051)은 profile: none 을 명시해 이름 검사만 쓴다.
+#
+# 근거: research/2026-04-17-wiznet-firmware-structure-between-boot-and-app.md
+#       research/2026-08-19-fw-git-device-mapping-and-app-binary-selection.md
+
+version: 1
+
+defaults:
+  vector_check: true
+
+profiles:
+  # ── W7500 (Cortex-M0) — WIZ750SR / WIZ752SR 계열 ────────────────
+  # 실측: WIZ750SRv145.bin  SP=0x20003DF8  ResetH=0x000071EC
+  w7500:
+    sram: [0x20000000, 0x20004000]      # 16KB
+    app_start: 0x00007000               # BOOT 0x00000000~0x00006FFF (28KB)
+    flash_end: 0x0001FFFF               # 128KB
+
+  # ── STM32 — WIZ550 계열 ─────────────────────────────────────────
+  # 실측: WIZ550SR_App.bin  SP=0x2000C000  ResetH=0x080072F0
+  #       WIZ550SR.bin(병합본) ResetH=0x080002F0
+  stm32:
+    sram: [0x20000000, 0x2000C000]
+    app_start: 0x08007000
+    flash_end: 0x0803FFFF
+
+  # ── RP2040 — WIZ5XXSR-RP ────────────────────────────────────────
+  # 실측: 1.0.5~1.1.0 전 버전 SP=0x20042000 ResetH=0x100800F6
+  rp2040_5xx:
+    sram: [0x20000000, 0x20042000]      # 264KB
+    app_start: 0x10080000               # BOOT 512KB
+    flash_end: 0x10FFFFFF
+
+  # ── RP2040 — W55RP20-S2E / W232N / IP20 ─────────────────────────
+  # 실측: 4개 제품 전부 SP=0x20042000 ResetH=0x100200F6
+  # 주의: 이 프로파일 안에서는 제품 구별이 불가하다(값이 동일).
+  #       제품 매핑은 config/fw_sources.json 이 담당한다.
+  rp2040_w55rp20:
+    sram: [0x20000000, 0x20042000]
+    app_start: 0x10020000               # BOOT 128KB
+    flash_end: 0x10FFFFFF
+
+  # ── 벡터 테이블 없음 — W7100A(8051), WIZ107SR / WIZ108SR ────────
+  none:
+    vector_check: false
+
+# RP2040 부트 이미지는 앞 256바이트가 stage2 라 offset 0x04 가 벡터가 아니다.
+# 제품·버전과 무관하게 아래 고정값이 나오며, 그 자체가 "APP 아님" 신호다.
+# 실측: BOOT/병합 이미지 15개 전부 앞 256B 바이트 단위 일치.
+rp2040_stage2_signature:
+  sp: 0x4B32B500
+  reset: 0x60582020
