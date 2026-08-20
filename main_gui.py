@@ -5341,6 +5341,74 @@ class WIZWindow(QMainWindow, main_window):
             )
             return None
 
+    def _subnet_mismatch(self):
+        """
+        선택 장치 IP 가 PC 대역 밖이면 (장치IP, PC IP, prefix) 반환, 아니면 None.
+        판단할 정보가 없으면 None (= 문제 없음으로 취급).
+        """
+        dev_ip = (self.localip_addr or "").strip()
+        pc_ip = (self.selected_eth or "").strip()
+        if not dev_ip or not pc_ip:
+            return None
+        try:
+            import ipaddress
+            prefix = None
+            for ad in ifaddr.get_adapters():
+                for ip in ad.ips:
+                    if isinstance(ip.ip, str) and ip.ip == pc_ip:
+                        prefix = ip.network_prefix
+                        break
+                if prefix is not None:
+                    break
+            if prefix is None:
+                self.logger.info(f"_subnet_mismatch: {pc_ip} 넷마스크 미확인 — 검사 생략")
+                return None
+            pc_net = ipaddress.ip_interface(f"{pc_ip}/{prefix}").network
+            if ipaddress.ip_address(dev_ip) in pc_net:
+                return None
+            return dev_ip, pc_ip, prefix
+        except Exception as e:
+            self.logger.info(f"_subnet_mismatch: 검사 생략 ({e})")
+            return None
+
+    def _check_upload_subnet(self) -> bool:
+        """
+        펌웨어 업로드 전 장치 IP 가 PC 와 같은 대역인지 본다. 진행 가능하면 True.
+
+        업로드는 장치가 알려준 자기 IP 로 TCP 접속해서 진행된다
+        (FW 응답 = local_ip:port). 대역이 다르면 접속이 안 되는데, 그때는 이미
+        장치가 펌웨어 대기 모드로 들어가 설정 채널 응답까지 멈춘 뒤다.
+        그래서 시작 전에 확인한다.
+
+        라우팅으로 닿는 구성도 있을 수 있어 차단하지 않고 확인을 받는다.
+        """
+        mismatch = self._subnet_mismatch()
+        if mismatch is None:
+            return True
+        dev_ip, pc_ip, prefix = mismatch
+
+        self.logger.warning(
+            f"[FW] 대역 불일치 — 장치 {dev_ip} / PC {pc_ip}/{prefix} : 업로드 접속 실패 가능"
+        )
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle("Network mismatch")
+        box.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        box.setText(
+            f"장치와 PC 의 IP 대역이 다릅니다.<br><br>"
+            f"장치: <b>{dev_ip}</b><br>PC: <b>{pc_ip}/{prefix}</b>"
+        )
+        box.setInformativeText(
+            "펌웨어 업로드는 장치 IP 로 직접 접속해서 진행하므로 실패할 수 있습니다.\n"
+            "장치 IP 를 PC 와 같은 대역으로 바꾸거나, PC 에 해당 대역 주소를 추가한 뒤 "
+            "다시 시도해 주세요.\n\n"
+            "검색은 브로드캐스트라 대역이 달라도 목록에는 나타납니다.\n"
+            "그래도 진행하시겠습니까?"
+        )
+        box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        box.setDefaultButton(QMessageBox.No)
+        return box.exec_() == QMessageBox.Yes
+
     def _verify_fw_image(self, filepath: str) -> bool:
         """
         업로드 직전 이미지 검증. 통과하면 True, 막으면 False.
@@ -5740,7 +5808,19 @@ class WIZWindow(QMainWindow, main_window):
         if error == -1:
             text = " Firmware update failed. No response from device."
             self.statusbar.showMessage(text)
-            self.show_msgbox("Error", text, QMessageBox.Critical)
+            # 대역이 다르면 장치가 응답을 안 한 게 아니라 접속이 안 된 것이다.
+            # "No response" 만 보여주면 원인을 엉뚱한 데서 찾게 된다.
+            mismatch = self._subnet_mismatch()
+            detail = text
+            if mismatch:
+                dev_ip, pc_ip, prefix = mismatch
+                detail = (
+                    f"{text}\n\n"
+                    f"장치 IP({dev_ip})가 PC({pc_ip}/{prefix})와 다른 대역입니다.\n"
+                    f"펌웨어 업로드는 장치 IP 로 직접 접속하므로 대역이 다르면 실패합니다.\n"
+                    f"장치 IP 를 같은 대역으로 바꾸거나 PC 에 해당 대역 주소를 추가해 주세요."
+                )
+            self.show_msgbox("Error", detail, QMessageBox.Critical)
             # self.msg_upload_failed()
         elif error == -2:
             text = " Firmware update: Network connection failed."
@@ -5911,6 +5991,9 @@ class WIZWindow(QMainWindow, main_window):
                 QMessageBox.Warning,
             )
             return
+        # 받아놓고 못 올리는 일이 없도록 다이얼로그를 열기 전에 대역부터 확인한다
+        if not self._check_upload_subnet():
+            return
 
         is_wiz550 = (
             hasattr(self, 'curr_mac') and self.curr_mac
@@ -6072,6 +6155,8 @@ class WIZWindow(QMainWindow, main_window):
         if fname:
             # 파일명 표기 + 벡터 테이블 대조. 둘이 어긋나거나 APP 이 아니면 중단.
             if not self._verify_fw_image(fname):
+                return
+            if not self._check_upload_subnet():
                 return
 
             self.fw_filename = fname
