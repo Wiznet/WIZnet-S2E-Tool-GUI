@@ -54,6 +54,16 @@ profiles:
     app_start: 0x10020000               # BOOT 128KB
     flash_end: 0x10FFFFFF
 
+  # ── WIZ550S2E (Modbus 빌드 포함) ────────────────────────────────
+  # WIZ550SR/WEB 과 배치가 완전히 다르다. SRAM 0x10000000 대, 플래시 0x00000000 대.
+  # 실측: WIZ550S2E_App.bin v130 SP=0x10002000 ResetH=0x00006114
+  #       WIZ550S2E_App.bin v141 SP=0x10002000 ResetH=0x0000613C
+  #       WIZ550S2E.bin(병합본)      ResetH=0x0000012A
+  wiz550s2e:
+    sram: [0x10000000, 0x10002000]
+    app_start: 0x00006000
+    flash_end: 0x0001FFFF
+
   # ── 벡터 테이블 없음 — W7100A(8051), WIZ107SR / WIZ108SR ────────
   none:
     vector_check: false
