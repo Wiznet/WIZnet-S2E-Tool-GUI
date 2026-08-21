@@ -5341,6 +5341,123 @@ class WIZWindow(QMainWindow, main_window):
             )
             return None
 
+    def _subnet_mismatch(self):
+        """
+        선택 장치 IP 가 PC 대역 밖이면 (장치IP, PC IP, prefix) 반환, 아니면 None.
+        판단할 정보가 없으면 None (= 문제 없음으로 취급).
+        """
+        dev_ip = (self.localip_addr or "").strip()
+        pc_ip = (self.selected_eth or "").strip()
+        if not dev_ip or not pc_ip:
+            return None
+        try:
+            import ipaddress
+            prefix = None
+            for ad in ifaddr.get_adapters():
+                for ip in ad.ips:
+                    if isinstance(ip.ip, str) and ip.ip == pc_ip:
+                        prefix = ip.network_prefix
+                        break
+                if prefix is not None:
+                    break
+            if prefix is None:
+                self.logger.info(f"_subnet_mismatch: {pc_ip} 넷마스크 미확인 — 검사 생략")
+                return None
+            pc_net = ipaddress.ip_interface(f"{pc_ip}/{prefix}").network
+            if ipaddress.ip_address(dev_ip) in pc_net:
+                return None
+            return dev_ip, pc_ip, prefix
+        except Exception as e:
+            self.logger.info(f"_subnet_mismatch: 검사 생략 ({e})")
+            return None
+
+    def _check_upload_subnet(self) -> bool:
+        """
+        펌웨어 업로드 전 장치 IP 가 PC 와 같은 대역인지 본다. 진행 가능하면 True.
+
+        업로드는 장치가 알려준 자기 IP 로 TCP 접속해서 진행된다
+        (FW 응답 = local_ip:port). 대역이 다르면 접속이 안 되는데, 그때는 이미
+        장치가 펌웨어 대기 모드로 들어가 설정 채널 응답까지 멈춘 뒤다.
+        그래서 시작 전에 확인한다.
+
+        라우팅으로 닿는 구성도 있을 수 있어 차단하지 않고 확인을 받는다.
+        """
+        mismatch = self._subnet_mismatch()
+        if mismatch is None:
+            return True
+        dev_ip, pc_ip, prefix = mismatch
+
+        self.logger.warning(
+            f"[FW] 대역 불일치 — 장치 {dev_ip} / PC {pc_ip}/{prefix} : 업로드 접속 실패 가능"
+        )
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle("Network mismatch")
+        box.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        box.setText(
+            f"The device and this PC are on different subnets.<br><br>"
+            f"Device: <b>{dev_ip}</b><br>PC: <b>{pc_ip}/{prefix}</b>"
+        )
+        box.setInformativeText(
+            "Firmware upload connects directly to the device IP, so it will "
+            "likely fail.\n"
+            "Change the device IP to the same subnet, or add an address in the "
+            "device's subnet to this PC, then try again.\n\n"
+            "Search uses broadcast, so the device still appears in the list "
+            "even when the subnets differ.\n\n"
+            "Continue anyway?"
+        )
+        box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        box.setDefaultButton(QMessageBox.No)
+        return box.exec_() == QMessageBox.Yes
+
+    def _verify_fw_image(self, filepath: str) -> bool:
+        """
+        업로드 직전 이미지 검증. 통과하면 True, 막으면 False.
+
+        파일명 표기와 벡터 테이블 판정을 대조해 둘이 어긋나거나 APP 이 아니면
+        차단한다. 검증 기준(fw_image.profile)이 없는 장치도 차단한다 —
+        근거 없이 통과시키면 다른 이미지를 그대로 굽게 된다.
+        """
+        try:
+            from fw_image_check import FWImageChecker, OK
+            from fw_git_fetcher import FWGitFetcher
+            if getattr(self, "_fw_image_checker", None) is None:
+                self._fw_image_checker = FWImageChecker(
+                    resource_path("config/fw_image_defaults.yaml"), logger=self.logger
+                )
+            spec = self._load_setting_spec()
+            result = self._fw_image_checker.check(
+                filepath,
+                getattr(spec, "fw_image", None) if spec else None,
+                FWGitFetcher.is_non_app_name,
+            )
+        except Exception as e:
+            # 검증기 자체가 실패하면 판단 근거가 없으므로 막는다
+            self.logger.error(f"_verify_fw_image failed: {e}")
+            self.show_msgbox(
+                "Warning",
+                f"Firmware image check could not be performed.\n{e}",
+                QMessageBox.Warning,
+            )
+            return False
+
+        if result["result"] == OK:
+            return True
+
+        self.logger.warning(
+            f"[FWImageCheck] 업로드 차단 — {result['reason']} / {result['detail']}"
+        )
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle("Firmware image check")
+        box.setText(result["reason"])
+        box.setInformativeText("Please select an APP firmware file.")
+        box.setDetailedText(result["detail"])
+        box.setStandardButtons(QMessageBox.Ok)
+        box.exec_()
+        return False
+
     def _get_set_response_timeout(self):
         """
         SET 명령 응답 대기 타임아웃(초). Advanced Search Options에서 조정 가능.
@@ -5693,7 +5810,22 @@ class WIZWindow(QMainWindow, main_window):
         if error == -1:
             text = " Firmware update failed. No response from device."
             self.statusbar.showMessage(text)
-            self.show_msgbox("Error", text, QMessageBox.Critical)
+            # 대역이 다르면 장치가 응답을 안 한 게 아니라 접속이 안 된 것이다.
+            # "No response" 만 보여주면 원인을 엉뚱한 데서 찾게 된다.
+            mismatch = self._subnet_mismatch()
+            detail = text
+            if mismatch:
+                dev_ip, pc_ip, prefix = mismatch
+                detail = (
+                    f"{text}\n\n"
+                    f"The device ({dev_ip}) is on a different subnet from this "
+                    f"PC ({pc_ip}/{prefix}).\n"
+                    f"Firmware upload connects directly to the device IP, so it "
+                    f"fails when the subnets differ.\n"
+                    f"Change the device IP to the same subnet, or add an address "
+                    f"in the device's subnet to this PC."
+                )
+            self.show_msgbox("Error", detail, QMessageBox.Critical)
             # self.msg_upload_failed()
         elif error == -2:
             text = " Firmware update: Network connection failed."
@@ -5782,6 +5914,83 @@ class WIZWindow(QMainWindow, main_window):
             self._fw_download_path = path
             self._save_fw_download_path(path)
 
+    def _handle_unsupported_fw_device(self):
+        """
+        FW from Git 에 배포처가 등록되지 않은 장치를 만났을 때의 처리.
+        사용자에게 알리고, 동의하면 툴 저장소 이슈로 남긴다.
+        """
+        # 공개 배포처가 없음을 이미 확인한 장치는 사유를 그대로 알린다.
+        # 이슈로 물어볼 것이 없으므로 등록 제안도 하지 않는다.
+        reason = self._fw_fetcher.find_unsupported(self.curr_dev)
+        if reason:
+            self.show_msgbox_richtext(
+                "Unsupported device",
+                f"<b>FW from Git</b> is not supported for "
+                f"<b>{self.curr_dev}</b>.<br><br>"
+                f"{reason}<br><br>"
+                f"Download the firmware file yourself and use "
+                f"<b>Firmware Upload</b> instead.",
+                QMessageBox.Warning,
+            )
+            self.logger.info(
+                f"[FW from Git] {self.curr_dev}: 미지원 장치 (사유: {reason})"
+            )
+            return
+
+        supported = ", ".join(sorted(set(self._fw_fetcher.supported_devices())))
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle("Unsupported device")
+        box.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        box.setText(
+            f"No firmware source is registered for <b>{self.curr_dev}</b>.<br><br>"
+            f"Stopping here so that firmware for another product is not "
+            f"installed by mistake.<br>"
+            f"Download the firmware file yourself and use "
+            f"<b>Firmware Upload</b> instead."
+        )
+        box.setDetailedText(f"Registered devices:\n{supported}")
+        box.setInformativeText(
+            "Report this device so it can be added to the supported list?"
+        )
+        box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        box.setDefaultButton(QMessageBox.Yes)
+        if box.exec_() != QMessageBox.Yes:
+            return
+
+        try:
+            from fw_issue_reporter import FWIssueReporter
+            from fw_git_dialog import ReportUnsupportedThread
+        except Exception as e:
+            self.logger.warning(f"issue reporter import failed: {e}")
+            return
+
+        reporter = FWIssueReporter(
+            "Wiznet/WIZnet-S2E-Tool-GUI", VERSION, logger=self.logger
+        )
+        self._fw_issue_thread = ReportUnsupportedThread(
+            reporter, self.curr_dev, self.curr_ver or ""
+        )
+        self._fw_issue_thread.done.connect(self._on_fw_issue_reported)
+        self._fw_issue_thread.start()
+
+    def _on_fw_issue_reported(self, result: dict):
+        """이슈 보고 결과 안내. manual 이면 사용자가 직접 제출하도록 브라우저를 연다."""
+        action = result.get("action", "")
+        url = result.get("url", "")
+        msg = result.get("message", "")
+        self.logger.info(f"[FW from Git] unsupported device report: {action} {url}")
+
+        if action == "manual" and url:
+            webbrowser.open(url)
+        if action == "error":
+            self.show_msgbox(
+                "Warning", f"Failed to report the issue.\n{msg}", QMessageBox.Warning
+            )
+            return
+        body = msg + (f"\n\n{url}" if url else "")
+        self.show_msgbox("Information", body, QMessageBox.Information)
+
     def event_fw_from_git(self):
         if not self.curr_dev:
             self.show_msgbox("Warning", "Please select a device first.", QMessageBox.Warning)
@@ -5792,6 +6001,9 @@ class WIZWindow(QMainWindow, main_window):
                 "Failed to load FW from Git configuration file (fw_sources.json).",
                 QMessageBox.Warning,
             )
+            return
+        # 받아놓고 못 올리는 일이 없도록 다이얼로그를 열기 전에 대역부터 확인한다
+        if not self._check_upload_subnet():
             return
 
         is_wiz550 = (
@@ -5822,20 +6034,11 @@ class WIZWindow(QMainWindow, main_window):
             fw_type_list = []
             family, device_spec = self._fw_fetcher.find_device(self.curr_dev)
             if family is None:
-                dn = self.curr_dev.upper()
-                sources = self._fw_fetcher._sources
-                best_fam = sources["families"][0]
-                best_dev = best_fam["devices"][0]
-                for fam in sources["families"]:
-                    for dev in fam["devices"]:
-                        base = dev["name_pattern"].rstrip("?*").upper()
-                        if base and dn.startswith(base):
-                            best_fam, best_dev = fam, dev
-                            break
-                    else:
-                        continue
-                    break
-                family, device_spec = best_fam, best_dev
+                # 등록되지 않은 장치를 임의의 family 로 대체하면 다른 제품의
+                # 이미지를 그대로 플래싱하게 된다(예: WIZ5XXSR-RP -> IP20).
+                # 추측하지 않고 중단한다.
+                self._handle_unsupported_fw_device()
+                return
             display_name = self.curr_dev
 
         wiz550_config = None
@@ -5856,11 +6059,17 @@ class WIZWindow(QMainWindow, main_window):
             self._fw_fetcher, self._fw_download_path,
             fw_type_list=fw_type_list or None,
             wiz550_config=wiz550_config,
+            image_validator=self._verify_fw_image,
         )
         dlg.firmware_ready.connect(self._on_fw_git_ready)
         dlg.exec_()
 
     def _on_fw_git_ready(self, filepath: str, filesize: int):
+        # 배포처 설정이 잘못돼 부트로더나 병합본이 뽑혀 나와도 굽지 않도록,
+        # 수동 선택 경로와 같은 검증을 여기에도 건다.
+        if not self._verify_fw_image(filepath):
+            self._cleanup_fw_git_file(filepath)
+            return
         if self.localip_addr is None:
             self.show_msgbox(
                 "Warning",
@@ -5956,13 +6165,10 @@ class WIZWindow(QMainWindow, main_window):
         )
 
         if fname:
-            basename = fname.split('/')[-1]
-            if 'BOOT' in basename.upper():
-                self.show_msgbox(
-                    "Warning",
-                    f"Cannot upload BOOT firmware file.\n\nSelected file: {basename}\n\nPlease select an APP firmware file only.",
-                    QMessageBox.Warning,
-                )
+            # 파일명 표기 + 벡터 테이블 대조. 둘이 어긋나거나 APP 이 아니면 중단.
+            if not self._verify_fw_image(fname):
+                return
+            if not self._check_upload_subnet():
                 return
 
             self.fw_filename = fname
