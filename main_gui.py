@@ -472,6 +472,11 @@ class WIZWindow(QMainWindow, main_window):
         self.smallfont = None
         self.btnfont = None
 
+        # 사용자가 User I/O 탭의 GPIO 콤보를 직접 조작한 상태인지.
+        # 켜져 있는 동안 주기 갱신(gpio_update)이 gpio*_set 을 덮어쓰지 않는다.
+        # gui_init() 이 이 플래그를 읽는 핸들러를 연결하므로 반드시 그보다 먼저 만든다.
+        self._gpio_user_editing = False
+
         self.gui_init()
 
         # Main icon
@@ -785,6 +790,17 @@ class WIZWindow(QMainWindow, main_window):
         self.gpioc_config.currentIndexChanged.connect(self.gpio_check)
         self.gpiod_config.currentIndexChanged.connect(self.gpio_check)
 
+        # GPIO 편집 감지 — activated 는 사용자가 직접 고를 때만 발생한다.
+        # currentIndexChanged 를 쓰면 주기 갱신의 setCurrentIndex() 가 스스로를
+        # 편집으로 오인해 플래그가 영구히 서 버린다.
+        for _name in ("a", "b", "c", "d"):
+            getattr(self, f"gpio{_name}_config").activated.connect(
+                self._on_gpio_user_edit
+            )
+            getattr(self, f"gpio{_name}_set").activated.connect(
+                self._on_gpio_user_edit
+            )
+
         # Manage certificate for WIZ510SSL
         self.btn_load_rootca.clicked.connect(lambda: self.load_cert_btn_clicked("OC"))
         self.btn_load_client_cert.clicked.connect(
@@ -1023,6 +1039,9 @@ class WIZWindow(QMainWindow, main_window):
             self.gpio_check()
             self.get_refresh_time()
         else:
+            # User I/O 탭을 벗어나면 편집 상태를 놓는다 — 다시 들어올 때는
+            # 장치 현재값으로 채워지는 것이 맞다
+            self._clear_gpio_user_edit("left User I/O tab")
             try:
                 if self.datarefresh is not None:
                     self.logger.debug(
@@ -2369,8 +2388,15 @@ class WIZWindow(QMainWindow, main_window):
 
                 try:
                     # Expansion GPIO
+                    #
+                    # gpio*_get 은 장치 현재값 표시용이라 항상 갱신한다.
+                    # gpio*_config / gpio*_set 은 사용자 입력 위젯이므로 편집 중에는
+                    # 건드리지 않는다. 그러지 않으면 사용자가 High 로 바꿔 둔 값을
+                    # 다음 갱신 주기(기본 10초)가 장치 현재값으로 되돌리고, 그 상태로
+                    # Apply 하면 되돌아간 값이 그대로 전송된다.
+                    keep_user_edit = self._gpio_user_editing
                     for i in range(len(cmdset_list)):
-                        if num < 2:
+                        if num < 2 and not keep_user_edit:
                             if b"CA" in cmdset_list[i]:
                                 self.gpioa_config.setCurrentIndex(
                                     int(cmdset_list[i][2:])
@@ -2390,23 +2416,48 @@ class WIZWindow(QMainWindow, main_window):
 
                         if b"GA" in cmdset_list[i]:
                             self.gpioa_get.setText(cmdset_list[i][2:].decode())
-                            self.gpioa_set.setCurrentIndex(int(cmdset_list[i][2:]))
+                            if not keep_user_edit:
+                                self.gpioa_set.setCurrentIndex(int(cmdset_list[i][2:]))
                         if b"GB" in cmdset_list[i]:
                             self.gpiob_get.setText(cmdset_list[i][2:].decode())
-                            self.gpiob_set.setCurrentIndex(int(cmdset_list[i][2:]))
+                            if not keep_user_edit:
+                                self.gpiob_set.setCurrentIndex(int(cmdset_list[i][2:]))
                         if b"GC" in cmdset_list[i]:
                             self.gpioc_get.setText(cmdset_list[i][2:].decode())
-                            self.gpioc_set.setCurrentIndex(int(cmdset_list[i][2:]))
+                            if not keep_user_edit:
+                                self.gpioc_set.setCurrentIndex(int(cmdset_list[i][2:]))
                         if b"GD" in cmdset_list[i]:
                             self.gpiod_get.setText(cmdset_list[i][2:].decode())
-                            self.gpiod_set.setCurrentIndex(int(cmdset_list[i][2:]))
+                            if not keep_user_edit:
+                                self.gpiod_set.setCurrentIndex(int(cmdset_list[i][2:]))
                 except Exception as e:
                     self.logger.error(e)
+
+    def _on_gpio_user_edit(self, _index=None):
+        """사용자가 GPIO 콤보를 직접 조작했다.
+
+        주기 갱신 스레드를 세우는 대신 플래그만 든다. 스레드를 멈추면 이미
+        수신 대기 중이던 응답이 정지 직후 도착해 그대로 덮어쓰는 경합이 남는다.
+        """
+        if not self._gpio_user_editing:
+            self.logger.debug("GPIO edit started: refresh no longer overwrites gpio*_set")
+        self._gpio_user_editing = True
+
+    def _clear_gpio_user_edit(self, reason=""):
+        """GPIO 편집 상태 해제.
+
+        해제를 빠뜨리면 값이 갱신되지 않을 뿐이고, 편집 중인 값을 덮어써
+        잘못 전송하는 쪽으로는 실패하지 않는다.
+        """
+        if self._gpio_user_editing:
+            self.logger.debug(f"GPIO edit cleared ({reason})")
+        self._gpio_user_editing = False
 
     def _on_search_button_clicked(self):
         """검색 버튼 클릭 이벤트 핸들러 - 타이머 시작"""
         # Device Search 버튼 클릭 시 항상 이전 검색 결과 클리어
         # (cumulative_mode와 상관없이 클리어 - 반복 검색 시에만 누적 유지)
+        self._clear_gpio_user_edit("device search")
         self.mac_list = []
         self.mn_list = []
         self.vr_list = []
@@ -3519,6 +3570,10 @@ class WIZWindow(QMainWindow, main_window):
     def dev_clicked(self, param=None, call_from=None):
         # dev_info = []
         # clicked_mac = ""
+        # 다른 장치를 고르면 앞 장치에서 편집하던 상태는 의미가 없다.
+        # _sync_userio_tab_state() 보다 먼저 놓아야 탭이 열려 있는 경우
+        # 새 장치 값으로 다시 채워진다.
+        self._clear_gpio_user_edit("device changed")
         # if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
         self._sync_userio_tab_state()
         # for currentItem in self.list_device.selectedItems():
@@ -5576,6 +5631,9 @@ class WIZWindow(QMainWindow, main_window):
 
             elif len(mc) == 17:
                 # ── 정상 성공: MAC 유효 (VB.NET: nSec.MC.data.Length == 17) ──
+                # 편집분이 장치에 반영됐으니 이제 주기 갱신이 실제값을 보여주게 둔다.
+                # 실패 응답에서는 놓지 않는다 — 사용자가 다시 시도할 값이다.
+                self._clear_gpio_user_edit("apply succeeded")
                 if self._setcmd_reduced:
                     self.statusbar.showMessage(
                         f" Set complete — network settings only "
