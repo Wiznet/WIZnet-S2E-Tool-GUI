@@ -53,13 +53,13 @@ class FWIssueReporter:
             existing = self._search_issue(title)
         except Exception as e:
             self._log(f"issue search failed: {e}")
-            return self._manual(title, body, reason="검색 실패")
+            return self._manual(title, body, reason="issue search failed")
 
         if existing and existing["state"] == "closed":
             return {
                 "action": ACT_SKIPPED_CLOSED,
                 "url": existing["html_url"],
-                "message": "이미 처리된 이슈가 있어 새로 등록하지 않았습니다.",
+                "message": "A closed issue already covers this - nothing reported.",
             }
 
         gh = self._gh_path()
@@ -73,14 +73,14 @@ class FWIssueReporter:
                 return {
                     "action": ACT_COMMENTED,
                     "url": existing["html_url"],
-                    "message": "기존 이슈에 발생 사실을 덧붙였습니다.",
+                    "message": "Added a comment to the existing issue.",
                 }
             url = self._gh(gh, ["issue", "create", "--repo", self.repo,
                                 "--title", title, "--body", body]).strip()
             return {
                 "action": ACT_CREATED,
                 "url": url,
-                "message": "새 이슈를 등록했습니다.",
+                "message": "Reported a new issue.",
             }
         except Exception as e:
             self._log(f"issue write failed: {e}")
@@ -112,23 +112,24 @@ class FWIssueReporter:
 
     def _build_body(self, device_name: str, fw_version: str) -> str:
         return (
-            f"`FW from Git` 에서 지원 정보가 없는 장치가 검색되었습니다.\n\n"
-            f"| 항목 | 값 |\n| --- | --- |\n"
+            f"A device with no firmware source information was found in "
+            f"`FW from Git`.\n\n"
+            f"| Item | Value |\n| --- | --- |\n"
             f"| Device | `{device_name}` |\n"
             f"| Device FW | `{fw_version or '-'}` |\n"
             f"| Config Tool | `{self.tool_version or '-'}` |\n"
             f"| OS | `{platform.system()} {platform.release()}` |\n\n"
-            f"`config/fw_sources.json` 에 이 장치의 배포처가 등록되어 있지 않아 "
-            f"펌웨어 다운로드를 진행하지 않고 중단했습니다.\n\n"
-            f"등록에 필요한 정보:\n"
-            f"- 펌웨어 배포처(저장소 릴리즈 또는 문서 페이지)\n"
-            f"- 애셋 파일명 규칙\n"
-            f"- 압축 파일이라면 내부에서 꺼낼 바이너리 파일명\n"
+            f"`config/fw_sources.json` has no firmware source for this device, "
+            f"so the download was stopped instead of guessing one.\n\n"
+            f"Information needed to register it:\n"
+            f"- Firmware source (repository releases or a documentation page)\n"
+            f"- Asset file name pattern\n"
+            f"- For archives, the binary file name to extract\n"
         )
 
     def _comment_body(self) -> str:
         return (
-            f"동일 증상이 다시 발생했습니다. "
+            f"Seen again. "
             f"(Config Tool `{self.tool_version or '-'}`, "
             f"{platform.system()} {platform.release()})"
         )
@@ -137,11 +138,11 @@ class FWIssueReporter:
         """토큰이 없거나 API 쓰기에 실패했을 때 사용자가 직접 제출할 URL 을 만든다."""
         if existing:
             url = existing["html_url"]
-            msg = "기존 이슈가 있습니다. 브라우저에서 확인해 주세요."
+            msg = "An issue already exists. Opening it in your browser."
         else:
             url = (f"https://github.com/{self.repo}/issues/new"
                    f"?title={quote(title)}&body={quote(body)}")
-            msg = "GitHub 이슈 등록 페이지를 열어 제출해 주세요."
+            msg = "Opening the GitHub issue form - please review and submit."
         if reason:
             msg += f" ({reason})"
         return {"action": ACT_MANUAL, "url": url, "message": msg}

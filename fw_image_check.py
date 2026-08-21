@@ -67,30 +67,30 @@ class FWImageChecker:
         cfg 에 app_start 가 없으면 판정하지 않는다.
         """
         if not cfg.get("vector_check", True):
-            return UNKNOWN, "이 계열은 벡터 테이블이 없어 검사하지 않음"
+            return UNKNOWN, "No vector table on this MCU family - skipped"
         app_start = cfg.get("app_start")
         if app_start is None:
-            return UNKNOWN, "프로파일이 지정되지 않아 검사 기준이 없음"
+            return UNKNOWN, "No fw_image profile - nothing to check against"
         if len(data) < 8:
-            return NOT_APP, "파일이 8바이트 미만"
+            return NOT_APP, "File is shorter than 8 bytes"
 
         sp = struct.unpack_from("<I", data, 0)[0]
         rst = struct.unpack_from("<I", data, 4)[0] & ~1
         where = f"SP=0x{sp:08X} ResetH=0x{rst:08X}"
 
         if self._stage2[0] is not None and (sp, rst) == self._stage2:
-            return NOT_APP, f"{where} — RP2040 stage2 로 시작(부트로더 또는 병합본)"
+            return NOT_APP, f"{where} - starts with RP2040 stage2 (bootloader or merged image)"
 
         sram = cfg.get("sram")
         if sram and not (sram[0] <= sp <= sram[1]):
-            return NOT_APP, f"{where} — SP 가 SRAM 범위 밖"
+            return NOT_APP, f"{where} - stack pointer outside SRAM range"
 
         flash_end = cfg.get("flash_end")
         if rst < app_start:
-            return NOT_APP, f"{where} — Reset Handler 가 APP 시작(0x{app_start:08X}) 앞"
+            return NOT_APP, f"{where} - reset handler below APP start (0x{app_start:08X})"
         if flash_end is not None and rst > flash_end:
-            return NOT_APP, f"{where} — Reset Handler 가 플래시 범위 밖"
-        return APP, f"{where} — APP 영역(0x{app_start:08X}+)"
+            return NOT_APP, f"{where} - reset handler outside flash range"
+        return APP, f"{where} - APP region (0x{app_start:08X}+)"
 
     # ------------------------------------------------------------ 종합
 
@@ -105,9 +105,9 @@ class FWImageChecker:
         if cfg.get("vector_check", True) and cfg.get("app_start") is None:
             return {
                 "result": BLOCK,
-                "reason": "이 장치의 펌웨어 이미지 검증 정보가 등록되어 있지 않습니다.",
-                "detail": (f"{name}\n검증 기준(fw_image.profile)이 없어 APP 이미지인지 "
-                           f"확인할 수 없습니다."),
+                "reason": "No firmware image validation info is registered for this device.",
+                "detail": (f"{name}\nWithout fw_image.profile there is no way "
+                           f"to tell whether this is an APP image."),
             }
 
         by_name = self.verdict_by_name(filepath, non_app_checker)
@@ -120,8 +120,8 @@ class FWImageChecker:
                 return {"result": OK, "reason": "", "detail": vec_detail}
             return {
                 "result": BLOCK,
-                "reason": "부트로더 또는 병합 이미지로 보입니다.",
-                "detail": f"{name}\n파일명에 boot/all/merge/incl 표기가 있습니다.",
+                "reason": "This looks like a bootloader or a merged image.",
+                "detail": f"{name}\nThe file name contains boot/all/merge/incl.",
             }
 
         if by_name == by_vec:
@@ -129,17 +129,17 @@ class FWImageChecker:
                 return {"result": OK, "reason": "", "detail": vec_detail}
             return {
                 "result": BLOCK,
-                "reason": "APP 이미지가 아닙니다. 부트로더 또는 부트+앱 병합본입니다.",
+                "reason": "Not an APP image. This is a bootloader or a boot+app merged image.",
                 "detail": f"{name}\n{vec_detail}",
             }
 
         # 이름과 벡터가 어긋남 — 어느 쪽도 믿지 않는다
         return {
             "result": BLOCK,
-            "reason": "파일명과 바이너리 구조의 판정이 서로 다릅니다.",
+            "reason": "File name and binary layout disagree.",
             "detail": (f"{name}\n"
-                       f"파일명 판정 : {'APP' if by_name == APP else 'APP 아님'}\n"
-                       f"바이너리 판정: {'APP' if by_vec == APP else 'APP 아님'}\n"
+                       f"By file name : {'APP' if by_name == APP else 'not APP'}\n"
+                       f"By binary    : {'APP' if by_vec == APP else 'not APP'}\n"
                        f"{vec_detail}"),
         }
 

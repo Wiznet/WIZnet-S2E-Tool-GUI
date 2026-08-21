@@ -5395,15 +5395,17 @@ class WIZWindow(QMainWindow, main_window):
         box.setWindowTitle("Network mismatch")
         box.setTextFormat(QtCore.Qt.TextFormat.RichText)
         box.setText(
-            f"장치와 PC 의 IP 대역이 다릅니다.<br><br>"
-            f"장치: <b>{dev_ip}</b><br>PC: <b>{pc_ip}/{prefix}</b>"
+            f"The device and this PC are on different subnets.<br><br>"
+            f"Device: <b>{dev_ip}</b><br>PC: <b>{pc_ip}/{prefix}</b>"
         )
         box.setInformativeText(
-            "펌웨어 업로드는 장치 IP 로 직접 접속해서 진행하므로 실패할 수 있습니다.\n"
-            "장치 IP 를 PC 와 같은 대역으로 바꾸거나, PC 에 해당 대역 주소를 추가한 뒤 "
-            "다시 시도해 주세요.\n\n"
-            "검색은 브로드캐스트라 대역이 달라도 목록에는 나타납니다.\n"
-            "그래도 진행하시겠습니까?"
+            "Firmware upload connects directly to the device IP, so it will "
+            "likely fail.\n"
+            "Change the device IP to the same subnet, or add an address in the "
+            "device's subnet to this PC, then try again.\n\n"
+            "Search uses broadcast, so the device still appears in the list "
+            "even when the subnets differ.\n\n"
+            "Continue anyway?"
         )
         box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         box.setDefaultButton(QMessageBox.No)
@@ -5435,7 +5437,7 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.error(f"_verify_fw_image failed: {e}")
             self.show_msgbox(
                 "Warning",
-                f"펌웨어 이미지 검증에 실패했습니다.\n{e}",
+                f"Firmware image check could not be performed.\n{e}",
                 QMessageBox.Warning,
             )
             return False
@@ -5450,7 +5452,7 @@ class WIZWindow(QMainWindow, main_window):
         box.setIcon(QMessageBox.Warning)
         box.setWindowTitle("Firmware image check")
         box.setText(result["reason"])
-        box.setInformativeText("APP 펌웨어 파일을 선택해 주세요.")
+        box.setInformativeText("Please select an APP firmware file.")
         box.setDetailedText(result["detail"])
         box.setStandardButtons(QMessageBox.Ok)
         box.exec_()
@@ -5816,9 +5818,12 @@ class WIZWindow(QMainWindow, main_window):
                 dev_ip, pc_ip, prefix = mismatch
                 detail = (
                     f"{text}\n\n"
-                    f"장치 IP({dev_ip})가 PC({pc_ip}/{prefix})와 다른 대역입니다.\n"
-                    f"펌웨어 업로드는 장치 IP 로 직접 접속하므로 대역이 다르면 실패합니다.\n"
-                    f"장치 IP 를 같은 대역으로 바꾸거나 PC 에 해당 대역 주소를 추가해 주세요."
+                    f"The device ({dev_ip}) is on a different subnet from this "
+                    f"PC ({pc_ip}/{prefix}).\n"
+                    f"Firmware upload connects directly to the device IP, so it "
+                    f"fails when the subnets differ.\n"
+                    f"Change the device IP to the same subnet, or add an address "
+                    f"in the device's subnet to this PC."
                 )
             self.show_msgbox("Error", detail, QMessageBox.Critical)
             # self.msg_upload_failed()
@@ -5920,9 +5925,11 @@ class WIZWindow(QMainWindow, main_window):
         if reason:
             self.show_msgbox_richtext(
                 "Unsupported device",
-                f"<b>{self.curr_dev}</b> 은 <b>FW from Git</b> 을 지원하지 않습니다.<br><br>"
+                f"<b>FW from Git</b> is not supported for "
+                f"<b>{self.curr_dev}</b>.<br><br>"
                 f"{reason}<br><br>"
-                f"펌웨어 파일을 직접 받아 <b>Firmware Upload</b> 로 진행해 주세요.",
+                f"Download the firmware file yourself and use "
+                f"<b>Firmware Upload</b> instead.",
                 QMessageBox.Warning,
             )
             self.logger.info(
@@ -5936,12 +5943,16 @@ class WIZWindow(QMainWindow, main_window):
         box.setWindowTitle("Unsupported device")
         box.setTextFormat(QtCore.Qt.TextFormat.RichText)
         box.setText(
-            f"<b>{self.curr_dev}</b> 의 펌웨어 배포처가 등록되어 있지 않습니다.<br><br>"
-            f"다른 제품의 펌웨어가 잘못 설치되는 것을 막기 위해 진행하지 않습니다.<br>"
-            f"펌웨어 파일을 직접 받아 <b>Firmware Upload</b> 로 진행해 주세요."
+            f"No firmware source is registered for <b>{self.curr_dev}</b>.<br><br>"
+            f"Stopping here so that firmware for another product is not "
+            f"installed by mistake.<br>"
+            f"Download the firmware file yourself and use "
+            f"<b>Firmware Upload</b> instead."
         )
-        box.setDetailedText(f"등록된 장치:\n{supported}")
-        box.setInformativeText("이 장치를 지원 목록에 추가하도록 이슈를 남길까요?")
+        box.setDetailedText(f"Registered devices:\n{supported}")
+        box.setInformativeText(
+            "Report this device so it can be added to the supported list?"
+        )
         box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         box.setDefaultButton(QMessageBox.Yes)
         if box.exec_() != QMessageBox.Yes:
@@ -5974,7 +5985,7 @@ class WIZWindow(QMainWindow, main_window):
             webbrowser.open(url)
         if action == "error":
             self.show_msgbox(
-                "Warning", f"이슈 등록에 실패했습니다.\n{msg}", QMessageBox.Warning
+                "Warning", f"Failed to report the issue.\n{msg}", QMessageBox.Warning
             )
             return
         body = msg + (f"\n\n{url}" if url else "")
