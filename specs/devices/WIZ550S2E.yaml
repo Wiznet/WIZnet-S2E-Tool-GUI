@@ -136,3 +136,7 @@ ui:
           choices:
             0: "RTU"
             1: "ASCII"
+
+# 펌웨어 이미지 판별 프로파일 — config/fw_image_defaults.yaml 참조
+fw_image:
+  profile: wiz550s2e

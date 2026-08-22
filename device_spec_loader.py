@@ -123,6 +123,8 @@ class DeviceSpec:
     fw_config: FWConfig
     ui_config: UIConfig
     module_meta: dict[str, ModuleMeta] = field(default_factory=dict)
+    # 펌웨어 이미지 판별 설정(profile / app_start 등). 미지정이면 빈 dict.
+    fw_image: dict = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -459,6 +461,7 @@ def _load_device_impl(device_name: str, fw_version: str | None) -> DeviceSpec:
         fw_config=fw_config,
         ui_config=ui_config,
         module_meta=module_meta,
+        fw_image=dev.get("fw_image", {}) or {},
     )
 
 

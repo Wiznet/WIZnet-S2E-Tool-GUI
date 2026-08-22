@@ -16,18 +16,42 @@ from PyQt5.QtWidgets import (
 )
 
 
+class ReportUnsupportedThread(QThread):
+    """
+    미지원 장치 이슈 보고를 백그라운드로 돌린다.
+    검색·등록이 수 초 걸릴 수 있어 GUI 를 붙잡지 않기 위함.
+    done 은 fw_issue_reporter.report_unsupported() 의 결과 dict 를 그대로 전달한다.
+    """
+    done = pyqtSignal(dict)
+
+    def __init__(self, reporter, device_name, fw_version=""):
+        super().__init__()
+        self._reporter = reporter
+        self._device_name = device_name
+        self._fw_version = fw_version
+
+    def run(self):
+        try:
+            self.done.emit(
+                self._reporter.report_unsupported(self._device_name, self._fw_version)
+            )
+        except Exception as e:      # 보고 실패가 툴 동작을 막으면 안 됨
+            self.done.emit({"action": "error", "url": "", "message": str(e)})
+
+
 class _FetchReleasesThread(QThread):
     done = pyqtSignal(list)
     error = pyqtSignal(str)
 
-    def __init__(self, fetcher, repo):
+    def __init__(self, fetcher, family):
         super().__init__()
         self._fetcher = fetcher
-        self._repo = repo
+        self._family = family
 
     def run(self):
         try:
-            self.done.emit(self._fetcher.get_releases(self._repo))
+            # family 의 source_type 에 따라 GitHub 릴리즈 / docs 페이지로 분기
+            self.done.emit(self._fetcher.get_releases_for(self._family))
         except Exception as e:
             self.error.emit(str(e))
 
@@ -57,7 +81,7 @@ class FWGitDialog(QDialog):
     firmware_ready = pyqtSignal(str, int)   # (bin_path, filesize)
 
     def __init__(self, parent, device_name, family, device_spec, fetcher, dl_path,
-                 fw_type_list=None, wiz550_config=None):
+                 fw_type_list=None, wiz550_config=None, image_validator=None):
         """
         fw_type_list: [{"label": str, "family": dict, "device_spec": dict}, ...]
           None 또는 빈 리스트면 타입 선택 행 미표시.
@@ -72,6 +96,9 @@ class FWGitDialog(QDialog):
         self._dl_path      = dl_path
         self._fw_type_list = fw_type_list or []
         self._wiz550_config = wiz550_config
+        # WIZ550 은 이 창 안에서 바로 TFTP 업로드하므로 firmware_ready 를 타지 않는다.
+        # 그 경로도 같은 이미지 검증을 받도록 호출자가 검증 함수를 넘겨준다.
+        self._image_validator = image_validator
         self._releases     = []
         self._current_asset = None
         self._fetch_thread  = None
@@ -213,7 +240,7 @@ class FWGitDialog(QDialog):
         self._lbl_asset.setStyleSheet("")
         self._releases = []
         self._current_asset = None
-        self._fetch_thread = _FetchReleasesThread(self._fetcher, self._family["repo"])
+        self._fetch_thread = _FetchReleasesThread(self._fetcher, self._family)
         self._fetch_thread.done.connect(self._on_releases_fetched)
         self._fetch_thread.error.connect(self._on_fetch_error)
         self._fetch_thread.start()
@@ -273,6 +300,12 @@ class FWGitDialog(QDialog):
     def _on_download_done(self, path, size):
         self._tmp_bin_path = path
         if self._wiz550_config is not None:
+            if self._image_validator is not None and not self._image_validator(path):
+                self._set_busy(False)
+                self._cleanup_tmp()
+                self._lbl_asset.setText("Firmware image check failed.")
+                self._lbl_asset.setStyleSheet("color: red;")
+                return
             self._start_wiz550_upload(path)
         else:
             self._set_busy(False)

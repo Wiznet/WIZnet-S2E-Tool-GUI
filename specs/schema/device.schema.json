@@ -59,6 +59,18 @@
       "type": "object",
       "additionalProperties": true,
       "description": "UI layout hints. Internal structure is flexible to allow editor evolution."
+    },
+    "fw_image": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Firmware image (APP/BOOT) validation settings. 'profile' selects a profile from config/fw_image_defaults.yaml; individual keys override it.",
+      "properties": {
+        "profile":      {"type": "string"},
+        "vector_check": {"type": "boolean"},
+        "app_start":    {"type": "integer"},
+        "flash_end":    {"type": "integer"},
+        "sram":         {"type": "array", "items": {"type": "integer"}, "minItems": 2, "maxItems": 2}
+      }
     }
   }
 }
