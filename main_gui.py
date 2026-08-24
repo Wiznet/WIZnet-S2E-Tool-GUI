@@ -3574,6 +3574,14 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.error(f"get_clicked_devinfo:object_config:{e}")
 
         # print(f"2nd caller={call_from}")
+        # @TODO 문구 개선 (2024-07-17 `2b3a96b` 이후 그대로). 두 가지가 부정확하다.
+        #   1) UPGRADE 상태의 원인을 DHCP 로 단정한다. DNS 해석 중일 수도 있다
+        #   2) "Retry" 가 무엇인지 모호하다. 이 팝업을 닫고 장치를 다시 클릭해도
+        #      상태는 갱신되지 않는다 — Search 를 다시 돌려야 한다는 안내가 빠졌다
+        # 안: "Device is not ready yet - it may still be acquiring an IP address
+        #      or resolving DNS. Run Search again to refresh the status, or set
+        #      a static IP."
+        # 사용자 노출 문구라 실기기에서 이 팝업이 실제로 뜨는 상황을 확인한 뒤 바꾼다.
         if self.curr_st == DeviceStatus.upgrade and call_from is None:
             self.show_msgbox(
                 "Info",
