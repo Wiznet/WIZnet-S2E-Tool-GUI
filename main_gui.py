@@ -954,8 +954,14 @@ class WIZWindow(QMainWindow, main_window):
         self.broadcast.setChecked(True)  # UDP Broadcast 검색 선택
         self.logger.info(f"검색 설정 로드 완료: expected_device_count={self.retry_search_expected_count}, max_retry_count={self.retry_search_max_count}, cumulative_mode=True")
 
-        # for WIZ5XXSR custom module
-        # @TODO: a6e5282d1e 에서 U3~U9 가 삭제되어 아래 코드도 삭제되어야 함
+        # WIZ5XXSR-RP_E-SAVE 의 MQTT subtopic 확장(U3~U9) 흔적.
+        # E-SAVE 지원은 `E-Save` 브랜치에서만 유지하며 이 계열에는 커맨드
+        # (WIZMakeCMD.cmd_wiz5xxsr_esave)도 .ui 위젯(lineedit_mqtt_subtopic_3~9)도
+        # 없다. 그래서 아래 코드는 주석을 풀면 AttributeError 로 죽는다.
+        # 여기 남은 subtopic 위젯은 _0/_1/_2 뿐이다.
+        # `E-Save` 브랜치는 2023-08 에 갈라져 develop 이 474 커밋 앞서 있어
+        # 그대로 가져올 수 없다. 요구사항·재구현 절차는 research 문서 참조:
+        # 2026-08-25-esave-branch-requirements-extraction.md
         # for i in range(3, 10):
         #     lineedit_subtopic = getattr(self, f'lineedit_mqtt_subtopic_{i}')
         #     # lineedit_subtopic.hide()

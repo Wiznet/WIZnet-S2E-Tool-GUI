@@ -121,7 +121,12 @@ cmd_w55rp20_2ch_ch1 = [
     'EE',  # Channel 1 ethernet connected data
 ]
 
-# WIZ5XXSR-RP_E-SAVE commands
+# WIZ5XXSR-RP_E-SAVE commands (MQTT Subscribe topic 4~10)
+# E-SAVE 지원은 `E-Save` 브랜치에서만 유지한다. 이 계열에서 비활성인 것이
+# 정상이며, 아래 search()/setcommand() 안의 주석 블록도 같은 이유다.
+# 되살리려면 커맨드 정의는 specs/ 가 주인이므로 여기가 아니라 그쪽부터 손대야
+# 한다. 요구사항·재구현 절차:
+# research/2026-08-25-esave-branch-requirements-extraction.md
 #cmd_wiz5xxsr_esave = ['U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9']
 
 
@@ -248,7 +253,7 @@ class WIZMakeCMD:
                 for cmd in cmd_wiz5xxsr:
                     cmd_list.append([cmd, ""])
                 self.logger.debug(f"search::cmd_list2={cmd_list}")
-                # Commands for E-SAVE
+                # Commands for E-SAVE — `E-Save` 브랜치 전용 (위 cmd_wiz5xxsr_esave 주석 참조)
                 #if 'E-SAVE' in devname:
                 #    for cmd in cmd_wiz5xxsr_esave:
                 #        cmd_list.append([cmd, ""])
@@ -299,7 +304,7 @@ class WIZMakeCMD:
                 for cmd in temp_cmd_wiz5xxsr:
                     cmd_list.append([cmd, ""])
                 self.logger.debug(f"search::cmd_list2={cmd_list}")
-                # Commands for E-SAVE
+                # Commands for E-SAVE — `E-Save` 브랜치 전용 (위 cmd_wiz5xxsr_esave 주석 참조)
                 #if 'E-SAVE' in devname:
                 #    for cmd in cmd_wiz5xxsr_esave:
                 #        cmd_list.append([cmd, ""])
@@ -398,7 +403,7 @@ class WIZMakeCMD:
                     else:
                         for cmd in cmd_1p_boot:
                             cmd_list.append([cmd, ""])
-                    # Commands for E-SAVE
+                    # Commands for E-SAVE — `E-Save` 브랜치 전용 (위 cmd_wiz5xxsr_esave 주석 참조)
                     #if 'E-SAVE' in devname:
                     #    for cmd in cmd_wiz5xxsr_esave:
                     #        cmd_list.append([cmd, ""])
