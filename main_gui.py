@@ -976,8 +976,14 @@ class WIZWindow(QMainWindow, main_window):
         self.broadcast.setChecked(True)  # UDP Broadcast 검색 선택
         self.logger.info(f"검색 설정 로드 완료: expected_device_count={self.retry_search_expected_count}, max_retry_count={self.retry_search_max_count}, cumulative_mode=True")
 
-        # for WIZ5XXSR custom module
-        # @TODO: a6e5282d1e 에서 U3~U9 가 삭제되어 아래 코드도 삭제되어야 함
+        # WIZ5XXSR-RP_E-SAVE 의 MQTT subtopic 확장(U3~U9) 흔적.
+        # E-SAVE 지원은 `E-Save` 브랜치에서만 유지하며 이 계열에는 커맨드
+        # (WIZMakeCMD.cmd_wiz5xxsr_esave)도 .ui 위젯(lineedit_mqtt_subtopic_3~9)도
+        # 없다. 그래서 아래 코드는 주석을 풀면 AttributeError 로 죽는다.
+        # 여기 남은 subtopic 위젯은 _0/_1/_2 뿐이다.
+        # `E-Save` 브랜치는 2023-08 에 갈라져 develop 이 474 커밋 앞서 있어
+        # 그대로 가져올 수 없다. 요구사항·재구현 절차는 research 문서 참조:
+        # 2026-08-25-esave-branch-requirements-extraction.md
         # for i in range(3, 10):
         #     lineedit_subtopic = getattr(self, f'lineedit_mqtt_subtopic_{i}')
         #     # lineedit_subtopic.hide()
@@ -3636,6 +3642,14 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.error(f"get_clicked_devinfo:object_config:{e}")
 
         # print(f"2nd caller={call_from}")
+        # @TODO 문구 개선 (2024-07-17 `2b3a96b` 이후 그대로). 두 가지가 부정확하다.
+        #   1) UPGRADE 상태의 원인을 DHCP 로 단정한다. DNS 해석 중일 수도 있다
+        #   2) "Retry" 가 무엇인지 모호하다. 이 팝업을 닫고 장치를 다시 클릭해도
+        #      상태는 갱신되지 않는다 — Search 를 다시 돌려야 한다는 안내가 빠졌다
+        # 안: "Device is not ready yet - it may still be acquiring an IP address
+        #      or resolving DNS. Run Search again to refresh the status, or set
+        #      a static IP."
+        # 사용자 노출 문구라 실기기에서 이 팝업이 실제로 뜨는 상황을 확인한 뒤 바꾼다.
         if self.curr_st == DeviceStatus.upgrade and call_from is None:
             self.show_msgbox(
                 "Info",
