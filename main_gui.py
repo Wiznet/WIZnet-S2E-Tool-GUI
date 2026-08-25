@@ -2337,8 +2337,17 @@ class WIZWindow(QMainWindow, main_window):
         if self.wizmsghandler is not None and self.wizmsghandler.isRunning():
             self.wizmsghandler.wait()
         else:
+            # terminate() 가 실제로 먹는지 확인하기 위해 전후 생존 수를 남긴다.
+            # self.threads 는 append 만 하고 제거하지 않아 계속 쌓인다.
+            alive_before = sum(1 for t in self.threads if t.isRunning())
             for thread in self.threads:
                 thread.terminate()
+            if WIZMSGHandler.verbose_wire_log:
+                alive_after = sum(1 for t in self.threads if t.isRunning())
+                self.logger.debug(
+                    f"[GPIO] refresh_gpio: threads={len(self.threads)} "
+                    f"alive {alive_before} -> {alive_after} (terminate 직후)"
+                )
             ##
             cmd_list = []
             if self.isConnected or self.broadcast.isChecked():
@@ -2391,6 +2400,16 @@ class WIZWindow(QMainWindow, main_window):
                 resp = self.datarefresh.rcv_list[0]
                 # cmdset_list = resp.splitlines()
                 cmdset_list = resp.split(b"\r\n")
+
+                # 읽는 대상을 남긴다. num 은 emit 한 스레드의 회차인데, 이전
+                # 인스턴스가 살아 있으면 그쪽 회차가 넘어오면서 아래 num<2
+                # 판정이 어긋난다. 어느 인스턴스 데이터를 보고 있는지 대조용.
+                if WIZMSGHandler.verbose_wire_log:
+                    self.logger.debug(
+                        f"[GPIO] update(num={num}) "
+                        f"reading DataRefresh#{getattr(self.datarefresh, 'inst_id', '?')} "
+                        f"rcv_list[0]={len(resp)}B editing={self._gpio_user_editing}"
+                    )
 
                 try:
                     # Expansion GPIO
