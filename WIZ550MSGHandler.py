@@ -294,7 +294,10 @@ def _parse_get_info_reply(data: bytes, device_type: str) -> dict:
         logger.warning(f"[WIZ550] GET_INFO system_info 부족: {len(system_info)}B")
         return {}
 
-    # WIZ550Profile에서 파싱 — Wave 2 구현 후 실제 동작
+    # WIZ550Profile 에서 파싱. parse_sr/parse_s2e/parse_web 셋 다 구현돼 있어
+    # 정상 상태에서는 아래 except 로 오지 않는다. 남겨 두는 이유는 패키징
+    # 사고(모듈 미번들)를 대비한 것이며, 그때는 파싱 없이 raw 로 넘겨
+    # 상위가 최소한 장치를 인식할 수 있게 한다.
     try:
         from WIZ550Profile import parse_sr, parse_s2e, parse_web
         if device_type == 'WIZ550SR':
@@ -304,8 +307,7 @@ def _parse_get_info_reply(data: bytes, device_type: str) -> dict:
         elif device_type == 'WIZ550WEB':
             return parse_web(system_info)
     except ImportError:
-        logger.warning("[WIZ550] WIZ550Profile 미구현 — GET_INFO 파싱 불가 (Wave 2 완료 후 동작)")
-        # Wave 2 이전에는 raw dict 반환
+        logger.warning("[WIZ550] WIZ550Profile 모듈 로드 실패 — GET_INFO 파싱 불가, raw 로 폴백")
         return {
             'mac': src_mac,
             'local_ip': '0.0.0.0',
