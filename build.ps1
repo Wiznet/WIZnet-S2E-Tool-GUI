@@ -12,7 +12,7 @@ param(
 
 $_version = Get-Content .\version -Raw
 $_version = $_version.Trim()
-$target_bin_name = "wizconfig_s2e_tool_$_version"
+$target_bin_name = "wizconfig_s2e_tool_${_version}_4CH"
 Write-Output "$target_bin_name"
 
 # 구버전 .spec 파일 정리 (현재 버전 제외)

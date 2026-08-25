@@ -443,7 +443,7 @@ class WIZWindow(QMainWindow, main_window):
         super().__init__()
         self.setupUi(self)
 
-        self.setWindowTitle(f"WIZnet S2E Configuration Tool {VERSION} (BETA)")
+        self.setWindowTitle(f"WIZnet S2E Configuration Tool {VERSION} (BETA - 4CH)")
 
         self.logger = logger
         if "Dev" in VERSION:
@@ -1618,6 +1618,18 @@ class WIZWindow(QMainWindow, main_window):
             self.radiobtn_group_s0.hide()
             self.radiobtn_group_s1.hide()
             self.group_dtrdsr.show()
+            # W55RP20 계열은 펌웨어가 SC(DTR/DSR 선택) SET을 지원하지 않으므로
+            # (전용 핀 없음 — DTR/DSR은 Flow control 항목으로 선택) 조작해도 반영되지 않는다.
+            # 값은 조회되어 표시되지만 변경은 불가하도록 비활성화한다.
+            _sc_writable = self.curr_dev not in W55RP20_FAMILY
+            self.group_dtrdsr.setEnabled(_sc_writable)
+            if not _sc_writable:
+                self.group_dtrdsr.setToolTip(
+                    "이 장치는 전용 DTR/DSR 핀이 없습니다. "
+                    "DTR/DSR 사용은 채널별 Serial options의 Flow control에서 선택하세요."
+                )
+            else:
+                self.group_dtrdsr.setToolTip("")
             # 이전 기준: 'WIZ5XXSR' in curr_dev or curr_dev in W55RP20_FAMILY
             #             or 'W232N' in curr_dev or 'IP20' in curr_dev
             # 신규: security 기본값 True, 예외(WIZ510SSL)만 widget_override로 선언
@@ -4718,7 +4730,16 @@ class WIZWindow(QMainWindow, main_window):
                 setcmd["PO"] = "1" if self.po_telnet.isChecked() else "0"
 
             # Status pin
-            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
+            # SC(Status pin / DTR-DSR)는 W55RP20 계열 펌웨어가 SET을 지원하지 않는다.
+            # 펌웨어 segcp.c: `case SEGCP_SC:` 가 이 보드에서는 값 검사 없이 무조건
+            # `ret |= SEGCP_RET_ERR_NOTAVAIL` — 보드에 전용 DTR/DSR 핀이 없고 RTS/CTS 핀을
+            # 공유하므로 DTR/DSR 선택은 Flow control 항목으로 하기 때문.
+            # 문제는 이 에러 비트가 패킷 끝까지 유지(sticky)되어
+            #   1) 이후 모든 GET 응답이 폐기되고(응답이 헤더 15바이트만 남음)
+            #   2) save_DevConfig_to_storage() 자체가 건너뛰어져 설정이 아예 저장되지 않는다.
+            # 따라서 W55RP20 계열에는 SC를 보내지 않는다.
+            if ("WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev
+                    or self.curr_dev in W55RP20_FAMILY):
                 pass
             else:
                 # initial value
@@ -5129,6 +5150,25 @@ class WIZWindow(QMainWindow, main_window):
                 )
                 # self.logger.debug(cmd_list)
 
+                # [SETDIAG] 전송 패킷 진단: 크기와 SV/RT 포함 여부
+                # (펌웨어 수신 버퍼 2047B 초과 시 뒤쪽 SV/RT가 잘려 저장이 안 됨)
+                try:
+                    _pkt_size = 0
+                    for _c in cmd_list:
+                        _pkt_size += len(_c[0])
+                        _pkt_size += 6 if _c[0] == "MA" else len(_c[1])
+                        if "\r\n" not in _c[1]:
+                            _pkt_size += 2
+                    _tail = [_c[0] for _c in cmd_list[-3:]]
+                    self.logger.info(
+                        f"[SETDIAG] send: set={len(setcmd)} total_cmds={len(cmd_list)} "
+                        f"pkt_size={_pkt_size}B tail={_tail} "
+                        f"SV={'SV' in [c[0] for c in cmd_list]} RT={'RT' in [c[0] for c in cmd_list]}"
+                    )
+                    self.logger.info(f"[SETDIAG] setcmd={setcmd}")
+                except Exception as _e:
+                    self.logger.error(f"[SETDIAG] send diag error: {_e}")
+
                 # socket config
                 self.socket_config()
 
@@ -5190,6 +5230,15 @@ class WIZWindow(QMainWindow, main_window):
         prev_channel_tab_index = self.channel_tab.currentIndex()
         set_result = {}
 
+        # [SETDIAG] 수신 원본 진단 — 장치가 실제로 무엇을 돌려줬는지 확인
+        try:
+            _rl = self.wizmsghandler.rcv_list if self.wizmsghandler is not None else []
+            self.logger.info(f"[SETDIAG] recv: resp_len={resp_len} packets={len(_rl)}")
+            for _i, _p in enumerate(_rl):
+                self.logger.info(f"[SETDIAG] recv pkt[{_i}] {len(_p)}B: {_p[:400]!r}")
+        except Exception as _e:
+            self.logger.error(f"[SETDIAG] recv diag error: {_e}")
+
         if resp_len == -1:
             self.logger.warning("Setting: no response from device.")
             self.statusbar.showMessage(" Setting: no response from device.")
@@ -5206,19 +5255,22 @@ class WIZWindow(QMainWindow, main_window):
             self.set_reponse = self.wizmsghandler.rcv_list[0]
 
             # ── 응답 파싱 (VB.NET parsingMsg() 방식) ──────────────────────
-            # MA prefix(10 bytes) 제거 후 \r\n 단위로 분리
-            payload = (self.set_reponse[10:]
-                       if len(self.set_reponse) >= 10 and self.set_reponse[:2] == b"MA"
-                       else self.set_reponse)
-            for chunk in payload.split(b"\r\n"):
-                if len(chunk) < 3 or chunk[:2] == b"MA":
-                    continue
-                try:
-                    cmd   = chunk[:2].decode("ascii")
-                    param = chunk[2:].decode("utf-8", errors="replace")
-                    set_result[cmd] = param
-                except Exception as e:
-                    self.logger.error(e)
+            # 멀티패킷 응답을 모두 파싱한다. 장치가 짧은 ack 패킷(MA/PW만 포함)을 먼저 보내고
+            # MC 등 본 데이터를 뒤 패킷으로 보내는 경우가 있어, 첫 패킷만 보면 성공 판정(MC)이 실패한다.
+            # 패킷마다 MA prefix(10 bytes)를 개별 제거 후 \r\n 단위로 분리.
+            for _pkt in self.wizmsghandler.rcv_list:
+                payload = (_pkt[10:]
+                           if len(_pkt) >= 10 and _pkt[:2] == b"MA"
+                           else _pkt)
+                for chunk in payload.split(b"\r\n"):
+                    if len(chunk) < 3 or chunk[:2] == b"MA":
+                        continue
+                    try:
+                        cmd   = chunk[:2].decode("ascii")
+                        param = chunk[2:].decode("utf-8", errors="replace")
+                        set_result[cmd] = param
+                    except Exception as e:
+                        self.logger.error(e)
 
             mc = set_result.get("MC", "")
             er = set_result.get("ER", "")
@@ -5227,7 +5279,8 @@ class WIZWindow(QMainWindow, main_window):
             min_len = self._get_expected_min_resp_len(self.curr_dev, self.curr_ver)
             self.logger.info(
                 f"Setting resp_len={resp_len}, expected_min={min_len}, "
-                f"MC='{mc}', ER='{er}'"
+                f"packets={len(self.wizmsghandler.rcv_list)}, "
+                f"fields={len(set_result)}, MC='{mc}', ER='{er}'"
             )
 
             if er:
@@ -5973,7 +6026,7 @@ class WIZWindow(QMainWindow, main_window):
             f"<html><body style='font-family:Arial,sans-serif;font-size:13px;margin:0;padding:0;'>"
             f"<h2 style='margin:0 0 6px 0;'>About WIZnet-S2E-Tool-GUI</h2>"
             f"<p style='margin:2px 0;'>Configuration Tool for WIZnet serial to ethernet devices.</p>"
-            f"<p style='margin:2px 0;'>Version: <b>{VERSION}</b></p>"
+            f"<p style='margin:2px 0;'>Version: <b>{VERSION} (BETA - 4CH)</b></p>"
             f"<p style='margin:2px 0;'>Author: WIZnet</p>"
             f"<p style='margin:2px 0;'>Github: <a href='{gh}'>Repository</a>"
             f" &nbsp;|&nbsp; <a href='{gh}/releases'>Release</a></p>"

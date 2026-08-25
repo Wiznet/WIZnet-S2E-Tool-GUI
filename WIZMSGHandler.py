@@ -16,7 +16,9 @@ exitflag = 0
 # PACKET_SIZE = 2048
 PACKET_SIZE = 4096
 MAX_REPLY_CHUNKS = 200      # HIGH-03: 비정상 응답 truncation 상한
-EACH_DEV_LOOP_TIMEOUT = 0.15  # Strategy B: 개별 장치 멀티패킷 수집 루프 타임아웃
+EACH_DEV_LOOP_TIMEOUT = 0.4  # Strategy B: 개별 장치 멀티패킷 수집 루프 타임아웃
+# 0.15s였던 이전 값은 4CH 장치(GET 커맨드 129개, 3CH 104개/2CH 79개 — 기본 보안장치 50개 대비 최대 2.5배)의
+# 멀티패킷 응답을 다 받기 전에 조기 종료시켜 검색 실패("정보 아직 읽고있음"/MC 필드 누락)를 유발했다.
 
 
 def _sanitize_device_name(raw: bytes) -> str:
@@ -295,6 +297,11 @@ class WIZMSGHandler(QThread):
                                 for i in range(0, len(replylists)):
                                     if b"AP" in replylists[i][:2]:
                                         if replylists[i][2:] == b" ":
+                                            # 주의: "AP"는 W55RP20 2CH+ 에서 'CH1 remote port' 커맨드와 겹친다.
+                                            # CH1 remote port 응답이 공백이면 비밀번호 오류로 오판할 수 있음.
+                                            self.logger.warning(
+                                                f"[SETDIAG] setting_pw_wrong=True triggered by chunk[{i}]={replylists[i]!r}"
+                                            )
                                             self.setting_pw_wrong = True
                                         else:
                                             self.setting_pw_wrong = False
@@ -360,7 +367,9 @@ class WIZMSGHandler(QThread):
                         if self.setting_pw_wrong:
                             self.set_result.emit(-3)
                         else:
-                            self.set_result.emit(len(self.rcv_list[0]))
+                            # 멀티패킷 응답: 첫 패킷만 세면 실제 응답 길이를 과소평가한다.
+                            # (장치가 짧은 ack 패킷을 먼저 보내고 본 데이터를 뒤에 보내는 경우가 있음)
+                            self.set_result.emit(sum(len(p) for p in self.rcv_list))
                     else:
                         self.set_result.emit(-1)
                 elif self.opcode == Opcode.OP_FWUP:
