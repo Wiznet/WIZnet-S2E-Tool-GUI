@@ -188,11 +188,20 @@ class WIZMSGHandler(QThread):
             except Exception as e:
                 self.logger.debug(f"[WIRE] request dump failed: {e}")
 
+    # 전송은 실제로 채운 만큼만 한다.
+    #
+    # self.msg 는 PACKET_SIZE(4096) 고정 버퍼인데 예전에는 이걸 통째로 보냈다.
+    # 452B 짜리 SET 요청이 널 패딩 3644B 를 달고 나갔다는 뜻이다.
+    # 장치의 설정 수신 버퍼는 512B(CONFIG_BUF_SIZE)다. 수신 길이를 그대로 믿고
+    # 복사하던 구버전 펌웨어에서는 버퍼 오버플로였고, 그럼에도 응답이 나오던
+    # 것은 운이었다. 수신을 511B 로 제한하도록 고친 펌웨어에서는 남은 3585B 를
+    # 배출하는 경로를 타면서 소켓이 어긋나 모든 UDP 가 무응답이 됐다.
+    # (2026-08-25 WIZ752SR-12x FW 2.1.0dev1 실기기 확인)
     def sendcommands(self):
-        self.sock.sendto(self.msg)
+        self.sock.sendto(self.msg[:self.size])
 
     def sendcommandsTCP(self):
-        self.sock.write(self.msg)
+        self.sock.write(self.msg[:self.size])
 
     def check_parameter(self, cmdset):
         # print('check_parameter()', cmdset, cmdset[:2], cmdset[2:])
@@ -470,17 +479,18 @@ class DataRefresh(QThread):
         if WIZMSGHandler.verbose_wire_log:
             self.logger.debug(f"[WIRE][DataRefresh#{self.inst_id}] {msg}")
 
+    # 실제로 채운 만큼만 전송한다 (WIZMSGHandler.sendcommands 주석 참조).
     def sendcommands(self):
         self._wire_log(
             f"request size={self.size}B bytes={bytes(self.msg[:self.size])!r}"
         )
-        self.sock.sendto(self.msg)
+        self.sock.sendto(self.msg[:self.size])
 
     def sendcommandsTCP(self):
         self._wire_log(
             f"request(tcp) size={self.size}B bytes={bytes(self.msg[:self.size])!r}"
         )
-        self.sock.write(self.msg)
+        self.sock.write(self.msg[:self.size])
 
     def run(self):
         try:

@@ -64,10 +64,13 @@ def _fw_send_cmd(sock, cmd_list: list, what_sock: str, timeout: int) -> bytes | 
         return None
 
     try:
+        # 채운 만큼만 보낸다. msg 는 4096B 고정 버퍼라 통짜로 보내면 널 패딩이
+        # 함께 나가고, 장치의 설정 수신 버퍼(512B)를 넘겨 오버플로가 된다.
+        # 상세는 WIZMSGHandler.sendcommands 주석 참조.
         if what_sock == "udp":
-            sock.sendto(msg)
+            sock.sendto(msg[:size])
         elif what_sock == "tcp":
-            sock.write(msg)
+            sock.write(msg[:size])
     except Exception as e:
         logger.error(f"[_fw_send_cmd] 전송 실패: {e}")
         return None
