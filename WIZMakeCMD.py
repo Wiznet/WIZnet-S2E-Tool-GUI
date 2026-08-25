@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from packaging.version import Version, InvalidVersion
+from packaging.version import Version
 
 """
 Make Serial command
@@ -146,12 +146,23 @@ cmd_w55rp20_2ch = cmd_w55rp20 + cmd_w55rp20_2ch_ch1
 
 
 def _safe_version(v: str) -> Version:
-    try:
-        return Version(v)
-    except InvalidVersion:
-        # PEP 440 비표준 접미사(예: "1.2.2wiz") → 숫자 부분만 추출
-        m = re.match(r'[\d.]+', v)
-        return Version(m.group(0).rstrip('.')) if m else Version("0")
+    """장치 버전 문자열에서 숫자부만 뽑아 비교 가능한 Version 으로 만든다.
+
+    버전 비교는 숫자부만 가지고 한다. `dev` / `rc` / `beta` 같은 접미사는
+    정식 출시 전이라는 표기일 뿐이고 기능은 같은 번호의 정식판과 동일하다.
+    접두어(`VR2.1.0`)나 빌드 메타(`1.2.2_custom_20260825`)도 같은 이유로
+    무시한다.
+
+    `Version(v)` 를 그대로 쓰면 안 된다. PEP 440 이 `dev`/`a`/`b`/`rc` 를
+    사전 릴리즈로 정식 해석해서 `1.1.8dev` 가 `1.1.8` 보다 작아지고,
+    `InvalidVersion` 이 나지 않으므로 폴백 경로도 타지 않는다. 그러면 같은
+    기능을 가진 dev 펌웨어가 version_compare 게이트에서 조용히 차단된다.
+    """
+    m = re.search(r'\d+(?:\.\d+)*', v or "")
+    if not m:
+        logger.warning(f"[version] 숫자부를 찾지 못함: {v!r} → 0 으로 처리")
+        return Version("0")
+    return Version(m.group(0))
 
 
 def version_compare(version1: str, version2: str) -> int:
