@@ -117,3 +117,55 @@ def test_version_compare_returns_sign(a, b, expected):
 def test_version_compare_with_empty_returns_zero(a, b):
     """빈 문자열이 들어오면 비교하지 않고 0 을 돌려준다 (기존 계약 유지)."""
     assert version_compare(a, b) == 0
+
+
+# ─────────────────────────────────────────────────────────────────
+# 회귀 대조 — 정식 표기는 수정 전후 판정이 같아야 한다
+#
+# 이 수정은 게이트를 여는 방향이라, 사전 릴리즈가 아닌 버전에서 판정이
+# 하나라도 달라지면 실기기 동작이 바뀐다. 수정 전 구현을 여기에 재현해
+# 전수 대조한다.
+# ─────────────────────────────────────────────────────────────────
+
+# 코드에서 실제로 쓰이는 게이트 기준값
+_GATES = ["1.0.8", "1.1.8", "1.2.0", "1.2.1", "1.4.4"]
+
+# 실제 유통되는 정식 버전 표기
+_RELEASE_VERSIONS = [
+    "1.0.5", "1.0.6", "1.0.8", "1.0.9", "1.1.0", "1.1.1", "1.1.8",
+    "1.2.0", "1.2.1", "1.2.2", "1.2.3", "1.3.0", "1.4.0", "1.4.2",
+    "1.4.4", "1.4.5", "2.1.0", "4.06", "4.05", "1.2.2wiz",
+]
+
+
+def _legacy_safe_version(v):
+    """수정 전 구현 — `Version(v)` 를 그대로 쓰고 실패했을 때만 숫자 추출."""
+    import re
+    from packaging.version import Version, InvalidVersion
+    try:
+        return Version(v)
+    except InvalidVersion:
+        m = re.match(r'[\d.]+', v)
+        return Version(m.group(0).rstrip('.')) if m else Version("0")
+
+
+def _legacy_compare(a, b):
+    if not a or not b:
+        return 0
+    x, y = _legacy_safe_version(a), _legacy_safe_version(b)
+    return 0 if x == y else (-1 if x < y else 1)
+
+
+@pytest.mark.parametrize("version", _RELEASE_VERSIONS)
+@pytest.mark.parametrize("gate", _GATES)
+def test_release_versions_have_no_regression(version, gate):
+    """정식 표기는 수정 전후 판정이 동일해야 한다 (양방향)."""
+    assert version_compare(version, gate) == _legacy_compare(version, gate)
+    assert version_compare(gate, version) == _legacy_compare(gate, version)
+
+
+@pytest.mark.parametrize("version, gate", [(g + "dev", g) for g in _GATES])
+def test_prerelease_verdict_actually_changed(version, gate):
+    """반대로 사전 릴리즈는 판정이 바뀌어야 한다 — 이 수정의 목적."""
+    assert _legacy_compare(version, gate) == -1     # 전: 차단
+    assert version_compare(version, gate) == 0      # 후: 동일 취급
