@@ -7,8 +7,13 @@ WIZ550 generalTab 미연결 필드 배선 검증 — BUG-W550-AE / AH / AI.
 안 되던" 상태였고, 이 테스트는 위젯 ↔ profile dict 사이 코덱이 값을 잃지 않는지 본다.
 
   AE  packing_delimiter[4] + packing_delimiter_length  ↔  ch0_pack_char (hex)
+  AF  dns_use                                          ↔  wiz550_dns_use (동적 생성)
+  AG  dns_domain_name[50]                              ↔  wiz550_dns_domain (동적 생성)
   AH  serial_trigger[3]                                ↔  at_hex1/2/3 (hex 2자씩)
   AI  modbus_use / modbus_mode                         ↔  ch0_modbus_protocol
+
+AF/AG 위젯은 .ui 에 없고 코드로 만든다. 그래서 "장치 전환 시 사라지는가"가 값 왕복만큼
+중요하다. 안 숨기면 일반 장치 화면에 WIZ550 전용 칸이 유령으로 남는다.
 
 AI 는 값 왕복뿐 아니라 **event_opmode() 가 콤보를 되돌려도 값이 살아남는지**가 핵심이다.
 event_opmode 의 working_mode 제약은 WIZ750SR 계열 규칙이고 WIZ550 구조체에는 없다.
@@ -56,6 +61,8 @@ def _base_profile(**over) -> dict:
         'reconnection': 3000,
         'pw_setting': '',
         'pw_connect': '',
+        'dns_use': 0,
+        'dns_domain_name': '',
         'serial_command': 1,
         'serial_trigger': b'+++',
     }
@@ -321,3 +328,121 @@ def test_bytes_to_hex(win, raw, length, expect):
 ])
 def test_hex_to_bytes(win, text, expect):
     assert win._wiz550_hex_to_bytes(text) == expect
+
+
+# ─────────────────────────────────────────────────────────────────
+# BUG-W550-AF / AG — dns_use / dns_domain_name (동적 생성 위젯)
+# ─────────────────────────────────────────────────────────────────
+
+def test_dns_widgets_exist_and_start_hidden(win):
+    """위젯이 만들어져 있고, 장치를 고르기 전에는 숨어 있다.
+
+    isVisible() 은 창을 show() 하지 않아서 항상 False 다. 명시적 숨김만 보려면
+    isHidden() 을 써야 한다.
+    """
+    assert win.wiz550_dns_use.isHidden()
+    assert win.wiz550_dns_domain.isHidden()
+
+
+def test_dns_widgets_placed_next_to_dns_server(win):
+    """DNS server IP 칸과 같은 레이아웃(gridLayout3)에 붙는다."""
+    layout = win.gridLayout3
+    placed = {layout.itemAt(i).widget() for i in range(layout.count())}
+    assert win.dns_addr in placed
+    assert {win.wiz550_dns_use, win.wiz550_dns_domain} <= placed
+
+
+def test_dns_widgets_shown_for_wiz550(win):
+    _load(win, _base_profile(dns_use=1, dns_domain_name='example.com'))
+    assert not win.wiz550_dns_use.isHidden()
+    assert not win.wiz550_dns_domain.isHidden()
+
+
+def test_dns_roundtrip(win):
+    _load(win, _base_profile(dns_use=1, dns_domain_name='device.wiznet.io'))
+    assert win.wiz550_dns_use.isChecked()
+    assert win.wiz550_dns_domain.text() == 'device.wiznet.io'
+    out = win.fill_setinfo_wiz550()
+    assert out['dns_use'] == 1
+    assert out['dns_domain_name'] == 'device.wiznet.io'
+
+
+def test_dns_user_edit(win):
+    _load(win, _base_profile(dns_use=0, dns_domain_name=''))
+    win.wiz550_dns_use.setChecked(True)
+    win.wiz550_dns_domain.setText('mqtt.example.org')
+    out = win.fill_setinfo_wiz550()
+    assert (out['dns_use'], out['dns_domain_name']) == (1, 'mqtt.example.org')
+
+
+def test_dns_domain_locked_when_unused(win):
+    """dns_use=0 이면 도메인 칸이 잠긴다 (WIZ1x0SR 의 같은 쌍과 동일)."""
+    _load(win, _base_profile(dns_use=0))
+    assert not _self_enabled(win.wiz550_dns_domain)
+    _load(win, _base_profile(dns_use=1, dns_domain_name='a.b'))
+    assert _self_enabled(win.wiz550_dns_domain)
+
+
+def test_dns_domain_maxlength_leaves_room_for_nul(win):
+    """구조체가 50B 이고 C 문자열이라 49자까지만 받는다."""
+    assert win.wiz550_dns_domain.maxLength() == 49
+
+
+def test_dns_widgets_hidden_on_generic_device(win):
+    """일반 장치로 넘어가면 사라진다 (anti-stale).
+
+    안 숨기면 WIZ750SR 화면에 WIZ550 전용 칸이 그대로 남는다.
+    """
+    from device_spec_loader import load_device
+
+    _load(win, _base_profile(dns_use=1, dns_domain_name='example.com'))
+    assert not win.wiz550_dns_use.isHidden()
+
+    win._apply_common_gating(load_device("WIZ750SR"))
+    assert win.wiz550_dns_use.isHidden()
+    assert win.wiz550_dns_domain.isHidden()
+
+
+def test_dns_domain_survives_profile_build_roundtrip(win):
+    """UI → build_s2e → parse_s2e 까지 도메인이 살아남는다 (50B 필드 경계 확인)."""
+    from WIZ550Profile import build_s2e, parse_s2e
+
+    domain = 'x' * 49
+    _load(win, _base_profile(dns_use=1, dns_domain_name=domain))
+    out = win.fill_setinfo_wiz550()
+    reparsed = parse_s2e(build_s2e(out))
+    assert reparsed['dns_use'] == 1
+    assert reparsed['dns_domain_name'] == domain
+
+
+def test_dns_row_does_not_overflow_network_group(win, qapp):
+    """DNS 칸을 드러내도 network_config 가 넘치지 않는다 — 레이아웃 회귀.
+
+    generalTab 은 부모 레이아웃 없이 고정 geometry 로 놓여서, 칸을 늘려도 그룹이
+    그만큼 커지지 못한다. 라벨 + 도메인칸을 따로 둔 2행 구성은 실측에서 20px 넘쳐
+    기존 dns_addr 와 세로로 겹쳤다. 이 테스트가 그 회귀를 잡는다.
+    """
+    win.resize(1200, 900)
+    win.show()
+    qapp.processEvents()
+
+    group = win.dns_addr.parentWidget()
+    _load(win, _base_profile(dns_use=1, dns_domain_name='device.wiznet.io'))
+    group.parentWidget().layout().activate()
+    qapp.processEvents()
+
+    need = group.minimumSizeHint().height()
+    assert need <= group.height(), (
+        f"network_config 가 {need}px 필요한데 {group.height()}px 뿐 — 위젯이 겹친다"
+    )
+
+    def _bottom(w):
+        return w.geometry().y() + w.geometry().height()
+
+    assert _bottom(win.dns_addr) <= win.wiz550_dns_domain.geometry().y(), (
+        "dns_addr 와 도메인 칸이 세로로 겹친다"
+    )
+    assert _bottom(win.dns_addr) <= win.wiz550_dns_use.geometry().y(), (
+        "dns_addr 와 Use DNS 체크박스가 세로로 겹친다"
+    )
+    win.hide()

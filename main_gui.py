@@ -649,6 +649,9 @@ class WIZWindow(QMainWindow, main_window):
         # 되돌린 뒤 복원할 값이 필요하다. activated 는 사용자가 직접 고를 때만 발생하므로
         # 프로그램이 되돌린 값을 캐시가 다시 받아 적는 자기 오염이 없다.
         self.ch0_modbus_protocol.activated.connect(self._on_wiz550_modbus_changed)
+        # BUG-W550-AF/AG: WIZ550 전용 DNS 위젯을 .ui 대신 런타임에 만든다.
+        # gui_init() 뒤라 폰트·레이아웃이 확정된 상태에서 붙는다.
+        self._build_wiz550_dns_widgets()
         self.ch0_keepalive_enable.stateChanged.connect(self.event_keepalive)
         self.ch1_keepalive_enable.stateChanged.connect(self.event_keepalive)
         self.ip_dhcp.clicked.connect(self.event_ip_alloc)
@@ -1572,6 +1575,9 @@ class WIZWindow(QMainWindow, main_window):
         # BUG-W550-AI: WIZ550 Modbus 전용 상태도 여기서 끈다. WIZ550 경로는 이 호출
         # 뒤에 fill_devinfo_wiz550() 끝에서 다시 세우고, 일반 장치로 넘어가면 꺼진 채 남는다.
         self._wiz550_modbus_active = False
+        # BUG-W550-AF/AG: WIZ550 전용 DNS 위젯도 같은 이유로 여기서 숨긴다.
+        # 이 위젯들은 코드로 만든 것이라 .ui 기반 override 대상이 아니다.
+        self._set_wiz550_dns_visible(False)
         for name in ('ch0_mqttclient', 'ch0_modbus_protocol', 'ch0_uart_name', 'ip_pppoe'):
             w = getattr(self, name, None)
             if w is not None:
@@ -3730,6 +3736,71 @@ class WIZWindow(QMainWindow, main_window):
         return ['300', '600', '1200', '2400', '4800', '9600',
                 '19200', '38400', '57600', '115200', '230400', '460800']
 
+    def _build_wiz550_dns_widgets(self) -> None:
+        """WIZ550 전용 DNS 위젯(dns_use / dns_domain_name)을 만든다 — BUG-W550-AF/AG.
+
+        .ui 에 이 두 칸이 없다. Designer 로 넣지 않고 여기서 만드는 이유는 두 필드가
+        WIZ550 계열 전용이라 일반 장치 화면에서는 항상 숨겨야 하기 때문이다.
+        .ui 에 두면 배치와 숨김 처리를 양쪽에서 관리하게 되고, 일반 장치 레이아웃
+        간격까지 건드린다.
+
+        붙는 곳은 DNS server IP 칸(dns_addr)이 있는 gridLayout3 의 빈 행 1 이다.
+        의미가 같은 값끼리 모이고, 기존 행은 건드리지 않는다.
+
+        대응: dns_use=1 이면 장치가 dns_addr 에 dns_domain_name 을 질의해서
+        remote_ip 대신 해석된 주소로 접속한다. WIZ1x0SR 의
+        wiz1x0_dns_enable / wiz1x0_dns_ip / wiz1x0_domain 3종 세트와 같은 구조다.
+
+        **높이 제약 주의.** 이 그룹(network_config)이 든 generalTab 은 부모 레이아웃 없이
+        고정 geometry 로 놓인다. 즉 칸을 늘려도 그룹이 그만큼 커지지 못한다. 실측으로
+        여유는 21px 뿐이라, 라벨 + 도메인칸을 따로 둔 2행 구성(+41px)은 기존 dns_addr 와
+        겹쳐 버린다. 그래서 체크박스를 라벨 자리(col 0)에 놓아 1행으로 만들고, 새 위젯
+        높이도 행 높이에 맞춰 눌러 둔다. 도메인 칸 이름은 placeholder 로 대신한다.
+        """
+        _parent = self.dns_addr.parentWidget()
+        _font = self.dns_addr.font()
+
+        self.wiz550_dns_use = QtWidgets.QCheckBox("Use DNS", _parent)
+        self.wiz550_dns_use.setFont(_font)
+        self.wiz550_dns_use.setMaximumHeight(18)
+        self.wiz550_dns_use.setToolTip(
+            "Resolve the domain name through the DNS server instead of using Remote IP"
+        )
+
+        self.wiz550_dns_domain = QtWidgets.QLineEdit(_parent)
+        self.wiz550_dns_domain.setFont(_font)
+        self.wiz550_dns_domain.setMinimumSize(QtCore.QSize(130, 20))
+        self.wiz550_dns_domain.setMaximumSize(QtCore.QSize(150, 20))
+        self.wiz550_dns_domain.setPlaceholderText("domain name")
+        self.wiz550_dns_domain.setToolTip("Domain name to resolve (max 49 characters)")
+        # 구조체는 50B 지만 C 문자열이라 NUL 1B 를 남겨야 한다. 49자를 꽉 채워도
+        # _str_to_cstr(s, 50) 이 마지막 바이트를 0 으로 채운다.
+        self.wiz550_dns_domain.setMaxLength(49)
+
+        self.gridLayout3.addWidget(self.wiz550_dns_use, 1, 0)
+        self.gridLayout3.addWidget(self.wiz550_dns_domain, 1, 1)
+
+        self.wiz550_dns_use.stateChanged.connect(self._on_wiz550_dns_use_changed)
+        # 기본은 숨김. WIZ550 응답을 채울 때만 드러낸다.
+        # 숨긴 위젯은 QGridLayout 계산에서 빠지므로 일반 장치 화면 높이는 그대로다.
+        self._set_wiz550_dns_visible(False)
+
+    def _set_wiz550_dns_visible(self, visible: bool) -> None:
+        """WIZ550 DNS 위젯 3개의 가시성을 한 번에 정한다 (BUG-W550-AF/AG).
+
+        위젯이 아직 없는 시점(__init__ 초반)에 불려도 죽지 않게 getattr 로 막는다.
+        """
+        for _name in ('wiz550_dns_use', 'wiz550_dns_domain'):
+            w = getattr(self, _name, None)
+            if w is not None:
+                w.setVisible(visible)
+
+    def _on_wiz550_dns_use_changed(self, state) -> None:
+        """DNS 미사용이면 도메인 칸을 잠근다 — WIZ1x0SR 의 같은 쌍과 동일 동작."""
+        w = getattr(self, 'wiz550_dns_domain', None)
+        if w is not None:
+            w.setEnabled(bool(state))
+
     @staticmethod
     def _wiz550_bytes_to_hex(raw, length=None) -> str:
         """WIZ550 바이트 필드 → 대문자 hex 문자열. length 를 주면 앞에서 그만큼만 쓴다.
@@ -3907,6 +3978,15 @@ class WIZWindow(QMainWindow, main_window):
                         self.generalTab.removeTab(i)
                         break
 
+        # BUG-W550-AF/AG: dns_use / dns_domain_name.
+        # dns_use=1 이면 장치가 dns_server_ip 에 이 도메인을 질의해 remote_ip 대신 쓴다.
+        # 위치 주의: _apply_common_gating() 이 이 위젯들을 숨기므로 그 뒤여야 한다.
+        self._set_wiz550_dns_visible(True)
+        self.wiz550_dns_use.setChecked(bool(d.get('dns_use', 0)))
+        self.wiz550_dns_domain.setText(d.get('dns_domain_name', ''))
+        # 체크 상태가 직전과 같으면 stateChanged 가 안 뜨므로 직접 부른다.
+        self._on_wiz550_dns_use_changed(self.wiz550_dns_use.isChecked())
+
         # BUG-W550-AI: modbus_use/modbus_mode ↔ ch0_modbus_protocol.
         # variant=='modbus'(164B, fw minor 짝수) 응답에만 있는 필드고, build_s2e 도 그때만
         # 확장 2B 를 붙인다. 그 외에는 콤보를 잠가 조작해도 안 나간다는 걸 알린다.
@@ -3962,6 +4042,9 @@ class WIZWindow(QMainWindow, main_window):
         d['subnet'] = self.subnet.text().strip()
         d['gateway'] = self.gateway.text().strip()
         d['dns_server_ip'] = self.dns_addr.text().strip()
+        # BUG-W550-AF/AG: dns_use / dns_domain_name.
+        d['dns_use'] = 1 if self.wiz550_dns_use.isChecked() else 0
+        d['dns_domain_name'] = self.wiz550_dns_domain.text().strip()
 
         # Working mode (Java 원본: 0=Client, 1=Server, 2=TCP Mixed, 3=UDP, 4=MQTT)
         if self.ch0_tcpclient.isChecked():
