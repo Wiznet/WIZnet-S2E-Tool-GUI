@@ -150,3 +150,7 @@ ui:
         - {id: pw_setting,     label: "Search Password", type: text}
         # pw_connect / serial_command 제거 (2026-06-04): 둘 다 WEB 구조체에서 주석처리(미존재),
         # parse_web 미반환 → UI 제외. (pw_connect=ConfigData.h:96, serial_command=ConfigData.h:105)
+
+# 펌웨어 이미지 판별 프로파일 — config/fw_image_defaults.yaml 참조
+fw_image:
+  profile: stm32

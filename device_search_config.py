@@ -103,6 +103,8 @@ class DeviceSearchConfig:
             'phase3': {
                 'device_query_timeout_sec': 1.5,
                 'set_command_delay_ms': 500,
+                'set_response_timeout_sec': 2.0,
+                'set_response_timeout_5xx_sec': 2.0,
             },
             'tcp': {
                 'scan_timeout_sec': 2.0,
@@ -159,6 +161,8 @@ class DeviceSearchConfig:
         ('search', 'phase1', 'emit_stabilization_ms'): (0, 500),
         ('search', 'phase3', 'device_query_timeout_sec'): (0.5, 5.0),
         ('search', 'phase3', 'set_command_delay_ms'): (0, 2000),
+        ('search', 'phase3', 'set_response_timeout_sec'): (1.0, 15.0),
+        ('search', 'phase3', 'set_response_timeout_5xx_sec'): (1.0, 30.0),
         ('search', 'tcp', 'max_parallel_workers'): (1, 50),
         ('ui', 'progress_bar', 'update_percent'): (1, 100),
         ('ui', 'progress_bar', 'auto_hide_delay_ms'): (0, 10000),
@@ -472,6 +476,26 @@ class DeviceSearchConfig:
         """
         return self.config['search']['phase3']['set_command_delay_ms']
 
+    def get_phase3_set_response_timeout(self) -> float:
+        """SET 명령 응답 대기 타임아웃 (초) — 일반 장치
+
+        Returns:
+            float: 타임아웃 값 (초)
+        """
+        return float(self.config['search']['phase3']['set_response_timeout_sec'])
+
+    def get_phase3_set_response_timeout_5xx(self) -> float:
+        """SET 명령 응답 대기 타임아웃 (초) — WIZ5XXSR-RP 계열 전용
+
+        WIZ5XXSR-RP는 TCP client 접속 실패 시 `connect()`가 최대 1.8초
+        (RCR 8 x RTR 200ms) 블로킹되고, SET 직후 플래시 저장(4KB 섹터 소거,
+        최대 400ms급)이 겹쳐 일반 타임아웃으로는 응답을 놓칠 수 있다.
+
+        Returns:
+            float: 타임아웃 값 (초)
+        """
+        return float(self.config['search']['phase3']['set_response_timeout_5xx_sec'])
+
     # ============================================================
     # TCP 설정 접근자
     # ============================================================
@@ -632,6 +656,8 @@ class DeviceSearchConfig:
             'skip_phase1_emit_delay': self.is_skip_phase1_emit_delay(),
             'phase3_device_query_timeout': self.get_phase3_device_query_timeout(),
             'phase3_set_command_delay_ms': self.get_phase3_set_command_delay_ms(),
+            'phase3_set_response_timeout': self.get_phase3_set_response_timeout(),
+            'phase3_set_response_timeout_5xx': self.get_phase3_set_response_timeout_5xx(),
             'tcp_max_parallel_workers': self.get_tcp_max_parallel_workers(),
             'pgbar_update_percent': self.get_pgbar_update_percent(),
             'pgbar_auto_hide_delay_ms': self.get_pgbar_auto_hide_delay_ms(),
@@ -710,6 +736,18 @@ class DeviceSearchConfig:
                 if not (0 <= value <= 2000):
                     raise ValueError(f"phase3_set_command_delay_ms must be 0~2000, got {value}")
                 self.config['search']['phase3']['set_command_delay_ms'] = value
+
+            if 'phase3_set_response_timeout' in updates:
+                value = float(updates['phase3_set_response_timeout'])
+                if not (1.0 <= value <= 15.0):
+                    raise ValueError(f"phase3_set_response_timeout must be 1.0~15.0, got {value}")
+                self.config['search']['phase3']['set_response_timeout_sec'] = value
+
+            if 'phase3_set_response_timeout_5xx' in updates:
+                value = float(updates['phase3_set_response_timeout_5xx'])
+                if not (1.0 <= value <= 30.0):
+                    raise ValueError(f"phase3_set_response_timeout_5xx must be 1.0~30.0, got {value}")
+                self.config['search']['phase3']['set_response_timeout_5xx_sec'] = value
 
             if 'tcp_max_parallel_workers' in updates:
                 value = int(updates['tcp_max_parallel_workers'])

@@ -130,3 +130,7 @@ ui:
         - {id: dns_use,        label: "DNS Enable",            type: checkbox}
         - {id: inactivity,     label: "Inactivity Timeout",    type: uint16}
         - {id: reconnection,   label: "Reconnection Interval", type: uint16}
+
+# 펌웨어 이미지 판별 프로파일 — config/fw_image_defaults.yaml 참조
+fw_image:
+  profile: stm32

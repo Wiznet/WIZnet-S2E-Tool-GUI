@@ -535,6 +535,8 @@ class WIZWindow(QMainWindow, main_window):
         self.curr_dev = None
         self.curr_ver = None
         self.curr_st = None
+        # 직전 Apply에서 BOOT/UPGRADE 상태로 인해 축소 전송이 일어났는지
+        self._setcmd_reduced = False
 
         # Load device search timing configuration
         self.timing_config = DeviceSearchConfig()
@@ -952,8 +954,14 @@ class WIZWindow(QMainWindow, main_window):
         self.broadcast.setChecked(True)  # UDP Broadcast 검색 선택
         self.logger.info(f"검색 설정 로드 완료: expected_device_count={self.retry_search_expected_count}, max_retry_count={self.retry_search_max_count}, cumulative_mode=True")
 
-        # for WIZ5XXSR custom module
-        # @TODO: a6e5282d1e 에서 U3~U9 가 삭제되어 아래 코드도 삭제되어야 함
+        # WIZ5XXSR-RP_E-SAVE 의 MQTT subtopic 확장(U3~U9) 흔적.
+        # E-SAVE 지원은 `E-Save` 브랜치에서만 유지하며 이 계열에는 커맨드
+        # (WIZMakeCMD.cmd_wiz5xxsr_esave)도 .ui 위젯(lineedit_mqtt_subtopic_3~9)도
+        # 없다. 그래서 아래 코드는 주석을 풀면 AttributeError 로 죽는다.
+        # 여기 남은 subtopic 위젯은 _0/_1/_2 뿐이다.
+        # `E-Save` 브랜치는 2023-08 에 갈라져 develop 이 474 커밋 앞서 있어
+        # 그대로 가져올 수 없다. 요구사항·재구현 절차는 research 문서 참조:
+        # 2026-08-25-esave-branch-requirements-extraction.md
         # for i in range(3, 10):
         #     lineedit_subtopic = getattr(self, f'lineedit_mqtt_subtopic_{i}')
         #     # lineedit_subtopic.hide()
@@ -1261,7 +1269,7 @@ class WIZWindow(QMainWindow, main_window):
                 and self.dev_profile.get(self.curr_mac, {}).get('_proto') == 'wiz550'):
             self.apply_wiz550()
             return
-        if self.curr_dev == 'WIZ1x0SR':
+        if self.curr_dev == self.WIZ1X0_DISPLAY_NAME:
             self.apply_1x0()
             return
         self.do_setting()
@@ -1272,7 +1280,7 @@ class WIZWindow(QMainWindow, main_window):
                 and self.dev_profile.get(self.curr_mac, {}).get('_proto') == 'wiz550'):
             self.reset_wiz550(op_code=OP_REMOTE_RESET)
             return
-        if self.curr_dev == 'WIZ1x0SR':
+        if self.curr_dev == self.WIZ1X0_DISPLAY_NAME:
             self.show_msgbox("Info", "WIZ1x0SR automatically restarts when Apply is performed.", QMessageBox.Information)
             return
         self.do_reset()
@@ -1306,7 +1314,7 @@ class WIZWindow(QMainWindow, main_window):
             self.upload_wiz550()
             return
         # 기존 WIZ1x0SR 처리 (미지원)
-        if self.curr_dev == 'WIZ1x0SR':
+        if self.curr_dev == self.WIZ1X0_DISPLAY_NAME:
             self.show_msgbox("Info", "WIZ1x0SR firmware upload is not supported.", QMessageBox.Information)
             return
         # 기존 WIZ5xxSR 처리
@@ -1391,6 +1399,9 @@ class WIZWindow(QMainWindow, main_window):
     def _modbus_supported(self) -> bool:
         if not self.curr_dev or not self.curr_ver:
             return False
+        # 이 판정은 UI enable 뿐 아니라 get_object_value() 의 MB/PO 전송 여부도
+        # 결정하므로 BOOT 만 제외한다. UPGRADE(DHCP·DNS 대기)는 앱이 도는
+        # 일시 상태라 Modbus 커맨드를 정상 처리한다.
         if self.curr_st in DeviceStatusMinimum:
             return False
         if self._uses_mb_modbus():
@@ -2166,6 +2177,43 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.info("Device [%s] TCP connected\r\n" % (serverip))
         return self.cli_sock
 
+    # ── 프로토콜 계열 판정 (issue #67) ──────────────────────────────
+    # 바이너리 설정 프로토콜 장치군 — ASCII 커맨드(TCP/UDP:50001)를 해석하지 못한다.
+    #   'wiz550': UDP:6550 XOR 바이너리 (WIZ550SR/S2E/WEB — WIZ550MSGHandler)
+    #   'wiz1x0': UDP:1460 FIND/SETT 바이너리 (WIZ100/105/110SR — WIZ1x0Profile)
+    # search_each_dev()의 동일 판정과 값을 공유한다 — 수정 시 반드시 함께.
+    BINARY_PROTOS = ('wiz550', 'wiz1x0')
+    # '_proto'는 실시간 검색 결과에만 실리는 휘발성 필드다. CSV 로드
+    # (load_searched_results_from_csv)는 dev_profile을 MC/MN/VR/... 만으로
+    # 재구성하므로 '_proto'가 유실된다. 그 경우 CSV에도 살아남는 'MN'(장치명)으로
+    # 2차 판정한다.
+    # WIZ1x0 계열의 목록 표시명. 프로토콜에 모델명 필드 자체가 없어(100/105/110
+    # 구별 불가) 도구가 붙이는 고정 이름이다. _merge_wiz1x0_results·curr_dev 비교·
+    # BINARY_MN_PREFIXES가 전부 이 상수를 공유한다 — 표시명을 바꾸려면 여기만.
+    WIZ1X0_DISPLAY_NAME = 'WIZ1x0SR'
+    # 이 프리픽스는 "도구가 목록에 표시하는 이름" 기준이다 (CSV Device Name 컬럼의
+    # 실제 출처가 그 표시명이므로):
+    #   WIZ550 계열 → device_type ('WIZ550SR'/'WIZ550S2E'/'WIZ550WEB')
+    #   WIZ1x0 계열 → WIZ1X0_DISPLAY_NAME
+    # 주의: 'WIZ1'로 줄이면 WIZ107SR/108SR(ASCII 계열)까지 잘못 걸린다.
+    BINARY_MN_PREFIXES = ('WIZ550', WIZ1X0_DISPLAY_NAME.upper())
+
+    def _is_binary_proto_dev(self, mac):
+        """mac 장치가 바이너리 설정 프로토콜 계열인지 판정한다.
+
+        미선택(mac이 None/빈값)은 False — "바이너리라고 확인된 바 없음"이라는
+        뜻이다. IP Address 검색은 아직 목록에 없는 장치를 IP로 찾는 기능이므로,
+        정체 미상의 대상에는 ASCII TCP를 시도하는 것이 기본값이어야 한다.
+        """
+        if not mac:
+            return False
+        prof = self.dev_profile.get(mac, {})
+        if prof.get('_proto') in self.BINARY_PROTOS:
+            return True
+        # '_proto' 유실 경로(CSV 로드 등) 대비: 장치명으로 재판정
+        mn = str(prof.get('MN', '')).upper()
+        return mn.startswith(self.BINARY_MN_PREFIXES)
+
     def socket_config(self):
         try:
             # Broadcast
@@ -2187,29 +2235,67 @@ class WIZWindow(QMainWindow, main_window):
                 port = int(self.search_port.text())
                 self.logger.debug(f"unicast: ip={ip_addr!r}, port={port}")
 
-                # 현재 선택 장치가 WIZ5xxSR이면 원래 TCP 동작 유지, WIZ550/미선택은 TCP 완전 생략
-                _proto = self.dev_profile.get(self.curr_mac or '', {}).get('_proto', '')
-                _tcp_mode = bool(self.curr_mac and _proto not in ('wiz550', 'wiz1x0', ''))
+                # (1) TCP를 시도할 것인가 — 장치의 프로토콜 능력만으로 결정한다.
+                # 바이너리 계열(WIZ550/WIZ1x0)은 ASCII 커맨드를 TCP로 해석하지
+                # 못하므로 시도 자체가 낭비다. 그 외(ASCII 계열 + 미선택)는 시도한다.
+                # 미선택을 반드시 포함해야 하는 이유: IP Address 검색은 "아직 목록에
+                # 없는 장치를 IP로 찾는" 기능이라, 선택된 장치(curr_mac)를 전제로
+                # 삼으면 닭-달걀이 되어 최초 검색이 영구히 불가능해진다.
+                # (85f2865가 이 전제를 넣으면서 WIZ107SR 등 ASCII 장치의 TCP unicast
+                # 검색이 통째로 죽었다 — issue #67)
+                _tcp_mode = not self._is_binary_proto_dev(self.curr_mac)
+
+                # (2) 차단 다이얼로그를 띄울 것인가 — (1)과는 별개의 UX 판단이다.
+                # 사용자가 특정 ASCII 장치를 지목해 둔 상태의 실패만 "확정 실패"로
+                # 보고 모달로 알린다. 미선택 상태의 실패는 탐색 시도 중 하나일
+                # 뿐이므로 상태바로만 알리고 흐름을 막지 않는다.
+                # (aa7b467이 복구한 WIZ5xxSR 다이얼로그 동작을 이 플래그가 이어받음.
+                #  85f2865에서 이 두 판단이 _tcp_mode 하나로 합쳐지며 의미가 어긋난
+                #  것이 #67의 근본 원인 — 다시 합치지 말 것)
+                _show_dialog = _tcp_mode and bool(self.curr_mac)
 
                 if _tcp_mode:
-                    # WIZ5xxSR: ping → TCP → 원래 다이얼로그 동작
                     net_response = self.net_check_ping(ip_addr)
                     if net_response == 0:
                         self.conf_sock = self.connect_over_tcp(ip_addr, port)
                         if self.conf_sock is None:
                             self.isConnected = False
                             self.logger.info("TCP connection failed!: %s" % ip_addr)
+                            # 다이얼로그를 띄우지 않는 경로에서도 상태바에는 반드시
+                            # 남긴다. isConnected=False면 search_pre()의 검색 블록이
+                            # 통째로 스킵되어, 사용자에게는 설명 없이 "0 devices"만
+                            # 보이기 때문.
                             self.statusbar.showMessage(" TCP connection failed: %s" % ip_addr)
-                            self.msg_connection_failed()
+                            if _show_dialog:
+                                self.msg_connection_failed()
                         else:
                             self.isConnected = True
                     else:
                         self.statusbar.showMessage(" Network unreachable: %s" % ip_addr)
-                        self.msg_not_connected(ip_addr)
+                        if _show_dialog:
+                            self.msg_not_connected(ip_addr)
                 else:
-                    # WIZ550 또는 미선택: ping·TCP 완전 생략, WIZ550Searcher가 UDP:6550으로 처리
-                    self.logger.debug(f"WIZ550 unicast: skip ping/TCP, UDP:6550 search for {ip_addr}")
-                    self.statusbar.showMessage(f" Searching WIZ550: {ip_addr} via UDP:6550...")
+                    # 바이너리 계열 선택 상태: ping·TCP 생략.
+                    # (85f2865가 없애려던 무의미한 ping/TCP 대기를 이 분기가 유지)
+                    self.logger.debug(f"binary-proto unicast: skip ping/TCP for {ip_addr}")
+                    prof = self.dev_profile.get(self.curr_mac or '', {})
+                    is_wiz1x0 = (
+                        prof.get('_proto') == 'wiz1x0'
+                        or str(prof.get('MN', '')).upper().startswith(
+                            self.WIZ1X0_DISPLAY_NAME.upper()
+                        )
+                    )
+                    if is_wiz1x0:
+                        # WIZ1x0은 IP 지정 검색 채널이 미구현(VB6 TCP:1461 미이식).
+                        # 이 분기 뒤에 도는 것은 WIZ550Searcher(UDP:6550)뿐이라
+                        # WIZ1x0을 찾을 수 없다 — "검색 중" 거짓 안내 대신 사실을 알린다.
+                        self.statusbar.showMessage(
+                            " WIZ1x0SR: IP-address search not supported."
+                            " Use Broadcast + 'WIZ1x0SR search' checkbox."
+                        )
+                    else:
+                        # WIZ550 계열: WIZ550Searcher가 UDP:6550으로 unicast 검색 수행
+                        self.statusbar.showMessage(f" Searching device: {ip_addr} via UDP:6550...")
                 self.btn_search.setEnabled(True)
 
         except Exception as e:
@@ -2542,7 +2628,8 @@ class WIZWindow(QMainWindow, main_window):
         if new_results:
             for mac_str, board_dict in new_results:
                 self.mac_list.append(mac_str.encode())
-                self.mn_list.append("WIZ1x0SR")
+                # 표시명 상수 공유 — BINARY_MN_PREFIXES(CSV 폴백 판정)가 이 값에 의존
+                self.mn_list.append(self.WIZ1X0_DISPLAY_NAME)
                 ver = board_dict.get('appver_str', '0.0')
                 self.vr_list.append(ver.encode())
                 self.st_list.append(b'normal')
@@ -2555,7 +2642,7 @@ class WIZWindow(QMainWindow, main_window):
             for mac_str, board_dict in new_results:
                 row = self.list_device.rowCount()
                 self.list_device.insertRow(row)
-                for col, text in [(0, mac_str), (1, "WIZ1x0SR"), (2, "✓")]:
+                for col, text in [(0, mac_str), (1, self.WIZ1X0_DISPLAY_NAME), (2, "✓")]:
                     item = QTableWidgetItem(text)
                     item.setBackground(_wiz1x0_bg)
                     self.list_device.setItem(row, col, item)
@@ -2661,10 +2748,10 @@ class WIZWindow(QMainWindow, main_window):
         self.code = " "
         # self.all_response = []
         # WIZ1x0SR + WIZ550: 바이너리 프로토콜 장치 → WIZ5xxSR 텍스트 커맨드 제외 (UI-01, Pitfall 3)
-        _binary_proto = ('wiz1x0', 'wiz550')
+        # 판정은 _is_binary_proto_dev로 통일 (issue #67 — MN 폴백 포함)
         dev_info_list = [
             d for d in dev_info_list
-            if self.dev_profile.get(d[0], {}).get('_proto') not in _binary_proto
+            if not self._is_binary_proto_dev(d[0])
         ]
         # self.logger.info(f"search_each_dev() dev_info_list: {dev_info_list}")
         total_devs = len(dev_info_list)
@@ -3445,7 +3532,7 @@ class WIZWindow(QMainWindow, main_window):
         # WIZ1x0SR 전용 UI 패널
         if self.dev_profile.get(macaddr, {}).get('_proto') == 'wiz1x0':
             self.curr_mac = macaddr
-            self.curr_dev = 'WIZ1x0SR'
+            self.curr_dev = self.WIZ1X0_DISPLAY_NAME
             self._show_wiz1x0_panel(True)
             self.fill_devinfo_1x0(self.dev_profile[macaddr])
             return
@@ -3487,6 +3574,14 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.error(f"get_clicked_devinfo:object_config:{e}")
 
         # print(f"2nd caller={call_from}")
+        # @TODO 문구 개선 (2024-07-17 `2b3a96b` 이후 그대로). 두 가지가 부정확하다.
+        #   1) UPGRADE 상태의 원인을 DHCP 로 단정한다. DNS 해석 중일 수도 있다
+        #   2) "Retry" 가 무엇인지 모호하다. 이 팝업을 닫고 장치를 다시 클릭해도
+        #      상태는 갱신되지 않는다 — Search 를 다시 돌려야 한다는 안내가 빠졌다
+        # 안: "Device is not ready yet - it may still be acquiring an IP address
+        #      or resolving DNS. Run Search again to refresh the status, or set
+        #      a static IP."
+        # 사용자 노출 문구라 실기기에서 이 팝업이 실제로 뜨는 상황을 확인한 뒤 바꾼다.
         if self.curr_st == DeviceStatus.upgrade and call_from is None:
             self.show_msgbox(
                 "Info",
@@ -4756,6 +4851,11 @@ class WIZWindow(QMainWindow, main_window):
                         self.ch1_ethernet_connection_condition.setText(dev_data["EE"])
 
             # SECURITY_TWO_PORT_DEV도 SECURITY_DEVICE에 속하므로 elif가 아닌 if 사용
+            #
+            # BOOT(부트로더)에서는 MQTT/인증서 커맨드가 응답에 없으므로 건너뛴다.
+            # UPGRADE 는 앱이 도는 일시 상태라 응답에 값이 모두 들어 있고,
+            # get_object_value() 도 이 항목들을 전송하므로 UI 를 채워야 한다.
+            # 채우지 않으면 이전 장치의 값이 남아 그대로 전송될 수 있다.
             if (
                 self.curr_dev in SECURITY_DEVICE
                 and "ST" in dev_data
@@ -4875,9 +4975,23 @@ class WIZWindow(QMainWindow, main_window):
                 setcmd["SP"] = " "
             else:
                 setcmd["SP"] = self.searchcode.text()
-            # 장비 상태가 BOOT 이면 다른 내용은 저장하지 않음.
-            # @TODO: GUI 도 막아야 함
+            # 장비 상태가 BOOT(부트로더) 이면 네트워크 기본 설정만 전송한다.
+            # 이 지점 이후의 항목(OP/RH/RP, BR 등 시리얼 전체, 타이머, MQTT, 인증서)은
+            # 패킷에 실리지 않으므로, 조용히 누락되지 않도록 사용자에게 알린다.
+            # UPGRADE 가 제외되는 이유는 wizcmdset.DeviceStatusMinimum 주석 참고.
+            # @TODO: GUI 도 막아야 함 — 일반 장치는 BOOT 에서도 Apply 버튼이 열려 있다.
+            #        (WIZ550 경로만 btn_setting.setEnabled() 로 차단 중)
             if self.curr_st in DeviceStatusMinimum:
+                self._setcmd_reduced = True
+                self.logger.warning(
+                    f"Setting: device status is {self.curr_st} — "
+                    f"only network settings are sent ({sorted(setcmd.keys())}). "
+                    "Serial/OP/Remote host and other options are skipped."
+                )
+                self.statusbar.showMessage(
+                    f" Warning: device is in {self.curr_st} state — "
+                    "only network settings will be applied."
+                )
                 logger.debug(f"setcmd: {setcmd}")
                 return setcmd
             # etc - general
@@ -5043,6 +5157,8 @@ class WIZWindow(QMainWindow, main_window):
                     setcmd["TR"] = self.tcp_timeout.text()
 
             # Expansion GPIO
+            # BOOT 에서는 GPIO 커맨드가 처리되지 않으므로 제외. UPGRADE 는 포함한다
+            # (위 조기 반환과 동일한 이유 — DeviceStatusMinimum 주석 참고).
             if self.curr_st in DeviceStatusMinimum:
                 pass
             else:
@@ -5226,10 +5342,172 @@ class WIZWindow(QMainWindow, main_window):
         logger.debug(f"setcmd: {setcmd}")
         return setcmd
 
+    def _load_setting_spec(self):
+        """현재 선택 장치의 DeviceSpec 로드. 없으면 None (레거시 검증으로 폴백)."""
+        if not self.curr_dev:
+            return None
+        spec_name = detect_device(self.curr_dev) or self.curr_dev
+        try:
+            return load_device(spec_name, self.curr_ver)
+        except FileNotFoundError:
+            self.logger.warning(
+                f"_load_setting_spec: spec not found for {spec_name!r} — 레거시 검증 사용"
+            )
+            return None
+
+    def _subnet_mismatch(self):
+        """
+        선택 장치 IP 가 PC 대역 밖이면 (장치IP, PC IP, prefix) 반환, 아니면 None.
+        판단할 정보가 없으면 None (= 문제 없음으로 취급).
+        """
+        dev_ip = (self.localip_addr or "").strip()
+        pc_ip = (self.selected_eth or "").strip()
+        if not dev_ip or not pc_ip:
+            return None
+        try:
+            import ipaddress
+            prefix = None
+            for ad in ifaddr.get_adapters():
+                for ip in ad.ips:
+                    if isinstance(ip.ip, str) and ip.ip == pc_ip:
+                        prefix = ip.network_prefix
+                        break
+                if prefix is not None:
+                    break
+            if prefix is None:
+                self.logger.info(f"_subnet_mismatch: {pc_ip} 넷마스크 미확인 — 검사 생략")
+                return None
+            pc_net = ipaddress.ip_interface(f"{pc_ip}/{prefix}").network
+            if ipaddress.ip_address(dev_ip) in pc_net:
+                return None
+            return dev_ip, pc_ip, prefix
+        except Exception as e:
+            self.logger.info(f"_subnet_mismatch: 검사 생략 ({e})")
+            return None
+
+    def _check_upload_subnet(self) -> bool:
+        """
+        펌웨어 업로드 전 장치 IP 가 PC 와 같은 대역인지 본다. 진행 가능하면 True.
+
+        업로드는 장치가 알려준 자기 IP 로 TCP 접속해서 진행된다
+        (FW 응답 = local_ip:port). 대역이 다르면 접속이 안 되는데, 그때는 이미
+        장치가 펌웨어 대기 모드로 들어가 설정 채널 응답까지 멈춘 뒤다.
+        그래서 시작 전에 확인한다.
+
+        라우팅으로 닿는 구성도 있을 수 있어 차단하지 않고 확인을 받는다.
+        """
+        mismatch = self._subnet_mismatch()
+        if mismatch is None:
+            return True
+        dev_ip, pc_ip, prefix = mismatch
+
+        self.logger.warning(
+            f"[FW] 대역 불일치 — 장치 {dev_ip} / PC {pc_ip}/{prefix} : 업로드 접속 실패 가능"
+        )
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle("Network mismatch")
+        box.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        box.setText(
+            f"The device and this PC are on different subnets.<br><br>"
+            f"Device: <b>{dev_ip}</b><br>PC: <b>{pc_ip}/{prefix}</b>"
+        )
+        box.setInformativeText(
+            "Firmware upload connects directly to the device IP, so it will "
+            "likely fail.\n"
+            "Change the device IP to the same subnet, or add an address in the "
+            "device's subnet to this PC, then try again.\n\n"
+            "Search uses broadcast, so the device still appears in the list "
+            "even when the subnets differ.\n\n"
+            "Continue anyway?"
+        )
+        box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        box.setDefaultButton(QMessageBox.No)
+        return box.exec_() == QMessageBox.Yes
+
+    def _verify_fw_image(self, filepath: str) -> bool:
+        """
+        업로드 직전 이미지 검증. 통과하면 True, 막으면 False.
+
+        파일명 표기와 벡터 테이블 판정을 대조해 둘이 어긋나거나 APP 이 아니면
+        차단한다. 검증 기준(fw_image.profile)이 없는 장치도 차단한다 —
+        근거 없이 통과시키면 다른 이미지를 그대로 굽게 된다.
+        """
+        try:
+            from fw_image_check import FWImageChecker, OK
+            from fw_git_fetcher import FWGitFetcher
+            if getattr(self, "_fw_image_checker", None) is None:
+                self._fw_image_checker = FWImageChecker(
+                    resource_path("config/fw_image_defaults.yaml"), logger=self.logger
+                )
+            spec = self._load_setting_spec()
+            result = self._fw_image_checker.check(
+                filepath,
+                getattr(spec, "fw_image", None) if spec else None,
+                FWGitFetcher.is_non_app_name,
+            )
+        except Exception as e:
+            # 검증기 자체가 실패하면 판단 근거가 없으므로 막는다
+            self.logger.error(f"_verify_fw_image failed: {e}")
+            self.show_msgbox(
+                "Warning",
+                f"Firmware image check could not be performed.\n{e}",
+                QMessageBox.Warning,
+            )
+            return False
+
+        if result["result"] == OK:
+            return True
+
+        self.logger.warning(
+            f"[FWImageCheck] 업로드 차단 — {result['reason']} / {result['detail']}"
+        )
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle("Firmware image check")
+        box.setText(result["reason"])
+        box.setInformativeText("Please select an APP firmware file.")
+        box.setDetailedText(result["detail"])
+        box.setStandardButtons(QMessageBox.Ok)
+        box.exec_()
+        return False
+
+    def _get_set_response_timeout(self):
+        """
+        SET 명령 응답 대기 타임아웃(초). Advanced Search Options에서 조정 가능.
+
+        WIZ5XXSR-RP 계열은 별도 값을 사용한다. 해당 장치는 TCP client 접속 실패 시
+        `connect()`가 최대 1.8초(RCR 8 x RTR 200ms) 블로킹되고, SET 직후 플래시
+        저장(4KB 섹터 소거, 최대 400ms급)이 겹쳐 일반 타임아웃으로는 응답을
+        놓치는 경우가 있다 (TASKS.md BUG-WIZ5XX-SET-NORESP).
+        """
+        try:
+            if self.curr_dev and "WIZ5XXSR" in self.curr_dev:
+                timeout = self.timing_config.get_phase3_set_response_timeout_5xx()
+            else:
+                timeout = self.timing_config.get_phase3_set_response_timeout()
+        except Exception as e:
+            self.logger.warning(f"_get_set_response_timeout: {e} — 기본값 2초 사용")
+            return 2
+        self.logger.debug(f"SET response timeout: {timeout}s (dev={self.curr_dev})")
+        return timeout
+
+    def _is_valid_setcmd_param(self, spec, cmd, value):
+        """
+        SET 파라미터 검증. 커맨드 단위로 DeviceSpec 우선, 없으면 레거시 cmdset 폴백.
+
+        DeviceSpec(specs/*.yaml)은 FW 소스 기준으로 정비된 값이므로 우선한다.
+        아직 spec에 정의되지 않은 커맨드(GPIO/Modbus 등)는 레거시가 계속 담당한다.
+        """
+        if spec is not None and cmd in spec.cmdset:
+            return bool(spec.cmdset[cmd].is_valid(value)), "spec"
+        return bool(self.cmdset.isvalidparameter(cmd, value)), "legacy"
+
     def do_setting(self):
         self.disable_object()
 
         self.set_reponse = None
+        self._setcmd_reduced = False
 
         self.sock_close()
 
@@ -5248,22 +5526,17 @@ class WIZWindow(QMainWindow, main_window):
             # Update cmdset
             self.cmdset.get_cmdset(self.curr_dev, self.curr_st, self.curr_ver)
             self.logger.info(f"Device setting: {self.curr_dev}")
-            # Parameter validity check
+            # Parameter validity check (DeviceSpec 우선 + 레거시 폴백)
             invalid_flag = 0
-            setcmd_cmd = list(setcmd.keys())
             self.logger.debug(f"do_setting::setcmd={setcmd}")
-            for i in range(len(setcmd)):
-                if (
-                    self.cmdset.isvalidparameter(
-                        setcmd_cmd[i], setcmd.get(setcmd_cmd[i])
-                    )
-                    is False
-                ):
+            spec = self._load_setting_spec()
+            for cmd, value in setcmd.items():
+                is_valid, source = self._is_valid_setcmd_param(spec, cmd, value)
+                if not is_valid:
                     self.logger.warning(
-                        "Invalid parameter: %s %s"
-                        % (setcmd_cmd[i], setcmd.get(setcmd_cmd[i]))
+                        f"Invalid parameter [{source}]: {cmd} {value!r}"
                     )
-                    self.msg_invalid(setcmd.get(setcmd_cmd[i]))
+                    self.msg_invalid(value)
                     invalid_flag += 1
 
             if invalid_flag > 0:
@@ -5289,13 +5562,14 @@ class WIZWindow(QMainWindow, main_window):
                 # socket config
                 self.socket_config()
 
+                set_timeout = self._get_set_response_timeout()
                 if self.unicast_ip.isChecked():
                     self.wizmsghandler = WIZMSGHandler(
-                        self.conf_sock, cmd_list, "tcp", Opcode.OP_SETCOMMAND, 2
+                        self.conf_sock, cmd_list, "tcp", Opcode.OP_SETCOMMAND, set_timeout
                     )
                 else:
                     self.wizmsghandler = WIZMSGHandler(
-                        self.conf_sock, cmd_list, "udp", Opcode.OP_SETCOMMAND, 2
+                        self.conf_sock, cmd_list, "udp", Opcode.OP_SETCOMMAND, set_timeout
                     )
                 self.wizmsghandler.set_result.connect(self.get_setting_result)
                 self.wizmsghandler.start()
@@ -5333,6 +5607,32 @@ class WIZWindow(QMainWindow, main_window):
 
         # MA prefix(10) + PW 라인(최소 5) + 커맨드 응답(최소 5 bytes/cmd)
         return 10 + 5 + n * 5
+
+    def _refresh_status_from_set_result(self, set_result):
+        """
+        SET 응답의 ST 값으로 curr_st / dev_data 를 최신화한다.
+
+        curr_st 는 검색 시점(get_dev_list)에만 채워지므로, 재검색 없이 Apply 를
+        반복하면 과거 상태가 남는다. BOOT/UPGRADE 가 남아 있으면
+        get_object_value() 가 네트워크 설정만 담고 조기 반환하여
+        시리얼/OP/Remote host 등이 조용히 누락된다.
+
+        dev_data[mac] 는 [MN, VR, ST] 형태이며, dev_clicked() 가 여기서
+        curr_st 를 다시 읽으므로 dev_data 를 함께 갱신한다.
+        """
+        new_st = set_result.get("ST")
+        if not new_st:
+            return
+        new_st = new_st.strip()
+        if not new_st or new_st == self.curr_st:
+            return
+
+        prev_st = self.curr_st
+        self.curr_st = new_st
+        entry = self.dev_data.get(self.curr_mac)
+        if isinstance(entry, list) and len(entry) >= 3:
+            entry[2] = new_st
+        self.logger.info(f"Device status refreshed from SET response: {prev_st} -> {new_st}")
 
     def get_setting_result(self, resp_len):
         if not self.curr_dev or not self.curr_ver:
@@ -5388,8 +5688,20 @@ class WIZWindow(QMainWindow, main_window):
 
             elif len(mc) == 17:
                 # ── 정상 성공: MAC 유효 (VB.NET: nSec.MC.data.Length == 17) ──
-                self.statusbar.showMessage(" Set device complete!")
+                if self._setcmd_reduced:
+                    self.statusbar.showMessage(
+                        f" Set complete — network settings only "
+                        f"(device was in {self.curr_st} state)."
+                    )
+                else:
+                    self.statusbar.showMessage(" Set device complete!")
                 self.msg_set_success()
+
+                # SET 응답에 포함된 ST 로 장치 상태를 최신화한다.
+                # curr_st 는 원래 검색 시점(dev_data)에만 갱신되어, 재검색 없이 Apply 를
+                # 반복하면 과거 상태(BOOT/UPGRADE)가 남아 설정이 조용히 축소 전송된다.
+                # 응답에 이미 ST 가 들어 있으므로 추가 통신 없이 자가 치유가 가능하다.
+                self._refresh_status_from_set_result(set_result)
 
                 if self.isConnected and self.unicast_ip.isChecked():
                     self.logger.info("close socket")
@@ -5512,7 +5824,22 @@ class WIZWindow(QMainWindow, main_window):
         if error == -1:
             text = " Firmware update failed. No response from device."
             self.statusbar.showMessage(text)
-            self.show_msgbox("Error", text, QMessageBox.Critical)
+            # 대역이 다르면 장치가 응답을 안 한 게 아니라 접속이 안 된 것이다.
+            # "No response" 만 보여주면 원인을 엉뚱한 데서 찾게 된다.
+            mismatch = self._subnet_mismatch()
+            detail = text
+            if mismatch:
+                dev_ip, pc_ip, prefix = mismatch
+                detail = (
+                    f"{text}\n\n"
+                    f"The device ({dev_ip}) is on a different subnet from this "
+                    f"PC ({pc_ip}/{prefix}).\n"
+                    f"Firmware upload connects directly to the device IP, so it "
+                    f"fails when the subnets differ.\n"
+                    f"Change the device IP to the same subnet, or add an address "
+                    f"in the device's subnet to this PC."
+                )
+            self.show_msgbox("Error", detail, QMessageBox.Critical)
             # self.msg_upload_failed()
         elif error == -2:
             text = " Firmware update: Network connection failed."
@@ -5601,6 +5928,83 @@ class WIZWindow(QMainWindow, main_window):
             self._fw_download_path = path
             self._save_fw_download_path(path)
 
+    def _handle_unsupported_fw_device(self):
+        """
+        FW from Git 에 배포처가 등록되지 않은 장치를 만났을 때의 처리.
+        사용자에게 알리고, 동의하면 툴 저장소 이슈로 남긴다.
+        """
+        # 공개 배포처가 없음을 이미 확인한 장치는 사유를 그대로 알린다.
+        # 이슈로 물어볼 것이 없으므로 등록 제안도 하지 않는다.
+        reason = self._fw_fetcher.find_unsupported(self.curr_dev)
+        if reason:
+            self.show_msgbox_richtext(
+                "Unsupported device",
+                f"<b>FW from Git</b> is not supported for "
+                f"<b>{self.curr_dev}</b>.<br><br>"
+                f"{reason}<br><br>"
+                f"Download the firmware file yourself and use "
+                f"<b>Firmware Upload</b> instead.",
+                QMessageBox.Warning,
+            )
+            self.logger.info(
+                f"[FW from Git] {self.curr_dev}: 미지원 장치 (사유: {reason})"
+            )
+            return
+
+        supported = ", ".join(sorted(set(self._fw_fetcher.supported_devices())))
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle("Unsupported device")
+        box.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        box.setText(
+            f"No firmware source is registered for <b>{self.curr_dev}</b>.<br><br>"
+            f"Stopping here so that firmware for another product is not "
+            f"installed by mistake.<br>"
+            f"Download the firmware file yourself and use "
+            f"<b>Firmware Upload</b> instead."
+        )
+        box.setDetailedText(f"Registered devices:\n{supported}")
+        box.setInformativeText(
+            "Report this device so it can be added to the supported list?"
+        )
+        box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        box.setDefaultButton(QMessageBox.Yes)
+        if box.exec_() != QMessageBox.Yes:
+            return
+
+        try:
+            from fw_issue_reporter import FWIssueReporter
+            from fw_git_dialog import ReportUnsupportedThread
+        except Exception as e:
+            self.logger.warning(f"issue reporter import failed: {e}")
+            return
+
+        reporter = FWIssueReporter(
+            "Wiznet/WIZnet-S2E-Tool-GUI", VERSION, logger=self.logger
+        )
+        self._fw_issue_thread = ReportUnsupportedThread(
+            reporter, self.curr_dev, self.curr_ver or ""
+        )
+        self._fw_issue_thread.done.connect(self._on_fw_issue_reported)
+        self._fw_issue_thread.start()
+
+    def _on_fw_issue_reported(self, result: dict):
+        """이슈 보고 결과 안내. manual 이면 사용자가 직접 제출하도록 브라우저를 연다."""
+        action = result.get("action", "")
+        url = result.get("url", "")
+        msg = result.get("message", "")
+        self.logger.info(f"[FW from Git] unsupported device report: {action} {url}")
+
+        if action == "manual" and url:
+            webbrowser.open(url)
+        if action == "error":
+            self.show_msgbox(
+                "Warning", f"Failed to report the issue.\n{msg}", QMessageBox.Warning
+            )
+            return
+        body = msg + (f"\n\n{url}" if url else "")
+        self.show_msgbox("Information", body, QMessageBox.Information)
+
     def event_fw_from_git(self):
         if not self.curr_dev:
             self.show_msgbox("Warning", "Please select a device first.", QMessageBox.Warning)
@@ -5611,6 +6015,9 @@ class WIZWindow(QMainWindow, main_window):
                 "Failed to load FW from Git configuration file (fw_sources.json).",
                 QMessageBox.Warning,
             )
+            return
+        # 받아놓고 못 올리는 일이 없도록 다이얼로그를 열기 전에 대역부터 확인한다
+        if not self._check_upload_subnet():
             return
 
         is_wiz550 = (
@@ -5641,20 +6048,11 @@ class WIZWindow(QMainWindow, main_window):
             fw_type_list = []
             family, device_spec = self._fw_fetcher.find_device(self.curr_dev)
             if family is None:
-                dn = self.curr_dev.upper()
-                sources = self._fw_fetcher._sources
-                best_fam = sources["families"][0]
-                best_dev = best_fam["devices"][0]
-                for fam in sources["families"]:
-                    for dev in fam["devices"]:
-                        base = dev["name_pattern"].rstrip("?*").upper()
-                        if base and dn.startswith(base):
-                            best_fam, best_dev = fam, dev
-                            break
-                    else:
-                        continue
-                    break
-                family, device_spec = best_fam, best_dev
+                # 등록되지 않은 장치를 임의의 family 로 대체하면 다른 제품의
+                # 이미지를 그대로 플래싱하게 된다(예: WIZ5XXSR-RP -> IP20).
+                # 추측하지 않고 중단한다.
+                self._handle_unsupported_fw_device()
+                return
             display_name = self.curr_dev
 
         wiz550_config = None
@@ -5675,11 +6073,17 @@ class WIZWindow(QMainWindow, main_window):
             self._fw_fetcher, self._fw_download_path,
             fw_type_list=fw_type_list or None,
             wiz550_config=wiz550_config,
+            image_validator=self._verify_fw_image,
         )
         dlg.firmware_ready.connect(self._on_fw_git_ready)
         dlg.exec_()
 
     def _on_fw_git_ready(self, filepath: str, filesize: int):
+        # 배포처 설정이 잘못돼 부트로더나 병합본이 뽑혀 나와도 굽지 않도록,
+        # 수동 선택 경로와 같은 검증을 여기에도 건다.
+        if not self._verify_fw_image(filepath):
+            self._cleanup_fw_git_file(filepath)
+            return
         if self.localip_addr is None:
             self.show_msgbox(
                 "Warning",
@@ -5775,13 +6179,10 @@ class WIZWindow(QMainWindow, main_window):
         )
 
         if fname:
-            basename = fname.split('/')[-1]
-            if 'BOOT' in basename.upper():
-                self.show_msgbox(
-                    "Warning",
-                    f"Cannot upload BOOT firmware file.\n\nSelected file: {basename}\n\nPlease select an APP firmware file only.",
-                    QMessageBox.Warning,
-                )
+            # 파일명 표기 + 벡터 테이블 대조. 둘이 어긋나거나 APP 이 아니면 중단.
+            if not self._verify_fw_image(fname):
+                return
+            if not self._check_upload_subnet():
                 return
 
             self.fw_filename = fname
@@ -6660,6 +7061,38 @@ class WIZWindow(QMainWindow, main_window):
         )
         phase3_layout.addRow("SET Response Delay:", dialog.spin_set_delay)
 
+        # SET Response Timeout (일반 장치)
+        dialog.spin_set_timeout = QDoubleSpinBox()
+        dialog.spin_set_timeout.setRange(1.0, 15.0)
+        dialog.spin_set_timeout.setSingleStep(0.5)
+        dialog.spin_set_timeout.setDecimals(1)
+        dialog.spin_set_timeout.setSuffix(" sec")
+        dialog.spin_set_timeout.setValue(current_values['phase3_set_response_timeout'])
+        dialog.spin_set_timeout.setToolTip(
+            "How long to wait for the device response after Apply.\n"
+            "Exceeding this shows \"Setting failed\" even if the device applied the setting.\n\n"
+            "Default: 2.0 s"
+        )
+        phase3_layout.addRow("SET Response Timeout:", dialog.spin_set_timeout)
+
+        # SET Response Timeout (WIZ5XXSR-RP 전용)
+        dialog.spin_set_timeout_5xx = QDoubleSpinBox()
+        dialog.spin_set_timeout_5xx.setRange(1.0, 30.0)
+        dialog.spin_set_timeout_5xx.setSingleStep(0.5)
+        dialog.spin_set_timeout_5xx.setDecimals(1)
+        dialog.spin_set_timeout_5xx.setSuffix(" sec")
+        dialog.spin_set_timeout_5xx.setValue(current_values['phase3_set_response_timeout_5xx'])
+        dialog.spin_set_timeout_5xx.setToolTip(
+            "SET response timeout applied only to WIZ5XXSR-RP devices.\n\n"
+            "These devices block up to 1.8 s inside connect() when the remote host is\n"
+            "unreachable (RCR 8 x RTR 200 ms), and the flash save right after SET\n"
+            "(4 KB sector erase, up to ~400 ms) can overlap with it. The general 2.0 s\n"
+            "timeout can therefore be too short in some situations.\n\n"
+            "Default: 2.0 s (same as the general value). Raise it toward 5.0 s if\n"
+            "\"Setting failed\" appears while the setting is actually applied."
+        )
+        phase3_layout.addRow("SET Response Timeout (WIZ5XXSR-RP):", dialog.spin_set_timeout_5xx)
+
         phase3_group.setLayout(phase3_layout)
         main_layout.addWidget(phase3_group)
 
@@ -6754,6 +7187,8 @@ class WIZWindow(QMainWindow, main_window):
             'skip_phase1_emit_delay': dialog.check_skip_delay.isChecked(),
             'phase3_device_query_timeout': dialog.spin_query_timeout.value(),
             'phase3_set_command_delay_ms': dialog.spin_set_delay.value(),
+            'phase3_set_response_timeout': dialog.spin_set_timeout.value(),
+            'phase3_set_response_timeout_5xx': dialog.spin_set_timeout_5xx.value(),
             'tcp_max_parallel_workers': dialog.spin_tcp_workers.value(),
             'pgbar_update_percent': dialog.spin_pgbar_percent.value(),
             'pgbar_auto_hide_delay_ms': dialog.spin_pgbar_hide.value()
@@ -6824,6 +7259,8 @@ class WIZWindow(QMainWindow, main_window):
                 dialog.check_skip_delay.setChecked(defaults['skip_phase1_emit_delay'])
                 dialog.spin_query_timeout.setValue(defaults['phase3_device_query_timeout'])
                 dialog.spin_set_delay.setValue(defaults['phase3_set_command_delay_ms'])
+                dialog.spin_set_timeout.setValue(defaults['phase3_set_response_timeout'])
+                dialog.spin_set_timeout_5xx.setValue(defaults['phase3_set_response_timeout_5xx'])
                 dialog.spin_tcp_workers.setValue(defaults['tcp_max_parallel_workers'])
                 dialog.spin_pgbar_percent.setValue(defaults['pgbar_update_percent'])
                 dialog.spin_pgbar_hide.setValue(defaults['pgbar_auto_hide_delay_ms'])
@@ -7388,9 +7825,12 @@ class WIZWindow(QMainWindow, main_window):
                 writer = csv.writer(f)
 
                 # 헤더 (Phase 1 모든 정보 포함)
+                # Protocol: dev_profile['_proto'] 영속화 (wiz550/wiz1x0, ASCII는 빈칸).
+                # 로드 시 이 값으로 _proto를 복원해 바이너리 장치 판정이 유지된다
+                # (issue #67 — 없으면 _is_binary_proto_dev의 MN 폴백이 커버)
                 writer.writerow([
                     'Mac Address', 'Device Name', 'Firmware Version', 'Status', 'Operation Mode', 'Detected',
-                    'IP Address', 'Subnet Mask', 'Gateway', 'DNS', 'IP Mode', 'Local Port'
+                    'IP Address', 'Subnet Mask', 'Gateway', 'DNS', 'IP Mode', 'Local Port', 'Protocol'
                 ])
 
                 # 데이터
@@ -7413,10 +7853,11 @@ class WIZWindow(QMainWindow, main_window):
                     dns = profile.get('DS', '')
                     ip_mode = 'DHCP' if profile.get('IM', '0') == '1' else 'Static'
                     local_port = profile.get('LP', '')
+                    proto = profile.get('_proto', '')
 
                     writer.writerow([self._csv_safe(x) for x in [
                         mac, name, version, status, op_mode, detected,
-                        ip_addr, subnet, gateway, dns, ip_mode, local_port
+                        ip_addr, subnet, gateway, dns, ip_mode, local_port, proto
                     ]])
 
             # 저장 성공 시 MRU 업데이트 (Save: 초기화)
@@ -7515,7 +7956,10 @@ class WIZWindow(QMainWindow, main_window):
                         'gateway': row.get('Gateway', ''),
                         'dns': row.get('DNS', ''),
                         'ip_mode': row.get('IP Mode', 'Static'),
-                        'local_port': row.get('Local Port', '')
+                        'local_port': row.get('Local Port', ''),
+                        # Protocol 컬럼(선택): _proto 복원용. 구버전 CSV엔 없음 → 빈값
+                        # (그 경우 _is_binary_proto_dev의 MN 폴백이 판정을 커버)
+                        'proto': row.get('Protocol', ''),
                     })
 
                 # 내부 변수 업데이트
@@ -7556,6 +8000,9 @@ class WIZWindow(QMainWindow, main_window):
                         'IM': '1' if net_info['ip_mode'] == 'DHCP' else '0',
                         'LP': net_info['local_port'],
                     }
+                    # Protocol 컬럼이 있던 CSV면 _proto 복원 (바이너리 장치 판정 유지)
+                    if net_info['proto']:
+                        self.dev_profile[mac_str]['_proto'] = net_info['proto']
 
                     # searched_dev 리스트 초기화
                     self.searched_dev.append([mac_str, name_str, version_str, status_str])
