@@ -282,3 +282,20 @@ def test_presearch_path_still_lists_device(qapp):
         assert th.mn_list == ["WIZ752SR-12x"]
         assert th.vr_list == [b"2.1.0dev"]
         assert [c for c, _ in cmd_list[2:]] == cmd_presearch
+
+
+# ── 10. 가짜 장치 응답 목적지 — 펌웨어는 보낸 포트로 브로드캐스트한다 ────────
+
+def test_fake_replies_by_broadcast_to_sender_port_like_firmware():
+    """segcp.c:1443 sendto(..., "\xFF\xFF\xFF\xFF", destport). 유니캐스트면 툴의 겹친 포트 5000 소켓 중
+    가장 오래된 것만 받아 실기기에서 안 나는 'no response' 가 난다 (2026-09-03 실측)."""
+    fw_like = FakeSegcpDevice(PROFILE_WIZ752_MEASURED, mac=MAC, reply_broadcast=True)
+    assert fw_like.reply_target(("192.168.7.2", 5000)) == ("255.255.255.255", 5000)
+    loopback = FakeSegcpDevice(PROFILE_WIZ752_MEASURED, mac=MAC)
+    assert loopback.reply_target(("127.0.0.1", 61234)) == ("127.0.0.1", 61234)
+
+
+def test_fake_profile_has_user_io_defaults_for_datarefresh():
+    """DataRefresh 는 CA~CD/GA~GD 를 따로 묻는다. 없으면 User I/O 탭이 비어 보인다."""
+    for k in ("CA", "CB", "CC", "CD", "GA", "GB", "GC", "GD"):
+        assert k in PROFILE_WIZ752_MEASURED

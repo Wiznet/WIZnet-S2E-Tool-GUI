@@ -16,6 +16,15 @@
     "overflow"  현재 펌웨어. 넘쳐도 전부 보낸다
     "truncate"  상한이 들어간 펌웨어 가정. 버퍼 크기 - 1 에서 잘라 보낸다
 
+응답 목적지
+    펌웨어는 응답을 보낸 쪽 포트로 **브로드캐스트**한다
+    (segcp.c:1443 `sendto(..., "\xFF\xFF\xFF\xFF", destport)`, WIZ750SR 은 :1241).
+    설정툴은 포트 5000 소켓을 닫지 않고 거듭 만들어 여러 개가 겹쳐 있는데, Windows 는
+    유니캐스트를 가장 먼저 바인드된 소켓 하나에만 주고 브로드캐스트는 전부에 준다
+    (2026-09-03 실측). 그래서 유니캐스트로 답하면 실기기에서는 안 나던 "no response" 가
+    난다. 단독 실행은 펌웨어대로 브로드캐스트(reply_broadcast=True) 가 기본이고,
+    pytest 는 루프백이라 유니캐스트를 쓴다.
+
 단순화한 것
     - SET 커맨드는 값을 저장만 하고 응답에 싣지 않는다 (ER/응답 에코 없음)
     - MA 가 자기 MAC 이거나 FF:FF:FF:FF:FF:FF 일 때만 답한다. PW 값은 검사하지 않는다
@@ -62,6 +71,10 @@ PROFILE_WIZ752_MEASURED: dict[str, str] = {
     'EN': 'RS-232/TTL', 'RS': '7000', 'EB': '13', 'ED': '1', 'EP': '0',
     'ES': '0', 'EF': '0', 'E0': '1', 'E1': '1', 'NT': '0', 'NS': '0',
     'ND': '00', 'S0': '0', 'S1': '1', 'SC': '00',
+    # User I/O 는 검색 응답에 없고 DataRefresh 가 따로 묻는다(cmd_gpio_4pin).
+    # 실측 프로파일에 없어서 기본값을 둔다 — 없으면 User I/O 탭이 비어 보인다.
+    'CA': '0', 'CB': '0', 'CC': '0', 'CD': '0',
+    'GA': '0', 'GB': '0', 'GC': '0', 'GD': '0',
 }
 
 
@@ -115,9 +128,10 @@ class FakeSegcpDevice:
                  bind: str = "127.0.0.1", port: int = 0,
                  reply_buf_size: int = DEFAULT_REPLY_BUF_SIZE,
                  mode: str = "overflow", drop_first: int = 0,
-                 verbose: bool = False):
+                 reply_broadcast: bool = False, verbose: bool = False):
         if mode not in ("overflow", "truncate"):
             raise ValueError(f"unknown mode {mode!r}")
+        self.reply_broadcast = reply_broadcast   # True = 펌웨어처럼 255.255.255.255:보낸포트 로 응답
         self.profile = dict(profile)
         self.profile['MC'] = mac
         self.mac6 = mac_to_bytes(mac)
@@ -168,6 +182,12 @@ class FakeSegcpDevice:
             reply = reply[:self.reply_buf_size - 1]
         return reply
 
+    def reply_target(self, addr) -> tuple[str, int]:
+        """응답을 보낼 곳. 펌웨어와 같게 하려면 보낸 쪽 포트로 브로드캐스트."""
+        if self.reply_broadcast:
+            return ("255.255.255.255", addr[1])
+        return (addr[0], addr[1])
+
     # ── 서버 ──────────────────────────────────────────────────────────
 
     @property
@@ -179,6 +199,7 @@ class FakeSegcpDevice:
     def start(self) -> "FakeSegcpDevice":
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self._sock.bind((self.bind, self._port))
         self._sock.settimeout(0.05)
         self._stop.clear()
@@ -228,10 +249,11 @@ class FakeSegcpDevice:
         note = f"  OVERFLOW +{over[0]}B" if over else ""
         parsed = parse_request(data)
         ncmd = len(parsed[2]) if parsed else 0
-        self._log(f"#{idx} req {len(data)}B ({ncmd} cmds)  → reply {len(reply)}B{note}")
+        target = self.reply_target(addr)
+        self._log(f"#{idx} req {len(data)}B ({ncmd} cmds) from {addr[0]}:{addr[1]}  → reply {len(reply)}B to {target[0]}:{target[1]}{note}")
         try:
             assert self._sock is not None
-            self._sock.sendto(reply, addr)
+            self._sock.sendto(reply, target)
         except OSError as e:
             self._log(f"#{idx} sendto failed: {e}")
 
@@ -250,16 +272,20 @@ def _main() -> None:
                     help="응답 버퍼 크기 (기본 512)")
     ap.add_argument("--domain", default=None,
                     help="RH/QH 에 넣을 도메인 (기본: 실측 프로파일의 test-server-01.local)")
+    ap.add_argument("--unicast-reply", action="store_true",
+                    help="응답을 보낸 쪽 주소로 유니캐스트 (기본은 펌웨어처럼 브로드캐스트)")
     args = ap.parse_args()
 
     profile = PROFILE_WIZ752_MEASURED
     if args.domain:
         profile = profile_with_remote_host(profile, args.domain)
     dev = FakeSegcpDevice(profile, mac=args.mac, bind=args.bind, port=args.port,
-                          reply_buf_size=args.buf, mode=args.mode, verbose=True)
+                          reply_buf_size=args.buf, mode=args.mode,
+                          reply_broadcast=not args.unicast_reply, verbose=True)
     dev.start()
     print(f"[fake-segcp] listening {args.bind}:{dev.port}  mac={args.mac}  "
-          f"mode={args.mode} buf={args.buf}  (Ctrl+C 로 종료)", flush=True)
+          f"mode={args.mode} buf={args.buf}  reply={'broadcast' if dev.reply_broadcast else 'unicast'}"
+          f"  (Ctrl+C 로 종료)", flush=True)
     try:
         while True:
             threading.Event().wait(1.0)
