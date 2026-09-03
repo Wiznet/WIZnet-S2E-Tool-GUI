@@ -69,6 +69,38 @@ cmd_ch2 = [
     "ND"
 ]
 
+# WIZ752SR-12x 개별 장치 조회(Phase 3)는 세 요청으로 나눠 보낸다.
+#
+# 장치 응답 버퍼 gSEGCPREP 는 CONFIG_BUF_SIZE(512, W7500 계열 common.h) 인데 펌웨어가
+# 길이를 대조하지 않고 strlen 만큼 보낸다(segcp.c:1443). 61~64개를 한 번에 물으면
+# 응답이 499~531B(2026-08-31~09-01 실측) 라 값 몇 개만 길어져도 넘치고, 넘친 바이트는
+# UART 송신 링버퍼 포인터(txring[0].data)를 덮는다. 커맨드 몇 개를 빼는 것으로는
+# 부족하다 — RH/QH 가 같은 도메인을 돌려주므로 도메인 19자만 돼도 다시 넘는다.
+#
+# 그래서 한 요청에 묻는 양 자체를 줄인다. 응답 크기를 예측하는 것이 아니라 상한을
+# 구조적으로 낮추는 것이라, 펌웨어 값이 바뀌어도 여유가 흡수한다. 청크마다 MA/PW
+# 헤더가 붙고, MC 를 넣어 응답을 같은 장치로 합친다. 실측 프로파일 기준 청크별 응답은
+# 약 250 / 150 / 195B 이고 도메인 39자에서도 최대 250B 다
+# (tests/test_segcp_reply_overflow.py 가 384B 상한을 고정한다).
+#
+# 앞 두 청크는 cmd_ch1 을 LP(채널0 Local port) 앞에서 자른 것이라 cmd_ch1 이 바뀌어도
+# 따라간다. S0/S1(상태 핀 값)은 설정툴이 읽는 곳이 없어 넣지 않는다. SC 는 Options
+# 탭 라디오가 읽는다.
+_ch0_serial_start = cmd_ch1.index("LP")
+cmd_2p_chunk_network = cmd_ch1[:_ch0_serial_start]                 # 장치·네트워크 공통 (MC 포함)
+cmd_2p_chunk_ch0 = ["MC"] + cmd_ch1[_ch0_serial_start:]            # 채널0 시리얼·옵션
+cmd_2p_chunk_ch1 = ["MC"] + cmd_ch2 + ["SC"]                       # 채널1 + 상태 핀 모드
+cmd_2p_search_chunks = [cmd_2p_chunk_network, cmd_2p_chunk_ch0, cmd_2p_chunk_ch1]
+
+# WIZ752SR-12x SET 확인 쿼리 전용 목록.
+#
+# 완료 판정(get_setting_result 의 len(mc)==17)에 MC 가 필요하므로 cmd_ch2 앞에 MC 만 붙인다.
+# cmd_2p_default(전체 64개)를 쓰면 요청이 627바이트가 되어 펌웨어의
+# CONFIG_BUF_SIZE(512, WIZ752SR-12x/WIZ750SR common.h)를 넘겨 gSEGCPREQ 버퍼를
+# 오버플로시킨다. 실측: 오프셋 ~512 지점의 토큰부터 파싱이 깨지며 엉뚱한 커맨드명으로
+# INVALIDPARAM/NOTAVAIL 이 반환됐다. (2026-08-18, 실기기 확인)
+cmd_2p_setconfirm = ["MC"] + cmd_ch2
+
 # for expansion GPIO
 cmd_gpio_4pin = ["CA", "CB", "CC", "CD", "GA", "GB", "GC", "GD"]  
 cmd_gpio_2pin = ["CA", "CB", "GA", "GB"]
@@ -217,9 +249,27 @@ class WIZMakeCMD:
             cmd_list.append([cmd, ""])
         return cmd_list
 
+    def search_chunks(self, mac_addr, idcode, devname, version, devstatus=None):
+        """개별 장치 조회 요청 **목록**. 요청 하나가 아니라 여러 개일 수 있다.
+
+        2포트 장치(WIZ752SR-12x 계열)는 cmd_2p_search_chunks 대로 세 요청으로 나눈다 —
+        한 번에 물으면 응답이 장치 버퍼 512B 를 넘긴다(그 목록의 주석 참조).
+        그 외 장치는 search() 결과 하나짜리 목록이다.
+        호출자는 청크를 순서대로 보내고 응답을 합친다: WIZMSGHandler.for_device_query().
+        """
+        if devname in TWO_PORT_DEV or "752" in devname:
+            return [
+                self.make_header(mac_addr, idcode) + [[cmd, ""] for cmd in chunk]
+                for chunk in cmd_2p_search_chunks
+            ]
+        return [self.search(mac_addr, idcode, devname, version, devstatus)]
+
     def search(self, mac_addr, idcode, devname, version, devstatus=None):
         # Search All Devices on the network
         # print('search()', mac_addr, idcode, devname, version)
+        #
+        # 2포트 장치는 이 한 요청의 응답이 장치 버퍼(512B)를 넘긴다.
+        # 개별 장치 조회에는 search_chunks() 를 쓸 것.
         cmd_list = self.make_header(mac_addr, idcode)
 
         if devname in ONE_PORT_DEV:
@@ -354,8 +404,11 @@ class WIZMakeCMD:
                         for cmd in cmd_1p_default:
                             cmd_list.append([cmd, ""])
             elif devname in TWO_PORT_DEV or "752" in devname:
-                # for WIZ752SR-12x
-                for cmd in cmd_ch2:
+                # WIZ752SR-12x: cmd_ch2 만 붙이면 MC 가 확인 쿼리에 없어서
+                # get_setting_result() 의 성공 판정(len(mc)==17)이 항상 실패한다
+                # (완료 팝업이 안 뜨던 원인). MC 를 앞에 붙인 전용 목록을 쓴다.
+                # 전체 목록(cmd_2p_default)은 요청이 512바이트 버퍼를 넘겨 쓸 수 없다.
+                for cmd in cmd_2p_setconfirm:
                     cmd_list.append([cmd, ""])
             elif devname in SECURITY_DEVICE:
                 if 'WIZ510SSL' in devname:
