@@ -63,8 +63,9 @@ search_cmd_order:
   - SS
   - NP
   - SP
-  - S0
-  - S1
+  # 2026-09-03: S0/S1 제거. 861154c 가 S0/S1/SC 를 넣었으나 개별 조회는 WIZMakeCMD.cmd_2p_search_chunks
+  # (세 청크)로 나가고 그 목록에 S0/S1 이 없다 — 설정툴이 읽는 곳이 없어 요청하지 않는다.
+  # SC 는 청크 ch1 에 있어 유지. 이 순서는 spec.search_cmd_list(TR 포함 여부 판정)에만 쓰인다.
   - SC
 
 command_groups:
