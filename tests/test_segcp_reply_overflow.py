@@ -299,3 +299,18 @@ def test_fake_profile_has_user_io_defaults_for_datarefresh():
     """DataRefresh 는 CA~CD/GA~GD 를 따로 묻는다. 없으면 User I/O 탭이 비어 보인다."""
     for k in ("CA", "CB", "CC", "CD", "GA", "GB", "GC", "GD"):
         assert k in PROFILE_WIZ752_MEASURED
+
+
+# ── 11. SET 확인 쿼리 — 완료 판정에 필요한 MC 가 응답에 온다 (ddbea45 회귀 방지) ──
+
+def test_set_confirm_reply_carries_mc_and_channel1_values(local_sock):
+    """develop 은 확인 쿼리가 cmd_ch2 만이라 응답에 MC 가 없어 752 Apply 가 늘 실패로 보였다
+    (2026-09-03 실기기: resp_len=160, expected_min=320, MC=''). cmd_2p_setconfirm 은 MC 를 앞에 둔다."""
+    cmds = WIZMakeCMD().setcommand(MAC, " ", " ", ["LP", "RH"], ["5000", "192.168.11.3"], DEV, VER, "OPEN")
+    dev = FakeSegcpDevice(PROFILE_WIZ752_MEASURED, mac=MAC)
+    reply = dev.build_reply(request_bytes(local_sock, cmds))
+    prof = parse_reply_lines(reply)
+    assert prof.get("MC") == MAC, "완료 판정(len(MC)==17)에 MC 가 필요하다"
+    assert set(prof) >= set(cmd_ch2), "채널1 값이 확인 응답에 실린다"
+    assert dev.profile["RH"] == "192.168.11.3", "SET 값이 장치에 저장됐다"
+    assert dev.overflow_events == [], "확인 쿼리 요청/응답이 512B 안이다"
