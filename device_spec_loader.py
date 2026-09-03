@@ -68,6 +68,8 @@ class CmdEntry:
 class FWConfig:
     upload_supported: bool = False
     config_port: int = 50001
+    # SEGCP 요청/응답 버퍼 크기(B). 0 = 모름 → 응답 크기 경고를 내지 않는다
+    config_buf_size: int = 0
     upload_port_from_response: bool = False
     hw_version_field: str = "VR"
     new_hw_major_versions: list[int] = field(default_factory=list)
@@ -431,6 +433,7 @@ def _load_device_impl(device_name: str, fw_version: str | None) -> DeviceSpec:
     fw_config = FWConfig(
         upload_supported=fw_raw.get("upload_supported", False),
         config_port=fw_raw.get("config_port", 50001),
+        config_buf_size=int(fw_raw.get("config_buf_size", 0) or 0),
         upload_port_from_response=fw_raw.get("upload_port_from_response", False),
         hw_version_field=fw_raw.get("hw_version_field", "VR"),
         new_hw_major_versions=fw_raw.get("new_hw_major_versions", []),

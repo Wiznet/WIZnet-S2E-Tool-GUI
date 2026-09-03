@@ -11,7 +11,7 @@ from WIZMakeCMD import (
 
 from WIZUDPSock import WIZUDPSock
 from FWUploadThread import FWUploadThread
-from WIZMSGHandler import WIZMSGHandler, DataRefresh
+from WIZMSGHandler import WIZMSGHandler, DataRefresh, parse_reply_lines
 from WIZ1x0MSGHandler import WIZ1x0Searcher, WIZ1x0Setter
 from WIZ550MSGHandler import (
     WIZ550Searcher,
@@ -2740,9 +2740,21 @@ class WIZWindow(QMainWindow, main_window):
     def _stop_pgbar_fill_timer(self):
         pass  # 타이머 없음 (하위 호환용 stub)
 
+    def _reply_buf_size_of(self, devname, version):
+        """장치 응답 버퍼 크기(B). spec 의 fw_constraints.config_buf_size 에서 읽는다.
+
+        모르는 장치는 None — WIZMSGHandler 가 크기 경고를 내지 않는다. 이 값은 응답을
+        받은 뒤 버퍼에 닿았는지 검출하는 데만 쓴다. 예방(요청 분할)은 값에 기대지 않는다.
+        """
+        try:
+            spec = load_device(detect_device(devname) or devname, version)
+        except Exception as e:
+            self.logger.debug(f"_reply_buf_size_of({devname!r}): spec 없음 — {e}")
+            return None
+        return spec.fw_config.config_buf_size or None
+
     def search_each_dev(self, dev_info_list):
         """Phase 3: 개별 장비 정보 조회 (pgbar 최적화 적용)"""
-        cmd_list = []
         self.eachdev_info = []
 
         self.code = " "
@@ -2788,15 +2800,12 @@ class WIZWindow(QMainWindow, main_window):
                 # TCP unicast: 단일 연결, 순차 처리 (pgbar 최적화 적용)
                 for idx, dev_info in enumerate(dev_info_list):
                     self.logger.debug(dev_info)
-                    cmd_list = self.wizmakecmd.search(
+                    chunks = self.wizmakecmd.search_chunks(
                         dev_info[0], self.code, dev_info[1], dev_info[2], dev_info[3]
                     )
-                    th = WIZMSGHandler(
-                        self.conf_sock,
-                        cmd_list,
-                        "tcp",
-                        Opcode.OP_SEARCHALL,
-                        self.search_wait_time_each,
+                    th = WIZMSGHandler.for_device_query(
+                        self.conf_sock, chunks, "tcp", self.search_wait_time_each,
+                        reply_limit=self._reply_buf_size_of(dev_info[1], dev_info[2]),
                     )
                     th.searched_data.connect(self.getsearch_each_dev)
                     th.start()
@@ -2814,7 +2823,7 @@ class WIZWindow(QMainWindow, main_window):
 
                 for dev_info in dev_info_list:
                     self.logger.debug(dev_info)
-                    cmd_list = self.wizmakecmd.search(
+                    chunks = self.wizmakecmd.search_chunks(
                         dev_info[0], self.code, dev_info[1], dev_info[2], dev_info[3]
                     )
                     # 장비마다 독립 소켓 (localport=0 → OS가 포트 자동 할당)
@@ -2822,12 +2831,9 @@ class WIZWindow(QMainWindow, main_window):
                     dev_sock.open()
                     dev_socks.append(dev_sock)
 
-                    th = WIZMSGHandler(
-                        dev_sock,
-                        cmd_list,
-                        "udp",
-                        Opcode.OP_SEARCHALL,
-                        self.search_wait_time_each,
+                    th = WIZMSGHandler.for_device_query(
+                        dev_sock, chunks, "udp", self.search_wait_time_each,
+                        reply_limit=self._reply_buf_size_of(dev_info[1], dev_info[2]),
                     )
                     th.searched_data.connect(self.getsearch_each_dev)
                     th.start()
@@ -2909,15 +2915,10 @@ class WIZWindow(QMainWindow, main_window):
             if dev_data is None:
                 return
 
-            # 현재 수신된 패킷만 파싱 (기존 O(N²) 전체 재처리 → O(1))
-            profile = {}
-            cmdsets = dev_data.split(b"\r\n")
-            for cmdset in cmdsets:
-                if len(cmdset) < 2 or cmdset[:2] == b"MA":
-                    continue
-                cmd = cmdset[:2].decode('utf-8', errors='replace')
-                param = cmdset[2:].decode('utf-8', errors='replace')
-                profile[cmd] = param
+            # 현재 수신된 패킷만 파싱 (기존 O(N²) 전체 재처리 → O(1)).
+            # 청크로 나눠 조회한 장치는 응답 여러 개가 이어 붙어 오는데, 파서가 dict 를
+            # 만들므로 순서·중복(MC)에 영향이 없다.
+            profile = parse_reply_lines(dev_data)
 
             mc = profile.get("MC")
             if mc:
@@ -3630,10 +3631,13 @@ class WIZWindow(QMainWindow, main_window):
         QApplication.processEvents()
         try:
             code = self.code if hasattr(self, 'code') and self.code else " "
-            cmd_list = self.wizmakecmd.search(dev_info[0], code, dev_info[1], dev_info[2], dev_info[3])
+            chunks = self.wizmakecmd.search_chunks(dev_info[0], code, dev_info[1], dev_info[2], dev_info[3])
             dev_sock = WIZUDPSock(0, 50001, self.selected_eth or "", localport=0)
             dev_sock.open()
-            th = WIZMSGHandler(dev_sock, cmd_list, "udp", Opcode.OP_SEARCHALL, self.search_wait_time_each)
+            th = WIZMSGHandler.for_device_query(
+                dev_sock, chunks, "udp", self.search_wait_time_each,
+                reply_limit=self._reply_buf_size_of(dev_info[1], dev_info[2]),
+            )
             th.searched_data.connect(self.getsearch_each_dev)
             th.start()
             th.wait()
