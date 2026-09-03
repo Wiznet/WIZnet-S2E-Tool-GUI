@@ -94,6 +94,9 @@ class WIZMSGHandler(QThread):
     # 기본값 500ms 유지 권장 — 줄이면 구형/느린 장치에서 SET 후 재조회 실패 가능.
     set_command_delay_ms = 500
 
+    # logging.verbose_debug 로 제어 (main_gui 가 설정/갱신)
+    verbose_wire_log = False
+
     def __init__(self, udpsock, cmd_list, what_sock, op_code, timeout, presearch=False):
         QThread.__init__(self)
 
@@ -206,6 +209,16 @@ class WIZMSGHandler(QThread):
                 f"({DEVICE_CONFIG_BUF_SIZE}B)를 초과함 — 펌웨어에서 잘리거나 "
                 f"파싱이 깨질 수 있음. cmd 수={len(self.cmd_list)}"
             )
+
+        # 와이어 바이트 덤프 (logging.verbose_debug 활성 시에만)
+        if WIZMSGHandler.verbose_wire_log:
+            try:
+                self.logger.debug(
+                    f"[WIRE] request opcode={self.opcode} size={self.size}B "
+                    f"bytes={bytes(self.msg[:self.size])!r}"
+                )
+            except Exception as e:
+                self.logger.debug(f"[WIRE] request dump failed: {e}")
 
     def sendcommands(self):
         self.sock.sendto(self.msg)
@@ -509,6 +522,8 @@ class WIZMSGHandler(QThread):
 class DataRefresh(QThread):
     resp_check = pyqtSignal(int)
 
+    _seq = 0    # 인스턴스 식별 순번 (로그 추적용)
+
     def __init__(self, sock, cmd_list, what_sock, interval):
         QThread.__init__(self)
 
@@ -533,6 +548,13 @@ class DataRefresh(QThread):
         self.cmd_list = cmd_list
         self.interval = interval * 1000
 
+        # 인스턴스 식별 순번.
+        # refresh_gpio() 가 새 인스턴스를 만들 때 이전 것을 terminate() 하지만
+        # 실제로 죽었는지 보장이 없다. 로그에서 어느 스레드가 보내고 받았는지
+        # 구분하려면 식별자가 필요하다.
+        DataRefresh._seq += 1
+        self.inst_id = DataRefresh._seq
+
     def makecommands(self):
         self.size = 0
 
@@ -553,10 +575,26 @@ class DataRefresh(QThread):
                 self.msg[self.size :] = str.encode("\r\n")
                 self.size += 2
 
+    def _wire_log(self, msg):
+        """logging.verbose_debug 가 켜져 있을 때만 남기는 와이어 로그.
+
+        WIZMSGHandler 와 같은 스위치를 쓴다. GPIO 조회는 이 클래스가 담당하는데
+        지금까지 요청·응답이 어디에도 기록되지 않아 장치가 무엇을 답했는지
+        확인할 수 없었다.
+        """
+        if WIZMSGHandler.verbose_wire_log:
+            self.logger.debug(f"[WIRE][DataRefresh#{self.inst_id}] {msg}")
+
     def sendcommands(self):
+        self._wire_log(
+            f"request size={self.size}B bytes={bytes(self.msg[:self.size])!r}"
+        )
         self.sock.sendto(self.msg)
 
     def sendcommandsTCP(self):
+        self._wire_log(
+            f"request(tcp) size={self.size}B bytes={bytes(self.msg[:self.size])!r}"
+        )
         self.sock.write(self.msg)
 
     def run(self):
@@ -583,16 +621,23 @@ class DataRefresh(QThread):
                 # sys.stdout.write("iter count: %r " % self.iter)
 
                 for sock in readready:
-                    self.logger.info(f"DataRefresh: {checknum}")
+                    self.logger.info(f"DataRefresh#{self.inst_id}: {checknum}")
 
                     if sock == self.sock.sock:
                         data, _ = self.sock.recvfrom()
                         self.rcv_list.append(data)  # 수신 데이터 저장
+                        self._wire_log(
+                            f"reply iter={checknum} len={len(data)}B bytes={data!r}"
+                        )
                         # replylists = data.splitlines()
                         # replylists = data.split(b"\r\n")
                         # print('replylists', replylists)
 
                 checknum += 1
+                # emit 하는 쪽을 남긴다. 이전 인스턴스가 terminate() 후에도 살아
+                # 남아 함께 emit 하면 gpio_update() 는 출처를 구분하지 못한 채
+                # 항상 현재 self.datarefresh 의 rcv_list 를 읽는다.
+                self._wire_log(f"emit({checknum}) rcv_list={len(self.rcv_list)}")
                 self.resp_check.emit(checknum)
                 if self.interval == 0:
                     break

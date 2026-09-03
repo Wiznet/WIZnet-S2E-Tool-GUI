@@ -589,6 +589,17 @@ class DeviceSearchConfig:
         level_str = self.config.get('logging', {}).get('level', 'INFO').upper()
         return getattr(logging, level_str, logging.INFO)
 
+    def is_verbose_debug(self) -> bool:
+        """상세 디버그(와이어 바이트 덤프 등) 활성화 여부
+
+        DEBUG 레벨만으로는 양이 많아 평소 끄고, 프로토콜 수준 추적이
+        필요할 때만 켠다. 런타임 변경 가능(config 파일 감시).
+
+        Returns:
+            bool: True면 [WIRE] 로그 출력
+        """
+        return bool(self.config.get('logging', {}).get('verbose_debug', False))
+
     def is_skip_phase1_emit_delay(self) -> bool:
         """Phase 1 emit 전 msleep 건너뛰기 여부
 

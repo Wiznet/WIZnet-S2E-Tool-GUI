@@ -90,6 +90,11 @@ from terminal.terminal_panel import TerminalPanel
 
 SECURITY_TWO_PORT_DEV = ("W55RP20-S2E-2CH",)
 W55RP20_FAMILY = ("W55RP20-S2E", "W55RP20-S2E-2CH")
+# User I/O 탭(GPIO) 지원 장치 — ONE_PORT_DEV 중 WIZ107SR/108SR(GPIO 미지원)만 제외하고 TWO_PORT_DEV(752 계열) 합침
+# TODO(꼼수): 신규 장치 추가 시 이 목록도 수동 갱신 필요 — 근본 해법은 specs/devices/*.yaml의
+# command_groups(gpio) 기반 판단으로 전환하는 것. object_config_for_device()가 아직 spec 미사용이라
+# 지금은 보류. 검증 충분히 하고 나서 spec 기반 전환 예정 (관련: WIZ752SR-12x.yaml gpio 그룹 추가함).
+IO_TAB_DEV_FAMILY = (frozenset(ONE_PORT_DEV) - {"WIZ107SR", "WIZ108SR"}) | frozenset(TWO_PORT_DEV)
 
 
 class RetrySearchLimits:
@@ -467,6 +472,11 @@ class WIZWindow(QMainWindow, main_window):
         self.smallfont = None
         self.btnfont = None
 
+        # 사용자가 User I/O 탭의 GPIO 콤보를 직접 조작한 상태인지.
+        # 켜져 있는 동안 주기 갱신(gpio_update)이 gpio*_set 을 덮어쓰지 않는다.
+        # gui_init() 이 이 플래그를 읽는 핸들러를 연결하므로 반드시 그보다 먼저 만든다.
+        self._gpio_user_editing = False
+
         self.gui_init()
 
         # Main icon
@@ -550,6 +560,7 @@ class WIZWindow(QMainWindow, main_window):
         WIZMSGHandler.emit_stabilization_ms = self.timing_config.get_phase1_emit_stabilization_ms()
         WIZMSGHandler.skip_phase1_emit_delay = self.timing_config.is_skip_phase1_emit_delay()
         WIZMSGHandler.set_command_delay_ms = self.timing_config.get_phase3_set_command_delay_ms()
+        WIZMSGHandler.verbose_wire_log = self.timing_config.is_verbose_debug()
 
         # 로그 레벨 초기 적용 + config 파일 실시간 감시
         _init_level = self.timing_config.get_log_level()
@@ -701,12 +712,12 @@ class WIZWindow(QMainWindow, main_window):
         self.actionExit.setShortcut(QtGui.QKeySequence("Ctrl+Q"))
         self.actionExit.setShortcutContext(Qt.ApplicationShortcut)
 
-        self._sc_apply = QtWidgets.QShortcut(QtGui.QKeySequence("F4"), self)
-        self._sc_apply.setContext(Qt.WindowShortcut)
-        self._sc_apply.activated.connect(self.btn_setting.click)
-
+        # F4 는 QAction 한 곳에서만 등록한다. QShortcut 과 중복 등록하면 Qt 가
+        # "Ambiguous shortcut overload: F4" 를 내며 어느 쪽도 확실히 발동하지 않는다.
+        # 메뉴에 항목이 노출되고 단축키 힌트도 함께 표시되므로 QAction 쪽을 남긴다.
         self._action_apply = QAction("Apply Settings", self)
         self._action_apply.setShortcut(QtGui.QKeySequence("F4"))
+        self._action_apply.setShortcutContext(Qt.WindowShortcut)
         self._action_apply.triggered.connect(self.btn_setting.click)
         self.menuFile.insertAction(self.actionExit, self._action_apply)
         self.menuFile.insertSeparator(self.actionExit)
@@ -778,6 +789,17 @@ class WIZWindow(QMainWindow, main_window):
         self.gpiob_config.currentIndexChanged.connect(self.gpio_check)
         self.gpioc_config.currentIndexChanged.connect(self.gpio_check)
         self.gpiod_config.currentIndexChanged.connect(self.gpio_check)
+
+        # GPIO 편집 감지 — activated 는 사용자가 직접 고를 때만 발생한다.
+        # currentIndexChanged 를 쓰면 주기 갱신의 setCurrentIndex() 가 스스로를
+        # 편집으로 오인해 플래그가 영구히 서 버린다.
+        for _name in ("a", "b", "c", "d"):
+            getattr(self, f"gpio{_name}_config").activated.connect(
+                self._on_gpio_user_edit
+            )
+            getattr(self, f"gpio{_name}_set").activated.connect(
+                self._on_gpio_user_edit
+            )
 
         # Manage certificate for WIZ510SSL
         self.btn_load_rootca.clicked.connect(lambda: self.load_cert_btn_clicked("OC"))
@@ -970,7 +992,7 @@ class WIZWindow(QMainWindow, main_window):
         # btn_upload → 드롭다운 메뉴 (FW from local PC / FW from Git)
         upload_menu = QMenu(self)
         self._act_fw_local = upload_menu.addAction("FW from local PC")
-        self._act_fw_git   = upload_menu.addAction("FW from Git")
+        self._act_fw_git = upload_menu.addAction("FW from Git")
         self.btn_upload.setMenu(upload_menu)
         self._act_fw_local.triggered.connect(self.event_upload_clicked)
         self._act_fw_git.triggered.connect(self.event_fw_from_git)
@@ -1007,31 +1029,41 @@ class WIZWindow(QMainWindow, main_window):
         self.btn_factory.addAction(self.factory_firmware_action)
 
     # @funclog(logger)
+    def _sync_userio_tab_state(self):
+        """User I/O 탭 활성 상태에 따라 GPIO 실시간 리프레시 시작/중지.
+
+        dev_clicked()/tab_changed() 공용 — 둘 다 '탭==2면 시작'이 필요하고,
+        tab_changed()는 그 외 탭 전환 시 정지까지 담당해서 한 곳으로 합침.
+        """
+        if not self.curr_dev or self.curr_dev not in IO_TAB_DEV_FAMILY:
+            return
+        if self.generalTab.currentIndex() == 2:
+            self.logger.debug(
+                f"Start DataRefresh: {self.curr_dev}, currentTab: {self.generalTab.currentIndex()}"
+            )
+            # Expansion GPIO tab
+            self.gpio_check()
+            self.get_refresh_time()
+        else:
+            # User I/O 탭을 벗어나면 편집 상태를 놓는다 — 다시 들어올 때는
+            # 장치 현재값으로 채워지는 것이 맞다
+            self._clear_gpio_user_edit("left User I/O tab")
+            try:
+                if self.datarefresh is not None:
+                    self.logger.debug(
+                        f"Stop DataRefresh: {self.curr_dev}, currentTab: {self.generalTab.currentIndex()}"
+                    )
+                    if self.datarefresh.isRunning():
+                        self.datarefresh.terminate()
+            except Exception as e:
+                self.logger.error(e)
+
     def tab_changed(self):
         """
         When tab changed
         - check user IO tab
         """
-        if not self.curr_dev:
-            return
-        if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev:
-            if self.generalTab.currentIndex() == 2:
-                self.logger.debug(
-                    f"Start DataRefresh: {self.curr_dev}, currentTab: {self.generalTab.currentIndex()}"
-                )
-                # Expansion GPIO tab
-                self.gpio_check()
-                self.get_refresh_time()
-            else:
-                try:
-                    if self.datarefresh is not None:
-                        self.logger.debug(
-                            f"Stop DataRefresh: {self.curr_dev}, currentTab: {self.generalTab.currentIndex()}"
-                        )
-                        if self.datarefresh.isRunning():
-                            self.datarefresh.terminate()
-                except Exception as e:
-                    self.logger.error(e)
+        self._sync_userio_tab_state()
 
     @funclog(logger)
     def net_ifs_selected(self, netifs):
@@ -1091,7 +1123,6 @@ class WIZWindow(QMainWindow, main_window):
 
         self.statusbar.showMessage(f"Selected eth: {selected_ip} - {selected_name}")
         self.selected_eth = selected_ip
-
 
     # Get network adapter & IP list
     def net_adapter_info(self):
@@ -1843,7 +1874,7 @@ class WIZWindow(QMainWindow, main_window):
         - WIZ5XXSR-RP (only use A,B)
         """
         # if 'WIZ750' in self.curr_dev or 'W7500' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
-        if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev or "W7500" in self.curr_dev:
+        if self.curr_dev in IO_TAB_DEV_FAMILY:
             # ! Check current tab length
             # self.logger.debug(f'totalTab: {len(self.generalTab)}, currentTab: {self.generalTab.currentIndex()}')
             # self.generalTab.insertTab(2, self.userio_tab, self.userio_tab_text)
@@ -2306,8 +2337,17 @@ class WIZWindow(QMainWindow, main_window):
         if self.wizmsghandler is not None and self.wizmsghandler.isRunning():
             self.wizmsghandler.wait()
         else:
+            # terminate() 가 실제로 먹는지 확인하기 위해 전후 생존 수를 남긴다.
+            # self.threads 는 append 만 하고 제거하지 않아 계속 쌓인다.
+            alive_before = sum(1 for t in self.threads if t.isRunning())
             for thread in self.threads:
                 thread.terminate()
+            if WIZMSGHandler.verbose_wire_log:
+                alive_after = sum(1 for t in self.threads if t.isRunning())
+                self.logger.debug(
+                    f"[GPIO] refresh_gpio: threads={len(self.threads)} "
+                    f"alive {alive_before} -> {alive_after} (terminate 직후)"
+                )
             ##
             cmd_list = []
             if self.isConnected or self.broadcast.isChecked():
@@ -2361,10 +2401,27 @@ class WIZWindow(QMainWindow, main_window):
                 # cmdset_list = resp.splitlines()
                 cmdset_list = resp.split(b"\r\n")
 
+                # 읽는 대상을 남긴다. num 은 emit 한 스레드의 회차인데, 이전
+                # 인스턴스가 살아 있으면 그쪽 회차가 넘어오면서 아래 num<2
+                # 판정이 어긋난다. 어느 인스턴스 데이터를 보고 있는지 대조용.
+                if WIZMSGHandler.verbose_wire_log:
+                    self.logger.debug(
+                        f"[GPIO] update(num={num}) "
+                        f"reading DataRefresh#{getattr(self.datarefresh, 'inst_id', '?')} "
+                        f"rcv_list[0]={len(resp)}B editing={self._gpio_user_editing}"
+                    )
+
                 try:
                     # Expansion GPIO
+                    #
+                    # gpio*_get 은 장치 현재값 표시용이라 항상 갱신한다.
+                    # gpio*_config / gpio*_set 은 사용자 입력 위젯이므로 편집 중에는
+                    # 건드리지 않는다. 그러지 않으면 사용자가 High 로 바꿔 둔 값을
+                    # 다음 갱신 주기(기본 10초)가 장치 현재값으로 되돌리고, 그 상태로
+                    # Apply 하면 되돌아간 값이 그대로 전송된다.
+                    keep_user_edit = self._gpio_user_editing
                     for i in range(len(cmdset_list)):
-                        if num < 2:
+                        if num < 2 and not keep_user_edit:
                             if b"CA" in cmdset_list[i]:
                                 self.gpioa_config.setCurrentIndex(
                                     int(cmdset_list[i][2:])
@@ -2384,19 +2441,48 @@ class WIZWindow(QMainWindow, main_window):
 
                         if b"GA" in cmdset_list[i]:
                             self.gpioa_get.setText(cmdset_list[i][2:].decode())
+                            if not keep_user_edit:
+                                self.gpioa_set.setCurrentIndex(int(cmdset_list[i][2:]))
                         if b"GB" in cmdset_list[i]:
                             self.gpiob_get.setText(cmdset_list[i][2:].decode())
+                            if not keep_user_edit:
+                                self.gpiob_set.setCurrentIndex(int(cmdset_list[i][2:]))
                         if b"GC" in cmdset_list[i]:
                             self.gpioc_get.setText(cmdset_list[i][2:].decode())
+                            if not keep_user_edit:
+                                self.gpioc_set.setCurrentIndex(int(cmdset_list[i][2:]))
                         if b"GD" in cmdset_list[i]:
                             self.gpiod_get.setText(cmdset_list[i][2:].decode())
+                            if not keep_user_edit:
+                                self.gpiod_set.setCurrentIndex(int(cmdset_list[i][2:]))
                 except Exception as e:
                     self.logger.error(e)
+
+    def _on_gpio_user_edit(self, _index=None):
+        """사용자가 GPIO 콤보를 직접 조작했다.
+
+        주기 갱신 스레드를 세우는 대신 플래그만 든다. 스레드를 멈추면 이미
+        수신 대기 중이던 응답이 정지 직후 도착해 그대로 덮어쓰는 경합이 남는다.
+        """
+        if not self._gpio_user_editing:
+            self.logger.debug("GPIO edit started: refresh no longer overwrites gpio*_set")
+        self._gpio_user_editing = True
+
+    def _clear_gpio_user_edit(self, reason=""):
+        """GPIO 편집 상태 해제.
+
+        해제를 빠뜨리면 값이 갱신되지 않을 뿐이고, 편집 중인 값을 덮어써
+        잘못 전송하는 쪽으로는 실패하지 않는다.
+        """
+        if self._gpio_user_editing:
+            self.logger.debug(f"GPIO edit cleared ({reason})")
+        self._gpio_user_editing = False
 
     def _on_search_button_clicked(self):
         """검색 버튼 클릭 이벤트 핸들러 - 타이머 시작"""
         # Device Search 버튼 클릭 시 항상 이전 검색 결과 클리어
         # (cumulative_mode와 상관없이 클리어 - 반복 검색 시에만 누적 유지)
+        self._clear_gpio_user_edit("device search")
         self.mac_list = []
         self.mn_list = []
         self.vr_list = []
@@ -2535,10 +2621,10 @@ class WIZWindow(QMainWindow, main_window):
 
             # Set socket for search
             # self.logger.info(f"[TIMING] {self._T()} socket_config() 시작")
-            _t_sock = time.time()
+            # _t_sock = time.time()
             self.socket_config()
             # self.logger.info(f"[TIMING] {self._T()} socket_config() 완료 ({(time.time() - _t_sock) * 1000:.1f}ms 소요)")
-            _conf_sock = "None" if not hasattr(self, "conf_sock") else self.conf_sock
+            # _conf_sock = "None" if not hasattr(self, "conf_sock") else self.conf_sock
             # self.logger.info(f"search: conf_sock: {_conf_sock}")
 
             # Search devices
@@ -3510,11 +3596,12 @@ class WIZWindow(QMainWindow, main_window):
     def dev_clicked(self, param=None, call_from=None):
         # dev_info = []
         # clicked_mac = ""
+        # 다른 장치를 고르면 앞 장치에서 편집하던 상태는 의미가 없다.
+        # _sync_userio_tab_state() 보다 먼저 놓아야 탭이 열려 있는 경우
+        # 새 장치 값으로 다시 채워진다.
+        self._clear_gpio_user_edit("device changed")
         # if 'WIZ750' in self.curr_dev or 'WIZ5XX' in self.curr_dev:
-        if self.curr_dev and ("WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev):
-            if self.generalTab.currentIndex() == 2:
-                self.gpio_check()
-                self.get_refresh_time()
+        self._sync_userio_tab_state()
         # for currentItem in self.list_device.selectedItems():
         # print('Click info:', currentItem, currentItem.row(), currentItem.column(), currentItem.text())
         # print('clicked', self.list_device.selectedItems()[0].text())
@@ -5166,7 +5253,7 @@ class WIZWindow(QMainWindow, main_window):
             if self.curr_st in DeviceStatusMinimum:
                 pass
             else:
-                if "WIZ750" in self.curr_dev or "WIZ750SR-T1L" in self.curr_dev:
+                if self.curr_dev in IO_TAB_DEV_FAMILY:
                     setcmd["CA"] = str(self.gpioa_config.currentIndex())
                     setcmd["CB"] = str(self.gpiob_config.currentIndex())
                     setcmd["CC"] = str(self.gpioc_config.currentIndex())
@@ -5179,8 +5266,6 @@ class WIZWindow(QMainWindow, main_window):
                         setcmd["GC"] = str(self.gpioc_set.currentIndex())
                     if self.gpiod_config.currentIndex() == 1:
                         setcmd["GD"] = str(self.gpiod_set.currentIndex())
-                elif "WIZ752" in self.curr_dev:
-                    pass
 
             # for channel 2
             if self.curr_dev in TWO_PORT_DEV or "WIZ752" in self.curr_dev:
@@ -5660,6 +5745,13 @@ class WIZWindow(QMainWindow, main_window):
                 return
             self.set_reponse = self.wizmsghandler.rcv_list[0]
 
+            # 와이어 바이트 덤프 (logging.verbose_debug 활성 시에만)
+            if WIZMSGHandler.verbose_wire_log:
+                self.logger.debug(
+                    f"[WIRE] reply packets={len(self.wizmsghandler.rcv_list)} "
+                    f"len={len(self.set_reponse)}B bytes={self.set_reponse!r}"
+                )
+
             # ── 응답 파싱 (VB.NET parsingMsg() 방식) ──────────────────────
             # MA prefix(10 bytes) 제거 후 \r\n 단위로 분리
             payload = (self.set_reponse[10:]
@@ -5693,6 +5785,9 @@ class WIZWindow(QMainWindow, main_window):
 
             elif len(mc) == 17:
                 # ── 정상 성공: MAC 유효 (VB.NET: nSec.MC.data.Length == 17) ──
+                # 편집분이 장치에 반영됐으니 이제 주기 갱신이 실제값을 보여주게 둔다.
+                # 실패 응답에서는 놓지 않는다 — 사용자가 다시 시도할 값이다.
+                self._clear_gpio_user_edit("apply succeeded")
                 if self._setcmd_reduced:
                     self.statusbar.showMessage(
                         f" Set complete — network settings only "
@@ -7380,6 +7475,10 @@ class WIZWindow(QMainWindow, main_window):
             self.logger.setLevel(level)
             self.logger.info(f"[Config] 로그 레벨 변경: {level_str}")
             self._sync_log_level_menu(level_str)
+            verbose = bool(data.get('logging', {}).get('verbose_debug', False))
+            if verbose != WIZMSGHandler.verbose_wire_log:
+                WIZMSGHandler.verbose_wire_log = verbose
+                self.logger.info(f"[Config] verbose_debug(와이어 덤프): {verbose}")
         except Exception as e:
             self.logger.warning(f"[Config] 로그 레벨 변경 실패: {e}")
         # 일부 에디터는 파일을 삭제 후 재생성 → watcher에서 제거됨, 재등록

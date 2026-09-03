@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from packaging.version import Version, InvalidVersion
+from packaging.version import Version
 
 """
 Make Serial command
@@ -168,6 +168,18 @@ Command Set
 cmd_1p_boot = cmd_boot
 cmd_1p_default = cmd_ch1
 cmd_1p_advanced = cmd_ch1 + cmd_wiz75xsr + cmd_added
+# 2포트 장치 전체 조회 목록(61개). 개별 장치 조회(Phase 3)는 이 목록을 쓰지 않는다 —
+# search_chunks() 가 cmd_2p_search_chunks 로 세 번 나눠 보낸다. 한 번에 물으면 응답이
+# 장치 버퍼 gSEGCPREP[512] 를 넘기기 때문이다(499~531B 실측, 2026-08-31~09-01).
+#
+# 2026-07-29 861154c 는 여기에 cmd_wiz75xsr(S0 S1) + ["SC"] 를 더했었다 — 752 검색 응답에
+# 상태 핀이 빠져 있던 문제의 조치였다. 2026-09-03 되돌린다.
+#   ① 그 16B 가 응답을 499→515B 로 밀어 512B 버퍼를 확정적으로 넘겼다(실측). 넘친 바이트는
+#      UART 송신 링버퍼 포인터 txring[0].data 를 덮는다(FW 담당자 map 확인)
+#   ② SC 는 cmd_2p_chunk_ch1 에 들어 있어 Options 탭 라디오에 그대로 반영된다
+#   ③ S0/S1 은 설정툴에 읽는 곳이 없다(저장소 전수 확인). 상태 핀 블락(TASK-W7500-STATUSPIN-BLOCK)
+#      이 확정되면 SC 도 spec 의 command_groups 에서 정리한다
+# 이 목록은 search() 의 2포트 분기에만 남아 있고 그 분기는 호출처가 없다(전부 search_chunks).
 cmd_2p_default = cmd_ch1 + cmd_ch2
 
 # Security devices
@@ -178,12 +190,23 @@ cmd_w55rp20_2ch = cmd_w55rp20 + cmd_w55rp20_2ch_ch1
 
 
 def _safe_version(v: str) -> Version:
-    try:
-        return Version(v)
-    except InvalidVersion:
-        # PEP 440 비표준 접미사(예: "1.2.2wiz") → 숫자 부분만 추출
-        m = re.match(r'[\d.]+', v)
-        return Version(m.group(0).rstrip('.')) if m else Version("0")
+    """장치 버전 문자열에서 숫자부만 뽑아 비교 가능한 Version 으로 만든다.
+
+    버전 비교는 숫자부만 가지고 한다. `dev` / `rc` / `beta` 같은 접미사는
+    정식 출시 전이라는 표기일 뿐이고 기능은 같은 번호의 정식판과 동일하다.
+    접두어(`VR2.1.0`)나 빌드 메타(`1.2.2_custom_20260825`)도 같은 이유로
+    무시한다.
+
+    `Version(v)` 를 그대로 쓰면 안 된다. PEP 440 이 `dev`/`a`/`b`/`rc` 를
+    사전 릴리즈로 정식 해석해서 `1.1.8dev` 가 `1.1.8` 보다 작아지고,
+    `InvalidVersion` 이 나지 않으므로 폴백 경로도 타지 않는다. 그러면 같은
+    기능을 가진 dev 펌웨어가 version_compare 게이트에서 조용히 차단된다.
+    """
+    m = re.search(r'\d+(?:\.\d+)*', v or "")
+    if not m:
+        logger.warning(f"[version] 숫자부를 찾지 못함: {v!r} → 0 으로 처리")
+        return Version("0")
+    return Version(m.group(0))
 
 
 def version_compare(version1: str, version2: str) -> int:
