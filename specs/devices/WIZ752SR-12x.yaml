@@ -95,6 +95,9 @@ overrides:
 fw_constraints:
   upload_supported: true
   config_port: 50001
+  # SEGCP 요청/응답 버퍼 gSEGCPREQ/gSEGCPREP 크기 (common.h CONFIG_BUF_SIZE). 펌웨어가
+  # 응답 길이를 대조하지 않으므로 설정툴이 응답이 여기 닿았는지 사후 검출하는 데 쓴다.
+  config_buf_size: 512
 
 ui:
   tabs:
