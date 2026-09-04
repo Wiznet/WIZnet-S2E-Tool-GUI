@@ -12,7 +12,7 @@ from WIZMakeCMD import (
 from WIZUDPSock import WIZUDPSock
 from FWUploadThread import FWUploadThread
 from WIZMSGHandler import WIZMSGHandler, DataRefresh, parse_reply_lines
-from WIZ1x0MSGHandler import WIZ1x0Searcher, WIZ1x0Setter
+from WIZ1x0MSGHandler import WIZ1x0Searcher, WIZ1x0Setter, WIZ1x0DirectSearcher
 from WIZ550MSGHandler import (
     WIZ550Searcher,
     WIZ550Getter,
@@ -969,6 +969,8 @@ class WIZWindow(QMainWindow, main_window):
 
         # WIZ1x0SR 검색 스레드 (FIND/IMIN, UDP:1460)
         self.wiz1x0_searcher = None
+        # WIZ1x0SR 직접-IP 검색 스레드 (TCP:1461, IP Address 모드 전용)
+        self.wiz1x0_direct = None
         self._wiz1x0_search_pending = False  # WIZ1x0Searcher 완료 대기 중 플래그
         self._search_phase3_done = False      # search_each_dev() 완료 플래그
         # WIZ1x0SR 전용 패널: 초기 hidden, 시그널 연결
@@ -2350,13 +2352,18 @@ class WIZWindow(QMainWindow, main_window):
                         )
                     )
                     if is_wiz1x0:
-                        # WIZ1x0은 IP 지정 검색 채널이 미구현(VB6 TCP:1461 미이식).
-                        # 이 분기 뒤에 도는 것은 WIZ550Searcher(UDP:6550)뿐이라
-                        # WIZ1x0을 찾을 수 없다 — "검색 중" 거짓 안내 대신 사실을 알린다.
-                        self.statusbar.showMessage(
-                            " WIZ1x0SR: IP-address search not supported."
-                            " Use Broadcast + 'WIZ1x0SR search' checkbox."
-                        )
+                        # WIZ1x0 직접-IP 검색은 TCP:1461 (WIZ1x0DirectSearcher,
+                        # search_pre에서 체크박스 ON일 때 기동). 체크박스가 꺼져
+                        # 있으면 검색 주체가 없으므로 사실대로 안내한다.
+                        if self.chk_wiz1x0_search.isChecked():
+                            self.statusbar.showMessage(
+                                f" Searching WIZ1x0SR: {ip_addr} via TCP:1461..."
+                            )
+                        else:
+                            self.statusbar.showMessage(
+                                " WIZ1x0SR: enable the 'WIZ1x0SR search' checkbox"
+                                " to search by IP address."
+                            )
                     else:
                         # WIZ550 계열: WIZ550Searcher가 UDP:6550으로 unicast 검색 수행
                         self.statusbar.showMessage(f" Searching device: {ip_addr} via UDP:6550...")
@@ -2736,6 +2743,30 @@ class WIZWindow(QMainWindow, main_window):
                 )
                 self.wiz550_searcher.search_done.connect(self._merge_wiz550_results)
                 self.wiz550_searcher.start()
+
+            # WIZ1x0SR 직접-IP 검색 (TCP:1461) — IP Address 모드 + 체크박스 ON.
+            # 반드시 isConnected 게이트 밖: unicast에서 바이너리 장치를 선택하면
+            # socket_config()가 ping/TCP를 스킵해 isConnected=False로 남으므로,
+            # 게이트 안에 두면 이 검색은 영원히 실행되지 않는다.
+            # pending 플래그는 걸지 않는다 — search_done이 모든 경로에서 1회
+            # emit되는 계약이지만, _finalize_search의 pgbar 게이트에 새 데드락
+            # 표면을 만들지 않기 위해 결과 병합만 수행한다.
+            if (
+                self.unicast_ip.isChecked()
+                and self.chk_wiz1x0_search.isChecked()
+                and self.search_ipaddr.text().strip()
+            ):
+                if self.wiz1x0_direct is None or not self.wiz1x0_direct.isRunning():
+                    try:
+                        _direct_timeout = self.timing_config.get_tcp_scan_timeout()
+                    except Exception:
+                        _direct_timeout = 2.0
+                    self.wiz1x0_direct = WIZ1x0DirectSearcher(
+                        target_ip=self.search_ipaddr.text().strip(),
+                        timeout=_direct_timeout,
+                    )
+                    self.wiz1x0_direct.search_done.connect(self._merge_wiz1x0_results)
+                    self.wiz1x0_direct.start()
 
     def _merge_wiz1x0_results(self, results: list):
         """WIZ1x0Searcher 완료 콜백 — 결과를 기존 device list에 병합."""
