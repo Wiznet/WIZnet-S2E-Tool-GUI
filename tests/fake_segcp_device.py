@@ -205,7 +205,7 @@ class FakeSegcpDevice:
                  quirks: FirmwareQuirks = FW_752_2_1_0DEV,
                  reply_buf_size: Optional[int] = None, mode: Optional[str] = None,
                  drop_first: int = 0, reply_broadcast: bool = False,
-                 verbose: int = 0):
+                 distinct_source_port: bool = False, verbose: int = 0):
         # reply_buf_size / mode 는 quirks 로 옮기기 전의 이름. 둘 다 받아 준다.
         if reply_buf_size is not None:
             quirks = replace(quirks, reply_buf_size=reply_buf_size)
@@ -223,6 +223,11 @@ class FakeSegcpDevice:
         self._port = port
         self.drop_first = drop_first      # 처음 N개 요청을 응답 없이 버린다 (유실 시험)
         self.reply_broadcast = reply_broadcast   # True = 펌웨어처럼 브로드캐스트로 응답
+        # 응답을 설정 포트가 아닌 전용 포트에서 보낸다. 여러 대를 한 PC 에 띄울 때만 쓴다 —
+        # 설정툴 Phase 1 이 응답을 출처 주소별로 모으기 때문이다(run() 의 per_addr_buf).
+        # 같은 IP:포트에서 답하면 여러 대가 한 대로 합쳐지고 MC 는 마지막 것이 이긴다.
+        # 실장치는 IP 가 서로 달라 그런 일이 없다. 한 대만 띄울 때는 꺼 둔다(실장치와 동일).
+        self.distinct_source_port = distinct_source_port
         self.verbose = int(verbose)
 
         # 거부할 커맨드: {커맨드: 오류이름}. 오류이름은 SEGCP_ERRORS 중 하나.
@@ -241,6 +246,7 @@ class FakeSegcpDevice:
         self._unresponsive_until = 0.0
         self._explained_other_device = False
         self._sock: Optional[socket.socket] = None
+        self._tx: Optional[socket.socket] = None
         self._thread: Optional[threading.Thread] = None
         self._stop = threading.Event()
 
@@ -372,6 +378,10 @@ class FakeSegcpDevice:
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self._sock.bind((self.bind, self._port))
         self._sock.settimeout(0.05)
+        if self.distinct_source_port:
+            self._tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self._tx.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            self._tx.bind((self.bind, 0))
         self._stop.clear()
         self._thread = threading.Thread(target=self._serve, name=f"fake-segcp-{self.mac}", daemon=True)
         self._thread.start()
@@ -385,6 +395,9 @@ class FakeSegcpDevice:
         if self._sock is not None:
             self._sock.close()
             self._sock = None
+        if self._tx is not None:
+            self._tx.close()
+            self._tx = None
 
     def __enter__(self) -> "FakeSegcpDevice":
         return self.start()
@@ -437,8 +450,9 @@ class FakeSegcpDevice:
         self._log(1, f"#{idx} req {len(data)}B ({verdict.note}) from {addr[0]}:{addr[1]}"
                      f"  → reply {len(reply)}B to {target[0]}:{target[1]}{note}")
         try:
-            assert self._sock is not None
-            self._sock.sendto(reply, target)
+            tx = self._tx if self._tx is not None else self._sock
+            assert tx is not None
+            tx.sendto(reply, target)
         except OSError as e:
             self._log(1, f"#{idx} sendto 실패: {e}")
 
@@ -464,7 +478,12 @@ class FakeSegcpDevice:
 
 def make_device_fleet(count: int, profile: dict[str, str], *,
                       first_mac: str = FAKE_MAC, **kwargs) -> list[FakeSegcpDevice]:
-    """MAC 이 1씩 증가하는 가짜 장치 여러 대. 검색이 N대를 다 잡는지 볼 때 쓴다."""
+    """MAC 이 1씩 증가하는 가짜 장치 여러 대. 검색이 N대를 다 잡는지 볼 때 쓴다.
+
+    두 대 이상이면 응답 출처 포트를 장치마다 나눈다 — 그러지 않으면 설정툴이 한 대로
+    합쳐 본다(FakeSegcpDevice.distinct_source_port 주석 참조). 명시하면 그 값을 따른다.
+    """
+    kwargs.setdefault("distinct_source_port", count > 1)
     base = int(first_mac.replace(":", ""), 16)
     fleet = []
     for i in range(count):
@@ -503,12 +522,12 @@ def _main() -> None:
                             reboot_sec=args.reboot_sec,
                             dns_block_sec=args.dns_block_sec)
 
-    if args.count > 1 and args.port != 0:
-        # 한 포트를 여러 장치가 공유해야 설정툴의 브로드캐스트를 모두가 받는다.
-        # 같은 주소에 여러 소켓을 여는 것은 SO_REUSEADDR 로 가능하지만 유니캐스트
-        # 배달이 한 소켓에만 가므로, 여러 대는 브로드캐스트 응답에서만 의미가 있다.
-        print("[fake-segcp] 주의: --count 는 브로드캐스트 응답(기본)에서만 정상 동작한다",
-              flush=True)
+    if args.count > 1:
+        # 수신은 한 포트를 공유해야 설정툴의 브로드캐스트를 모두가 받는다. 대신 응답은
+        # 장치마다 다른 포트에서 내보낸다 — 같은 출처 주소로 답하면 설정툴 Phase 1 이
+        # 여러 대를 한 대로 합쳐 세기 때문이다. 실장치는 IP 가 달라 이 편의가 필요 없다.
+        print("[fake-segcp] --count > 1: 응답 출처 포트를 장치마다 분리한다 "
+              "(실장치는 설정 포트에서 답한다 — 시험용 편의)", flush=True)
 
     fleet = make_device_fleet(args.count, profile, first_mac=args.mac,
                               bind=args.bind, port=args.port, quirks=quirks,

@@ -191,3 +191,60 @@ def test_search_reply_sizes_are_unchanged_by_these_additions():
     sizes = [len(dev.build_reply(get(OTHER_MAC, [c for c, _ in ch[2:]]))) for ch in chunks]
     assert sizes == [250, 148, 195]
     assert dev.overflow_events == []
+
+
+# ── 7. 여러 대를 띄울 때의 출처 주소 ────────────────────────────────────
+
+def _phase1_macs(port):
+    """설정툴 Phase 1(브로드캐스트 검색)이 세는 장치 목록."""
+    from constants import Opcode
+    from WIZMSGHandler import WIZMSGHandler
+    from WIZUDPSock import WIZUDPSock
+    sock = WIZUDPSock(0, port, "", localport=0)
+    sock.open()
+    try:
+        th = WIZMSGHandler(sock, WIZMakeCMD().presearch("FF:FF:FF:FF:FF:FF", " "),
+                           "udp", Opcode.OP_SEARCHALL, 1.0, presearch=True)
+        th.run()
+        return [m.decode() for m in th.mac_list]
+    finally:
+        sock.close()
+
+
+def test_fleet_sharing_one_source_port_is_merged_into_one_device_by_the_tool():
+    """설정툴 Phase 1 은 응답을 **출처 주소별로** 모아 dict 하나로 만든다
+    (WIZMSGHandler.run 의 per_addr_buf). 여러 대가 같은 IP:포트에서 답하면 한 대로 합쳐지고
+    MC 는 마지막 것이 이긴다. 실장치는 IP 가 서로 달라 이 일이 없다.
+    이 시험은 그 한계를 기록해 두는 것이다 — 고친 것이 아니다."""
+    fleet = make_device_fleet(3, PROFILE_WIZ752_MEASURED, bind="0.0.0.0", port=50078,
+                              reply_broadcast=True, distinct_source_port=False)
+    for d in fleet:
+        d.start()
+    try:
+        macs = _phase1_macs(50078)
+    finally:
+        for d in fleet:
+            d.stop()
+    assert sum(1 for d in fleet if d.replies) == 3, "세 대 모두 응답은 했다"
+    assert len(macs) == 1, f"그런데 툴은 한 대로 본다: {macs}"
+
+
+def test_fleet_with_distinct_source_ports_is_seen_as_separate_devices():
+    """그래서 여러 대를 띄울 때는 응답 출처 포트를 장치마다 다르게 준다.
+    실장치는 설정 포트(50001)에서 답하므로 이건 시험용 편의다."""
+    fleet = make_device_fleet(3, PROFILE_WIZ752_MEASURED, bind="0.0.0.0", port=50079,
+                              reply_broadcast=True)
+    for d in fleet:
+        d.start()
+    try:
+        macs = sorted(_phase1_macs(50079))
+    finally:
+        for d in fleet:
+            d.stop()
+    assert macs == ["00:08:DC:FA:CE:01", "00:08:DC:FA:CE:02", "00:08:DC:FA:CE:03"], macs
+
+
+def test_single_device_answers_from_the_config_port_like_the_real_one():
+    """한 대만 띄울 때는 실장치와 같이 설정 포트에서 답한다."""
+    dev = FakeSegcpDevice(PROFILE_WIZ752_MEASURED, mac=MAC, bind="0.0.0.0", port=50080)
+    assert dev.distinct_source_port is False
