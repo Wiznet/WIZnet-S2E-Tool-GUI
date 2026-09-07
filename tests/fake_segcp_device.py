@@ -171,6 +171,95 @@ def expected_reply_len(profile: dict[str, str], cmds: list[str]) -> int:
     return 15 + sum(4 + len(profile[c]) for c in cmds if c in profile)
 
 
+# ── spec 에서 프로파일 만들기 ───────────────────────────────────────────
+#
+# specs/devices/*.yaml 15종 중 12종이 이 SEGCP 프로토콜을 쓴다. 차이는 커맨드 목록과
+# 값 범위뿐이고 그건 전부 spec 에 있으니, 기종마다 dict 를 손으로 적을 이유가 없다.
+#
+# 다만 spec 은 "무엇을 물을 수 있나" 만 알고 "장치가 무슨 값을 갖고 있나" 는 모른다.
+# 그래서 아래 기본값 표로 그럴듯한 값을 채우고, 만들어 낸 값이 그 커맨드의 regex/values 를
+# 통과하는지 반드시 대조한다. 통과하지 못하면 values 첫 항목으로 물러선다.
+#
+# ⚠ 이렇게 만든 장치는 **우리 spec 을 그대로 되비추는 거울**이다. spec 이 실장치와
+# 어긋나 있으면 그 어긋남까지 같이 재현한다. spec 자체의 옳고 그름은 실기기나 FW 소스로만
+# 가릴 수 있다 (tests/test_fake_segcp_spec_driven.py 의 실측 대조 시험 참조).
+
+_DEFAULTS: dict[str, str] = {
+    "UN": "RS-232/TTL", "EN": "RS-232/TTL",
+    "ST": "OPEN", "QS": "OPEN",
+    "LI": "192.168.7.21", "SM": "255.255.255.0", "GW": "192.168.7.1", "DS": "8.8.8.8",
+    "LP": "5000", "RP": "5000", "QL": "5001", "QP": "5001", "AP": "5002",
+    "RH": "192.168.11.3", "QH": "192.168.11.3",
+    "KI": "7000", "KE": "5000", "RI": "3000",
+    "RS": "7000", "RE": "5000", "RR": "3000",
+    "SS": "2B2B2B", "PD": "00", "ND": "00",
+    "NP": " ", "SP": " ", "PI": " ", "PP": " ", "DI": " ", "DW": " ",
+    "QU": " ", "QK": " ", "PU": " ",
+    "DP": "3030", "SC": "00",
+}
+
+
+def profile_from_spec(device_name: str, *, mac: str = FAKE_MAC,
+                      fw_version: Optional[str] = None,
+                      include: Optional[list[str]] = None,
+                      overrides: Optional[dict[str, str]] = None) -> dict[str, str]:
+    """spec 을 바탕으로 값을 채운 프로파일. 값은 그 커맨드의 spec 을 만족한다.
+
+    조회 목록(search_cmd_list)과 읽을 수 있는 커맨드(cmdset)를 모두 덮는다.
+    include 로 커맨드를 더 줄 수 있다 — 설정툴이 spec 에 없는 커맨드를 묻는 기종이
+    있어서다(12종 중 10종, 2026-09-07 실측). 실장치는 그 커맨드에도 답하므로
+    시험용 장치도 답해야 한다. 어긋남 자체는 spec 쪽 문제라 따로 추적한다.
+    """
+    from device_spec_loader import load_device
+
+    spec = load_device(device_name, fw_version)
+    wanted = list(spec.search_cmd_list)
+    wanted += [c for c, e in spec.cmdset.items() if e.is_readable() and c not in wanted]
+    for c in (include or []):
+        if c not in wanted:
+            wanted.append(c)
+
+    profile: dict[str, str] = {}
+    for cmd in wanted:
+        profile[cmd] = _value_for(cmd, spec.cmdset.get(cmd), spec, mac, fw_version)
+    profile["MC"] = mac
+    if overrides:
+        profile.update(overrides)
+    return profile
+
+
+def tool_asked_commands(device_name: str, fw_version: str,
+                        mac: str = FAKE_MAC) -> list[str]:
+    """설정툴이 그 기종 검색에 실제로 싣는 커맨드 목록 (WIZMakeCMD 기준)."""
+    from WIZMakeCMD import WIZMakeCMD
+    chunks = WIZMakeCMD().search_chunks(mac, " ", device_name, fw_version, "OPEN")
+    return [c for ch in chunks for c, _ in ch[2:]]
+
+
+def _value_for(cmd, entry, spec, mac, fw_version) -> str:
+    """커맨드 하나의 값. 정하는 순서: 고정 의미 → 기본값 표 → values 첫 항목 → "0"."""
+    if cmd == "MC":
+        return mac
+    if cmd == "VR":
+        return fw_version or "1.2.4"
+    if cmd == "MN":
+        return spec.display_name or spec.name
+    if cmd == "DH":
+        return f"{spec.name}-{mac.replace(':', '')[-6:]}"
+
+    candidates = []
+    if cmd in _DEFAULTS:
+        candidates.append(_DEFAULTS[cmd])
+    if entry is not None and entry.values:
+        candidates.extend(entry.values.keys())
+    candidates.extend(("0", "1", " ", ""))
+
+    for value in candidates:
+        if entry is None or entry.is_valid(value):
+            return value
+    return candidates[0] if candidates else "0"
+
+
 def mac_to_bytes(mac: str) -> bytes:
     return bytes.fromhex(mac.replace(":", ""))
 
@@ -205,7 +294,8 @@ class FakeSegcpDevice:
                  quirks: FirmwareQuirks = FW_752_2_1_0DEV,
                  reply_buf_size: Optional[int] = None, mode: Optional[str] = None,
                  drop_first: int = 0, reply_broadcast: bool = False,
-                 distinct_source_port: bool = False, verbose: int = 0):
+                 distinct_source_port: bool = False,
+                 validate_with_spec: Optional[str] = None, verbose: int = 0):
         # reply_buf_size / mode 는 quirks 로 옮기기 전의 이름. 둘 다 받아 준다.
         if reply_buf_size is not None:
             quirks = replace(quirks, reply_buf_size=reply_buf_size)
@@ -233,6 +323,13 @@ class FakeSegcpDevice:
         # 거부할 커맨드: {커맨드: 오류이름}. 오류이름은 SEGCP_ERRORS 중 하나.
         # 기본은 비어 있다 — 아무것도 거부하지 않는다.
         self.reject: dict[str, str] = {}
+        # 장치 이름을 주면 그 spec 의 regex/values 로 SET 값을 검사해 범위 밖이면
+        # ERINVALIDPARAM 을 돌려준다. 툴이 오류를 사용자에게 알리는 경로를 시험할 때 쓴다.
+        # 기본은 None — 검사하지 않는다.
+        self._spec = None
+        if validate_with_spec:
+            from device_spec_loader import load_device
+            self._spec = load_device(validate_with_spec)
 
         self.requests: list[bytes] = []
         self.replies: list[bytes] = []
@@ -290,8 +387,8 @@ class FakeSegcpDevice:
         body = b""
         reboot = False
         for cmd, param in cmds:
-            if cmd in self.reject:
-                err = self.reject[cmd]
+            err = self.reject.get(cmd) or self._spec_rejects(cmd, param)
+            if err:
                 if self.quirks.er_in_tool_mode:
                     body += f"ER{err}:{cmd}".encode() + CRLF
                 if self.quirks.abort_on_error:
@@ -321,6 +418,17 @@ class FakeSegcpDevice:
         if reboot:
             self._schedule_reboot()
         return reply
+
+    def _spec_rejects(self, cmd: str, param: str) -> Optional[str]:
+        """spec 검증이 켜져 있을 때 SET 값이 범위 밖이면 오류 이름을 준다."""
+        if self._spec is None or param == "" or cmd in ("SV", "RT", "EX"):
+            return None
+        entry = self._spec.cmdset.get(cmd)
+        if entry is None:
+            return "NOCOMMAND"
+        if not entry.is_valid(param):
+            return "INVALIDPARAM"
+        return None
 
     def _store(self, cmd: str, param: str) -> None:
         """SET 값을 장치에 반영한다. 도메인은 한 필드를 공유하고 길이 제한이 있다."""

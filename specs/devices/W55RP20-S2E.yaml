@@ -107,6 +107,10 @@ overrides:
 fw_constraints:
   upload_supported: true
   config_port: 50001
+  # SEGCP 요청/응답 버퍼 크기 (common.h CONFIG_BUF_SIZE). W55RP20-S2E 소스 확인 —
+  # W7500 계열 512 에서 2048 로 확장돼 있어 여유가 크다. 설정툴은 응답이 여기
+  # 닿았는지 사후 검출하는 데만 쓴다.
+  config_buf_size: 2048
 
 ui:
   tabs:

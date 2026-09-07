@@ -225,10 +225,18 @@ def test_w7500_family_spec_declares_512B_config_buffer(device):
     assert load_device(device).fw_config.config_buf_size == 512
 
 
-def test_other_device_spec_leaves_config_buffer_unknown():
-    """모르는 값은 0(미지정) — 그 장치에는 크기 경고를 내지 않는다."""
+@pytest.mark.parametrize("device", ["WIZ5XXSR-RP", "W55RP20-S2E"])
+def test_rp2040_family_spec_declares_2048B_config_buffer(device):
+    """RP2040 계열은 512 에서 2048 로 확장돼 있다 (WIZ5XXSR-RP-C / W55RP20-S2E 소스 확인)."""
     from device_spec_loader import load_device
-    assert load_device("WIZ5XXSR-RP").fw_config.config_buf_size == 0
+    assert load_device(device).fw_config.config_buf_size == 2048
+
+
+@pytest.mark.parametrize("device", ["WIZ107SR", "WIZ510SSL"])
+def test_unverified_device_spec_leaves_config_buffer_unknown(device):
+    """확인하지 못한 기종은 0(미지정)으로 둔다 — 틀린 값으로 경고를 죽이는 것보다 낫다."""
+    from device_spec_loader import load_device
+    assert load_device(device).fw_config.config_buf_size == 0
 
 
 # ── 8. GUI 배선: search_each_dev 가 청크 조회로 전체 프로파일을 채운다 ──────
