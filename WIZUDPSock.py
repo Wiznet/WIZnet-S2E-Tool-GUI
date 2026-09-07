@@ -37,5 +37,14 @@ class WIZUDPSock:
         return data, addr
 
     def close(self):
-        assert self.sock is not None, "close() called before open()"
-        self.sock.close()
+        """이미 닫혔거나 열린 적 없으면 아무것도 하지 않는다.
+
+        정리 경로가 여러 곳(설정 완료·FW 업로드·리셋·재설정)에 있어 두 번 닫히는 일이
+        생긴다. 그때 예외로 번지면 뒤따르는 정리가 통째로 건너뛰어져 소켓이 남는다.
+        """
+        if self.sock is None:
+            return
+        try:
+            self.sock.close()
+        finally:
+            self.sock = None

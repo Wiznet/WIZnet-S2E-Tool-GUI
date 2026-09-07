@@ -497,6 +497,12 @@ class WIZWindow(QMainWindow, main_window):
         self.searched_dev = []
         self.searched_devnum = None
         self.conf_sock = None
+        # conf_sock 이 어떤 조건으로 열렸는지. 같은 조건이면 다시 만들지 않는다 —
+        # 만들 때마다 이전 것을 닫지 않으면 같은 주소에 소켓이 겹쳐 쌓이고,
+        # Windows 는 겹친 소켓 중 가장 먼저 바인드된 것에만 유니캐스트를 준다.
+        self._conf_sock_key = None
+        # GPIO 주기 갱신 전용 소켓. conf_sock 을 공유하면 재설정 때 함께 닫혀 갱신이 죽는다.
+        self._datarefresh_sock = None
         self._finalize_timer = None
         self.mode_list = []
         self._timing_t0 = None
@@ -2280,23 +2286,63 @@ class WIZWindow(QMainWindow, main_window):
         mn = str(prof.get('MN', '')).upper()
         return mn.startswith(self.BINARY_MN_PREFIXES)
 
+    def _close_conf_sock(self):
+        """설정 소켓을 닫는다. 여러 번 불려도 안전하다."""
+        if self.conf_sock is not None:
+            try:
+                self.conf_sock.close()
+            except Exception as e:
+                self.logger.debug(f"_close_conf_sock: {e}")
+        self.conf_sock = None
+        self._conf_sock_key = None
+
+    def _close_datarefresh_sock(self):
+        """GPIO 갱신 전용 소켓을 닫는다. 여러 번 불려도 안전하다."""
+        if self._datarefresh_sock is not None:
+            try:
+                self._datarefresh_sock.close()
+            except Exception as e:
+                self.logger.debug(f"_close_datarefresh_sock: {e}")
+        self._datarefresh_sock = None
+
     def socket_config(self):
         try:
             # Broadcast
             if self.broadcast.isChecked():
                 bind_ip = self.selected_eth or ""
+                # 같은 조건이면 쓰던 것을 그대로 쓴다.
+                #
+                # 예전에는 부를 때마다 새로 만들고 이전 것을 닫지 않았다. 한 세션에
+                # 검색 다섯 번이면 소켓 다섯 개가 같은 주소(SO_REUSEADDR, 기본 52000)에
+                # 겹쳐 바인드된 채로 남는다. Windows 는 그중 **가장 먼저 바인드된**
+                # 소켓에만 유니캐스트를 배달하므로, 나중에 만든 소켓으로 요청을 보내면
+                # 응답을 못 받는다. 실기기에서는 W7500 펌웨어가 응답을 브로드캐스트해
+                # (segcp.c:1443) 가려져 있었고, 가짜 장치가 유니캐스트로 답하며 드러났다.
+                # (2026-09-03 실측, TASKS BUG-CONF-SOCK-PILEUP)
+                if (self.conf_sock is not None
+                        and self._conf_sock_key == ("udp", bind_ip)
+                        and getattr(self.conf_sock, "sock", None) is not None):
+                    self.logger.debug(f"socket_config: 기존 소켓 재사용 (bind_ip={bind_ip!r})")
+                    return
+                self._close_conf_sock()
                 self.conf_sock = WIZUDPSock(5000, 50001, bind_ip)
                 self.logger.debug(f"socket_config: bind_ip={bind_ip!r}")
                 try:
                     self.conf_sock.open()
+                    self._conf_sock_key = ("udp", bind_ip)
                 except OSError as e:
                     # selected_eth IP가 소멸(장치 재부팅/IP 변경 등)된 경우 INADDR_ANY로 재시도
                     self.logger.warning(f"socket_config: bind({bind_ip!r}) 실패({e}) → INADDR_ANY로 재시도")
+                    self._close_conf_sock()
                     self.conf_sock = WIZUDPSock(5000, 50001, "")
                     self.conf_sock.open()
+                    self._conf_sock_key = ("udp", "")
 
             # IP Address unicast
             elif self.unicast_ip.isChecked():
+                # 모드가 바뀌면 이전(브로드캐스트) 소켓을 남겨 두지 않는다.
+                if self._conf_sock_key is not None and self._conf_sock_key[0] == "udp":
+                    self._close_conf_sock()
                 ip_addr = self.search_ipaddr.text()
                 port = int(self.search_port.text())
                 self.logger.debug(f"unicast: ip={ip_addr!r}, port={port}")
@@ -2403,12 +2449,22 @@ class WIZWindow(QMainWindow, main_window):
                 # print('refresh_gpio', cmd_list)
 
                 if self.unicast_ip.isChecked():
+                    # TCP 는 연결된 스트림이라 설정 소켓을 그대로 쓴다.
                     self.datarefresh = DataRefresh(
                         self.conf_sock, cmd_list, "tcp", self.intv_time
                     )
                 else:
+                    # UDP 는 전용 소켓을 판다. 설정 소켓을 공유하면 재검색이
+                    # socket_config() 로 그 소켓을 닫을 때 돌고 있던 갱신이 죽고,
+                    # 같은 주소를 함께 읽어 어느 쪽이 어느 응답을 가져갈지도 정해지지 않는다.
+                    # 개별 장치 조회(search_each_dev)가 이미 같은 방식이다.
+                    self._close_datarefresh_sock()
+                    self._datarefresh_sock = WIZUDPSock(
+                        0, 50001, self.selected_eth or "", localport=0
+                    )
+                    self._datarefresh_sock.open()
                     self.datarefresh = DataRefresh(
-                        self.conf_sock, cmd_list, "udp", self.intv_time
+                        self._datarefresh_sock, cmd_list, "udp", self.intv_time
                     )
                 self.threads.append(self.datarefresh)
                 self.datarefresh.resp_check.connect(self.gpio_update)
