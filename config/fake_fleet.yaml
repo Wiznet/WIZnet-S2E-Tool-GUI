@@ -1,0 +1,57 @@
+# 가짜 WIZnet 장치 묶음 — 실장비 없이 설정툴을 돌릴 때 쓰는 구성.
+#
+#   uv run python -m tests.fake_fleet                       # 이 파일을 읽는다
+#   uv run python -m tests.fake_fleet --config 내구성.yaml   # 다른 구성
+#   uv run python -m tests.fake_fleet --only segcp          # 한 계열만
+#
+# 계열마다 포트가 다르다. 따로 띄우면 창을 셋 열어야 하고 하나를 빠뜨리면
+# "검색해도 안 잡힌다" 가 된다. 그래서 한 파일로 묶는다.
+#
+#   segcp  UDP 50001        WIZ752SR-12x 등 텍스트 프로토콜 (12기종)
+#   w550   UDP 6550         WIZ550SR / WIZ550S2E / WIZ550WEB
+#   w1x0   UDP 1460 + TCP 1461  WIZ1x0SR
+#
+# ⚠ 설정툴 쪽 주의
+#   - WIZ550 검색은 항상 돈다
+#   - WIZ1x0 검색은 "WIZ1x0SR Search" 체크박스를 켜야 돈다. 안 켜면 묻지도 않는다
+#   - 직접-IP 검색(TCP 1461)은 IP Address 모드 + 그 체크박스 + IP 입력이 있어야 돈다
+
+defaults:
+  bind: 0.0.0.0        # 설정툴이 브로드캐스트로 물으므로 모든 인터페이스에서 듣는다
+  verbose: 1           # 1 = 내 앞으로 온 요청만, 2 = 남의 요청까지 전부
+
+devices:
+  # ── WIZ752SR-12x (2포트) ─────────────────────────────────────────────
+  - family: segcp
+    count: 1           # 여러 대로 늘리면 응답 출처 포트를 자동으로 나눈다
+    port: 50001
+    mac: "00:08:DC:FA:CE:01"
+    # device 를 지정하면 그 기종 spec 으로 프로파일을 만든다.
+    # 생략하면 2026-09-01 에 실측한 WIZ752SR-12x 응답을 그대로 쓴다.
+    # device: WIZ5XXSR-RP
+    # fw_version: "1.1.1"
+    # remote_host: test-server-01.local   # RH/QH 에 넣을 값
+    quirks:
+      # 전부 기본은 끔. 필요한 것만 켠다 — 수동 시험에 없던 오류가 생기지 않게.
+      reboot_sec: 0.0        # RT 이후 무응답 시간 (실장치처럼 굴게 하려면 3~5)
+      dns_block_sec: 0.0     # 부팅 DNS 해석 지연. 채널0 이 TCP Server 가 아니고 도메인일 때만
+      # truncate_reply: false   # 응답 상한이 들어간 펌웨어 흉내
+      # shared_domain: true     # RH/QH 가 한 필드 (실장치 동작)
+
+  # ── WIZ550 계열 ──────────────────────────────────────────────────────
+  - family: w550
+    type: WIZ550SR     # WIZ550SR / WIZ550S2E / WIZ550WEB
+    count: 1
+    port: 6550
+    mac: "00:08:DC:55:00:01"
+    fw: "1.2.0"        # 첫 자리가 100 이상이면 부트로더로 잡힌다
+    password: ""       # 비우면 설정 비밀번호를 검사하지 않는다
+
+  # ── WIZ1x0SR ─────────────────────────────────────────────────────────
+  - family: w1x0
+    count: 1
+    port: 1460
+    direct_port: 1461  # 직접-IP 검색(TCP)
+    mac: "00:08:DC:1A:00:01"
+    ip: 192.168.7.60   # 장치가 보고할 IP
+    # setc_carries_board: true   # SETC 에 설정 본체를 실을지. 실장비 동작은 미확인
