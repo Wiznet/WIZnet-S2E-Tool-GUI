@@ -72,6 +72,11 @@ command_groups:
   - base
   - two_port
   - gpio  # TODO: 실장치 테스트 후 확인 — WIZ750SR과 동일 4핀(A~D)인지, 2핀(A,B)만 지원인지 미확정
+  # 2026-09-08: FW segcp.h 의 teSEGCPCMDNUM 에 DDNS(DD DX DP DI DW DH)·PPPoE(PI PP) 가
+  # 전부 있고, 2026-09-01 실측 프로파일에도 값이 들어 있다. 설정툴도 이 커맨드를 묻는다.
+  # DDNS/PPPoE 탭 자체는 WIZ107SR/108SR 에서만 열린다(main_gui.py 의 탭 제거 분기).
+  - ddns
+  - pppoe
 
 overrides:
   # WIZ752SR BR 최대 230400 (0-13)

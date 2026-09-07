@@ -1704,7 +1704,14 @@ class WIZWindow(QMainWindow, main_window):
         # 6. 콜백
         if has_9bit:
             self.event_ch0_databit_changed(self.ch0_databit.currentIndex())
-        if 'DD' in spec.cmdset:
+        # DDNS 필드 활성화는 DDNS/PPPoE 탭을 여는 기종에서만 의미가 있다.
+        # 예전 기준은 `'DD' in spec.cmdset` 이었는데, 2026-09-08 spec 을 펌웨어
+        # enum 에 맞추면서 WIZ752SR/WIZ750SR 도 DD 를 가지게 됐다 — 그 기종은
+        # 탭 자체가 제거되므로(아래 ddns_pppoe_tab 분기) 호출해도 보이지 않았고,
+        # 기준으로도 틀렸다. 이제 장치 YAML 이 직접 선언한다.
+        # (탭 제거 쪽은 아직 기종명 하드코딩이다 — TASKS BUG-SPEC-CMD-DRIFT 참고)
+        wo_ddns = spec.ui_config.widget_overrides.get('ddns_pppoe_tab')
+        if wo_ddns is not None and wo_ddns.visible:
             self.event_ddns_enable()
 
     def _config_serial_for_device(self):

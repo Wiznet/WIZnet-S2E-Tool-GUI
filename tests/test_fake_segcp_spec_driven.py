@@ -125,21 +125,12 @@ def test_spec_validation_accepts_a_value_in_range():
 
 # ── spec 드리프트 — 장비 없이 잡히는 것 ─────────────────────────────────
 
-# 설정툴이 spec 에 없는 커맨드를 묻는 기종 (2026-09-07 실측). WIZMakeCMD 의 하드코딩
-# 목록과 specs/devices/*.yaml 이 따로 논다. 고치면 xpass 로 알려 준다.
-_SPEC_DRIFT = {
-    "WIZ752SR-12x": 9, "WIZ750SR": 7, "WIZ750SR-1xx": 7, "WIZ510SSL": 3,
-    "WIZ5XXSR-RP": 5, "WIZ5XXSR-RP_E-SAVE": 5, "W55RP20-S2E": 3,
-    "W55RP20-S2E-2CH": 3, "W232N": 3, "IP20": 3,
-}
+# 2026-09-08: 열 기종 전부 해소. FW `segcp.h` 의 teSEGCPCMDNUM enum 과 대조해
+# specs/devices/*.yaml 을 채웠다(그룹 include + partial_command_groups).
+# 이 시험이 다시 깨지면 WIZMakeCMD 의 목록과 spec 이 또 갈라진 것이다.
 
 
-@pytest.mark.parametrize("device", [
-    pytest.param(d, marks=pytest.mark.xfail(
-        strict=True, reason=f"spec 이 모르는 커맨드 {_SPEC_DRIFT[d]}개를 묻는다 — TASKS search_cmd_order 드리프트"))
-    if d in _SPEC_DRIFT else d
-    for d in SEGCP_DEVICES
-])
+@pytest.mark.parametrize("device", SEGCP_DEVICES)
 def test_tool_only_asks_commands_the_spec_knows_about(device):
     """설정툴이 묻는 커맨드는 그 기종 spec 에 정의돼 있어야 한다.
 

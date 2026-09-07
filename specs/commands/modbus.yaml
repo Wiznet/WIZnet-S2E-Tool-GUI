@@ -10,7 +10,9 @@ meta:
   description: "Modbus 프로토콜 모드 선택 커맨드 (WIZ5XXSR-RP / W55RP20-S2E 계열)"
   requires:
     - base
-  conflicts: []
+  # 같은 PO 코드를 telnet 그룹이 다른 뜻으로 정의한다 — 함께 넣으면 안 된다.
+  conflicts:
+    - telnet
 
 #
 # 주의: WIZ5XX-RP계열의 PO/MB는 Modbus 관련이지만,
@@ -31,3 +33,22 @@ MB:
     widget: combobox
     label: "Modbus Mode (CH0)"
     order: 1
+
+# RP2040 계열에서 PO 는 Telnet 이 아니라 시리얼 프로토콜(Modbus) 선택자다.
+# 근거: segcp.c:795 `if(param_len > 2 || tmp_int > modbus_ascii) INVALIDPARAM`,
+#       uartHandler.h:94 `enum protocol { protocol_none=0, modbus_rtu=1, modbus_ascii=2 }`.
+# telnet.yaml 의 PO(^[0-1]$, TCP Raw/Telnet)를 이 기종에 쓰면 2 가 거부된다.
+PO:
+  description: "Serial protocol for channel 0 (Modbus)"
+  regex: "^[0-2]$"
+  values:
+    "0": "Serial to Ethernet"
+    "1": "Modbus RTU to TCP converter"
+    "2": "Modbus ASCII to TCP converter"
+  access: RW
+  ui:
+    tab: options
+    group: modbus
+    widget: combobox
+    label: "Modbus Mode (CH0)"
+    order: 2

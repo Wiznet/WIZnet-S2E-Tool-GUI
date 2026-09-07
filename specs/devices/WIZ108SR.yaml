@@ -99,6 +99,12 @@ fw_constraints:
   config_port: 50001
 
 ui:
+  widget_overrides:
+    # DDNS/PPPoE 탭을 여는 기종. 예전엔 `'DD' in spec.cmdset` 으로 판단했으나
+    # 2026-09-08 부터 WIZ752SR/WIZ750SR 도 DD 를 가진다(펌웨어가 실제로 가졌다).
+    # 커맨드 보유 여부와 화면 제공 여부는 다른 문제라 여기서 명시한다.
+    ddns_pppoe_tab:
+      visible: true
   tabs:
     - id: network
       label: "Network"

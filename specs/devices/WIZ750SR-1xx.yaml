@@ -54,6 +54,11 @@ command_groups:
   - base
   - retransmit
   - gpio
+  # 2026-09-08: FW segcp.h 의 teSEGCPCMDNUM 에 DDNS(DD DX DP DI DW DH)·PPPoE(PI PP) 가
+  # 전부 있다. 설정툴도 이 커맨드를 묻는다(WIZMakeCMD.cmd_ch1). DDNS/PPPoE 탭은
+  # WIZ107SR/108SR 에서만 열리므로 화면 변화는 없다.
+  - ddns
+  - pppoe
 
 overrides:
   # BR: WIZ750SR-1xx 최대 230400 (index 0-13)

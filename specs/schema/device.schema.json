@@ -39,11 +39,24 @@
       "type": "array",
       "items": {
         "type": "string",
-        "enum": ["base", "ddns", "gpio", "modbus", "pppoe", "retransmit",
+        "enum": ["base", "ddns", "flash_bank", "gpio", "modbus", "pppoe", "retransmit",
                  "security", "telnet", "two_port", "w55rp20_ext", "w55rp20_two_port"]
       },
       "minItems": 1,
       "description": "Command group names. Must match specs/commands/*.yaml filenames."
+    },
+    "partial_command_groups": {
+      "type": "object",
+      "propertyNames": {
+        "enum": ["base", "ddns", "flash_bank", "gpio", "modbus", "pppoe", "retransmit",
+                 "security", "telnet", "two_port", "w55rp20_ext", "w55rp20_two_port"]
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {"type": "string", "pattern": "^[A-Z0-9]{2}$"},
+        "minItems": 1
+      },
+      "description": "Take only these commands from a group. For devices whose firmware has just part of a group; state the reason in a comment."
     },
     "overrides": {
       "type": "object",

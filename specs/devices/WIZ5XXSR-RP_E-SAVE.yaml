@@ -64,6 +64,20 @@ search_cmd_order:
 command_groups:
   - base
   - security
+  # 2026-09-08: FW segcp.h(1-UART enum, DEVICE_UART_CNT==1)에 있는 것만 넣는다.
+  # gpio(CA~CD/GA~GD/SC/S0/S1)·modbus(MB PO)·retransmit(TR EC) 는 enum 에 전부 있다.
+  # PO 는 telnet 이 아니라 modbus 쪽 정의를 쓴다 — 이 펌웨어에서 PO 는
+  # 시리얼 프로토콜(0~2) 선택자다(segcp.c:795, uartHandler.h:94).
+  - retransmit
+  - modbus
+  - gpio
+
+# 그룹 전체가 아니라 이것만 — RP2040 펌웨어의 DDNS 는 도메인(DH) 하나뿐이고
+# DD DX DP DI DW 는 segcp.h enum 에 없다. 통째로 넣으면 spec 이 펌웨어에 없는
+# 커맨드를 가졌다고 주장하게 된다. (2026-09-08 FW 대조)
+partial_command_groups:
+  ddns: [DH]
+
 
 overrides:
   # BR: WIZ5XXSR-RP_E-SAVE 최대 460800 (index 0-14)
