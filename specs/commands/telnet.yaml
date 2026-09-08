@@ -10,7 +10,9 @@ meta:
   description: "TCP Raw vs Telnet 프로토콜 선택 커맨드 (WIZ107SR/108SR 전용)"
   requires:
     - base
-  conflicts: []
+  # 같은 PO 코드를 modbus 그룹이 다른 뜻으로 정의한다 — 함께 넣으면 안 된다.
+  conflicts:
+    - modbus
 
 #
 # 주의: WIZ107/108 원본 소스의 CalcSetMsg()에 PO 커맨드가 명시적으로 없음.

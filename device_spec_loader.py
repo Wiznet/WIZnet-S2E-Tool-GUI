@@ -291,6 +291,30 @@ def _load_command_group(
     return cmdset, meta
 
 
+def _select_partial_commands(
+    group_cmdset: dict,
+    wanted: list,
+    group_name: str,
+    device_name: str,
+) -> dict:
+    """그룹에서 지정한 커맨드만 골라 낸다.
+
+    펌웨어가 그룹의 일부만 가진 기종이 있다. 예를 들어 WIZ5XXSR-RP 펌웨어의
+    1-UART enum(`segcp.h`)에는 DDNS 커맨드 중 `DH` 하나뿐이다. 그룹을 통째로
+    넣으면 spec 이 펌웨어에 없는 커맨드를 가졌다고 주장하게 된다.
+
+    없는 커맨드를 적으면 조용히 넘기지 않는다 — 오타가 그대로 굳으면
+    "왜 이 커맨드만 빠졌지" 를 다음 사람이 다시 추적하게 된다.
+    """
+    unknown = [c for c in wanted if c not in group_cmdset]
+    if unknown:
+        raise ValueError(
+            f"{device_name}: partial_command_groups.{group_name} 에 "
+            f"그룹에 없는 커맨드 {unknown} — 오타이거나 그룹 파일에 정의가 없다"
+        )
+    return {c: group_cmdset[c] for c in wanted}
+
+
 def _apply_overrides(
     cmdset: dict[str, CmdEntry],
     overrides: dict,
@@ -409,8 +433,21 @@ def _load_device_impl(device_name: str, fw_version: str | None) -> DeviceSpec:
         if meta is not None:
             module_meta[group] = meta
 
-    # 1b. requires/conflicts 호환성 검증
-    _validate_module_compatibility(list(dev.get("command_groups", [])), module_meta)
+    # 1a. 부분 include — 그룹에서 이 커맨드만 가져온다.
+    #     펌웨어가 그룹의 일부만 가진 기종을 위해 있다. 근거는 각 장치 YAML 의 주석에.
+    partial_groups = list(dev.get("partial_command_groups", {}) or {})
+    for group, wanted in (dev.get("partial_command_groups", {}) or {}).items():
+        group_cmdset, meta = _load_command_group(group)
+        cmdset.update(
+            _select_partial_commands(group_cmdset, list(wanted), group, device_name)
+        )
+        if meta is not None:
+            module_meta[group] = meta
+
+    # 1b. requires/conflicts 호환성 검증 (부분 include 도 그룹으로 친다)
+    _validate_module_compatibility(
+        list(dev.get("command_groups", [])) + partial_groups, module_meta
+    )
 
     # 2. device-level overrides (min_version 필터 포함)
     if "overrides" in dev:

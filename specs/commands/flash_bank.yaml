@@ -1,0 +1,25 @@
+# flash_bank.yaml
+# 현재 부팅한 플래시 뱅크 조회. WIZ510SSL 전용.
+# 소스 기준: wizcmdset.py 의 legacy 정의 ("Current Flash Bank", RO).
+# 펌웨어 소스가 없어 값 목록은 두지 않는다 — 아는 것만 적는다.
+
+meta:
+  id: flash_bank
+  name: "Flash Bank"
+  category: system
+  description: "부팅 뱅크 조회 (WIZ510SSL)"
+  requires:
+    - base
+  conflicts: []
+
+BA:
+  description: "Current Flash Bank"
+  regex: "^[0-9]+$"
+  values: {}
+  access: RO
+  ui:
+    tab: options
+    group: flash_bank
+    widget: label
+    label: "Current Flash Bank"
+    order: 1
