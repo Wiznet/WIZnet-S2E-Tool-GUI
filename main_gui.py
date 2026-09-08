@@ -1693,6 +1693,10 @@ class WIZWindow(QMainWindow, main_window):
         wo = spec.ui_config.widget_overrides.get('tcp_timeout')
         visible = wo.visible if (wo and wo.visible is not None) else tr_in_spec
         enabled = wo.enabled if (wo and wo.enabled is not None) else tr_in_spec
+        # 담는 그룹박스까지 함께 숨긴다. 안쪽 둘만 숨기면 "TCP timeout" 제목이 붙은
+        # 빈 상자가 남는다 — WIZ752SR-12x(FW 에 TR 없음)에서 계속 보이던 상태다.
+        # 이 상자에는 아래 둘 말고 다른 위젯이 없다(gui/wizconfig_gui.ui, 시험으로 고정).
+        self.tcp_timeoutbox.setVisible(visible)
         self.tcp_timeout.setVisible(visible)
         self.tcp_timeout_label.setVisible(visible)
         self.tcp_timeout.setEnabled(enabled)
