@@ -116,13 +116,23 @@ class DeviceSpec:
 # ---------------------------------------------------------------------------
 
 def _parse_version(ver_str: str | None):
-    """packaging.version.Version 반환. 파싱 실패 시 None."""
+    """packaging.version.Version 반환. 파싱 실패 시 None.
+
+    비표준 접미사('1.3.3XXX' 등)는 숫자 부분만 추출해 파싱 —
+    펌웨어가 임의 접미사를 붙여도 min_version 필터가 동작하도록.
+    """
     if not ver_str:
         return None
+    from packaging.version import Version
     try:
-        from packaging.version import Version
         return Version(str(ver_str))
     except Exception:
+        m = re.match(r"^(\d+(?:\.\d+)*)", str(ver_str).strip())
+        if m:
+            try:
+                return Version(m.group(1))
+            except Exception:
+                pass
         return None
 
 

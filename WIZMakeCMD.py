@@ -224,16 +224,40 @@ def version_compare_old(version1: str, version2: str):
     # if return value < 0: version2 upper than version1
 
 
+def _coerce_version(ver_str: str):
+    """버전 문자열 → Version. 비표준 접미사('1.3.3XXX' 등)는 숫자 부분만 추출해 파싱.
+
+    펌웨어가 임의 접미사를 붙여도 툴이 죽지 않도록 방어. 파싱 불가 시 None.
+    """
+    try:
+        return Version(ver_str)
+    except Exception:
+        m = re.match(r"^(\d+(?:\.\d+)*)", str(ver_str).strip())
+        if m:
+            try:
+                return Version(m.group(1))
+            except Exception:
+                pass
+        logger.warning(f"version parse failed: {ver_str!r}")
+        return None
+
+
 # 이슈 수정 중 함수 버그 발견해서 수정함 #36
 def version_compare(version1: str, version2: str):
     """버전을 비교해서 앞이 크면 1 뒤가 크면 -1 같으면 0을 반환
     Args:
         version1 (str): 첫번째 버전
         version2 (str): 두번째 버전
+    비표준 버전('1.3.3XXX' 등)은 숫자 부분만으로 비교. 파싱 불가 시 0.
     """
     if not version1 or not version2:
         return 0
-    return 0 if version1 == version2 else -1 if Version(version1) < Version(version2) else 1
+    if version1 == version2:
+        return 0
+    v1, v2 = _coerce_version(version1), _coerce_version(version2)
+    if v1 is None or v2 is None:
+        return 0
+    return 0 if v1 == v2 else -1 if v1 < v2 else 1
 
 
 class WIZMakeCMD:
