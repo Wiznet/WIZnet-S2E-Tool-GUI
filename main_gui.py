@@ -88,8 +88,13 @@ from csv_mru_manager import CSVMRUManager
 from terminal.terminal_panel import TerminalPanel
 
 
-SECURITY_TWO_PORT_DEV = ("W55RP20-S2E-2CH",)
-W55RP20_FAMILY = ("W55RP20-S2E", "W55RP20-S2E-2CH")
+# 멀티채널 보안 장치 (CH1 이상 보유). 상위 채널 장치는 하위 채널 처리를 그대로 상속한다.
+SECURITY_TWO_PORT_DEV = ("W55RP20-S2E-2CH", "W55RP20-S2E-3CH", "W55RP20-S2E-4CH")
+# CH2 탭(3번째 채널)을 보유한 장치
+SECURITY_THREE_PORT_DEV = ("W55RP20-S2E-3CH", "W55RP20-S2E-4CH")
+# CH3 탭(4번째 채널)을 보유한 장치
+SECURITY_FOUR_PORT_DEV = ("W55RP20-S2E-4CH",)
+W55RP20_FAMILY = ("W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-3CH", "W55RP20-S2E-4CH")
 # User I/O 탭(GPIO) 지원 장치 — ONE_PORT_DEV 중 WIZ107SR/108SR(GPIO 미지원)만 제외하고 TWO_PORT_DEV(752 계열) 합침
 # TODO(꼼수): 신규 장치 추가 시 이 목록도 수동 갱신 필요 — 근본 해법은 specs/devices/*.yaml의
 # command_groups(gpio) 기반 판단으로 전환하는 것. object_config_for_device()가 아직 spec 미사용이라
@@ -459,6 +464,8 @@ class WIZWindow(QMainWindow, main_window):
             self.ch0_flow.itemText(i) for i in range(self.ch0_flow.count())
         ]
 
+        # 타이틀 "(BETA - 4CH)" 표기는 이 타이틀바가 전 장치 공용이라 보류 —
+        # version 정책·BETA 표기는 사용자 결정 대기 (계획서 참조)
         self.setWindowTitle(f"WIZnet S2E Configuration Tool {VERSION}")
 
         self.logger = logger
@@ -670,6 +677,8 @@ class WIZWindow(QMainWindow, main_window):
         self._build_wiz550_dns_widgets()
         self.ch0_keepalive_enable.stateChanged.connect(self.event_keepalive)
         self.ch1_keepalive_enable.stateChanged.connect(self.event_keepalive)
+        self.ch2_keepalive_enable.stateChanged.connect(self.event_keepalive)
+        self.ch3_keepalive_enable.stateChanged.connect(self.event_keepalive)
         self.ip_dhcp.clicked.connect(self.event_ip_alloc)
         self.ip_static.clicked.connect(self.event_ip_alloc)
         self.ip_pppoe.clicked.connect(self.event_ip_alloc)
@@ -698,6 +707,14 @@ class WIZWindow(QMainWindow, main_window):
         self.ch1_tcpserver.clicked.connect(self.event_opmode)
         self.ch1_tcpmixed.clicked.connect(self.event_opmode)
         self.ch1_udp.clicked.connect(self.event_opmode)
+        self.ch2_tcpclient.clicked.connect(self.event_opmode)
+        self.ch2_tcpserver.clicked.connect(self.event_opmode)
+        self.ch2_tcpmixed.clicked.connect(self.event_opmode)
+        self.ch2_udp.clicked.connect(self.event_opmode)
+        self.ch3_tcpclient.clicked.connect(self.event_opmode)
+        self.ch3_tcpserver.clicked.connect(self.event_opmode)
+        self.ch3_tcpmixed.clicked.connect(self.event_opmode)
+        self.ch3_udp.clicked.connect(self.event_opmode)
 
         # Event: Search method
         self.broadcast.clicked.connect(self._on_broadcast_selected)
@@ -899,6 +916,8 @@ class WIZWindow(QMainWindow, main_window):
         self.mqtt_tab_text = self.generalTab.tabText(4)
         self.certificate_tab_text = self.generalTab.tabText(5)
         self.ch1_tab_text = self.channel_tab.tabText(1)
+        self.ch2_tab_text = self.channel_tab.tabText(2)
+        self.ch3_tab_text = self.channel_tab.tabText(3)
         inital_tab_count = self.generalTab.count()
         for _i in range(inital_tab_count):
             self.logger.debug(f"({_i}:{self.generalTab.tabText(_i)})")
@@ -926,7 +945,9 @@ class WIZWindow(QMainWindow, main_window):
         self.generalTab.removeTab(4)
         self.generalTab.removeTab(3)
         self.generalTab.removeTab(2)
-        # default: one port device
+        # default: one port device — 높은 인덱스부터 제거
+        self.channel_tab.removeTab(3)
+        self.channel_tab.removeTab(2)
         self.channel_tab.removeTab(1)
 
         # for WIZ510SSL (not default)
@@ -943,16 +964,26 @@ class WIZWindow(QMainWindow, main_window):
         # group_packing_13은 기본적으로 숨김 (W55RP20-S2E, W232N, IP20일 때만 표시)
         self.group_packing_13.hide()
 
-        # Channel 1 Modbus 옵션 그룹은 기본적으로 숨김
+        # Channel 1/2/3 Modbus 옵션 그룹은 기본적으로 숨김
         self.ch1_group_modbus_option.hide()
+        self.ch2_group_modbus_option.hide()
+        self.ch3_group_modbus_option.hide()
 
-        # Channel 1(탭) 연결/패킹 그룹 기본 숨김
+        # Channel 1/2/3(탭) 연결/패킹 그룹 기본 숨김
         self.group_packing_14.hide()
         self.group_packing_15.hide()
+        self.group_packing_14_ch2.hide()
+        self.group_packing_15_ch2.hide()
+        self.group_packing_14_ch3.hide()
+        self.group_packing_15_ch3.hide()
 
-        # Channel #1 Timeout group is only used for dedicated two-port security models
+        # Channel #1/#2/#3 Timeout group is only used for multi-channel security models
         self.groupbox_ch1_timeout.hide()
         self.groupbox_ch1_timeout.setEnabled(False)
+        self.groupbox_ch2_timeout.hide()
+        self.groupbox_ch2_timeout.setEnabled(False)
+        self.groupbox_ch3_timeout.hide()
+        self.groupbox_ch3_timeout.setEnabled(False)
 
         self.ch0_serial_connection_condition_connect.setMaxLength(30)
         self.ch0_serial_connection_condition_disconnect.setMaxLength(30)
@@ -960,6 +991,12 @@ class WIZWindow(QMainWindow, main_window):
         self.ch1_ethernet_connection_condition.setMaxLength(30)
         self.ch1_serial_connection_condition_connect.setMaxLength(30)
         self.ch1_serial_connection_condition_disconnect.setMaxLength(30)
+        self.ch2_ethernet_connection_condition.setMaxLength(30)
+        self.ch2_serial_connection_condition_connect.setMaxLength(30)
+        self.ch2_serial_connection_condition_disconnect.setMaxLength(30)
+        self.ch3_ethernet_connection_condition.setMaxLength(30)
+        self.ch3_serial_connection_condition_connect.setMaxLength(30)
+        self.ch3_serial_connection_condition_disconnect.setMaxLength(30)
 
         # DeviceSearchConfig 초기화 (앱 시작 시)
         if not hasattr(self, 'device_search_config'):
@@ -1528,6 +1565,8 @@ class WIZWindow(QMainWindow, main_window):
             self.group_packing_13.hide()
 
         is_security_two_port = self.curr_dev in SECURITY_TWO_PORT_DEV
+        is_security_three_port = self.curr_dev in SECURITY_THREE_PORT_DEV
+        is_security_four_port = self.curr_dev in SECURITY_FOUR_PORT_DEV
         is_legacy_two_port = (
             (self.curr_dev in TWO_PORT_DEV or "WIZ752" in self.curr_dev)
             and not is_security_two_port
@@ -1546,6 +1585,20 @@ class WIZWindow(QMainWindow, main_window):
             self.groupbox_ch1_timeout.hide()
             self.groupbox_ch1_timeout.setEnabled(False)
 
+        if is_security_three_port:
+            self.groupbox_ch2_timeout.show()
+            self.groupbox_ch2_timeout.setEnabled(True)
+        else:
+            self.groupbox_ch2_timeout.hide()
+            self.groupbox_ch2_timeout.setEnabled(False)
+
+        if is_security_four_port:
+            self.groupbox_ch3_timeout.show()
+            self.groupbox_ch3_timeout.setEnabled(True)
+        else:
+            self.groupbox_ch3_timeout.hide()
+            self.groupbox_ch3_timeout.setEnabled(False)
+
         self.logger.debug(
             f"model={self.curr_dev},ver={self.curr_ver},version compare={version_compare(self.curr_ver, '1.0.8')},status={self.curr_st}"
         )
@@ -1553,6 +1606,8 @@ class WIZWindow(QMainWindow, main_window):
             self.ch0_modbus_protocol.setEnabled(False)
             self.ch0_modbus_protocol.setCurrentIndex(0)
             self.ch1_group_modbus_option.hide()
+            self.ch2_group_modbus_option.hide()
+            self.ch3_group_modbus_option.hide()
             return
 
         supports_modbus = not is_legacy_two_port and self._modbus_supported()
@@ -1570,6 +1625,28 @@ class WIZWindow(QMainWindow, main_window):
             self.ch1_modbus_protocol.setCurrentIndex(0)
             self.group_packing_14.hide()
             self.group_packing_15.hide()
+
+        if is_security_three_port:
+            self.ch2_group_modbus_option.show()
+            self.ch2_modbus_protocol.setEnabled(True)
+            self.group_packing_14_ch2.show()
+            self.group_packing_15_ch2.show()
+        else:
+            self.ch2_group_modbus_option.hide()
+            self.ch2_modbus_protocol.setCurrentIndex(0)
+            self.group_packing_14_ch2.hide()
+            self.group_packing_15_ch2.hide()
+
+        if is_security_four_port:
+            self.ch3_group_modbus_option.show()
+            self.ch3_modbus_protocol.setEnabled(True)
+            self.group_packing_14_ch3.show()
+            self.group_packing_15_ch3.show()
+        else:
+            self.ch3_group_modbus_option.hide()
+            self.ch3_modbus_protocol.setCurrentIndex(0)
+            self.group_packing_14_ch3.hide()
+            self.group_packing_15_ch3.hide()
 
         self._config_serial_for_device()
         self._config_status_pin_for_device()
@@ -1646,8 +1723,8 @@ class WIZWindow(QMainWindow, main_window):
                 if idx >= 0:
                     self.ch0_baud.setCurrentIndex(idx)
 
-        # 2. ch1_baud (2채널 장치)
-        if spec.channels == 2:
+        # 2. ch1_baud (2채널 이상 장치)
+        if spec.channels >= 2:
             eb_entry = spec.cmdset.get('EB')
             if eb_entry:
                 sorted_eb = sorted(eb_entry.values.items(), key=lambda x: int(x[0]))
@@ -1666,6 +1743,48 @@ class WIZWindow(QMainWindow, main_window):
                     idx = self.ch1_baud.findText(current_eb)
                     if idx >= 0:
                         self.ch1_baud.setCurrentIndex(idx)
+
+        # 2-1. ch2_baud (3채널 장치 — WB)
+        if spec.channels >= 3:
+            wb_entry = spec.cmdset.get('WB')
+            if wb_entry:
+                sorted_wb = sorted(wb_entry.values.items(), key=lambda x: int(x[0]))
+                wb_strings = [v for _, v in sorted_wb]
+                current_wb = None
+                if self.curr_mac in self.dev_profile:
+                    wb_raw = self.dev_profile[self.curr_mac].get('WB')
+                    if wb_raw is not None:
+                        try:
+                            current_wb = wb_entry.values.get(str(int(wb_raw)))
+                        except (ValueError, TypeError):
+                            pass
+                self.ch2_baud.clear()
+                self.ch2_baud.addItems(wb_strings)
+                if current_wb:
+                    idx = self.ch2_baud.findText(current_wb)
+                    if idx >= 0:
+                        self.ch2_baud.setCurrentIndex(idx)
+
+        # 2-2. ch3_baud (4채널 장치 — YB)
+        if spec.channels >= 4:
+            yb_entry = spec.cmdset.get('YB')
+            if yb_entry:
+                sorted_yb = sorted(yb_entry.values.items(), key=lambda x: int(x[0]))
+                yb_strings = [v for _, v in sorted_yb]
+                current_yb = None
+                if self.curr_mac in self.dev_profile:
+                    yb_raw = self.dev_profile[self.curr_mac].get('YB')
+                    if yb_raw is not None:
+                        try:
+                            current_yb = yb_entry.values.get(str(int(yb_raw)))
+                        except (ValueError, TypeError):
+                            pass
+                self.ch3_baud.clear()
+                self.ch3_baud.addItems(yb_strings)
+                if current_yb:
+                    idx = self.ch3_baud.findText(current_yb)
+                    if idx >= 0:
+                        self.ch3_baud.setCurrentIndex(idx)
 
         # 3. ip_pppoe — IM['2'] 존재 여부
         im_entry = spec.cmdset.get('IM')
@@ -1751,6 +1870,18 @@ class WIZWindow(QMainWindow, main_window):
             self.radiobtn_group_s0.hide()
             self.radiobtn_group_s1.hide()
             self.group_dtrdsr.show()
+            # W55RP20 계열은 펌웨어가 SC(DTR/DSR 선택) SET을 지원하지 않으므로
+            # (전용 핀 없음 — DTR/DSR은 Flow control 항목으로 선택) 조작해도 반영되지 않는다.
+            # 값은 조회되어 표시되지만 변경은 불가하도록 비활성화한다.
+            _sc_writable = self.curr_dev not in W55RP20_FAMILY
+            self.group_dtrdsr.setEnabled(_sc_writable)
+            if not _sc_writable:
+                self.group_dtrdsr.setToolTip(
+                    "이 장치는 전용 DTR/DSR 핀이 없습니다. "
+                    "DTR/DSR 사용은 채널별 Serial options의 Flow control에서 선택하세요."
+                )
+            else:
+                self.group_dtrdsr.setToolTip("")
             # 이전 기준: 'WIZ5XXSR' in curr_dev or curr_dev in W55RP20_FAMILY
             #             or 'W232N' in curr_dev or 'IP20' in curr_dev
             # 신규: security 기본값 True, 예외(WIZ510SSL)만 widget_override로 선언
@@ -1812,10 +1943,16 @@ class WIZWindow(QMainWindow, main_window):
         if bank_visible:
             self.combobox_current_bank.setEnabled(False)
 
-        # ch2 ssl/mqtt: 항상 비활성 (이전과 동일)
+        # CH1/CH2/CH3 ssl/mqtt: 항상 비활성 (이전과 동일)
         self.ch1_ssl_tcpclient.setEnabled(False)
         self.ch1_mqttclient.setEnabled(False)
         self.ch1_mqtts_client.setEnabled(False)
+        self.ch2_ssl_tcpclient.setEnabled(False)
+        self.ch2_mqttclient.setEnabled(False)
+        self.ch2_mqtts_client.setEnabled(False)
+        self.ch3_ssl_tcpclient.setEnabled(False)
+        self.ch3_mqttclient.setEnabled(False)
+        self.ch3_mqtts_client.setEnabled(False)
 
     def general_tab_config(self):
         """버튼 아래 일반 탭을 장비 종류와 상태에 따라 다르게 설정합니다.
@@ -1956,36 +2093,54 @@ class WIZWindow(QMainWindow, main_window):
 
         # WIZ550S2E mqtt 탭은 fill_devinfo_wiz550 에서 fw_ver 홀짝 확인 후 추가/제거.
 
+    def _get_device_channels(self) -> int:
+        """장치의 시리얼 채널 수. DeviceSpec(channels:)이 단일 진실 소스.
+
+        spec이 없는 장치(W7500-S2E 등)는 기존 family 상수로 폴백한다.
+        """
+        from device_spec_loader import load_device, detect_device
+        try:
+            spec_name = detect_device(self.curr_dev) or self.curr_dev
+            return load_device(spec_name, self.curr_ver).channels
+        except Exception:
+            if (
+                self.curr_dev in SECURITY_TWO_PORT_DEV
+                or self.curr_dev in TWO_PORT_DEV
+                or "WIZ752" in self.curr_dev
+            ):
+                return 2
+            return 1
+
     def channel_tab_config(self):
         if not self.curr_dev:
             return
         # channel tab config
         self.logger.debug(f"channel_tab_config::curr_st={self.curr_st}")
         if self.curr_st in DeviceStatusMinimum:
-            n_tabs = self.channel_tab.count()
-            for i in reversed(range(1, n_tabs + 1)):
+            for i in reversed(range(1, self.channel_tab.count())):
                 self.channel_tab.removeTab(i)
             self.channel_tab.setTabEnabled(0, False)
-        elif (
-            self.curr_dev in ONE_PORT_DEV
-            or "WIZ750" in self.curr_dev
-            or "WIZ750SR-T1L" in self.curr_dev
-            or self.curr_dev in SECURITY_DEVICE
-        ):
-            if self.curr_dev in SECURITY_TWO_PORT_DEV:
-                self.channel_tab.insertTab(1, self.tab_ch1, self.ch1_tab_text)
-                self.logger.debug("channel_tab_config::channel_tab set tab enabled security 2port")
-                self.channel_tab.setTabEnabled(0, True)
-                self.channel_tab.setTabEnabled(1, True)
-                return
-            self.channel_tab.removeTab(1)
-            self.logger.debug("channel_tab_config::channel_tab set tab enabled 1port")
-            self.channel_tab.setTabEnabled(0, True)
-        elif self.curr_dev in TWO_PORT_DEV or "WIZ752" in self.curr_dev:
-            self.channel_tab.insertTab(1, self.tab_ch1, self.ch1_tab_text)
-            self.logger.debug("channel_tab_config::channel_tab set tab enabled 2port")
-            self.channel_tab.setTabEnabled(0, True)
-            self.channel_tab.setTabEnabled(1, True)
+            return
+
+        # 채널 수 기반 탭 구성 — CH0은 상시, CH1+는 channels에 따라 삽입/제거
+        # (탭 위젯은 removeTab 후에도 파괴되지 않고 재삽입 가능)
+        extra_tabs = [
+            (self.tab_ch1, self.ch1_tab_text),
+            (self.tab_ch2, self.ch2_tab_text),
+            (self.tab_ch3, self.ch3_tab_text),
+        ]
+        channels = self._get_device_channels()
+        want = max(0, min(channels - 1, len(extra_tabs)))
+        for i in reversed(range(1, self.channel_tab.count())):
+            self.channel_tab.removeTab(i)
+        for idx in range(want):
+            widget, text = extra_tabs[idx]
+            self.channel_tab.insertTab(1 + idx, widget, text)
+        for i in range(self.channel_tab.count()):
+            self.channel_tab.setTabEnabled(i, True)
+        self.logger.debug(
+            f"channel_tab_config::channels={channels}, tabs={self.channel_tab.count()}"
+        )
 
     def event_localport_fix(self):
         if self.ch0_localport_fix.isChecked():
@@ -2044,6 +2199,20 @@ class WIZWindow(QMainWindow, main_window):
         else:
             self.ch1_keepalive_initial.setEnabled(False)
             self.ch1_keepalive_retry.setEnabled(False)
+
+        if self.ch2_keepalive_enable.isChecked():
+            self.ch2_keepalive_initial.setEnabled(True)
+            self.ch2_keepalive_retry.setEnabled(True)
+        else:
+            self.ch2_keepalive_initial.setEnabled(False)
+            self.ch2_keepalive_retry.setEnabled(False)
+
+        if self.ch3_keepalive_enable.isChecked():
+            self.ch3_keepalive_initial.setEnabled(True)
+            self.ch3_keepalive_retry.setEnabled(True)
+        else:
+            self.ch3_keepalive_initial.setEnabled(False)
+            self.ch3_keepalive_retry.setEnabled(False)
 
     def event_atmode(self):
         if self.at_enable.isChecked():
@@ -2178,6 +2347,54 @@ class WIZWindow(QMainWindow, main_window):
             else:
                 self.ch0_group_modbus_option.setEnabled(False)
                 self.ch0_modbus_protocol.setCurrentIndex(0)
+
+        # channel 2 (3채널 장치 전용 — 다른 장치에서는 탭 자체가 제거되어 있음)
+        if self.ch2_tcpclient.isChecked():
+            self.ch2_remote.setEnabled(True)
+            self.ch2_group_modbus_option.setEnabled(False)
+            self.ch2_modbus_protocol.setCurrentIndex(0)
+        elif self.ch2_tcpserver.isChecked():
+            self.ch2_remote.setEnabled(False)
+            self.ch2_group_modbus_option.setEnabled(True)
+        elif self.ch2_tcpmixed.isChecked():
+            self.ch2_remote.setEnabled(True)
+            self.ch2_group_modbus_option.setEnabled(False)
+            self.ch2_modbus_protocol.setCurrentIndex(0)
+        elif self.ch2_udp.isChecked():
+            self.ch2_remote.setEnabled(True)
+            self.ch2_group_modbus_option.setEnabled(True)
+        elif (
+            self.ch2_ssl_tcpclient.isChecked()
+            or self.ch2_mqttclient.isChecked()
+            or self.ch2_mqtts_client.isChecked()
+        ):
+            self.ch2_remote.setEnabled(True)
+            self.ch2_group_modbus_option.setEnabled(False)
+            self.ch2_modbus_protocol.setCurrentIndex(0)
+
+        # channel 3 (4채널 장치 대비 — 다른 장치에서는 탭 자체가 제거되어 있음)
+        if self.ch3_tcpclient.isChecked():
+            self.ch3_remote.setEnabled(True)
+            self.ch3_group_modbus_option.setEnabled(False)
+            self.ch3_modbus_protocol.setCurrentIndex(0)
+        elif self.ch3_tcpserver.isChecked():
+            self.ch3_remote.setEnabled(False)
+            self.ch3_group_modbus_option.setEnabled(True)
+        elif self.ch3_tcpmixed.isChecked():
+            self.ch3_remote.setEnabled(True)
+            self.ch3_group_modbus_option.setEnabled(False)
+            self.ch3_modbus_protocol.setCurrentIndex(0)
+        elif self.ch3_udp.isChecked():
+            self.ch3_remote.setEnabled(True)
+            self.ch3_group_modbus_option.setEnabled(True)
+        elif (
+            self.ch3_ssl_tcpclient.isChecked()
+            or self.ch3_mqttclient.isChecked()
+            or self.ch3_mqtts_client.isChecked()
+        ):
+            self.ch3_remote.setEnabled(True)
+            self.ch3_group_modbus_option.setEnabled(False)
+            self.ch3_modbus_protocol.setCurrentIndex(0)
 
         # BUG-W550-AI: WIZ550S2E-Modbus(164B) 는 위 규칙에서 제외한다.
         # 위 분기는 WIZ750SR 계열의 working_mode 제약(TCP Server/UDP 에서만 Modbus)이고,
@@ -4858,6 +5075,25 @@ class WIZWindow(QMainWindow, main_window):
 
     # ──────────────────────────────────────────────────────────────
 
+    def _apply_uart_interface(self, combo, dev_data, code_key, str_key, writable):
+        """Serial interface 콤보박스 표시.
+        writable(W55RP20 계열)이면 UI/EI/WI/YI 코드값으로 선택 가능한 항목을 세팅하고,
+        아니면(다른 장치, RO) UN/EN/WN/YN 문자열을 그대로 표시만 한다(편집 불가).
+        """
+        if writable and code_key in dev_data and dev_data[code_key].isdigit():
+            idx = int(dev_data[code_key])
+            combo.setEditable(False)
+            if 0 <= idx < combo.count():
+                combo.setCurrentIndex(idx)
+            combo.setEnabled(True)
+        else:
+            combo.setEnabled(False)
+            combo.setEditable(True)
+            if combo.lineEdit() is not None:
+                combo.lineEdit().setReadOnly(True)
+            if str_key in dev_data:
+                combo.setEditText(dev_data[str_key])
+
     def fill_devinfo(self, dev_data):
         if not self.curr_dev or not self.curr_ver:
             return
@@ -4871,8 +5107,10 @@ class WIZWindow(QMainWindow, main_window):
             # device info - channel 1
             if "ST" in dev_data:
                 self.ch0_status.setText(dev_data["ST"])
-            if "UN" in dev_data:
-                self.ch0_uart_name.setText(dev_data["UN"])
+            if "UN" in dev_data or "UI" in dev_data:
+                self._apply_uart_interface(
+                    self.ch0_uart_name, dev_data, "UI", "UN", self.curr_dev in W55RP20_FAMILY
+                )
             # Network - general
             if "IM" in dev_data:
                 if dev_data["IM"] == "0":
@@ -5079,7 +5317,7 @@ class WIZWindow(QMainWindow, main_window):
                 if "QS" in dev_data:
                     self.ch1_status.setText(dev_data["QS"])
                 if "EN" in dev_data:
-                    self.ch1_uart_name.setText(dev_data["EN"])
+                    self._apply_uart_interface(self.ch1_uart_name, dev_data, "EI", "EN", False)
                 # Network - channel 2
                 if "QO" in dev_data:
                     if dev_data["QO"] == "0":
@@ -5152,8 +5390,8 @@ class WIZWindow(QMainWindow, main_window):
 
                 if "QS" in dev_data:
                     self.ch1_status.setText(dev_data["QS"])
-                if "EN" in dev_data:
-                    self.ch1_uart_name.setText(dev_data["EN"])
+                if "EN" in dev_data or "EI" in dev_data:
+                    self._apply_uart_interface(self.ch1_uart_name, dev_data, "EI", "EN", True)
 
                 if "AO" in dev_data:
                     ao_val = dev_data["AO"]
@@ -5237,6 +5475,194 @@ class WIZWindow(QMainWindow, main_window):
                     else:
                         self.ch1_ethernet_connection_condition.setText(dev_data["EE"])
 
+                # ── Channel 2 (3채널 장치 전용, CH1 미러 — 코드만 치환) ──
+                if self.curr_dev in SECURITY_THREE_PORT_DEV:
+                    self.lineedit_ch2_ssl_recv_timeout.setText("0")
+                    self.ch2_modbus_protocol.setCurrentIndex(0)
+                    self.ch2_serial_connection_condition_connect.clear()
+                    self.ch2_serial_connection_condition_disconnect.clear()
+                    self.ch2_ethernet_connection_condition.clear()
+
+                    if "GS" in dev_data:
+                        self.ch2_status.setText(dev_data["GS"])
+                    if "WN" in dev_data or "WI" in dev_data:
+                        self._apply_uart_interface(self.ch2_uart_name, dev_data, "WI", "WN", True)
+
+                    if "TO" in dev_data:
+                        to_val = dev_data["TO"]
+                        if to_val == "0":
+                            self.ch2_tcpclient.setChecked(True)
+                        elif to_val == "1":
+                            self.ch2_tcpserver.setChecked(True)
+                        elif to_val == "2":
+                            self.ch2_tcpmixed.setChecked(True)
+                        elif to_val == "3":
+                            self.ch2_udp.setChecked(True)
+                        elif to_val == "4":
+                            self.ch2_ssl_tcpclient.setChecked(True)
+                        elif to_val == "5":
+                            self.ch2_mqttclient.setChecked(True)
+                        elif to_val == "6":
+                            self.ch2_mqtts_client.setChecked(True)
+
+                    if "GL" in dev_data:
+                        self.ch2_localport.setText(dev_data["GL"])
+                    if "GH" in dev_data:
+                        self.ch2_remoteip.setText(dev_data["GH"])
+                    if "TP" in dev_data:
+                        self.ch2_remoteport.setText(dev_data["TP"])
+
+                    if "WB" in dev_data and len(dev_data["WB"]) <= 4:
+                        self.ch2_baud.setCurrentIndex(int(dev_data["WB"]))
+                    if "WD" in dev_data and len(dev_data["WD"]) <= 2:
+                        self.ch2_databit.setCurrentIndex(int(dev_data["WD"]))
+                    if "WP" in dev_data:
+                        self.ch2_parity.setCurrentIndex(int(dev_data["WP"]))
+                    if "WS" in dev_data:
+                        self.ch2_stopbit.setCurrentIndex(int(dev_data["WS"]))
+                    if "WF" in dev_data and len(dev_data["WF"]) <= 2:
+                        self.ch2_flow.setCurrentIndex(int(dev_data["WF"]))
+
+                    if "TT" in dev_data:
+                        self.ch2_pack_time.setText(dev_data["TT"])
+                    if "HS" in dev_data:
+                        self.ch2_pack_size.setText(dev_data["HS"])
+                    if "HD" in dev_data and len(dev_data["HD"]) <= 2:
+                        self.ch2_pack_char.setText(dev_data["HD"])
+
+                    if "XV" in dev_data:
+                        self.ch2_inact_timer.setText(dev_data["XV"])
+
+                    if "XA" in dev_data:
+                        self.ch2_keepalive_enable.setChecked(dev_data["XA"] == "1")
+                    if "XS" in dev_data:
+                        self.ch2_keepalive_initial.setText(dev_data["XS"])
+                    if "XE" in dev_data:
+                        self.ch2_keepalive_retry.setText(dev_data["XE"])
+                    if "XR" in dev_data:
+                        self.ch2_reconnection.setText(dev_data["XR"])
+
+                    if "XO" in dev_data:
+                        self.lineedit_ch2_ssl_recv_timeout.setText(dev_data["XO"])
+
+                    if "WO" in dev_data:
+                        try:
+                            self.ch2_modbus_protocol.setCurrentIndex(int(dev_data["WO"]))
+                        except Exception as ex:
+                            self.logger.error(f"Error parsing WO: {dev_data['WO']} -> {ex}")
+
+                    if "XD" in dev_data:
+                        if dev_data["XD"] == " ":
+                            self.ch2_serial_connection_condition_connect.clear()
+                        else:
+                            self.ch2_serial_connection_condition_connect.setText(dev_data["XD"])
+
+                    if "XF" in dev_data:
+                        if dev_data["XF"] == " ":
+                            self.ch2_serial_connection_condition_disconnect.clear()
+                        else:
+                            self.ch2_serial_connection_condition_disconnect.setText(dev_data["XF"])
+
+                    if "WE" in dev_data:
+                        if dev_data["WE"] == " ":
+                            self.ch2_ethernet_connection_condition.clear()
+                        else:
+                            self.ch2_ethernet_connection_condition.setText(dev_data["WE"])
+
+                # ── Channel 3 (4채널 장치 전용, CH2 미러 — 코드만 치환) ──
+                if self.curr_dev in SECURITY_FOUR_PORT_DEV:
+                    self.lineedit_ch3_ssl_recv_timeout.setText("0")
+                    self.ch3_modbus_protocol.setCurrentIndex(0)
+                    self.ch3_serial_connection_condition_connect.clear()
+                    self.ch3_serial_connection_condition_disconnect.clear()
+                    self.ch3_ethernet_connection_condition.clear()
+
+                    if "CS" in dev_data:
+                        self.ch3_status.setText(dev_data["CS"])
+                    if "YN" in dev_data or "YI" in dev_data:
+                        self._apply_uart_interface(self.ch3_uart_name, dev_data, "YI", "YN", True)
+
+                    if "JO" in dev_data:
+                        jo_val = dev_data["JO"]
+                        if jo_val == "0":
+                            self.ch3_tcpclient.setChecked(True)
+                        elif jo_val == "1":
+                            self.ch3_tcpserver.setChecked(True)
+                        elif jo_val == "2":
+                            self.ch3_tcpmixed.setChecked(True)
+                        elif jo_val == "3":
+                            self.ch3_udp.setChecked(True)
+                        elif jo_val == "4":
+                            self.ch3_ssl_tcpclient.setChecked(True)
+                        elif jo_val == "5":
+                            self.ch3_mqttclient.setChecked(True)
+                        elif jo_val == "6":
+                            self.ch3_mqtts_client.setChecked(True)
+
+                    if "CL" in dev_data:
+                        self.ch3_localport.setText(dev_data["CL"])
+                    if "CH" in dev_data:
+                        self.ch3_remoteip.setText(dev_data["CH"])
+                    if "JP" in dev_data:
+                        self.ch3_remoteport.setText(dev_data["JP"])
+
+                    if "YB" in dev_data and len(dev_data["YB"]) <= 4:
+                        self.ch3_baud.setCurrentIndex(int(dev_data["YB"]))
+                    if "YD" in dev_data and len(dev_data["YD"]) <= 2:
+                        self.ch3_databit.setCurrentIndex(int(dev_data["YD"]))
+                    if "YP" in dev_data:
+                        self.ch3_parity.setCurrentIndex(int(dev_data["YP"]))
+                    if "YS" in dev_data:
+                        self.ch3_stopbit.setCurrentIndex(int(dev_data["YS"]))
+                    if "YF" in dev_data and len(dev_data["YF"]) <= 2:
+                        self.ch3_flow.setCurrentIndex(int(dev_data["YF"]))
+
+                    if "JT" in dev_data:
+                        self.ch3_pack_time.setText(dev_data["JT"])
+                    if "US" in dev_data:
+                        self.ch3_pack_size.setText(dev_data["US"])
+                    if "UD" in dev_data and len(dev_data["UD"]) <= 2:
+                        self.ch3_pack_char.setText(dev_data["UD"])
+
+                    if "ZV" in dev_data:
+                        self.ch3_inact_timer.setText(dev_data["ZV"])
+
+                    if "ZA" in dev_data:
+                        self.ch3_keepalive_enable.setChecked(dev_data["ZA"] == "1")
+                    if "ZS" in dev_data:
+                        self.ch3_keepalive_initial.setText(dev_data["ZS"])
+                    if "ZE" in dev_data:
+                        self.ch3_keepalive_retry.setText(dev_data["ZE"])
+                    if "ZR" in dev_data:
+                        self.ch3_reconnection.setText(dev_data["ZR"])
+
+                    if "ZO" in dev_data:
+                        self.lineedit_ch3_ssl_recv_timeout.setText(dev_data["ZO"])
+
+                    if "YO" in dev_data:
+                        try:
+                            self.ch3_modbus_protocol.setCurrentIndex(int(dev_data["YO"]))
+                        except Exception as ex:
+                            self.logger.error(f"Error parsing YO: {dev_data['YO']} -> {ex}")
+
+                    if "ZD" in dev_data:
+                        if dev_data["ZD"] == " ":
+                            self.ch3_serial_connection_condition_connect.clear()
+                        else:
+                            self.ch3_serial_connection_condition_connect.setText(dev_data["ZD"])
+
+                    if "ZF" in dev_data:
+                        if dev_data["ZF"] == " ":
+                            self.ch3_serial_connection_condition_disconnect.clear()
+                        else:
+                            self.ch3_serial_connection_condition_disconnect.setText(dev_data["ZF"])
+
+                    if "YE" in dev_data:
+                        if dev_data["YE"] == " ":
+                            self.ch3_ethernet_connection_condition.clear()
+                        else:
+                            self.ch3_ethernet_connection_condition.setText(dev_data["YE"])
+
             # SECURITY_TWO_PORT_DEV도 SECURITY_DEVICE에 속하므로 elif가 아닌 if 사용
             #
             # BOOT(부트로더)에서는 MQTT/인증서 커맨드가 응답에 없으므로 건너뛴다.
@@ -5315,10 +5741,12 @@ class WIZWindow(QMainWindow, main_window):
                     if "SO" in dev_data:
                         self.lineedit_ch0_ssl_recv_timeout.setText(dev_data["SO"])
 
-            self.object_config()
         except Exception as e:
             self.logger.error(e)
             self.msg_error("Get device information error {}".format(e))
+        finally:
+            # 필드 채우기 도중 예외가 나도 탭 구성(CH2/CH3 표시)은 항상 실행
+            self.object_config()
 
     def msg_error(self, error):
         msgbox = QMessageBox(self)
@@ -5435,6 +5863,8 @@ class WIZWindow(QMainWindow, main_window):
             setcmd["PR"] = str(self.ch0_parity.currentIndex())
             setcmd["SB"] = str(self.ch0_stopbit.currentIndex())
             setcmd["FL"] = str(self.ch0_flow.currentIndex())
+            if self.curr_dev in W55RP20_FAMILY:
+                setcmd["UI"] = str(self.ch0_uart_name.currentIndex())
             # 문맥으로 보면 ch0_modbus_protocol.isEnabled() 로 처리하는게 맞지만 항상 False 가 나와서 모델&버전 비교로 대체 #36
             if self._modbus_supported():
                 modbus_key = self._modbus_param_key()
@@ -5505,7 +5935,16 @@ class WIZWindow(QMainWindow, main_window):
                 setcmd["PO"] = "1" if self.po_telnet.isChecked() else "0"
 
             # Status pin
-            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
+            # SC(Status pin / DTR-DSR)는 W55RP20 계열 펌웨어가 SET을 지원하지 않는다.
+            # 펌웨어 segcp.c: `case SEGCP_SC:` 가 이 보드에서는 값 검사 없이 무조건
+            # `ret |= SEGCP_RET_ERR_NOTAVAIL` — 보드에 전용 DTR/DSR 핀이 없고 RTS/CTS 핀을
+            # 공유하므로 DTR/DSR 선택은 Flow control 항목으로 하기 때문.
+            # 문제는 이 에러 비트가 패킷 끝까지 유지(sticky)되어
+            #   1) 이후 모든 GET 응답이 폐기되고(응답이 헤더 15바이트만 남음)
+            #   2) save_DevConfig_to_storage() 자체가 건너뛰어져 설정이 아예 저장되지 않는다.
+            # 따라서 W55RP20 계열에는 SC를 보내지 않는다.
+            if ("WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev
+                    or self.curr_dev in W55RP20_FAMILY):
                 pass
             else:
                 # initial value
@@ -5622,6 +6061,7 @@ class WIZWindow(QMainWindow, main_window):
                 setcmd["EP"] = str(self.ch1_parity.currentIndex())
                 setcmd["ES"] = str(self.ch1_stopbit.currentIndex())
                 setcmd["EF"] = str(self.ch1_flow.currentIndex())
+                setcmd["EI"] = str(self.ch1_uart_name.currentIndex())
 
                 setcmd["AT"] = self.ch1_pack_time.text()
                 setcmd["NS"] = self.ch1_pack_size.text()
@@ -5660,6 +6100,134 @@ class WIZWindow(QMainWindow, main_window):
                     ee_data = ee_data[:30]
                     self.ch1_ethernet_connection_condition.setText(ee_data)
                 setcmd["EE"] = ee_data if ee_data else " "
+
+                # ── Channel 2 (3채널 장치 전용, CH1 미러 — 코드만 치환) ──
+                if self.curr_dev in SECURITY_THREE_PORT_DEV:
+                    if self.ch2_tcpclient.isChecked():
+                        setcmd["TO"] = "0"
+                    elif self.ch2_tcpserver.isChecked():
+                        setcmd["TO"] = "1"
+                    elif self.ch2_tcpmixed.isChecked():
+                        setcmd["TO"] = "2"
+                    elif self.ch2_udp.isChecked():
+                        setcmd["TO"] = "3"
+                    elif self.ch2_ssl_tcpclient.isChecked():
+                        setcmd["TO"] = "4"
+                    elif self.ch2_mqttclient.isChecked():
+                        setcmd["TO"] = "5"
+                    elif self.ch2_mqtts_client.isChecked():
+                        setcmd["TO"] = "6"
+
+                    setcmd["GL"] = self.ch2_localport.text()
+                    setcmd["GH"] = self.ch2_remoteip.text()
+                    setcmd["TP"] = self.ch2_remoteport.text()
+
+                    setcmd["WB"] = str(self.ch2_baud.currentIndex())
+                    setcmd["WD"] = str(self.ch2_databit.currentIndex())
+                    setcmd["WP"] = str(self.ch2_parity.currentIndex())
+                    setcmd["WS"] = str(self.ch2_stopbit.currentIndex())
+                    setcmd["WF"] = str(self.ch2_flow.currentIndex())
+                    setcmd["WI"] = str(self.ch2_uart_name.currentIndex())
+
+                    setcmd["TT"] = self.ch2_pack_time.text()
+                    setcmd["HS"] = self.ch2_pack_size.text()
+                    setcmd["HD"] = self.ch2_pack_char.text()
+
+                    setcmd["XV"] = self.ch2_inact_timer.text()
+
+                    if self.ch2_keepalive_enable.isChecked():
+                        setcmd["XA"] = "1"
+                        setcmd["XS"] = self.ch2_keepalive_initial.text()
+                        setcmd["XE"] = self.ch2_keepalive_retry.text()
+                    else:
+                        setcmd["XA"] = "0"
+
+                    setcmd["XR"] = self.ch2_reconnection.text()
+
+                    setcmd["XO"] = self.lineedit_ch2_ssl_recv_timeout.text()
+                    setcmd["WO"] = str(self.ch2_modbus_protocol.currentIndex())
+
+                    xd_data = self.ch2_serial_connection_condition_connect.text()
+                    if len(xd_data) > 30:
+                        xd_data = xd_data[:30]
+                        self.ch2_serial_connection_condition_connect.setText(xd_data)
+                    setcmd["XD"] = xd_data if xd_data else " "
+
+                    xf_data = self.ch2_serial_connection_condition_disconnect.text()
+                    if len(xf_data) > 30:
+                        xf_data = xf_data[:30]
+                        self.ch2_serial_connection_condition_disconnect.setText(xf_data)
+                    setcmd["XF"] = xf_data if xf_data else " "
+
+                    we_data = self.ch2_ethernet_connection_condition.text()
+                    if len(we_data) > 30:
+                        we_data = we_data[:30]
+                        self.ch2_ethernet_connection_condition.setText(we_data)
+                    setcmd["WE"] = we_data if we_data else " "
+
+                # ── Channel 3 (4채널 장치 전용, CH2 미러 — 코드만 치환) ──
+                if self.curr_dev in SECURITY_FOUR_PORT_DEV:
+                    if self.ch3_tcpclient.isChecked():
+                        setcmd["JO"] = "0"
+                    elif self.ch3_tcpserver.isChecked():
+                        setcmd["JO"] = "1"
+                    elif self.ch3_tcpmixed.isChecked():
+                        setcmd["JO"] = "2"
+                    elif self.ch3_udp.isChecked():
+                        setcmd["JO"] = "3"
+                    elif self.ch3_ssl_tcpclient.isChecked():
+                        setcmd["JO"] = "4"
+                    elif self.ch3_mqttclient.isChecked():
+                        setcmd["JO"] = "5"
+                    elif self.ch3_mqtts_client.isChecked():
+                        setcmd["JO"] = "6"
+
+                    setcmd["CL"] = self.ch3_localport.text()
+                    setcmd["CH"] = self.ch3_remoteip.text()
+                    setcmd["JP"] = self.ch3_remoteport.text()
+
+                    setcmd["YB"] = str(self.ch3_baud.currentIndex())
+                    setcmd["YD"] = str(self.ch3_databit.currentIndex())
+                    setcmd["YP"] = str(self.ch3_parity.currentIndex())
+                    setcmd["YS"] = str(self.ch3_stopbit.currentIndex())
+                    setcmd["YF"] = str(self.ch3_flow.currentIndex())
+                    setcmd["YI"] = str(self.ch3_uart_name.currentIndex())
+
+                    setcmd["JT"] = self.ch3_pack_time.text()
+                    setcmd["US"] = self.ch3_pack_size.text()
+                    setcmd["UD"] = self.ch3_pack_char.text()
+
+                    setcmd["ZV"] = self.ch3_inact_timer.text()
+
+                    if self.ch3_keepalive_enable.isChecked():
+                        setcmd["ZA"] = "1"
+                        setcmd["ZS"] = self.ch3_keepalive_initial.text()
+                        setcmd["ZE"] = self.ch3_keepalive_retry.text()
+                    else:
+                        setcmd["ZA"] = "0"
+
+                    setcmd["ZR"] = self.ch3_reconnection.text()
+
+                    setcmd["ZO"] = self.lineedit_ch3_ssl_recv_timeout.text()
+                    setcmd["YO"] = str(self.ch3_modbus_protocol.currentIndex())
+
+                    zd_data = self.ch3_serial_connection_condition_connect.text()
+                    if len(zd_data) > 30:
+                        zd_data = zd_data[:30]
+                        self.ch3_serial_connection_condition_connect.setText(zd_data)
+                    setcmd["ZD"] = zd_data if zd_data else " "
+
+                    zf_data = self.ch3_serial_connection_condition_disconnect.text()
+                    if len(zf_data) > 30:
+                        zf_data = zf_data[:30]
+                        self.ch3_serial_connection_condition_disconnect.setText(zf_data)
+                    setcmd["ZF"] = zf_data if zf_data else " "
+
+                    ye_data = self.ch3_ethernet_connection_condition.text()
+                    if len(ye_data) > 30:
+                        ye_data = ye_data[:30]
+                        self.ch3_ethernet_connection_condition.setText(ye_data)
+                    setcmd["YE"] = ye_data if ye_data else " "
 
             if self.curr_dev in SECURITY_DEVICE:
                 # New options for WIZ510SSL (Security devices)
@@ -5944,6 +6512,25 @@ class WIZWindow(QMainWindow, main_window):
                 )
                 # self.logger.debug(cmd_list)
 
+                # [SETDIAG] 전송 패킷 진단: 크기와 SV/RT 포함 여부
+                # (펌웨어 수신 버퍼 2047B 초과 시 뒤쪽 SV/RT가 잘려 저장이 안 됨)
+                try:
+                    _pkt_size = 0
+                    for _c in cmd_list:
+                        _pkt_size += len(_c[0])
+                        _pkt_size += 6 if _c[0] == "MA" else len(_c[1])
+                        if "\r\n" not in _c[1]:
+                            _pkt_size += 2
+                    _tail = [_c[0] for _c in cmd_list[-3:]]
+                    self.logger.info(
+                        f"[SETDIAG] send: set={len(setcmd)} total_cmds={len(cmd_list)} "
+                        f"pkt_size={_pkt_size}B tail={_tail} "
+                        f"SV={'SV' in [c[0] for c in cmd_list]} RT={'RT' in [c[0] for c in cmd_list]}"
+                    )
+                    self.logger.info(f"[SETDIAG] setcmd={setcmd}")
+                except Exception as _e:
+                    self.logger.error(f"[SETDIAG] send diag error: {_e}")
+
                 # socket config
                 self.socket_config()
 
@@ -5973,11 +6560,19 @@ class WIZWindow(QMainWindow, main_window):
         from WIZMakeCMD import (
             cmd_107sr, cmd_1p_advanced, cmd_1p_default, cmd_2p_setconfirm,
             cmd_security_base, cmd_wiz5xxsr_added, cmd_w55rp20_added,
+            cmd_w55rp20_3ch, cmd_w55rp20_4ch,
             ONE_PORT_DEV, TWO_PORT_DEV, SECURITY_DEVICE,
             version_compare,
         )
         if "WIZ107SR" in devname or "WIZ108SR" in devname:
             n = len(cmd_107sr)                          # 42
+        elif "W55RP20-S2E-4CH" in devname:
+            n = len(cmd_w55rp20_4ch)
+        elif "W55RP20-S2E-3CH" in devname:
+            n = len(cmd_w55rp20_3ch)
+        # W55RP20-S2E-2CH 는 의도적으로 여기 없음 — SECURITY_DEVICE 분기(50)로 폴백한다.
+        # cmd_w55rp20_2ch(79) 로 바꾸는 안은 M2-b 로 사용자 결정 대기 중
+        # (~/.claude/docs/WIZnet-S2E-Tool-GUI/plans/2026-08-12-w55rp20-ch4-absorption-plan.md)
         elif devname in TWO_PORT_DEV or "752" in devname:
             # setcommand() 가 붙이는 확인 쿼리 목록과 동일해야 한다
             n = len(cmd_2p_setconfirm)
@@ -6026,6 +6621,15 @@ class WIZWindow(QMainWindow, main_window):
         prev_channel_tab_index = self.channel_tab.currentIndex()
         set_result = {}
 
+        # [SETDIAG] 수신 원본 진단 — 장치가 실제로 무엇을 돌려줬는지 확인
+        try:
+            _rl = self.wizmsghandler.rcv_list if self.wizmsghandler is not None else []
+            self.logger.info(f"[SETDIAG] recv: resp_len={resp_len} packets={len(_rl)}")
+            for _i, _p in enumerate(_rl):
+                self.logger.info(f"[SETDIAG] recv pkt[{_i}] {len(_p)}B: {_p[:400]!r}")
+        except Exception as _e:
+            self.logger.error(f"[SETDIAG] recv diag error: {_e}")
+
         if resp_len == -1:
             self.logger.warning("Setting: no response from device.")
             self.statusbar.showMessage(" Setting: no response from device.")
@@ -6049,19 +6653,22 @@ class WIZWindow(QMainWindow, main_window):
                 )
 
             # ── 응답 파싱 (VB.NET parsingMsg() 방식) ──────────────────────
-            # MA prefix(10 bytes) 제거 후 \r\n 단위로 분리
-            payload = (self.set_reponse[10:]
-                       if len(self.set_reponse) >= 10 and self.set_reponse[:2] == b"MA"
-                       else self.set_reponse)
-            for chunk in payload.split(b"\r\n"):
-                if len(chunk) < 3 or chunk[:2] == b"MA":
-                    continue
-                try:
-                    cmd   = chunk[:2].decode("ascii")
-                    param = chunk[2:].decode("utf-8", errors="replace")
-                    set_result[cmd] = param
-                except Exception as e:
-                    self.logger.error(e)
+            # 멀티패킷 응답을 모두 파싱한다. 장치가 짧은 ack 패킷(MA/PW만 포함)을 먼저 보내고
+            # MC 등 본 데이터를 뒤 패킷으로 보내는 경우가 있어, 첫 패킷만 보면 성공 판정(MC)이 실패한다.
+            # 패킷마다 MA prefix(10 bytes)를 개별 제거 후 \r\n 단위로 분리.
+            for _pkt in self.wizmsghandler.rcv_list:
+                payload = (_pkt[10:]
+                           if len(_pkt) >= 10 and _pkt[:2] == b"MA"
+                           else _pkt)
+                for chunk in payload.split(b"\r\n"):
+                    if len(chunk) < 3 or chunk[:2] == b"MA":
+                        continue
+                    try:
+                        cmd   = chunk[:2].decode("ascii")
+                        param = chunk[2:].decode("utf-8", errors="replace")
+                        set_result[cmd] = param
+                    except Exception as e:
+                        self.logger.error(e)
 
             mc = set_result.get("MC", "")
             er = set_result.get("ER", "")
@@ -6070,7 +6677,8 @@ class WIZWindow(QMainWindow, main_window):
             min_len = self._get_expected_min_resp_len(self.curr_dev, self.curr_ver)
             self.logger.info(
                 f"Setting resp_len={resp_len}, expected_min={min_len}, "
-                f"MC='{mc}', ER='{er}'"
+                f"packets={len(self.wizmsghandler.rcv_list)}, "
+                f"fields={len(set_result)}, MC='{mc}', ER='{er}'"
             )
 
             if er:
@@ -6959,7 +7567,7 @@ class WIZWindow(QMainWindow, main_window):
             f"<html><body style='font-family:Arial,sans-serif;font-size:13px;margin:0;padding:0;'>"
             f"<h2 style='margin:0 0 6px 0;'>About WIZnet-S2E-Tool-GUI</h2>"
             f"<p style='margin:2px 0;'>Configuration Tool for WIZnet serial to ethernet devices.</p>"
-            f"<p style='margin:2px 0;'>Version: <b>{VERSION}</b></p>"
+            f"<p style='margin:2px 0;'>Version: <b>{VERSION} (BETA - 4CH)</b></p>"
             f"<p style='margin:2px 0;'>Author: WIZnet</p>"
             f"<p style='margin:2px 0;'>Github: <a href='{gh}'>Repository</a>"
             f" &nbsp;|&nbsp; <a href='{gh}/releases'>Release</a></p>"
@@ -7311,6 +7919,8 @@ class WIZWindow(QMainWindow, main_window):
 
         self.ch0_reconnection_label.setFont(self.smallfont)
         self.ch1_reconnection_label.setFont(self.smallfont)
+        self.ch2_reconnection_label.setFont(self.smallfont)
+        self.ch3_reconnection_label.setFont(self.smallfont)
         self.gpioa_label.setFont(self.smallfont)
         self.gpiob_label.setFont(self.smallfont)
         self.gpioc_label.setFont(self.smallfont)
