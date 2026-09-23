@@ -22,8 +22,16 @@ command_groups:
   - w55rp20_two_port
   - w55rp20_three_port
   - w55rp20_four_port
+  - pppoe
 
 overrides:
+  # The firmware takes Static, DHCP or PPPoE; base.yaml only declares the first two.
+  IM:
+    regex: "^[0-2]$"
+    values:
+      "0": "Static"
+      "1": "DHCP"
+      "2": "PPPoE"
   BR:
     regex: "^([0-9]|1[0-9])$"
     values:
@@ -138,6 +146,7 @@ ui:
       groups:
         - device_info
         - ip_mode
+        - pppoe
         - op_mode
         - conn_password
         - ssl_options

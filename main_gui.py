@@ -1552,6 +1552,17 @@ class WIZWindow(QMainWindow, main_window):
         has_pppoe = im_entry is not None and '2' in im_entry.values
         self.ip_pppoe.setVisible(has_pppoe)
 
+        # DDNS와 Network Protocol은 WIZ107SR/108SR의 것이다. PPPoE만 가진 장치는
+        # 계정 입력란 때문에 같은 탭을 쓰므로, 나머지 그룹은 숨기고 탭 이름도 바꾼다.
+        is_wiz1x0 = ("WIZ107" in self.curr_dev) or ("WIZ108" in self.curr_dev)
+        self.group_pppoe.setVisible(has_pppoe)
+        self.group_ddns.setVisible(is_wiz1x0)
+        self.group_network_protocol.setVisible(is_wiz1x0)
+        _idx = self.generalTab.indexOf(self.ddns_pppoe_tab)
+        if _idx >= 0:
+            self.generalTab.setTabText(
+                _idx, self.ddns_pppoe_tab_text if is_wiz1x0 else "PPPoE")
+
         # 4. DB 9-bit 항목
         db_entry = spec.cmdset.get('DB')
         has_9bit = db_entry is not None and '2' in db_entry.values
@@ -1582,6 +1593,19 @@ class WIZWindow(QMainWindow, main_window):
             self.event_ch0_databit_changed(self.ch0_databit.currentIndex())
         if 'DD' in spec.cmdset:
             self.event_ddns_enable()
+
+    def _device_has_pppoe(self) -> bool:
+        """현재 장치가 PPPoE로 주소를 받을 수 있는지. IM에 '2'가 있으면 지원."""
+        from device_spec_loader import load_device, detect_device
+        if not self.curr_dev:
+            return False
+        spec_name = detect_device(self.curr_dev) or self.curr_dev
+        try:
+            spec = load_device(spec_name, self.curr_ver)
+        except FileNotFoundError:
+            return False
+        im_entry = spec.cmdset.get('IM')
+        return im_entry is not None and '2' in im_entry.values
 
     def _config_serial_for_device(self):
         """장치별 보드레이트/시리얼 포트 설정."""
@@ -1750,6 +1774,16 @@ class WIZWindow(QMainWindow, main_window):
                         )
                         self.generalTab.setTabEnabled(next_tab_idx, True)
                         next_tab_idx += 1
+
+                # 시작할 때 모든 탭을 떼고 장치별로 다시 붙이는데, 이 분기에는
+                # ddns_pppoe_tab을 붙이는 코드가 없었다. PPPoE 계정 입력란이
+                # 그 탭에만 있으므로 PPPoE를 가진 장치는 여기서 챙긴다.
+                if self._device_has_pppoe() and "ddns_pppoe_tab" not in repr(list_tabs):
+                    _ppp_tab = self.tab_structure.get("ddns_pppoe_tab")
+                    if _ppp_tab is not None:
+                        self.generalTab.insertTab(next_tab_idx, _ppp_tab.object, "PPPoE")
+                        self.generalTab.setTabEnabled(next_tab_idx, True)
+                        next_tab_idx += 1
             #     # # self.generalTab.setTabEnabled(5, True)
             #     # # self.group_setting_pw.setEnabled(False)
             # for _t in range(self.generalTab.count()):
@@ -1762,9 +1796,11 @@ class WIZWindow(QMainWindow, main_window):
                 if _tab.name in ExcludeTabInCommon:
                     self.generalTab.removeTab(_tab.idx)
                     list_tabs.remove(_tab)
-                # WIZ107SR/108SR이 아닌 장치에서 ddns_pppoe_tab 제거
+                # DDNS/PPPoE 탭은 WIZ107SR/108SR의 것이지만, PPPoE를 가진 장치는
+                # 계정 입력란이 여기에만 있으므로 같이 남긴다.
                 elif _tab.name == "ddns_pppoe_tab" and not (
                     "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev
+                    or self._device_has_pppoe()
                 ):
                     self.generalTab.removeTab(_tab.idx)
                     list_tabs.remove(_tab)
@@ -1780,13 +1816,17 @@ class WIZWindow(QMainWindow, main_window):
                     )
                     self.generalTab.setTabEnabled(next_tab_idx, True)
                     next_tab_idx += 1
-            # WIZ107SR/108SR 전용: DDNS/PPPoE 탭 추가
-            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
+            # DDNS/PPPoE 탭 추가. 한 번 빠진 탭은 여기서만 돌아오므로, PPPoE를 가진
+            # 장치도 같이 챙긴다 — 계정 입력란이 이 탭에만 있다.
+            _is_wiz1x0 = "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev
+            if _is_wiz1x0 or self._device_has_pppoe():
                 if "ddns_pppoe_tab" not in repr(list_tabs):
                     ddns_tab_obj = self.tab_structure.get("ddns_pppoe_tab")
                     if ddns_tab_obj is not None:
                         self.generalTab.insertTab(
-                            next_tab_idx, ddns_tab_obj.object, ddns_tab_obj.ui_text
+                            next_tab_idx,
+                            ddns_tab_obj.object,
+                            ddns_tab_obj.ui_text if _is_wiz1x0 else "PPPoE",
                         )
                         self.generalTab.setTabEnabled(next_tab_idx, True)
 
@@ -1831,14 +1871,25 @@ class WIZWindow(QMainWindow, main_window):
         else:
             # if 'WIZ510SSL' in self.curr_dev:
             if self.curr_dev in SECURITY_DEVICE:
-                if len(self.generalTab) == 5:
-                    # Remove userio tab
-                    self.generalTab.removeTab(2)
-                elif len(self.generalTab) == 4:
-                    # Already removed userio tab
-                    pass
+                # Remove the User I/O tab by identity. Counting tabs and deleting
+                # index 2 assumed a fixed layout, so a device with one tab more -
+                # PPPoE, say - lost that tab instead.
+                #
+                # Original:
+                #     if len(self.generalTab) == 5:
+                #         self.generalTab.removeTab(2)
+                #     elif len(self.generalTab) == 4:
+                #         pass
+                _uio_idx = self.generalTab.indexOf(self.userio_tab)
+                if _uio_idx >= 0:
+                    self.generalTab.removeTab(_uio_idx)
             # else:
             #     self.generalTab.removeTab(2)
+
+        # 위 분기들이 탭을 여러 번 넣고 빼는 사이 PPPoE 탭이 밀려나는 일이 있어,
+        # 실제 탭 위젯을 기준으로 마지막에 한 번 더 확인한다.
+        if self._device_has_pppoe() and self.generalTab.indexOf(self.ddns_pppoe_tab) < 0:
+            self.generalTab.addTab(self.ddns_pppoe_tab, "PPPoE")
 
     def _get_device_channels(self) -> int:
         """장치의 시리얼 채널 수. DeviceSpec(channels:)이 단일 진실 소스.
@@ -4083,11 +4134,13 @@ class WIZWindow(QMainWindow, main_window):
                     self.status_dsr.setChecked(True)
                     self.checkbox_enable_dsr.setChecked(True)
 
-            # WIZ107SR / WIZ108SR 전용: DDNS / PPPoE 탭 필드 로드
-            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
-                # PPPoE 설정 (IM=2일 때만 유효)
+            # PPPoE 계정은 PPPoE를 가진 장치라면 어디든 읽는다 (IM=2일 때만 유효).
+            if self._device_has_pppoe():
                 self.pppoe_id.setText(dev_data.get("PI", "").strip())
                 self.pppoe_pw.setText(dev_data.get("PP", "").strip())
+
+            # WIZ107SR / WIZ108SR 전용: DDNS 탭 필드 로드
+            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
                 # DDNS Enable
                 dd_val = dev_data.get("DD", "0").strip()
                 self.ddns_enable.setChecked(dd_val == "1")
@@ -4714,11 +4767,13 @@ class WIZWindow(QMainWindow, main_window):
             setcmd["KE"] = self.ch0_keepalive_retry.text()
             # reconnection - channel 1
             setcmd["RI"] = self.ch0_reconnection.text()
-            # WIZ107SR / WIZ108SR 전용: DDNS / PPPoE 커맨드 저장
-            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
-                # PPPoE
+            # PPPoE 계정은 PPPoE를 가진 장치라면 어디든 저장한다.
+            if self._device_has_pppoe():
                 setcmd["PI"] = self.pppoe_id.text() or " "
                 setcmd["PP"] = self.pppoe_pw.text() or " "
+
+            # WIZ107SR / WIZ108SR 전용: DDNS 커맨드 저장
+            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
                 # DDNS Enable
                 setcmd["DD"] = "1" if self.ddns_enable.isChecked() else "0"
                 setcmd["DX"] = str(self.ddns_server_idx.currentIndex())

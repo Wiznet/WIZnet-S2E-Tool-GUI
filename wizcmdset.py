@@ -382,6 +382,16 @@ W55RP20_4CH_CMDSET = {
     "ZD": ["Channel 3 Serial Connected Data", "^.{0,30}$", {}, "RW"],
     "ZF": ["Channel 3 Serial Disconnected Data", "^.{0,30}$", {}, "RW"],
     "YE": ["Channel 3 Ethernet Connected Data", "^.{0,30}$", {}, "RW"],
+    # PPPoE. IM gains a third value here; the inherited entry only allowed 0 and 1,
+    # so applying settings was refused before anything reached the device.
+    "IM": [
+        "IP address Allocation Mode",
+        "^[0-2]$",
+        {"0": "Static IP", "1": "DHCP", "2": "PPPoE"},
+        "RW",
+    ],
+    "PI": ["PPPoE ID", "^.{0,63}$", {}, "RW"],
+    "PP": ["PPPoE Password", "^.{0,63}$", {}, "RW"],
 }
 
 # ==================== WIZ107SR / WIZ108SR CMDSET ====================
