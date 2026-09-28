@@ -19,8 +19,19 @@ command_groups:
   - retransmit
   - security
   - w55rp20_ext
+  # W55RP20-S2E-2CH.yaml 과 동일 근거(2026-09-08 FW 대조) — gpio(CA~CD/GA~GD/SC/S0/S1)·
+  # modbus(MB PO)·retransmit(TR EC) 는 이 보드 segcp.h enum 에 전부 있다. 3CH/4CH.yaml
+  # 작성 시 2CH.yaml 기반이라고 헤더에 적어 놓고 이 두 그룹만 빠뜨렸던 것을 2026-09-28
+  # (SW 왕복 시험, gh_ch4_e2e_fake_device 에서 SC/PO/DH 를 "spec 이 모르는 커맨드"로
+  # 잡아내 발견) 보완.
+  - modbus
+  - gpio
   - w55rp20_two_port
   - w55rp20_three_port
+
+# 그룹 전체가 아니라 이것만 — W55RP20-S2E-2CH.yaml 과 동일 근거(2026-09-08 FW 대조).
+partial_command_groups:
+  ddns: [DH]
 
 overrides:
   BR:

@@ -19,9 +19,16 @@ command_groups:
   - retransmit
   - security
   - w55rp20_ext
+  # W55RP20-S2E-2CH.yaml 과 동일 근거 — 3CH.yaml 헤더 주석 참고(2026-09-28 보완).
+  - modbus
+  - gpio
   - w55rp20_two_port
   - w55rp20_three_port
   - w55rp20_four_port
+
+# 그룹 전체가 아니라 이것만 — W55RP20-S2E-2CH.yaml 과 동일 근거(2026-09-08 FW 대조).
+partial_command_groups:
+  ddns: [DH]
 
 overrides:
   BR:

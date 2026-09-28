@@ -29,6 +29,10 @@ SEGCP_DEVICES = [
     "WIZ752SR-12x", "WIZ750SR", "WIZ750SR-1xx", "WIZ107SR", "WIZ108SR",
     "WIZ510SSL", "WIZ5XXSR-RP", "WIZ5XXSR-RP_E-SAVE",
     "W55RP20-S2E", "W55RP20-S2E-2CH", "W232N", "IP20",
+    # 3CH/4CH 는 TASK-W55RP20-CH4-ABSORB M1 해소(2026-09-28, ffb6bf9) 이후 추가 —
+    # 그 전엔 spec 드리프트(UI/EI 등)로 아래 test_tool_only_asks_commands_the_spec_knows_about
+    # 가 즉시 실패했다.
+    "W55RP20-S2E-3CH", "W55RP20-S2E-4CH",
 ]
 
 

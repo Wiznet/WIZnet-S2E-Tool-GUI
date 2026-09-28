@@ -121,8 +121,13 @@ GL:
     order: 2
 
 GH:
-  description: "Remote Host IP address for channel 2"
-  regex: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+  # base.yaml RH/QH와 동일 정책: IPv4 | 호스트명·도메인(≤128) | 공백/빈값(SEGCP_NULL).
+  # 근거: Grace-Koo 00b30e9 커밋 메시지 "Remote host 도메인 이름 허용을 CH0(RH)뿐
+  # 아니라 CH1~CH3(QH/GH/CH)까지 확장(firmware가 4채널 모두 IP/DNS 도메인을 동일하게
+  # 지원)" — 그러나 실제 diff는 WIZMakeCMD.py 조회 목록만 바꿨고 이 spec 정의는
+  # 빠져 있었다(UI/EI/WI/YI, FL DTR/DSR 와 같은 패턴, M1 참고). 2026-09-28 보완.
+  description: "Remote Host IP address / Domain for channel 2"
+  regex: "^(?=.{0,128}$)( ?|(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])|([A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?\\.)*[A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?)$"
   values: {}
   access: RW
   ui:
