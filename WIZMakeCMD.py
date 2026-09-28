@@ -411,6 +411,11 @@ class WIZMakeCMD:
                     temp_cmd_w55rp20_4ch = cmd_w55rp20_4ch
                 else:
                     # 하위 버전은 채널1/2/3 확장 명령 대신 기본 명령으로 구성
+                    self.logger.warning(
+                        f"search: {devname} FW {version} < 1.1.8 — "
+                        "CH1/2/3 확장 커맨드 미지원, 기본 명령으로만 조회한다"
+                        "(CH1~CH3 탭이 비어 보이는 것은 이 때문)"
+                    )
                     temp_cmd_w55rp20_4ch = cmd_security_base + cmd_wiz5xxsr_added
                 for cmd in temp_cmd_w55rp20_4ch:
                     cmd_list.append([cmd, ""])
@@ -428,6 +433,11 @@ class WIZMakeCMD:
                     temp_cmd_w55rp20_3ch = cmd_w55rp20_3ch
                 else:
                     # 하위 버전은 채널1/2 확장 명령 대신 기본 명령으로 구성
+                    self.logger.warning(
+                        f"search: {devname} FW {version} < 1.1.8 — "
+                        "CH1/2 확장 커맨드 미지원, 기본 명령으로만 조회한다"
+                        "(CH1/CH2 탭이 비어 보이는 것은 이 때문)"
+                    )
                     temp_cmd_w55rp20_3ch = cmd_security_base + cmd_wiz5xxsr_added
                 for cmd in temp_cmd_w55rp20_3ch:
                     cmd_list.append([cmd, ""])
@@ -445,6 +455,11 @@ class WIZMakeCMD:
                     temp_cmd_w55rp20_2ch = cmd_w55rp20_2ch
                 else:
                     # 하위 버전은 채널1 확장 명령 대신 기본 명령으로 구성
+                    self.logger.warning(
+                        f"search: {devname} FW {version} < 1.1.8 — "
+                        "CH1 확장 커맨드 미지원, 기본 명령으로만 조회한다"
+                        "(CH1 탭이 비어 보이는 것은 이 때문)"
+                    )
                     temp_cmd_w55rp20_2ch = cmd_security_base + cmd_wiz5xxsr_added
                 for cmd in temp_cmd_w55rp20_2ch:
                     cmd_list.append([cmd, ""])

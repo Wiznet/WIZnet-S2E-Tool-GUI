@@ -5631,7 +5631,11 @@ class WIZWindow(QMainWindow, main_window):
             setcmd["PR"] = str(self.ch0_parity.currentIndex())
             setcmd["SB"] = str(self.ch0_stopbit.currentIndex())
             setcmd["FL"] = str(self.ch0_flow.currentIndex())
-            if self.curr_dev in W55RP20_FAMILY:
+            # UI(CH0 인터페이스 선택)는 channel_field_map 범위 밖(CH_MIN=1)이라 같은
+            # gate 를 여기서 직접 건다 — 장치가 이번에 UI 를 보고했을 때만 되돌려
+            # 보낸다. 그러지 않으면 이전에 고른 다른 장치의 콤보 인덱스가 지금
+            # 장치(UI 미지원/미보고)에 그대로 전송된다(C1 잔상 인덱스, T4).
+            if self.curr_dev in W55RP20_FAMILY and "UI" in self._last_ch_dev_data:
                 setcmd["UI"] = str(self.ch0_uart_name.currentIndex())
             # 문맥으로 보면 ch0_modbus_protocol.isEnabled() 로 처리하는게 맞지만 항상 False 가 나와서 모델&버전 비교로 대체 #36
             if self._modbus_supported():
@@ -6157,12 +6161,17 @@ class WIZWindow(QMainWindow, main_window):
             ONE_PORT_DEV, TWO_PORT_DEV, SECURITY_DEVICE,
             version_compare,
         )
+        # 3CH/4CH 는 FW<1.1.8 이면 WIZMakeCMD.search() 가 채널 확장 커맨드 대신
+        # 기본 명령으로만 GET 하므로(cmd_security_base+cmd_wiz5xxsr_added), 기대
+        # 최소 길이도 같은 기준으로 낮춰야 한다. 안 그러면 구FW 의 정상 응답을
+        # "SearchMsg 처리 전 리부트"로 오판한다(M2/T3, 2026-09-28).
+        old_fw_base_n = len(cmd_security_base + cmd_wiz5xxsr_added)
         if "WIZ107SR" in devname or "WIZ108SR" in devname:
             n = len(cmd_107sr)                          # 42
         elif "W55RP20-S2E-4CH" in devname:
-            n = len(cmd_w55rp20_4ch)
+            n = len(cmd_w55rp20_4ch) if version_compare(version, "1.1.8") >= 0 else old_fw_base_n
         elif "W55RP20-S2E-3CH" in devname:
-            n = len(cmd_w55rp20_3ch)
+            n = len(cmd_w55rp20_3ch) if version_compare(version, "1.1.8") >= 0 else old_fw_base_n
         # W55RP20-S2E-2CH 는 의도적으로 여기 없음 — SECURITY_DEVICE 분기(50)로 폴백한다.
         # cmd_w55rp20_2ch(79) 로 바꾸는 안은 M2-b 로 사용자 결정 대기 중
         # (~/.claude/docs/WIZnet-S2E-Tool-GUI/plans/2026-08-12-w55rp20-ch4-absorption-plan.md)
