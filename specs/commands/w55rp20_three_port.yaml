@@ -12,6 +12,58 @@
 #
 # 주의: CH2 물리 시리얼은 CH0 RS-485 버스를 공유한다. serial 파라미터(WB/WD/WP/WS/WF)는
 #       표시상 존재하나 실제 버스는 CH0 설정을 따르므로 실효가 없다.
+#
+# UI/EI/WI(CH0/1/2 UART 인터페이스 선택) — 1포트/2CH는 부팅 핀 결정 read-only(main.yaml
+# 계열에 미정의)지만, 3CH부터 콤보박스로 RW 전환된다. 근거: FW 문서
+# W55RP20_ConfigTool_main_vs_4Port_KR.md(2026-09-23) 표2 "인터페이스 번호" 행.
+
+UI:
+  description: "UART Interface Select (code) for channel 0"
+  regex: "^[0-3]$"
+  values:
+    "0": "TTL/RS-232"
+    "1": "RS-422"
+    "2": "RS-485"
+    "3": "RS-485 Reverse"
+  access: RW
+  ui:
+    tab: serial
+    group: serial_info
+    widget: combobox
+    label: "UART Interface Select"
+    order: 2
+
+EI:
+  description: "UART Interface Select (code) for channel 1"
+  regex: "^[0-3]$"
+  values:
+    "0": "TTL/RS-232"
+    "1": "RS-422"
+    "2": "RS-485"
+    "3": "RS-485 Reverse"
+  access: RW
+  ui:
+    tab: channel1
+    group: ch1_info
+    widget: combobox
+    label: "CH1 UART Interface Select"
+    order: 3
+
+WI:
+  description: "UART Interface Select (code) for channel 2"
+  regex: "^[0-3]$"
+  values:
+    "0": "TTL/RS-232"
+    "1": "RS-422"
+    "2": "RS-485"
+    "3": "RS-485 Reverse"
+  access: RW
+  ui:
+    tab: channel2
+    group: ch2_info
+    widget: combobox
+    label: "CH2 UART Interface Select"
+    order: 3
 
 GS:
   description: "Operation status for channel 2"

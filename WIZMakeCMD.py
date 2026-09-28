@@ -125,13 +125,12 @@ cmd_wiz510ssl_added = ['BA']
 cmd_wiz5xxsr_added = ['SO', 'UF']
 
 # W55RP20-S2E specific commands
-cmd_w55rp20_added = ['SD', 'DD', 'SE', 'UI']  # Send Data at Connection, Send Data at Disconnection, Ethernet Data Connection Condition, UART Interface(Code)
+cmd_w55rp20_added = ['SD', 'DD', 'SE']  # Send Data at Connection, Send Data at Disconnection, Ethernet Data Connection Condition
 
 # W55RP20-S2E-2CH channel 1 specific commands
 cmd_w55rp20_2ch_ch1 = [
     'QS',  # Channel 1 status
     'EN',  # Channel 1 UART interface
-    'EI',  # Channel 1 UART interface (code, RW)
     'AO',  # Channel 1 operation mode (extended)
     'QL',  # Channel 1 local port
     'QH',  # Channel 1 remote host
@@ -155,6 +154,11 @@ cmd_w55rp20_2ch_ch1 = [
     'RF',  # Channel 1 serial disconnected data
     'EE',  # Channel 1 ethernet connected data
 ]
+
+# W55RP20-S2E-3CH부터 UART 인터페이스 선택이 CH0/CH1 도 RW 로 열린다(FW 문서
+# W55RP20_ConfigTool_main_vs_4Port_KR.md, 2026-09-23). 1포트/2CH 는 핀 결정 read-only
+# 그대로 두고(main 브랜치 동작), 3CH/4CH 만 콤보박스로 노출한다.
+cmd_w55rp20_3ch_ui_rw = ['UI', 'EI']  # Channel 0/1 UART interface (code, RW)
 
 # W55RP20-S2E-3CH channel 2 specific commands (CH1 미러 — 2글자 코드만 치환)
 cmd_w55rp20_3ch_ch2 = [
@@ -249,7 +253,7 @@ cmd_wiz510ssl = cmd_security_base + cmd_wiz510ssl_added
 cmd_wiz5xxsr = cmd_security_base + cmd_wiz5xxsr_added
 cmd_w55rp20 = cmd_security_base + cmd_wiz5xxsr_added + cmd_w55rp20_added
 cmd_w55rp20_2ch = cmd_w55rp20 + cmd_w55rp20_2ch_ch1
-cmd_w55rp20_3ch = cmd_w55rp20_2ch + cmd_w55rp20_3ch_ch2
+cmd_w55rp20_3ch = cmd_w55rp20_2ch + cmd_w55rp20_3ch_ui_rw + cmd_w55rp20_3ch_ch2
 cmd_w55rp20_4ch = cmd_w55rp20_3ch + cmd_w55rp20_4ch_ch3
 
 

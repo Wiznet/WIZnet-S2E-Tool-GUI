@@ -7,12 +7,29 @@
 #   GS→CS  WN→YN  TO→JO  GL→CL  GH→CH  TP→JP  WB→YB  WD→YD  WP→YP  WS→YS
 #   WF→YF  HD→UD  HS→US  TT→JT  XV→ZV  XR→ZR  XA→ZA  XS→ZS  XE→ZE  XO→ZO
 #   YO(모드버스)  ZD  ZF  YE
-#   (펌웨어의 YI(UART IF 번호)는 CH2의 WI와 동일 사유로 미포함 — CH0/CH1 대칭 유지)
+#   YI(UART IF 번호)는 UI/EI/WI 와 동일하게 RW — FW 문서
+#   W55RP20_ConfigTool_main_vs_4Port_KR.md(2026-09-23) 표2 참조
 #
 # baud(YB)는 그룹에서 0-15, device spec override로 16-19(고속) 추가 — EB/WB와 동일 패턴.
 #
 # 주의: CH3 물리 시리얼은 CH0 RS-485 버스를 공유한다. serial 파라미터(YB/YD/YP/YS/YF)는
 #       표시상 존재하나 실제 버스는 CH0 설정을 따르므로 실효가 없다.
+
+YI:
+  description: "UART Interface Select (code) for channel 3"
+  regex: "^[0-3]$"
+  values:
+    "0": "TTL/RS-232"
+    "1": "RS-422"
+    "2": "RS-485"
+    "3": "RS-485 Reverse"
+  access: RW
+  ui:
+    tab: channel3
+    group: ch3_info
+    widget: combobox
+    label: "CH3 UART Interface Select"
+    order: 3
 
 CS:
   description: "Operation status for channel 3"
