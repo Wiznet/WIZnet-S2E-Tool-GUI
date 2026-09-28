@@ -8,7 +8,7 @@ from WIZMakeCMD import (
     TWO_PORT_DEV,
     SECURITY_DEVICE,
 )
-from channel_field_map import build_channel_setcmd, fill_channel_widgets
+from channel_field_map import build_channel_setcmd, fill_channel_widgets, gate_optional_code
 
 from WIZUDPSock import WIZUDPSock
 from FWUploadThread import FWUploadThread
@@ -5631,11 +5631,12 @@ class WIZWindow(QMainWindow, main_window):
             setcmd["PR"] = str(self.ch0_parity.currentIndex())
             setcmd["SB"] = str(self.ch0_stopbit.currentIndex())
             setcmd["FL"] = str(self.ch0_flow.currentIndex())
-            # UI(CH0 인터페이스 선택)는 channel_field_map 범위 밖(CH_MIN=1)이라 같은
-            # gate 를 여기서 직접 건다 — 장치가 이번에 UI 를 보고했을 때만 되돌려
-            # 보낸다. 그러지 않으면 이전에 고른 다른 장치의 콤보 인덱스가 지금
-            # 장치(UI 미지원/미보고)에 그대로 전송된다(C1 잔상 인덱스, T4).
-            if self.curr_dev in W55RP20_FAMILY and "UI" in self._last_ch_dev_data:
+            # UI(CH0 인터페이스 선택)는 channel_field_map 범위 밖(CH_MIN=1)이지만
+            # 게이트 판정(gate_optional_code)은 R1(7단계)에서 ch1~3과 단일화했다 —
+            # 장치가 이번에 UI 를 보고했을 때만 되돌려 보낸다. 그러지 않으면 이전에
+            # 고른 다른 장치의 콤보 인덱스가 지금 장치(UI 미지원/미보고)에 그대로
+            # 전송된다(C1 잔상 인덱스, T4).
+            if self.curr_dev in W55RP20_FAMILY and gate_optional_code("UI", self._last_ch_dev_data):
                 setcmd["UI"] = str(self.ch0_uart_name.currentIndex())
             # 문맥으로 보면 ch0_modbus_protocol.isEnabled() 로 처리하는게 맞지만 항상 False 가 나와서 모델&버전 비교로 대체 #36
             if self._modbus_supported():

@@ -83,6 +83,16 @@ def _iter_rows():
 
 # ── SET 방향: 위젯 → setcmd ──────────────────────────────────────
 
+def gate_optional_code(code, dev_data, gate=True):
+    """"장치가 이번에 보고한 키만 되돌려 보낸다" 게이트 판정 — 단일 진실 소스.
+
+    ch1~3(build_channel_setcmd)뿐 아니라 ch0 UI(이 모듈 범위 밖, CH_MIN=1)도
+    같은 규칙을 쓴다(main_gui.py get_object_value 참조) — 잔상 인덱스(C1)가
+    두 곳에서 각자 다르게 새지 않도록 판정 로직을 여기 하나로 모은다.
+    """
+    return (not gate) or (code in dev_data)
+
+
 def _extract_opmode(ch, lookup):
     for val, name in enumerate(OPMODE_RADIOS):
         if lookup(f"ch{ch}_{name}").isChecked():
@@ -117,7 +127,7 @@ def build_channel_setcmd(ch, dev_data, lookup, setcmd, gate=True):
         if kind == "label":
             continue  # fill 전용
         cmd = codes[ch - 1]
-        if gate and cmd not in dev_data:
+        if not gate_optional_code(cmd, dev_data, gate):
             continue
         when = opts.get("when")
         if when is not None:
