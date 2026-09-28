@@ -502,6 +502,11 @@ class WIZWindow(QMainWindow, main_window):
 
         self.dev_profile = {}
         self.dev_data = {}
+        # fill_devinfo() 가 마지막으로 받은 원본 커맨드 dict(CH1~CH3 SET 게이트용).
+        # dev_profile[mac] 과 보통 같지만, "설정 불러오기"(load_configuration)는
+        # 파일 내용을 dev_profile 에 반영하지 않고 fill_devinfo() 에만 흘려보내므로
+        # 별도로 잡아 둔다 — TASK-W55RP20-CH4-ABSORB 4단계, C1/C2 해결
+        self._last_ch_dev_data = {}
         self.searched_dev = []
         self.searched_devnum = None
         self.conf_sock = None
@@ -5099,6 +5104,9 @@ class WIZWindow(QMainWindow, main_window):
         if not self.curr_dev or not self.curr_ver:
             return
         self.logger.debug(f"fill_devinfo type={type(dev_data)}")
+        # CH1~CH3 SET 게이트(gate=True)가 "장치가 실제로 보고한 키"를 판단하는 기준.
+        # try 진입 전에 잡아 둬 필드 채우기 도중 예외가 나도 게이트 값은 최신을 유지한다.
+        self._last_ch_dev_data = dev_data
         try:
             # device info (RO)
             if "MN" in dev_data:
@@ -5798,17 +5806,21 @@ class WIZWindow(QMainWindow, main_window):
                 setcmd["RR"] = self.ch1_reconnection.text()
             elif self.curr_dev in SECURITY_TWO_PORT_DEV:
                 # CH1~CH3 필드는 channel_field_map 이 단일 진실 소스(코드만 2글자 치환된
-                # 순수 미러, opmode 라디오 포함). 검증: tests/test_w55rp20_channel_snapshot.py
-                # (2단계 스냅샷, gate=False 등가성 — real 위젯 위에서 이 함수 교체 전/후 대조 완료).
-                build_channel_setcmd(1, {}, lambda name: getattr(self, name), setcmd, gate=False)
+                # 순수 미러, opmode 라디오 포함). gate=True — 장치가 마지막 GET 에서 실제로
+                # 보고한 키(_last_ch_dev_data)만 되돌려 보낸다. 잔상 인덱스(C1: 이전에 고른
+                # 다른 장치의 콤보 인덱스가 남아 있다가 그대로 전송됨)와 SET 게이트 부재(C2:
+                # 이 FW/버전이 모르는 커맨드까지 무조건 전송됨)를 여기 한 곳에서 막는다.
+                # 검증: tests/test_w55rp20_channel_snapshot.py — 4단계, gate=True 회귀 케이스.
+                dd = self._last_ch_dev_data
+                build_channel_setcmd(1, dd, lambda name: getattr(self, name), setcmd, gate=True)
 
                 # ── Channel 2 (3채널 장치 전용, CH1 미러 — 코드만 치환) ──
                 if self.curr_dev in SECURITY_THREE_PORT_DEV:
-                    build_channel_setcmd(2, {}, lambda name: getattr(self, name), setcmd, gate=False)
+                    build_channel_setcmd(2, dd, lambda name: getattr(self, name), setcmd, gate=True)
 
                 # ── Channel 3 (4채널 장치 전용, CH2 미러 — 코드만 치환) ──
                 if self.curr_dev in SECURITY_FOUR_PORT_DEV:
-                    build_channel_setcmd(3, {}, lambda name: getattr(self, name), setcmd, gate=False)
+                    build_channel_setcmd(3, dd, lambda name: getattr(self, name), setcmd, gate=True)
 
             if self.curr_dev in SECURITY_DEVICE:
                 # New options for WIZ510SSL (Security devices)
