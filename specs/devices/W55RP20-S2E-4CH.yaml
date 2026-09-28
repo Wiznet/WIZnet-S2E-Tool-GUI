@@ -4,7 +4,7 @@
 # 소스 기준: 펌웨어 GreenCS 커밋 de622f8 (DEVICE_UART_CNT=4 빌드)
 # W55RP20-S2E-3CH.yaml 기반 + CH3(w55rp20_four_port) 추가
 #
-# 주의: family는 "능력(security/SSL 보유)" 플래그로 쓰고, 채널 수는 channels(=3)로 결정한다.
+# 주의: family는 "능력(security/SSL 보유)" 플래그로 쓰고, 채널 수는 channels(=4)로 결정한다.
 #       ("two_port" 명칭은 레거시 — 실제 채널 수는 channels 필드가 단일 진실 소스)
 
 name: W55RP20-S2E-4CH
