@@ -8,6 +8,7 @@ from WIZMakeCMD import (
     TWO_PORT_DEV,
     SECURITY_DEVICE,
 )
+from channel_field_map import build_channel_setcmd, fill_channel_widgets
 
 from WIZUDPSock import WIZUDPSock
 from FWUploadThread import FWUploadThread
@@ -5382,98 +5383,21 @@ class WIZWindow(QMainWindow, main_window):
                     self.ch1_reconnection.setText(dev_data["RR"])
 
             elif self.curr_dev in SECURITY_TWO_PORT_DEV:
+                # CH1~CH3 필드는 channel_field_map 이 단일 진실 소스(코드만 2글자 치환된
+                # 순수 미러). uart_name(EI/WI/YI)만 예외로 수동 처리 — 콤보 활성/비활성 +
+                # 미조회 시 EN/WN/YN 문자열 표시(RO) 폴백은 이 테이블이 모델링하지 않는다
+                # (channel_field_map.py 모듈 docstring 의 "CH0 은 범위 밖" 설계와 같은 이유로,
+                # 이 폴백도 위젯 enable 상태를 다루는 코드라 테이블에 넣지 않았다).
+                # 검증: tests/test_w55rp20_channel_snapshot.py (2단계 스냅샷, gate=False 등가성)
                 self.lineedit_ch1_ssl_recv_timeout.setText("0")
                 self.ch1_modbus_protocol.setCurrentIndex(0)
                 self.ch1_serial_connection_condition_connect.clear()
                 self.ch1_serial_connection_condition_disconnect.clear()
                 self.ch1_ethernet_connection_condition.clear()
 
-                if "QS" in dev_data:
-                    self.ch1_status.setText(dev_data["QS"])
                 if "EN" in dev_data or "EI" in dev_data:
                     self._apply_uart_interface(self.ch1_uart_name, dev_data, "EI", "EN", True)
-
-                if "AO" in dev_data:
-                    ao_val = dev_data["AO"]
-                    if ao_val == "0":
-                        self.ch1_tcpclient.setChecked(True)
-                    elif ao_val == "1":
-                        self.ch1_tcpserver.setChecked(True)
-                    elif ao_val == "2":
-                        self.ch1_tcpmixed.setChecked(True)
-                    elif ao_val == "3":
-                        self.ch1_udp.setChecked(True)
-                    elif ao_val == "4":
-                        self.ch1_ssl_tcpclient.setChecked(True)
-                    elif ao_val == "5":
-                        self.ch1_mqttclient.setChecked(True)
-                    elif ao_val == "6":
-                        self.ch1_mqtts_client.setChecked(True)
-
-                if "QL" in dev_data:
-                    self.ch1_localport.setText(dev_data["QL"])
-                if "QH" in dev_data:
-                    self.ch1_remoteip.setText(dev_data["QH"])
-                if "AP" in dev_data:
-                    self.ch1_remoteport.setText(dev_data["AP"])
-
-                if "EB" in dev_data and len(dev_data["EB"]) <= 4:
-                    self.ch1_baud.setCurrentIndex(int(dev_data["EB"]))
-                if "ED" in dev_data and len(dev_data["ED"]) <= 2:
-                    self.ch1_databit.setCurrentIndex(int(dev_data["ED"]))
-                if "EP" in dev_data:
-                    self.ch1_parity.setCurrentIndex(int(dev_data["EP"]))
-                if "ES" in dev_data:
-                    self.ch1_stopbit.setCurrentIndex(int(dev_data["ES"]))
-                if "EF" in dev_data and len(dev_data["EF"]) <= 2:
-                    self.ch1_flow.setCurrentIndex(int(dev_data["EF"]))
-
-                if "AT" in dev_data:
-                    self.ch1_pack_time.setText(dev_data["AT"])
-                if "NS" in dev_data:
-                    self.ch1_pack_size.setText(dev_data["NS"])
-                if "ND" in dev_data and len(dev_data["ND"]) <= 2:
-                    self.ch1_pack_char.setText(dev_data["ND"])
-
-                if "RV" in dev_data:
-                    self.ch1_inact_timer.setText(dev_data["RV"])
-
-                if "RA" in dev_data:
-                    self.ch1_keepalive_enable.setChecked(dev_data["RA"] == "1")
-                if "RS" in dev_data:
-                    self.ch1_keepalive_initial.setText(dev_data["RS"])
-                if "RE" in dev_data:
-                    self.ch1_keepalive_retry.setText(dev_data["RE"])
-                if "RR" in dev_data:
-                    self.ch1_reconnection.setText(dev_data["RR"])
-
-                # RO: SSL recv timeout for channel 2 (2-channel devices only)
-                if "RO" in dev_data and self.curr_dev in SECURITY_TWO_PORT_DEV:
-                    self.lineedit_ch1_ssl_recv_timeout.setText(dev_data["RO"])
-
-                if "EO" in dev_data:
-                    try:
-                        self.ch1_modbus_protocol.setCurrentIndex(int(dev_data["EO"]))
-                    except Exception as ex:
-                        self.logger.error(f"Error parsing EO: {dev_data['EO']} -> {ex}")
-
-                if "RD" in dev_data:
-                    if dev_data["RD"] == " ":
-                        self.ch1_serial_connection_condition_connect.clear()
-                    else:
-                        self.ch1_serial_connection_condition_connect.setText(dev_data["RD"])
-
-                if "RF" in dev_data:
-                    if dev_data["RF"] == " ":
-                        self.ch1_serial_connection_condition_disconnect.clear()
-                    else:
-                        self.ch1_serial_connection_condition_disconnect.setText(dev_data["RF"])
-
-                if "EE" in dev_data:
-                    if dev_data["EE"] == " ":
-                        self.ch1_ethernet_connection_condition.clear()
-                    else:
-                        self.ch1_ethernet_connection_condition.setText(dev_data["EE"])
+                fill_channel_widgets(1, dev_data, lambda name: getattr(self, name))
 
                 # ── Channel 2 (3채널 장치 전용, CH1 미러 — 코드만 치환) ──
                 if self.curr_dev in SECURITY_THREE_PORT_DEV:
@@ -5483,91 +5407,9 @@ class WIZWindow(QMainWindow, main_window):
                     self.ch2_serial_connection_condition_disconnect.clear()
                     self.ch2_ethernet_connection_condition.clear()
 
-                    if "GS" in dev_data:
-                        self.ch2_status.setText(dev_data["GS"])
                     if "WN" in dev_data or "WI" in dev_data:
                         self._apply_uart_interface(self.ch2_uart_name, dev_data, "WI", "WN", True)
-
-                    if "TO" in dev_data:
-                        to_val = dev_data["TO"]
-                        if to_val == "0":
-                            self.ch2_tcpclient.setChecked(True)
-                        elif to_val == "1":
-                            self.ch2_tcpserver.setChecked(True)
-                        elif to_val == "2":
-                            self.ch2_tcpmixed.setChecked(True)
-                        elif to_val == "3":
-                            self.ch2_udp.setChecked(True)
-                        elif to_val == "4":
-                            self.ch2_ssl_tcpclient.setChecked(True)
-                        elif to_val == "5":
-                            self.ch2_mqttclient.setChecked(True)
-                        elif to_val == "6":
-                            self.ch2_mqtts_client.setChecked(True)
-
-                    if "GL" in dev_data:
-                        self.ch2_localport.setText(dev_data["GL"])
-                    if "GH" in dev_data:
-                        self.ch2_remoteip.setText(dev_data["GH"])
-                    if "TP" in dev_data:
-                        self.ch2_remoteport.setText(dev_data["TP"])
-
-                    if "WB" in dev_data and len(dev_data["WB"]) <= 4:
-                        self.ch2_baud.setCurrentIndex(int(dev_data["WB"]))
-                    if "WD" in dev_data and len(dev_data["WD"]) <= 2:
-                        self.ch2_databit.setCurrentIndex(int(dev_data["WD"]))
-                    if "WP" in dev_data:
-                        self.ch2_parity.setCurrentIndex(int(dev_data["WP"]))
-                    if "WS" in dev_data:
-                        self.ch2_stopbit.setCurrentIndex(int(dev_data["WS"]))
-                    if "WF" in dev_data and len(dev_data["WF"]) <= 2:
-                        self.ch2_flow.setCurrentIndex(int(dev_data["WF"]))
-
-                    if "TT" in dev_data:
-                        self.ch2_pack_time.setText(dev_data["TT"])
-                    if "HS" in dev_data:
-                        self.ch2_pack_size.setText(dev_data["HS"])
-                    if "HD" in dev_data and len(dev_data["HD"]) <= 2:
-                        self.ch2_pack_char.setText(dev_data["HD"])
-
-                    if "XV" in dev_data:
-                        self.ch2_inact_timer.setText(dev_data["XV"])
-
-                    if "XA" in dev_data:
-                        self.ch2_keepalive_enable.setChecked(dev_data["XA"] == "1")
-                    if "XS" in dev_data:
-                        self.ch2_keepalive_initial.setText(dev_data["XS"])
-                    if "XE" in dev_data:
-                        self.ch2_keepalive_retry.setText(dev_data["XE"])
-                    if "XR" in dev_data:
-                        self.ch2_reconnection.setText(dev_data["XR"])
-
-                    if "XO" in dev_data:
-                        self.lineedit_ch2_ssl_recv_timeout.setText(dev_data["XO"])
-
-                    if "WO" in dev_data:
-                        try:
-                            self.ch2_modbus_protocol.setCurrentIndex(int(dev_data["WO"]))
-                        except Exception as ex:
-                            self.logger.error(f"Error parsing WO: {dev_data['WO']} -> {ex}")
-
-                    if "XD" in dev_data:
-                        if dev_data["XD"] == " ":
-                            self.ch2_serial_connection_condition_connect.clear()
-                        else:
-                            self.ch2_serial_connection_condition_connect.setText(dev_data["XD"])
-
-                    if "XF" in dev_data:
-                        if dev_data["XF"] == " ":
-                            self.ch2_serial_connection_condition_disconnect.clear()
-                        else:
-                            self.ch2_serial_connection_condition_disconnect.setText(dev_data["XF"])
-
-                    if "WE" in dev_data:
-                        if dev_data["WE"] == " ":
-                            self.ch2_ethernet_connection_condition.clear()
-                        else:
-                            self.ch2_ethernet_connection_condition.setText(dev_data["WE"])
+                    fill_channel_widgets(2, dev_data, lambda name: getattr(self, name))
 
                 # ── Channel 3 (4채널 장치 전용, CH2 미러 — 코드만 치환) ──
                 if self.curr_dev in SECURITY_FOUR_PORT_DEV:
@@ -5577,91 +5419,9 @@ class WIZWindow(QMainWindow, main_window):
                     self.ch3_serial_connection_condition_disconnect.clear()
                     self.ch3_ethernet_connection_condition.clear()
 
-                    if "CS" in dev_data:
-                        self.ch3_status.setText(dev_data["CS"])
                     if "YN" in dev_data or "YI" in dev_data:
                         self._apply_uart_interface(self.ch3_uart_name, dev_data, "YI", "YN", True)
-
-                    if "JO" in dev_data:
-                        jo_val = dev_data["JO"]
-                        if jo_val == "0":
-                            self.ch3_tcpclient.setChecked(True)
-                        elif jo_val == "1":
-                            self.ch3_tcpserver.setChecked(True)
-                        elif jo_val == "2":
-                            self.ch3_tcpmixed.setChecked(True)
-                        elif jo_val == "3":
-                            self.ch3_udp.setChecked(True)
-                        elif jo_val == "4":
-                            self.ch3_ssl_tcpclient.setChecked(True)
-                        elif jo_val == "5":
-                            self.ch3_mqttclient.setChecked(True)
-                        elif jo_val == "6":
-                            self.ch3_mqtts_client.setChecked(True)
-
-                    if "CL" in dev_data:
-                        self.ch3_localport.setText(dev_data["CL"])
-                    if "CH" in dev_data:
-                        self.ch3_remoteip.setText(dev_data["CH"])
-                    if "JP" in dev_data:
-                        self.ch3_remoteport.setText(dev_data["JP"])
-
-                    if "YB" in dev_data and len(dev_data["YB"]) <= 4:
-                        self.ch3_baud.setCurrentIndex(int(dev_data["YB"]))
-                    if "YD" in dev_data and len(dev_data["YD"]) <= 2:
-                        self.ch3_databit.setCurrentIndex(int(dev_data["YD"]))
-                    if "YP" in dev_data:
-                        self.ch3_parity.setCurrentIndex(int(dev_data["YP"]))
-                    if "YS" in dev_data:
-                        self.ch3_stopbit.setCurrentIndex(int(dev_data["YS"]))
-                    if "YF" in dev_data and len(dev_data["YF"]) <= 2:
-                        self.ch3_flow.setCurrentIndex(int(dev_data["YF"]))
-
-                    if "JT" in dev_data:
-                        self.ch3_pack_time.setText(dev_data["JT"])
-                    if "US" in dev_data:
-                        self.ch3_pack_size.setText(dev_data["US"])
-                    if "UD" in dev_data and len(dev_data["UD"]) <= 2:
-                        self.ch3_pack_char.setText(dev_data["UD"])
-
-                    if "ZV" in dev_data:
-                        self.ch3_inact_timer.setText(dev_data["ZV"])
-
-                    if "ZA" in dev_data:
-                        self.ch3_keepalive_enable.setChecked(dev_data["ZA"] == "1")
-                    if "ZS" in dev_data:
-                        self.ch3_keepalive_initial.setText(dev_data["ZS"])
-                    if "ZE" in dev_data:
-                        self.ch3_keepalive_retry.setText(dev_data["ZE"])
-                    if "ZR" in dev_data:
-                        self.ch3_reconnection.setText(dev_data["ZR"])
-
-                    if "ZO" in dev_data:
-                        self.lineedit_ch3_ssl_recv_timeout.setText(dev_data["ZO"])
-
-                    if "YO" in dev_data:
-                        try:
-                            self.ch3_modbus_protocol.setCurrentIndex(int(dev_data["YO"]))
-                        except Exception as ex:
-                            self.logger.error(f"Error parsing YO: {dev_data['YO']} -> {ex}")
-
-                    if "ZD" in dev_data:
-                        if dev_data["ZD"] == " ":
-                            self.ch3_serial_connection_condition_connect.clear()
-                        else:
-                            self.ch3_serial_connection_condition_connect.setText(dev_data["ZD"])
-
-                    if "ZF" in dev_data:
-                        if dev_data["ZF"] == " ":
-                            self.ch3_serial_connection_condition_disconnect.clear()
-                        else:
-                            self.ch3_serial_connection_condition_disconnect.setText(dev_data["ZF"])
-
-                    if "YE" in dev_data:
-                        if dev_data["YE"] == " ":
-                            self.ch3_ethernet_connection_condition.clear()
-                        else:
-                            self.ch3_ethernet_connection_condition.setText(dev_data["YE"])
+                    fill_channel_widgets(3, dev_data, lambda name: getattr(self, name))
 
             # SECURITY_TWO_PORT_DEV도 SECURITY_DEVICE에 속하므로 elif가 아닌 if 사용
             #
@@ -6037,197 +5797,18 @@ class WIZWindow(QMainWindow, main_window):
                 # reconnection - channel 2
                 setcmd["RR"] = self.ch1_reconnection.text()
             elif self.curr_dev in SECURITY_TWO_PORT_DEV:
-                if self.ch1_tcpclient.isChecked():
-                    setcmd["AO"] = "0"
-                elif self.ch1_tcpserver.isChecked():
-                    setcmd["AO"] = "1"
-                elif self.ch1_tcpmixed.isChecked():
-                    setcmd["AO"] = "2"
-                elif self.ch1_udp.isChecked():
-                    setcmd["AO"] = "3"
-                elif self.ch1_ssl_tcpclient.isChecked():
-                    setcmd["AO"] = "4"
-                elif self.ch1_mqttclient.isChecked():
-                    setcmd["AO"] = "5"
-                elif self.ch1_mqtts_client.isChecked():
-                    setcmd["AO"] = "6"
-
-                setcmd["QL"] = self.ch1_localport.text()
-                setcmd["QH"] = self.ch1_remoteip.text()
-                setcmd["AP"] = self.ch1_remoteport.text()
-
-                setcmd["EB"] = str(self.ch1_baud.currentIndex())
-                setcmd["ED"] = str(self.ch1_databit.currentIndex())
-                setcmd["EP"] = str(self.ch1_parity.currentIndex())
-                setcmd["ES"] = str(self.ch1_stopbit.currentIndex())
-                setcmd["EF"] = str(self.ch1_flow.currentIndex())
-                setcmd["EI"] = str(self.ch1_uart_name.currentIndex())
-
-                setcmd["AT"] = self.ch1_pack_time.text()
-                setcmd["NS"] = self.ch1_pack_size.text()
-                setcmd["ND"] = self.ch1_pack_char.text()
-
-                setcmd["RV"] = self.ch1_inact_timer.text()
-
-                if self.ch1_keepalive_enable.isChecked():
-                    setcmd["RA"] = "1"
-                    setcmd["RS"] = self.ch1_keepalive_initial.text()
-                    setcmd["RE"] = self.ch1_keepalive_retry.text()
-                else:
-                    setcmd["RA"] = "0"
-
-                setcmd["RR"] = self.ch1_reconnection.text()
-
-                # RO: SSL recv timeout for channel 2 (2-channel devices only)
-                if self.curr_dev in SECURITY_TWO_PORT_DEV:
-                    setcmd["RO"] = self.lineedit_ch1_ssl_recv_timeout.text()
-                setcmd["EO"] = str(self.ch1_modbus_protocol.currentIndex())
-
-                rd_data = self.ch1_serial_connection_condition_connect.text()
-                if len(rd_data) > 30:
-                    rd_data = rd_data[:30]
-                    self.ch1_serial_connection_condition_connect.setText(rd_data)
-                setcmd["RD"] = rd_data if rd_data else " "
-
-                rf_data = self.ch1_serial_connection_condition_disconnect.text()
-                if len(rf_data) > 30:
-                    rf_data = rf_data[:30]
-                    self.ch1_serial_connection_condition_disconnect.setText(rf_data)
-                setcmd["RF"] = rf_data if rf_data else " "
-
-                ee_data = self.ch1_ethernet_connection_condition.text()
-                if len(ee_data) > 30:
-                    ee_data = ee_data[:30]
-                    self.ch1_ethernet_connection_condition.setText(ee_data)
-                setcmd["EE"] = ee_data if ee_data else " "
+                # CH1~CH3 필드는 channel_field_map 이 단일 진실 소스(코드만 2글자 치환된
+                # 순수 미러, opmode 라디오 포함). 검증: tests/test_w55rp20_channel_snapshot.py
+                # (2단계 스냅샷, gate=False 등가성 — real 위젯 위에서 이 함수 교체 전/후 대조 완료).
+                build_channel_setcmd(1, {}, lambda name: getattr(self, name), setcmd, gate=False)
 
                 # ── Channel 2 (3채널 장치 전용, CH1 미러 — 코드만 치환) ──
                 if self.curr_dev in SECURITY_THREE_PORT_DEV:
-                    if self.ch2_tcpclient.isChecked():
-                        setcmd["TO"] = "0"
-                    elif self.ch2_tcpserver.isChecked():
-                        setcmd["TO"] = "1"
-                    elif self.ch2_tcpmixed.isChecked():
-                        setcmd["TO"] = "2"
-                    elif self.ch2_udp.isChecked():
-                        setcmd["TO"] = "3"
-                    elif self.ch2_ssl_tcpclient.isChecked():
-                        setcmd["TO"] = "4"
-                    elif self.ch2_mqttclient.isChecked():
-                        setcmd["TO"] = "5"
-                    elif self.ch2_mqtts_client.isChecked():
-                        setcmd["TO"] = "6"
-
-                    setcmd["GL"] = self.ch2_localport.text()
-                    setcmd["GH"] = self.ch2_remoteip.text()
-                    setcmd["TP"] = self.ch2_remoteport.text()
-
-                    setcmd["WB"] = str(self.ch2_baud.currentIndex())
-                    setcmd["WD"] = str(self.ch2_databit.currentIndex())
-                    setcmd["WP"] = str(self.ch2_parity.currentIndex())
-                    setcmd["WS"] = str(self.ch2_stopbit.currentIndex())
-                    setcmd["WF"] = str(self.ch2_flow.currentIndex())
-                    setcmd["WI"] = str(self.ch2_uart_name.currentIndex())
-
-                    setcmd["TT"] = self.ch2_pack_time.text()
-                    setcmd["HS"] = self.ch2_pack_size.text()
-                    setcmd["HD"] = self.ch2_pack_char.text()
-
-                    setcmd["XV"] = self.ch2_inact_timer.text()
-
-                    if self.ch2_keepalive_enable.isChecked():
-                        setcmd["XA"] = "1"
-                        setcmd["XS"] = self.ch2_keepalive_initial.text()
-                        setcmd["XE"] = self.ch2_keepalive_retry.text()
-                    else:
-                        setcmd["XA"] = "0"
-
-                    setcmd["XR"] = self.ch2_reconnection.text()
-
-                    setcmd["XO"] = self.lineedit_ch2_ssl_recv_timeout.text()
-                    setcmd["WO"] = str(self.ch2_modbus_protocol.currentIndex())
-
-                    xd_data = self.ch2_serial_connection_condition_connect.text()
-                    if len(xd_data) > 30:
-                        xd_data = xd_data[:30]
-                        self.ch2_serial_connection_condition_connect.setText(xd_data)
-                    setcmd["XD"] = xd_data if xd_data else " "
-
-                    xf_data = self.ch2_serial_connection_condition_disconnect.text()
-                    if len(xf_data) > 30:
-                        xf_data = xf_data[:30]
-                        self.ch2_serial_connection_condition_disconnect.setText(xf_data)
-                    setcmd["XF"] = xf_data if xf_data else " "
-
-                    we_data = self.ch2_ethernet_connection_condition.text()
-                    if len(we_data) > 30:
-                        we_data = we_data[:30]
-                        self.ch2_ethernet_connection_condition.setText(we_data)
-                    setcmd["WE"] = we_data if we_data else " "
+                    build_channel_setcmd(2, {}, lambda name: getattr(self, name), setcmd, gate=False)
 
                 # ── Channel 3 (4채널 장치 전용, CH2 미러 — 코드만 치환) ──
                 if self.curr_dev in SECURITY_FOUR_PORT_DEV:
-                    if self.ch3_tcpclient.isChecked():
-                        setcmd["JO"] = "0"
-                    elif self.ch3_tcpserver.isChecked():
-                        setcmd["JO"] = "1"
-                    elif self.ch3_tcpmixed.isChecked():
-                        setcmd["JO"] = "2"
-                    elif self.ch3_udp.isChecked():
-                        setcmd["JO"] = "3"
-                    elif self.ch3_ssl_tcpclient.isChecked():
-                        setcmd["JO"] = "4"
-                    elif self.ch3_mqttclient.isChecked():
-                        setcmd["JO"] = "5"
-                    elif self.ch3_mqtts_client.isChecked():
-                        setcmd["JO"] = "6"
-
-                    setcmd["CL"] = self.ch3_localport.text()
-                    setcmd["CH"] = self.ch3_remoteip.text()
-                    setcmd["JP"] = self.ch3_remoteport.text()
-
-                    setcmd["YB"] = str(self.ch3_baud.currentIndex())
-                    setcmd["YD"] = str(self.ch3_databit.currentIndex())
-                    setcmd["YP"] = str(self.ch3_parity.currentIndex())
-                    setcmd["YS"] = str(self.ch3_stopbit.currentIndex())
-                    setcmd["YF"] = str(self.ch3_flow.currentIndex())
-                    setcmd["YI"] = str(self.ch3_uart_name.currentIndex())
-
-                    setcmd["JT"] = self.ch3_pack_time.text()
-                    setcmd["US"] = self.ch3_pack_size.text()
-                    setcmd["UD"] = self.ch3_pack_char.text()
-
-                    setcmd["ZV"] = self.ch3_inact_timer.text()
-
-                    if self.ch3_keepalive_enable.isChecked():
-                        setcmd["ZA"] = "1"
-                        setcmd["ZS"] = self.ch3_keepalive_initial.text()
-                        setcmd["ZE"] = self.ch3_keepalive_retry.text()
-                    else:
-                        setcmd["ZA"] = "0"
-
-                    setcmd["ZR"] = self.ch3_reconnection.text()
-
-                    setcmd["ZO"] = self.lineedit_ch3_ssl_recv_timeout.text()
-                    setcmd["YO"] = str(self.ch3_modbus_protocol.currentIndex())
-
-                    zd_data = self.ch3_serial_connection_condition_connect.text()
-                    if len(zd_data) > 30:
-                        zd_data = zd_data[:30]
-                        self.ch3_serial_connection_condition_connect.setText(zd_data)
-                    setcmd["ZD"] = zd_data if zd_data else " "
-
-                    zf_data = self.ch3_serial_connection_condition_disconnect.text()
-                    if len(zf_data) > 30:
-                        zf_data = zf_data[:30]
-                        self.ch3_serial_connection_condition_disconnect.setText(zf_data)
-                    setcmd["ZF"] = zf_data if zf_data else " "
-
-                    ye_data = self.ch3_ethernet_connection_condition.text()
-                    if len(ye_data) > 30:
-                        ye_data = ye_data[:30]
-                        self.ch3_ethernet_connection_condition.setText(ye_data)
-                    setcmd["YE"] = ye_data if ye_data else " "
+                    build_channel_setcmd(3, {}, lambda name: getattr(self, name), setcmd, gate=False)
 
             if self.curr_dev in SECURITY_DEVICE:
                 # New options for WIZ510SSL (Security devices)
