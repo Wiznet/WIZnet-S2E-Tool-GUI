@@ -18,6 +18,6 @@ jsonschema==4.26.0
 certifi==2026.6.17
 charset-normalizer==3.4.7
 idna==3.18
-urllib3==2.7.0
+urllib3==2.8.0
 pyserial==3.5
 tftpy==0.8.7
