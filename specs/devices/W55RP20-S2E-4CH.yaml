@@ -1,0 +1,277 @@
+# W55RP20-S2E-4CH.yaml
+# 4채널 고속 S2E 게이트웨이
+# RS-485 Modbus RTU 버스 1개를 TCP 서버 소켓 4개(CH0~CH3)가 공유하는 구조.
+# 소스 기준: 펌웨어 GreenCS 커밋 de622f8 (DEVICE_UART_CNT=4 빌드)
+# W55RP20-S2E-3CH.yaml 기반 + CH3(w55rp20_four_port) 추가
+#
+# 주의: family는 "능력(security/SSL 보유)" 플래그로 쓰고, 채널 수는 channels(=4)로 결정한다.
+#       ("two_port" 명칭은 레거시 — 실제 채널 수는 channels 필드가 단일 진실 소스)
+
+name: W55RP20-S2E-4CH
+display_name: "W55RP20-S2E-4CH"
+aliases:
+  - "W55RP20-S2E-4CH"
+family: security_two_port
+channels: 4
+
+command_groups:
+  - base
+  - retransmit
+  - security
+  - w55rp20_ext
+  # W55RP20-S2E-2CH.yaml 과 동일 근거 — 3CH.yaml 헤더 주석 참고(2026-09-28 보완).
+  - modbus
+  - gpio
+  - w55rp20_two_port
+  - w55rp20_three_port
+  - w55rp20_four_port
+
+# 그룹 전체가 아니라 이것만 — W55RP20-S2E-2CH.yaml 과 동일 근거(2026-09-08 FW 대조).
+partial_command_groups:
+  ddns: [DH]
+
+overrides:
+  BR:
+    regex: "^([0-9]|1[0-9])$"
+    values:
+      "0": "300"
+      "1": "600"
+      "2": "1200"
+      "3": "1800"
+      "4": "2400"
+      "5": "4800"
+      "6": "9600"
+      "7": "14400"
+      "8": "19200"
+      "9": "28800"
+      "10": "38400"
+      "11": "57600"
+      "12": "115200"
+      "13": "230400"
+      "14": "460800"
+      "15": "921600"
+      "16": {value: "1M", min_version: "1.2.1"}
+      "17": {value: "2M", min_version: "1.2.1"}
+      "18": {value: "4M", min_version: "1.2.1"}
+      "19": {value: "8M", min_version: "1.2.1"}
+  EB:
+    regex: "^([0-9]|1[0-9])$"
+    values:
+      "0": "300"
+      "1": "600"
+      "2": "1200"
+      "3": "1800"
+      "4": "2400"
+      "5": "4800"
+      "6": "9600"
+      "7": "14400"
+      "8": "19200"
+      "9": "28800"
+      "10": "38400"
+      "11": "57600"
+      "12": "115200"
+      "13": "230400"
+      "14": "460800"
+      "15": "921600"
+      "16": {value: "1M", min_version: "1.2.1"}
+      "17": {value: "2M", min_version: "1.2.1"}
+      "18": {value: "4M", min_version: "1.2.1"}
+      "19": {value: "8M", min_version: "1.2.1"}
+  WB:
+    regex: "^([0-9]|1[0-9])$"
+    values:
+      "0": "300"
+      "1": "600"
+      "2": "1200"
+      "3": "1800"
+      "4": "2400"
+      "5": "4800"
+      "6": "9600"
+      "7": "14400"
+      "8": "19200"
+      "9": "28800"
+      "10": "38400"
+      "11": "57600"
+      "12": "115200"
+      "13": "230400"
+      "14": "460800"
+      "15": "921600"
+      "16": {value: "1M", min_version: "1.2.1"}
+      "17": {value: "2M", min_version: "1.2.1"}
+      "18": {value: "4M", min_version: "1.2.1"}
+      "19": {value: "8M", min_version: "1.2.1"}
+  YB:
+    regex: "^([0-9]|1[0-9])$"
+    values:
+      "0": "300"
+      "1": "600"
+      "2": "1200"
+      "3": "1800"
+      "4": "2400"
+      "5": "4800"
+      "6": "9600"
+      "7": "14400"
+      "8": "19200"
+      "9": "28800"
+      "10": "38400"
+      "11": "57600"
+      "12": "115200"
+      "13": "230400"
+      "14": "460800"
+      "15": "921600"
+      "16": {value: "1M", min_version: "1.2.1"}
+      "17": {value: "2M", min_version: "1.2.1"}
+      "18": {value: "4M", min_version: "1.2.1"}
+      "19": {value: "8M", min_version: "1.2.1"}
+  # OP/AO/TO/JO — 3CH/4CH 펌웨어는 SSL/MQTT 미지원, 0~3(TCP client/server/mixed/UDP)만 유효.
+  # 4~6은 ERINVALIDPARAM. 근거: FW 문서 W55RP20_ConfigTool_main_vs_4Port_KR.md(2026-09-23) 표3.
+  OP:
+    regex: "^[0-3]$"
+    values:
+      "0": "TCP Client mode"
+      "1": "TCP Server mode"
+      "2": "TCP Mixed mode"
+      "3": "UDP mode"
+  AO:
+    regex: "^[0-3]$"
+    values:
+      "0": "TCP Client mode"
+      "1": "TCP Server mode"
+      "2": "TCP Mixed mode"
+      "3": "UDP mode"
+  TO:
+    regex: "^[0-3]$"
+    values:
+      "0": "TCP Client mode"
+      "1": "TCP Server mode"
+      "2": "TCP Mixed mode"
+      "3": "UDP mode"
+  JO:
+    regex: "^[0-3]$"
+    values:
+      "0": "TCP Client mode"
+      "1": "TCP Server mode"
+      "2": "TCP Mixed mode"
+      "3": "UDP mode"
+  # FL/EF/WF/YF — 3CH/4CH 펌웨어는 DTR/DSR(5)까지 지원. 근거: 위 문서 표3, 커밋 00b30e9.
+  FL:
+    regex: "^[0-5]$"
+    values:
+      "0": "NONE"
+      "1": "XON/XOFF"
+      "2": "RTS/CTS"
+      "3": "RTS on TX"
+      "4": "RTS on TX (invert)"
+      "5": "DTR/DSR"
+  EF:
+    regex: "^[0-5]$"
+    values:
+      "0": "NONE"
+      "1": "XON/XOFF"
+      "2": "RTS/CTS"
+      "3": "RTS on TX"
+      "4": "RTS on TX (invert)"
+      "5": "DTR/DSR"
+  WF:
+    regex: "^[0-5]$"
+    values:
+      "0": "NONE"
+      "1": "XON/XOFF"
+      "2": "RTS/CTS"
+      "3": "RTS on TX"
+      "4": "RTS on TX (invert)"
+      "5": "DTR/DSR"
+  YF:
+    regex: "^[0-5]$"
+    values:
+      "0": "NONE"
+      "1": "XON/XOFF"
+      "2": "RTS/CTS"
+      "3": "RTS on TX"
+      "4": "RTS on TX (invert)"
+      "5": "DTR/DSR"
+  # KI/KE(ch0)·RS/RE(ch1)·XS/XE(ch2)·ZS/ZE(ch3) keep-alive 간격 — 3CH/4CH 는 1000ms 미만
+  # ERINVALIDPARAM. 근거: 위 문서 표3.
+  KI:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  KE:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  RS:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  RE:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  XS:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  XE:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  ZS:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  ZE:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+
+fw_constraints:
+  upload_supported: true
+  config_port: 50001
+
+ui:
+  tabs:
+    - id: network
+      label: "Network"
+      groups:
+        - device_info
+        - ip_mode
+        - op_mode
+        - conn_password
+        - ssl_options
+    - id: serial
+      label: "Serial (CH0)"
+      groups:
+        - serial_info
+        - serial_params
+        - data_packing
+    - id: channel1
+      label: "Channel 1"
+      groups:
+        - ch1_info
+        - ch1_op_mode
+        - ch1_serial
+        - ch1_packing
+        - ch1_options
+        - ch1_connection_events
+    - id: channel2
+      label: "Channel 2"
+      groups:
+        - ch2_info
+        - ch2_op_mode
+        - ch2_serial
+        - ch2_packing
+        - ch2_options
+        - ch2_connection_events
+    - id: channel3
+      label: "Channel 3"
+      groups:
+        - ch3_info
+        - ch3_op_mode
+        - ch3_serial
+        - ch3_packing
+        - ch3_options
+        - ch3_connection_events
+    - id: options
+      label: "Options"
+      groups:
+        - inactivity
+        - keepalive
+        - trigger
+        - search_password
+        - tcp_options
+        - connection_events
+    - id: mqtt
+      label: "MQTT"
+      groups:
+        - mqtt_options
+        - mqtt_topics
+    - id: certificate
+      label: "Certificate"
+      groups:
+        - cert_options
+        - cert_upload

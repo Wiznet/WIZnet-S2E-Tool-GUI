@@ -207,6 +207,14 @@
     {
       "name_pattern": "W55RP20-S2E-2CH",
       "reason": "W55RP20-S2E 릴리즈에 2CH 전용 이미지가 없습니다 (2026-08-19 확인)."
+    },
+    {
+      "name_pattern": "W55RP20-S2E-3CH",
+      "reason": "W55RP20-S2E 공개 릴리즈(v1.2.2/v1.2.3)에 3CH 전용 이미지가 없습니다 — 3CH/4CH 는 아직 병합 전인 별도 개발 브랜치에만 존재 (gh release view 로 애셋 목록 직접 확인, 2026-09-28)."
+    },
+    {
+      "name_pattern": "W55RP20-S2E-4CH",
+      "reason": "W55RP20-S2E 공개 릴리즈(v1.2.2/v1.2.3)에 4CH 전용 이미지가 없습니다 — 3CH/4CH 는 아직 병합 전인 별도 개발 브랜치에만 존재 (gh release view 로 애셋 목록 직접 확인, 2026-09-28)."
     }
   ]
 }

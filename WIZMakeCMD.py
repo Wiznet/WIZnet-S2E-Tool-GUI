@@ -27,6 +27,8 @@ SECURITY_DEVICE = [
     "WIZ5XXSR-RP_E-SAVE",
     "W55RP20-S2E",
     "W55RP20-S2E-2CH",
+    "W55RP20-S2E-3CH",
+    "W55RP20-S2E-4CH",
     "W232N",
     "IP20",
 ]
@@ -153,6 +155,70 @@ cmd_w55rp20_2ch_ch1 = [
     'EE',  # Channel 1 ethernet connected data
 ]
 
+# W55RP20-S2E-3CH부터 UART 인터페이스 선택이 CH0/CH1 도 RW 로 열린다(FW 문서
+# W55RP20_ConfigTool_main_vs_4Port_KR.md, 2026-09-23). 1포트/2CH 는 핀 결정 read-only
+# 그대로 두고(main 브랜치 동작), 3CH/4CH 만 콤보박스로 노출한다.
+cmd_w55rp20_3ch_ui_rw = ['UI', 'EI']  # Channel 0/1 UART interface (code, RW)
+
+# W55RP20-S2E-3CH channel 2 specific commands (CH1 미러 — 2글자 코드만 치환)
+cmd_w55rp20_3ch_ch2 = [
+    'GS',  # Channel 2 status
+    'WN',  # Channel 2 UART interface
+    'WI',  # Channel 2 UART interface (code, RW)
+    'TO',  # Channel 2 operation mode (extended)
+    'GL',  # Channel 2 local port
+    'GH',  # Channel 2 remote host
+    'TP',  # Channel 2 remote port
+    'WB',  # Channel 2 baud rate
+    'WD',  # Channel 2 data bit
+    'WP',  # Channel 2 parity
+    'WS',  # Channel 2 stop bit
+    'WF',  # Channel 2 flow control
+    'HD',  # Channel 2 packing delimiter
+    'HS',  # Channel 2 packing size
+    'TT',  # Channel 2 packing time
+    'XV',  # Channel 2 inactivity timer
+    'XA',  # Channel 2 keep-alive enable
+    'XS',  # Channel 2 keep-alive initial interval
+    'XE',  # Channel 2 keep-alive retry interval
+    'XR',  # Channel 2 reconnection interval
+    'XO',  # Channel 2 SSL timeout
+    'WO',  # Channel 2 Modbus option
+    'XD',  # Channel 2 serial connected data
+    'XF',  # Channel 2 serial disconnected data
+    'WE',  # Channel 2 ethernet connected data
+]
+
+# W55RP20-S2E-4CH channel 3 specific commands (CH2 미러 — 2글자 코드만 치환)
+# 소스: 펌웨어 GreenCS segcp.h/segcp.c ch3 (25) 블록
+cmd_w55rp20_4ch_ch3 = [
+    'CS',  # Channel 3 status
+    'YN',  # Channel 3 UART interface
+    'YI',  # Channel 3 UART interface (code, RW)
+    'JO',  # Channel 3 operation mode (extended)
+    'CL',  # Channel 3 local port
+    'CH',  # Channel 3 remote host
+    'JP',  # Channel 3 remote port
+    'YB',  # Channel 3 baud rate
+    'YD',  # Channel 3 data bit
+    'YP',  # Channel 3 parity
+    'YS',  # Channel 3 stop bit
+    'YF',  # Channel 3 flow control
+    'UD',  # Channel 3 packing delimiter
+    'US',  # Channel 3 packing size
+    'JT',  # Channel 3 packing time
+    'ZV',  # Channel 3 inactivity timer
+    'ZA',  # Channel 3 keep-alive enable
+    'ZS',  # Channel 3 keep-alive initial interval
+    'ZE',  # Channel 3 keep-alive retry interval
+    'ZR',  # Channel 3 reconnection interval
+    'ZO',  # Channel 3 SSL timeout
+    'YO',  # Channel 3 Modbus option
+    'ZD',  # Channel 3 serial connected data
+    'ZF',  # Channel 3 serial disconnected data
+    'YE',  # Channel 3 ethernet connected data
+]
+
 # WIZ5XXSR-RP_E-SAVE commands (MQTT Subscribe topic 4~10)
 # E-SAVE 지원은 `E-Save` 브랜치에서만 유지한다. 이 계열에서 비활성인 것이
 # 정상이며, 아래 search()/setcommand() 안의 주석 블록도 같은 이유다.
@@ -187,6 +253,23 @@ cmd_wiz510ssl = cmd_security_base + cmd_wiz510ssl_added
 cmd_wiz5xxsr = cmd_security_base + cmd_wiz5xxsr_added
 cmd_w55rp20 = cmd_security_base + cmd_wiz5xxsr_added + cmd_w55rp20_added
 cmd_w55rp20_2ch = cmd_w55rp20 + cmd_w55rp20_2ch_ch1
+cmd_w55rp20_3ch = cmd_w55rp20_2ch + cmd_w55rp20_3ch_ui_rw + cmd_w55rp20_3ch_ch2
+cmd_w55rp20_4ch = cmd_w55rp20_3ch + cmd_w55rp20_4ch_ch3
+
+# R2(7단계, 2026-09-28): search()/setcommand() 에 devname 별로 거의 동일한 elif 4개
+# (4CH/3CH/2CH/base — FW<1.1.8 폴백 + 경고로그 + 목록 순회) 가 따로 있던 것을 테이블로
+# 정리한다. devname 접미사가 긴 것부터 순서대로 둬서, 기존 elif 우선순위("-4CH" 가
+# "W55RP20-S2E" 부분 문자열도 만족하므로 먼저 검사해야 함)를 그대로 유지한다.
+# ch_label=None 인 항목(2포트 미만/base)은 FW 구버전이어도 채널 확장 경고를 안 남긴다
+# (원래 base 분기엔 그런 경고가 없었다).
+W55RP20_CH_TABLE = [
+    ("W55RP20-S2E-4CH", cmd_w55rp20_4ch, "CH1/2/3"),
+    ("W55RP20-S2E-3CH", cmd_w55rp20_3ch, "CH1/2"),
+    ("W55RP20-S2E-2CH", cmd_w55rp20_2ch, "CH1"),
+    ("W55RP20-S2E", cmd_w55rp20, None),
+]
+# FW<1.1.8 폴백 — 채널 확장 커맨드 없이 base 목록으로 강등(4개 devname 전부 동일)
+cmd_w55rp20_pre118_fallback = cmd_security_base + cmd_wiz5xxsr_added
 
 
 def _safe_version(v: str) -> Version:
@@ -214,6 +297,7 @@ def version_compare(version1: str, version2: str) -> int:
     Args:
         version1 (str): 첫번째 버전
         version2 (str): 두번째 버전
+    비표준 버전('1.3.3XXX' 등)은 숫자 부분만으로 비교. 파싱 불가 시 0.
     """
     if not version1 or not version2:
         return 0
@@ -253,6 +337,27 @@ class WIZMakeCMD:
             return
 
         cmd_list.append([modbus_cmd, ""])
+
+    def _w55rp20_channel_cmds(self, devname: str, version: str, warn: bool = True):
+        """devname 에 맞는 W55RP20 계열 전체 커맨드 목록.
+
+        FW<1.1.8 이면 채널 확장 커맨드 없이 base 목록(cmd_w55rp20_pre118_fallback)으로
+        강등한다. devname 이 테이블 어디에도 안 걸리면 None.
+        `warn`: search() 호출부만 경고 로그를 남기던 원래 동작 보존 — setcommand()
+        호출부는 warn=False 로 무음 유지(원래도 setcommand 쪽엔 이 경고가 없었다).
+        """
+        for suffix, full_cmds, ch_label in W55RP20_CH_TABLE:
+            if suffix in devname:
+                if version_compare(version, "1.1.8") >= 0:
+                    return full_cmds
+                if warn and ch_label:
+                    self.logger.warning(
+                        f"search: {devname} FW {version} < 1.1.8 — "
+                        f"{ch_label} 확장 커맨드 미지원, 기본 명령으로만 조회한다"
+                        f"({ch_label} 탭이 비어 보이는 것은 이 때문)"
+                    )
+                return cmd_w55rp20_pre118_fallback
+        return None
 
     def make_header(self, mac_addr, idcode, devname="", set_pw=""):
         """
@@ -330,36 +435,16 @@ class WIZMakeCMD:
                 #if 'E-SAVE' in devname:
                 #    for cmd in cmd_wiz5xxsr_esave:
                 #        cmd_list.append([cmd, ""])
-            elif 'W55RP20-S2E-2CH' in devname:
+            elif any(suffix in devname for suffix, _, _ in W55RP20_CH_TABLE):
+                # R2(7단계): 4CH/3CH/2CH/base 4개 elif(FW<1.1.8 폴백 + 채널수만 다른 경고
+                # 로그 + cmd_list 순회) 를 W55RP20_CH_TABLE + _w55rp20_channel_cmds() 로 통합.
                 self.logger.debug(f"search::devstatus={devstatus}")
                 if devstatus == 'BOOT':
                     for cmd in cmd_1p_boot:
                         cmd_list.append([cmd, ""])
                     self.logger.debug(f"search::cmd_list={cmd_list}")
                     return cmd_list
-
-                if version_compare(version, "1.1.8") >= 0:
-                    temp_cmd_w55rp20_2ch = cmd_w55rp20_2ch
-                else:
-                    # 하위 버전은 채널1 확장 명령 대신 기본 명령으로 구성
-                    temp_cmd_w55rp20_2ch = cmd_security_base + cmd_wiz5xxsr_added
-                for cmd in temp_cmd_w55rp20_2ch:
-                    cmd_list.append([cmd, ""])
-                self.logger.debug(f"search::cmd_list2={cmd_list}")
-
-            elif 'W55RP20-S2E' in devname:
-                self.logger.debug(f"search::devstatus={devstatus}")
-                if devstatus == 'BOOT':
-                    for cmd in cmd_1p_boot:
-                        cmd_list.append([cmd, ""])
-                    self.logger.debug(f"search::cmd_list={cmd_list}")
-                    return cmd_list
-                # W55RP20-S2E는 SD 명령어 포함 (버전 1.1.8 이상인 경우에만)
-                if version_compare(version, "1.1.8") >= 0:
-                    temp_cmd_w55rp20 = cmd_w55rp20
-                else:
-                    temp_cmd_w55rp20 = cmd_security_base + cmd_wiz5xxsr_added
-                for cmd in temp_cmd_w55rp20:
+                for cmd in self._w55rp20_channel_cmds(devname, version):
                     cmd_list.append([cmd, ""])
                 self.logger.debug(f"search::cmd_list2={cmd_list}")
             elif 'W232N' in devname or 'IP20' in devname:
@@ -437,26 +522,12 @@ class WIZMakeCMD:
                 if 'WIZ510SSL' in devname:
                     for cmd in cmd_wiz510ssl:
                         cmd_list.append([cmd, ""])
-                elif 'W55RP20-S2E-2CH' in devname:
+                elif any(suffix in devname for suffix, _, _ in W55RP20_CH_TABLE):
+                    # R2(7단계): search() 쪽과 같은 테이블 재사용. 원래 이 분기엔 구FW
+                    # 경고 로그가 없었으므로 warn=False.
                     if status != "BOOT":
-                        if version_compare(version, "1.1.8") >= 0:
-                            for cmd in cmd_w55rp20_2ch:
-                                cmd_list.append([cmd, ""])
-                        else:
-                            for cmd in cmd_security_base + cmd_wiz5xxsr_added:
-                                cmd_list.append([cmd, ""])
-                    else:
-                        for cmd in cmd_1p_boot:
+                        for cmd in self._w55rp20_channel_cmds(devname, version, warn=False):
                             cmd_list.append([cmd, ""])
-                elif 'W55RP20-S2E' in devname:
-                    if status != "BOOT":
-                        # 버전 1.1.8 이상인 경우에만 SD, DD, SE 명령어 포함
-                        if version_compare(version, "1.1.8") >= 0:
-                            for cmd in cmd_w55rp20:
-                                cmd_list.append([cmd, ""])
-                        else:
-                            for cmd in cmd_security_base + cmd_wiz5xxsr_added:
-                                cmd_list.append([cmd, ""])
                     else:
                         for cmd in cmd_1p_boot:
                             cmd_list.append([cmd, ""])
