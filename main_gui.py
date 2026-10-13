@@ -726,9 +726,6 @@ class WIZWindow(QMainWindow, main_window):
         self.broadcast.clicked.connect(self._on_broadcast_selected)
         self.unicast_ip.clicked.connect(self._on_unicast_selected)
         # self.unicast_mac.clicked.connect(self.event_search_method)
-        self.localip.textChanged.connect(
-            lambda text: self.search_ipaddr.setText(text) if text and self.unicast_ip.isChecked() else None
-        )
 
         # Event: modbus
         # self.unicast_mac.clicked.connect(self.event_search_method)
@@ -2422,9 +2419,17 @@ class WIZWindow(QMainWindow, main_window):
         self.search_port.setEnabled(False)
         self._reset_retry_counter()
 
+    def _sync_search_ip(self, ip):
+        # 호출자는 장치가 보고한 IP 를 넘긴다(Local IP 칸은 사용자가 고치는 중일 수 있다).
+        # 타이핑 시점에 옮기면 Apply 가 아직 옛 IP 에 있는 장치로 접속하지 못한다.
+        ip = (ip or "").strip()
+        if ip and ip != "0.0.0.0" and self.unicast_ip.isChecked():
+            self.search_ipaddr.setText(ip)
+
     def _on_unicast_selected(self):
-        if self.localip.text():
-            self.search_ipaddr.setText(self.localip.text())
+        if self.curr_mac:
+            prof = self.dev_profile.get(self.curr_mac, {})
+            self._sync_search_ip(prof.get("LI") or prof.get("local_ip"))
         self.search_ipaddr.setEnabled(True)
         self.search_port.setEnabled(True)
         self._reset_retry_counter()
@@ -4051,6 +4056,8 @@ class WIZWindow(QMainWindow, main_window):
                 self.fill_devinfo(dev_data)
             except Exception as e:
                 self.logger.error(f"get_clicked_devinfo:fill_devinfo:{e}")
+            # Apply 성공 뒤 dev_clicked() 재호출도 여기를 지나, 응답의 새 LI 로 옮겨진다.
+            self._sync_search_ip(dev_data.get("LI"))
         else:
             if len(self.dev_profile) != self.searched_devnum:
                 self.logger.info(
@@ -4085,6 +4092,7 @@ class WIZWindow(QMainWindow, main_window):
             dev_sock.close()
             if macaddr in self.dev_profile:
                 self.fill_devinfo(self.dev_profile[macaddr])
+                self._sync_search_ip(self.dev_profile[macaddr].get("LI"))
             else:
                 self.statusbar.showMessage(f" No response from {macaddr}")
         except Exception as e:
@@ -4436,6 +4444,7 @@ class WIZWindow(QMainWindow, main_window):
 
         # B-02 Stage 2: GET_INFO 완료 후에 위젯에 값 채우기
         self.fill_devinfo_wiz550(cfg)
+        self._sync_search_ip(cfg.get('local_ip'))
         self.statusbar.showMessage(f" WIZ550 settings loaded: {macaddr}")
 
     # ──────────────────────────────────────────────────────────────
