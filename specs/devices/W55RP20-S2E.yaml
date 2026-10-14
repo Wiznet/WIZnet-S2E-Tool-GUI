@@ -81,6 +81,9 @@ partial_command_groups:
 
 
 overrides:
+  # NP(연결 비밀번호) — FW pw_connect[10] (W55RP20/WIZ5XXSR-RP 계열 공통, 2026-10-14 확인)
+  NP:
+    regex: "^.{0,9}$"
   # 고속 Baudrate (FW >= 1.2.1에서 index 0-19 지원)
   # FW 버전에 따라 device_spec_loader가 런타임에 조정
   BR:
