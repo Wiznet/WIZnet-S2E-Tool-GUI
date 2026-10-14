@@ -2016,6 +2016,18 @@ class WIZWindow(QMainWindow, main_window):
         elif not want and idx >= 0:
             self.generalTab.removeTab(idx)
 
+        if want:
+            # 이 탭엔 group_pppoe/group_network_protocol/group_ddns 셋이 있는데, PPPoE 만
+            # 지원하는 기종(W55RP20-S2E-4CH)은 뒤 둘에 로드·저장 배선이 없다(DD/DX/DP/DI/DW/PO
+            # 는 "WIZ107"/"WIZ108" 전용 그대로 — 2026-10-14 분리). 배선 없는 그룹을 보이는 채로
+            # 두면 입력해도 반영 안 되는 칸이 된다(s2egui2 검증으로 발견) — 기종 전환마다 다시 맞춘다.
+            has_ddns = bool(self.curr_dev) and (
+                "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev
+            )
+            self.group_pppoe.setVisible(self._has_pppoe_support())
+            self.group_network_protocol.setVisible(has_ddns)
+            self.group_ddns.setVisible(has_ddns)
+
     def general_tab_config(self):
         """버튼 아래 일반 탭을 장비 종류와 상태에 따라 다르게 설정합니다.
         SECURITY_DEVICE 이면 BOOT/UPGRADE 모드가 아닌 경우 mqtt, 인증서 탭을 추가합니다.

@@ -105,6 +105,34 @@ def test_switching_from_wiz510ssl_to_4ch_drops_mqtt_cert(win):
     assert "certificate_tab" not in names
 
 
+def test_w55rp20_3ch_also_loses_mqtt_cert_tabs(win):
+    """3CH 도 FW 상 SSL/MQTT 미지원(기존 yaml 주석)이라, OP 기반 판단으로 바뀌면서
+    같이 사라지는 게 맞다 — 4CH 만 고치려다 놓친 회귀가 아니라 의도한 동반 수정."""
+    _set_device(win, "W55RP20-S2E-3CH")
+    win.general_tab_config()
+    names = _tab_names(win)
+    assert "mqtt_tab" not in names
+    assert "certificate_tab" not in names
+
+
+def test_ddns_pppoe_tab_groups_visible_for_4ch_vs_wiz107(win):
+    """s2egui2 검증으로 발견: 4CH 가 탭을 열면 배선 없는 group_ddns/group_network_protocol
+    도 같이 보였다. PPPoE 그룹만 보이고 나머지 둘은 숨어야 한다."""
+    # 창을 띄우지 않은 상태라 isVisible() 은 항상 False다 — setVisible() 로 명시 지정한
+    # 상태만 보는 isHidden() 으로 확인한다.
+    _set_device(win, "W55RP20-S2E-4CH")
+    win.general_tab_config()
+    assert not win.group_pppoe.isHidden()
+    assert win.group_network_protocol.isHidden()
+    assert win.group_ddns.isHidden()
+
+    _set_device(win, "WIZ107SR")
+    win.general_tab_config()
+    assert not win.group_pppoe.isHidden()
+    assert not win.group_network_protocol.isHidden()
+    assert not win.group_ddns.isHidden()
+
+
 def test_pppoe_fields_load_for_4ch(win):
     """fill_devinfo 가 4CH 에서도 PI/PP 를 pppoe_id/pppoe_pw 로 읽어 오는지."""
     _set_device(win, "W55RP20-S2E-4CH")
