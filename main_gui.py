@@ -45,7 +45,6 @@ import time
 import re
 import os
 import json
-import subprocess
 import webbrowser
 import logging
 import datetime
@@ -84,6 +83,7 @@ import ifaddr
 
 # CSV MRU Manager
 from csv_mru_manager import CSVMRUManager
+from net_reachability import icmp_ping, tcp_probe
 
 # Terminal utility
 from terminal.terminal_panel import TerminalPanel
@@ -2700,7 +2700,11 @@ class WIZWindow(QMainWindow, main_window):
                 _show_dialog = _tcp_mode and bool(self.curr_mac)
 
                 if _tcp_mode:
-                    net_response = self.net_check_ping(ip_addr)
+                    # ping 대신 설정 포트(port)로 직접 TCP 연결을 시도한다 — 바로 아래
+                    # connect_over_tcp()가 할 일을 선점 확인하는 것이라 ping보다 정확하고
+                    # (ping 성공해도 포트가 닫혀 있으면 설정은 못 함), ping.exe 서브프로세스/
+                    # 콘솔창도 없다. (2026-10-14, net_reachability.py 참조)
+                    net_response = tcp_probe(ip_addr, port)
                     if net_response == 0:
                         self.conf_sock = self.connect_over_tcp(ip_addr, port)
                         if self.conf_sock is None:
@@ -6940,19 +6944,11 @@ class WIZWindow(QMainWindow, main_window):
                 self.firmware_update(self.fw_filename, self.fw_filesize)
 
     def net_check_ping(self, dst_ip):
+        # FW 업로드 전 "장치가 켜져 있나" 확인용 — TCP 연산이 아니라 ICMP가 맞는 체크.
+        # Windows는 ctypes IcmpSendEcho(net_reachability.py)라 서브프로세스/콘솔창이
+        # 없다. (예전엔 ping.exe 서브프로세스라 빌드된 exe에서 매번 콘솔창이 깜빡였다.)
         self.statusbar.showMessage(" Checking the network...")
-        # serverip = self.localip_addr
-        serverip = dst_ip
-        # do_ping = subprocess.Popen("ping " + ("-n 1 " if sys.platform.lower()=="win32" else "-c 1 ") + serverip,
-        do_ping = subprocess.Popen(
-            ["ping", "-n", "1", serverip]
-            if sys.platform == "win32"
-            else ["ping", "-c", "1", serverip],
-            stdout=None,
-            stderr=None,
-            shell=False,
-        )
-        ping_response = do_ping.wait()
+        ping_response = icmp_ping(dst_ip)
         self.logger.info(ping_response)
         return ping_response
 
