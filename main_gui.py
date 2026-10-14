@@ -1998,6 +1998,21 @@ class WIZWindow(QMainWindow, main_window):
         wo_ddns = spec.ui_config.widget_overrides.get('ddns_pppoe_tab')
         return wo_ddns is not None and wo_ddns.visible
 
+    def _has_full_ddns_support(self) -> bool:
+        """DX 커맨드(DDNS Server Index)를 갖는 기종인가 — PPPoE 지원과는 별개 판단.
+        W55RP20-S2E-4CH 는 `partial_command_groups: ddns: [DH]` 로 DH만 받고 DX는
+        없다(`W55RP20-S2E-4CH.yaml`) — 이 차이로 WIZ107SR/108SR 과 구분한다.
+        'DD'는 쓰지 않는다 — DDNS 의 DD(Enable DDNS)와 connection_events 그룹의
+        DD(Send Data at Disconnection)가 같은 2글자 코드를 재사용해 충돌한다."""
+        if not self.curr_dev:
+            return False
+        spec_name = detect_device(self.curr_dev) or self.curr_dev
+        try:
+            spec = load_device(spec_name, self.curr_ver)
+        except FileNotFoundError:
+            return False
+        return spec.cmdset.get('DX') is not None
+
     def _sync_ddns_pppoe_tab(self) -> None:
         """DDNS/PPPoE 탭을 기종에 맞춰 추가/제거한다. `list_tabs` 같은 스냅샷에 기대지
         않고 그때그때 실제 탭 목록을 다시 읽는다 — 삽입 루프 뒤에는 스냅샷이 낡기 때문."""
@@ -2019,11 +2034,10 @@ class WIZWindow(QMainWindow, main_window):
         if want:
             # 이 탭엔 group_pppoe/group_network_protocol/group_ddns 셋이 있는데, PPPoE 만
             # 지원하는 기종(W55RP20-S2E-4CH)은 뒤 둘에 로드·저장 배선이 없다(DD/DX/DP/DI/DW/PO
-            # 는 "WIZ107"/"WIZ108" 전용 그대로 — 2026-10-14 분리). 배선 없는 그룹을 보이는 채로
-            # 두면 입력해도 반영 안 되는 칸이 된다(s2egui2 검증으로 발견) — 기종 전환마다 다시 맞춘다.
-            has_ddns = bool(self.curr_dev) and (
-                "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev
-            )
+            # 는 "WIZ107"/"WIZ108" 전용 그대로). 배선 없는 그룹을 보이는 채로 두면 입력해도
+            # 반영 안 되는 칸이 된다(s2egui2 검증으로 발견, 2026-10-14). 가시성 판단은
+            # `_has_full_ddns_support()`(DX 커맨드 유무)로 하며, 로드·저장 배선과는 별개다.
+            has_ddns = self._has_full_ddns_support()
             self.group_pppoe.setVisible(self._has_pppoe_support())
             self.group_network_protocol.setVisible(has_ddns)
             self.group_ddns.setVisible(has_ddns)

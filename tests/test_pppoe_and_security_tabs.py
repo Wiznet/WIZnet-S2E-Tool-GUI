@@ -115,6 +115,22 @@ def test_w55rp20_3ch_also_loses_mqtt_cert_tabs(win):
     assert "certificate_tab" not in names
 
 
+def test_has_full_ddns_support_uses_dx_command_not_device_name(win):
+    """has_ddns 판단은 "WIZ107"/"WIZ108" 이름 문자열이 아니라 DX 커맨드 유무로 한다
+    (2026-10-14, PPPoE 판단(IM/PI/PP)과는 별개 기준). 4CH 는 partial_command_groups
+    로 DH만 받고 DX는 없다(W55RP20-S2E-4CH.yaml) — 이 차이로 107/108 과 갈린다.
+    DD는 쓰지 않는다 — connection_events 그룹의 DD(Send Data at Disconnection)와
+    코드가 충돌해 4CH 에도 True 로 잘못 나온다."""
+    _set_device(win, "WIZ107SR")
+    assert win._has_full_ddns_support() is True
+    _set_device(win, "WIZ108SR")
+    assert win._has_full_ddns_support() is True
+    _set_device(win, "W55RP20-S2E-4CH")
+    assert win._has_full_ddns_support() is False
+    _set_device(win, "W55RP20-S2E-3CH")
+    assert win._has_full_ddns_support() is False
+
+
 def test_ddns_pppoe_tab_groups_visible_for_4ch_vs_wiz107(win):
     """s2egui2 검증으로 발견: 4CH 가 탭을 열면 배선 없는 group_ddns/group_network_protocol
     도 같이 보였다. PPPoE 그룹만 보이고 나머지 둘은 숨어야 한다."""
