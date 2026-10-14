@@ -59,6 +59,10 @@ command_groups:
   - pppoe
 
 overrides:
+  # NP(연결 비밀번호) — FW pw_connect[10] (2026-10-14 실제 소스 WIZ750SR/.../ConfigData.h:68 확인).
+  # 10자 이상 보내면 ERINVALIDPARAM → UDP/TCP 모드라 ER 문자열 없이 SAVE 전체 스킵(조용히 실패).
+  NP:
+    regex: "^.{0,9}$"
   # TR: FW 1.2.0 이상에서만 지원
   TR:
     min_version: "1.2.0"
