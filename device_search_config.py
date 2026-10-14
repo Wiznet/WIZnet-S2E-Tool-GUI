@@ -682,6 +682,7 @@ class DeviceSearchConfig:
             'phase3_set_command_delay_ms': self.get_phase3_set_command_delay_ms(),
             'phase3_set_response_timeout': self.get_phase3_set_response_timeout(),
             'phase3_set_response_timeout_5xx': self.get_phase3_set_response_timeout_5xx(),
+            'phase3_post_apply_reboot_delay': self.get_phase3_post_apply_reboot_delay(),
             'tcp_max_parallel_workers': self.get_tcp_max_parallel_workers(),
             'pgbar_update_percent': self.get_pgbar_update_percent(),
             'pgbar_auto_hide_delay_ms': self.get_pgbar_auto_hide_delay_ms(),
@@ -772,6 +773,12 @@ class DeviceSearchConfig:
                 if not (1.0 <= value <= 30.0):
                     raise ValueError(f"phase3_set_response_timeout_5xx must be 1.0~30.0, got {value}")
                 self.config['search']['phase3']['set_response_timeout_5xx_sec'] = value
+
+            if 'phase3_post_apply_reboot_delay' in updates:
+                value = float(updates['phase3_post_apply_reboot_delay'])
+                if not (0.0 <= value <= 5.0):
+                    raise ValueError(f"phase3_post_apply_reboot_delay must be 0.0~5.0, got {value}")
+                self.config['search']['phase3']['post_apply_reboot_delay_sec'] = value
 
             if 'tcp_max_parallel_workers' in updates:
                 value = int(updates['tcp_max_parallel_workers'])

@@ -7842,6 +7842,20 @@ class WIZWindow(QMainWindow, main_window):
         )
         phase3_layout.addRow("SET Response Timeout (WIZ5XXSR-RP):", dialog.spin_set_timeout_5xx)
 
+        # Post-Apply Reboot Delay (IP 모드 변경 등)
+        dialog.spin_reboot_delay = QDoubleSpinBox()
+        dialog.spin_reboot_delay.setRange(0.0, 5.0)
+        dialog.spin_reboot_delay.setSingleStep(0.5)
+        dialog.spin_reboot_delay.setDecimals(1)
+        dialog.spin_reboot_delay.setSuffix(" sec")
+        dialog.spin_reboot_delay.setValue(current_values['phase3_post_apply_reboot_delay'])
+        dialog.spin_reboot_delay.setToolTip(
+            "IP 모드 변경 등으로 Apply 후 장치가 리부팅할 때, 다음 Device Search의\n"
+            "TCP probe 1회 실패를 기기 고장처럼 보이지 않게 이만큼 기다려 재확인한다.\n\n"
+            "Default: 1.0 s — 장치가 더 느리게 리부팅하면 올려서 확인."
+        )
+        phase3_layout.addRow("Post-Apply Reboot Delay:", dialog.spin_reboot_delay)
+
         phase3_group.setLayout(phase3_layout)
         main_layout.addWidget(phase3_group)
 
@@ -7938,6 +7952,7 @@ class WIZWindow(QMainWindow, main_window):
             'phase3_set_command_delay_ms': dialog.spin_set_delay.value(),
             'phase3_set_response_timeout': dialog.spin_set_timeout.value(),
             'phase3_set_response_timeout_5xx': dialog.spin_set_timeout_5xx.value(),
+            'phase3_post_apply_reboot_delay': dialog.spin_reboot_delay.value(),
             'tcp_max_parallel_workers': dialog.spin_tcp_workers.value(),
             'pgbar_update_percent': dialog.spin_pgbar_percent.value(),
             'pgbar_auto_hide_delay_ms': dialog.spin_pgbar_hide.value()
@@ -8010,6 +8025,7 @@ class WIZWindow(QMainWindow, main_window):
                 dialog.spin_set_delay.setValue(defaults['phase3_set_command_delay_ms'])
                 dialog.spin_set_timeout.setValue(defaults['phase3_set_response_timeout'])
                 dialog.spin_set_timeout_5xx.setValue(defaults['phase3_set_response_timeout_5xx'])
+                dialog.spin_reboot_delay.setValue(defaults['phase3_post_apply_reboot_delay'])
                 dialog.spin_tcp_workers.setValue(defaults['tcp_max_parallel_workers'])
                 dialog.spin_pgbar_percent.setValue(defaults['pgbar_update_percent'])
                 dialog.spin_pgbar_hide.setValue(defaults['pgbar_auto_hide_delay_ms'])
