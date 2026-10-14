@@ -6441,6 +6441,13 @@ class WIZWindow(QMainWindow, main_window):
                     self.logger.info("close socket")
                     if self.conf_sock is not None:
                         self.conf_sock.close()
+                    # 유니캐스트 TCP로 Apply 성공 — 응답은 끝까지 왔지만(len(mc)==17)
+                    # 장치가 이 직후 리부팅(IP 변경 등)할 수 있다(실측: 2026-10-14,
+                    # 짧은 응답 분기가 아니라 이 정상 성공 분기로도 리부팅이 일어남).
+                    # 다음 Search의 TCP probe 1회 실패를 "장치 고장"으로 보이지
+                    # 않게 유예를 둔다.
+                    _reboot_delay = self.timing_config.get_phase3_post_apply_reboot_delay()
+                    self._reboot_grace_until = time.time() + _reboot_delay + 4.0
 
                 try:
                     clicked_mac = self.list_device.selectedItems()[0].text()
