@@ -105,6 +105,7 @@ class DeviceSearchConfig:
                 'set_command_delay_ms': 500,
                 'set_response_timeout_sec': 2.0,
                 'set_response_timeout_5xx_sec': 2.0,
+                'post_apply_reboot_delay_sec': 1.0,
             },
             'tcp': {
                 'scan_timeout_sec': 2.0,
@@ -163,6 +164,7 @@ class DeviceSearchConfig:
         ('search', 'phase3', 'set_command_delay_ms'): (0, 2000),
         ('search', 'phase3', 'set_response_timeout_sec'): (1.0, 15.0),
         ('search', 'phase3', 'set_response_timeout_5xx_sec'): (1.0, 30.0),
+        ('search', 'phase3', 'post_apply_reboot_delay_sec'): (0.0, 5.0),
         ('search', 'tcp', 'max_parallel_workers'): (1, 50),
         ('ui', 'progress_bar', 'update_percent'): (1, 100),
         ('ui', 'progress_bar', 'auto_hide_delay_ms'): (0, 10000),
@@ -495,6 +497,17 @@ class DeviceSearchConfig:
             float: 타임아웃 값 (초)
         """
         return float(self.config['search']['phase3']['set_response_timeout_5xx_sec'])
+
+    def get_phase3_post_apply_reboot_delay(self) -> float:
+        """IP 모드 변경 Apply 후 재검색 대기 (초)
+
+        장치가 리부팅 감지된 Apply 뒤, 설정 포트가 다시 열릴 시간을 벌어준다
+        (socket_config의 TCP probe 1회 재확인 대기).
+
+        Returns:
+            float: 대기 시간 (초)
+        """
+        return float(self.config['search']['phase3']['post_apply_reboot_delay_sec'])
 
     # ============================================================
     # TCP 설정 접근자

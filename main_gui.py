@@ -514,6 +514,11 @@ class WIZWindow(QMainWindow, main_window):
         # 만들 때마다 이전 것을 닫지 않으면 같은 주소에 소켓이 겹쳐 쌓이고,
         # Windows 는 겹친 소켓 중 가장 먼저 바인드된 것에만 유니캐스트를 준다.
         self._conf_sock_key = None
+        # IP 모드 변경 Apply 로 장치가 리부팅 중임을 알리는 유예 시각(time.time() 기준).
+        # 이 시각 전이면 TCP probe 1회 실패를 "장치 고장"이 아니라 리부팅 중으로 보고
+        # post_apply_reboot_delay_sec 만큼 기다려 재확인한다 (socket_config,
+        # get_setting_result 참조, 2026-10-14).
+        self._reboot_grace_until = 0.0
         # GPIO 주기 갱신 전용 소켓. conf_sock 을 공유하면 재설정 때 함께 닫혀 갱신이 죽는다.
         self._datarefresh_sock = None
         self._finalize_timer = None
@@ -2705,6 +2710,19 @@ class WIZWindow(QMainWindow, main_window):
                     # (ping 성공해도 포트가 닫혀 있으면 설정은 못 함), ping.exe 서브프로세스/
                     # 콘솔창도 없다. (2026-10-14, net_reachability.py 참조)
                     net_response = tcp_probe(ip_addr, port)
+                    if net_response != 0 and time.time() < self._reboot_grace_until:
+                        # IP 모드 변경 Apply 직후(get_setting_result의 "Device rebooted"
+                        # 분기)라 장치가 실제로 리부팅 중일 수 있다 — 포트가 잠깐
+                        # 닫혀 있을 뿐인데 사용자에게는 "장치 고장"처럼 보인다.
+                        # post_apply_reboot_delay_sec 만큼만 기다려 1회 재확인한다.
+                        _delay = self.timing_config.get_phase3_post_apply_reboot_delay()
+                        self.logger.info(
+                            f"TCP probe failed during reboot grace window, "
+                            f"retry once after {_delay:g}s: {ip_addr}"
+                        )
+                        time.sleep(_delay)
+                        net_response = tcp_probe(ip_addr, port)
+                        self._reboot_grace_until = 0.0
                     if net_response == 0:
                         self.conf_sock = self.connect_over_tcp(ip_addr, port)
                         if self.conf_sock is None:
@@ -6452,9 +6470,14 @@ class WIZWindow(QMainWindow, main_window):
                     "Device rebooted before full response (e.g. IP mode change). "
                     "Command was delivered."
                 )
+                _reboot_delay = self.timing_config.get_phase3_post_apply_reboot_delay()
                 self.statusbar.showMessage(
-                    " Setting sent. Device rebooted (IP mode change). Re-search to verify."
+                    " Setting sent. Device rebooted (IP mode change). "
+                    f"Re-search to verify (auto-retries once after {_reboot_delay:g}s)."
                 )
+                # 다음 Search 때 TCP probe 가 리부팅 틈을 "장치 고장"처럼 보이게
+                # 하지 않도록 짧게 유예를 둔다 (socket_config 참조).
+                self._reboot_grace_until = time.time() + _reboot_delay + 4.0
 
         self.object_config()
 
