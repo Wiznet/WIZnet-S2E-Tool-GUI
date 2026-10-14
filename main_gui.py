@@ -6422,14 +6422,29 @@ class WIZWindow(QMainWindow, main_window):
                 # 편집분이 장치에 반영됐으니 이제 주기 갱신이 실제값을 보여주게 둔다.
                 # 실패 응답에서는 놓지 않는다 — 사용자가 다시 시도할 값이다.
                 self._clear_gpio_user_edit("apply succeeded")
+
+                # 유니캐스트 TCP로 Apply 성공 — 응답은 끝까지 왔지만(len(mc)==17)
+                # 장치가 이 직후 리부팅(IP 변경 등)할 수 있다(실측: 2026-10-14, 짧은
+                # 응답 분기가 아니라 이 정상 성공 분기로도 리부팅이 일어남). 다음
+                # Search의 TCP probe 1회 실패를 "장치 고장"으로 보이지 않게, Set
+                # success 안내문에도 보이는 형태로 먼저 유예를 건다.
+                _reboot_note = ""
+                if self.isConnected and self.unicast_ip.isChecked():
+                    _reboot_delay = self.timing_config.get_phase3_post_apply_reboot_delay()
+                    self._reboot_grace_until = time.time() + _reboot_delay + 4.0
+                    _reboot_note = (
+                        f" Device may be rebooting — next search auto-retries "
+                        f"once after {_reboot_delay:g}s if needed."
+                    )
+
                 if self._setcmd_reduced:
                     self.statusbar.showMessage(
                         f" Set complete — network settings only "
                         f"(device was in {self.curr_st} state)."
                     )
                 else:
-                    self.statusbar.showMessage(" Set device complete!")
-                self.msg_set_success()
+                    self.statusbar.showMessage(" Set device complete!" + _reboot_note)
+                self.msg_set_success(_reboot_note)
 
                 # SET 응답에 포함된 ST 로 장치 상태를 최신화한다.
                 # curr_st 는 원래 검색 시점(dev_data)에만 갱신되어, 재검색 없이 Apply 를
@@ -6441,13 +6456,6 @@ class WIZWindow(QMainWindow, main_window):
                     self.logger.info("close socket")
                     if self.conf_sock is not None:
                         self.conf_sock.close()
-                    # 유니캐스트 TCP로 Apply 성공 — 응답은 끝까지 왔지만(len(mc)==17)
-                    # 장치가 이 직후 리부팅(IP 변경 등)할 수 있다(실측: 2026-10-14,
-                    # 짧은 응답 분기가 아니라 이 정상 성공 분기로도 리부팅이 일어남).
-                    # 다음 Search의 TCP probe 1회 실패를 "장치 고장"으로 보이지
-                    # 않게 유예를 둔다.
-                    _reboot_delay = self.timing_config.get_phase3_post_apply_reboot_delay()
-                    self._reboot_grace_until = time.time() + _reboot_delay + 4.0
 
                 try:
                     clicked_mac = self.list_device.selectedItems()[0].text()
@@ -7410,11 +7418,12 @@ class WIZWindow(QMainWindow, main_window):
         msgbox.setText("Setting failed.\nWrong password.")
         msgbox.exec_()
 
-    def msg_set_success(self):
+    def msg_set_success(self, note=""):
         msgbox = QMessageBox(self)
-        msgbox.question(
-            self, "Setting success", "Device configuration complete!", QMessageBox.Yes
-        )
+        text = "Device configuration complete!"
+        if note:
+            text += "\n\n" + note.strip()
+        msgbox.question(self, "Setting success", text, QMessageBox.Yes)
 
     def msg_upload_warning(self, dst_ip):
         msgbox = QMessageBox(self)
