@@ -8299,6 +8299,20 @@ class WIZWindow(QMainWindow, main_window):
         )
         phase3_layout.addRow("Device Query Timeout:", dialog.dspin_device_query_timeout)  # 장비 쿼리 타임아웃
 
+        # Post-Apply Reboot Delay (IP 모드 변경 등)
+        dialog.dspin_reboot_delay = QDoubleSpinBox()
+        dialog.dspin_reboot_delay.setRange(0.0, 5.0)
+        dialog.dspin_reboot_delay.setSingleStep(0.5)
+        dialog.dspin_reboot_delay.setDecimals(1)
+        dialog.dspin_reboot_delay.setSuffix(" sec")
+        dialog.dspin_reboot_delay.setValue(config.get('phase3_post_apply_reboot_delay', 1.0))
+        dialog.dspin_reboot_delay.setToolTip(
+            "IP 모드 변경 등으로 Apply 후 장치가 리부팅할 때, 다음 Device Search의\n"
+            "TCP probe 1회 실패를 기기 고장처럼 보이지 않게 이만큼 기다려 재확인한다.\n\n"
+            "Default: 1.0 s — 장치가 더 느리게 리부팅하면 올려서 확인."
+        )
+        phase3_layout.addRow("Post-Apply Reboot Delay:", dialog.dspin_reboot_delay)
+
         phase3_group.setLayout(phase3_layout)
         main_layout.addWidget(phase3_group)
 
@@ -8406,6 +8420,7 @@ class WIZWindow(QMainWindow, main_window):
 
             # Phase 3 타이밍
             'phase3_device_query_timeout': dialog.dspin_device_query_timeout.value(),
+            'phase3_post_apply_reboot_delay': dialog.dspin_reboot_delay.value(),
 
             # TCP 설정
             'tcp_max_parallel_workers': dialog.spin_tcp_max_workers.value(),
@@ -8449,6 +8464,8 @@ class WIZWindow(QMainWindow, main_window):
             self.timing_config.config.setdefault('experimental', {})['phase3_on_demand'] = updates.get('phase3_on_demand', False)
             if 'pgbar_auto_hide_delay_ms' in updates:
                 self.timing_config.config.setdefault('ui', {}).setdefault('progress_bar', {})['auto_hide_delay_ms'] = int(updates['pgbar_auto_hide_delay_ms'])
+            if 'phase3_post_apply_reboot_delay' in updates:
+                self.timing_config.config.setdefault('search', {}).setdefault('phase3', {})['post_apply_reboot_delay_sec'] = float(updates['phase3_post_apply_reboot_delay'])
 
             self.logger.info(f"Advanced search options applied: {updates}")
             QtWidgets.QMessageBox.information(
@@ -8506,6 +8523,7 @@ class WIZWindow(QMainWindow, main_window):
 
                 # Phase 3 타이밍 기본값
                 dialog.dspin_device_query_timeout.setValue(defaults['phase3']['device_query_timeout_sec'])
+                dialog.dspin_reboot_delay.setValue(defaults['phase3']['post_apply_reboot_delay_sec'])
 
                 # TCP 설정 기본값
                 dialog.spin_tcp_max_workers.setValue(defaults['tcp']['max_parallel_workers'])
@@ -8535,6 +8553,8 @@ class WIZWindow(QMainWindow, main_window):
                 # timing_config 인메모리 동기화
                 self.timing_config.config.setdefault('logging', {})['show_timing_in_statusbar'] = False
                 self.timing_config.config.setdefault('experimental', {})['phase3_on_demand'] = False
+                self.timing_config.config.setdefault('search', {}).setdefault('phase3', {})['post_apply_reboot_delay_sec'] = \
+                    defaults['phase3']['post_apply_reboot_delay_sec']
 
                 QtWidgets.QMessageBox.information(
                     dialog,
