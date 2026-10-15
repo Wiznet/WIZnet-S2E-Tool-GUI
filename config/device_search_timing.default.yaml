@@ -66,6 +66,10 @@ search:
     #   오인하는 사례 있음). 리부팅이 감지된 Apply 뒤, 이 시간만큼 대기 후 1회
     #   재확인한다(socket_config 참조).
     # - 권장: 1.0 (장치가 더 느리게 리부팅하면 올려서 확인)
+    # - 네트워크 프리셋별 참고용 권장치(presets 구조에는 넣지 않음 — 리부팅 지연은
+    #   네트워크 속도보다 장치 자체 리부팅 시간에 좌우되고, presets에 넣으면 앱
+    #   재시작마다 Advanced Search Options에서 손으로 조정한 값을 덮어써 버림):
+    #   fast 1.0 / normal 1.0 / slow 2.0
     post_apply_reboot_delay_sec: 1.0
 
   # TCP Multicast / Mixed Search
