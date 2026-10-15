@@ -6681,6 +6681,7 @@ class WIZWindow(QMainWindow, main_window):
             fw_type_list=fw_type_list or None,
             wiz550_config=wiz550_config,
             image_validator=self._verify_fw_image,
+            current_version=self.curr_ver,
         )
         dlg.firmware_ready.connect(self._on_fw_git_ready)
         dlg.exec_()
