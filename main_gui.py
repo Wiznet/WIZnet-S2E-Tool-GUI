@@ -7917,6 +7917,53 @@ class WIZWindow(QMainWindow, main_window):
         )
         phase3_layout.addRow("Device Query Timeout:", dialog.dspin_device_query_timeout)  # 장비 쿼리 타임아웃
 
+        # SET Command Post-Response Delay
+        dialog.spin_set_delay = QSpinBox()
+        dialog.spin_set_delay.setRange(0, 2000)
+        dialog.spin_set_delay.setSingleStep(100)
+        dialog.spin_set_delay.setSuffix(" ms")
+        dialog.spin_set_delay.setValue(config.get('phase3_set_command_delay_ms', 500))
+        dialog.spin_set_delay.setToolTip(
+            "Wait time after SET response before re-querying the device.\n"
+            "The device reboots immediately after SET, and dev_clicked() queries it\n"
+            "right after — without this delay the device is mid-reboot and won't respond.\n\n"
+            "Default: 500 ms (recommended — do not reduce for older/slow devices).\n"
+            "Reducing below 200 ms risks SET-after-reboot query failures."
+        )
+        phase3_layout.addRow("SET Response Delay:", dialog.spin_set_delay)
+
+        # SET Response Timeout (일반 장치)
+        dialog.dspin_set_timeout = QDoubleSpinBox()
+        dialog.dspin_set_timeout.setRange(1.0, 15.0)
+        dialog.dspin_set_timeout.setSingleStep(0.5)
+        dialog.dspin_set_timeout.setDecimals(1)
+        dialog.dspin_set_timeout.setSuffix(" sec")
+        dialog.dspin_set_timeout.setValue(config.get('phase3_set_response_timeout', 2.0))
+        dialog.dspin_set_timeout.setToolTip(
+            "How long to wait for the device response after Apply.\n"
+            "Exceeding this shows \"Setting failed\" even if the device applied the setting.\n\n"
+            "Default: 2.0 s"
+        )
+        phase3_layout.addRow("SET Response Timeout:", dialog.dspin_set_timeout)
+
+        # SET Response Timeout (WIZ5XXSR-RP 전용)
+        dialog.dspin_set_timeout_5xx = QDoubleSpinBox()
+        dialog.dspin_set_timeout_5xx.setRange(1.0, 30.0)
+        dialog.dspin_set_timeout_5xx.setSingleStep(0.5)
+        dialog.dspin_set_timeout_5xx.setDecimals(1)
+        dialog.dspin_set_timeout_5xx.setSuffix(" sec")
+        dialog.dspin_set_timeout_5xx.setValue(config.get('phase3_set_response_timeout_5xx', 2.0))
+        dialog.dspin_set_timeout_5xx.setToolTip(
+            "SET response timeout applied only to WIZ5XXSR-RP devices.\n\n"
+            "These devices block up to 1.8 s inside connect() when the remote host is\n"
+            "unreachable (RCR 8 x RTR 200 ms), and the flash save right after SET\n"
+            "(4 KB sector erase, up to ~400 ms) can overlap with it. The general 2.0 s\n"
+            "timeout can therefore be too short in some situations.\n\n"
+            "Default: 2.0 s (same as the general value). Raise it toward 5.0 s if\n"
+            "\"Setting failed\" appears while the setting is actually applied."
+        )
+        phase3_layout.addRow("SET Response Timeout (WIZ5XXSR-RP):", dialog.dspin_set_timeout_5xx)
+
         # Post-Apply Reboot Delay (IP 모드 변경 등)
         dialog.dspin_reboot_delay = QDoubleSpinBox()
         dialog.dspin_reboot_delay.setRange(0.0, 5.0)
@@ -8038,6 +8085,9 @@ class WIZWindow(QMainWindow, main_window):
 
             # Phase 3 타이밍
             'phase3_device_query_timeout': dialog.dspin_device_query_timeout.value(),
+            'phase3_set_command_delay_ms': dialog.spin_set_delay.value(),
+            'phase3_set_response_timeout': dialog.dspin_set_timeout.value(),
+            'phase3_set_response_timeout_5xx': dialog.dspin_set_timeout_5xx.value(),
             'phase3_post_apply_reboot_delay': dialog.dspin_reboot_delay.value(),
 
             # TCP 설정
@@ -8073,6 +8123,8 @@ class WIZWindow(QMainWindow, main_window):
             WIZMSGHandler.loop_select_timeout = updates['phase1_loop_select_timeout']
             WIZMSGHandler.emit_stabilization_ms = updates['phase1_emit_stabilization_ms']
             WIZMSGHandler.skip_phase1_emit_delay = updates['skip_phase1_emit_delay']
+            if 'phase3_set_command_delay_ms' in updates:
+                WIZMSGHandler.set_command_delay_ms = int(updates['phase3_set_command_delay_ms'])
 
             # 인스턴스 변수 업데이트
             self.search_wait_time_each = updates['phase3_device_query_timeout']
@@ -8084,6 +8136,12 @@ class WIZWindow(QMainWindow, main_window):
                 self.timing_config.config.setdefault('ui', {}).setdefault('progress_bar', {})['auto_hide_delay_ms'] = int(updates['pgbar_auto_hide_delay_ms'])
             if 'phase3_post_apply_reboot_delay' in updates:
                 self.timing_config.config.setdefault('search', {}).setdefault('phase3', {})['post_apply_reboot_delay_sec'] = float(updates['phase3_post_apply_reboot_delay'])
+            if 'phase3_set_response_timeout' in updates:
+                self.timing_config.config.setdefault('search', {}).setdefault('phase3', {})['set_response_timeout_sec'] = float(updates['phase3_set_response_timeout'])
+            if 'phase3_set_response_timeout_5xx' in updates:
+                self.timing_config.config.setdefault('search', {}).setdefault('phase3', {})['set_response_timeout_5xx_sec'] = float(updates['phase3_set_response_timeout_5xx'])
+            if 'phase3_set_command_delay_ms' in updates:
+                self.timing_config.config.setdefault('search', {}).setdefault('phase3', {})['set_command_delay_ms'] = int(updates['phase3_set_command_delay_ms'])
 
             self.logger.info(f"Advanced search options applied: {updates}")
             QtWidgets.QMessageBox.information(
@@ -8141,6 +8199,9 @@ class WIZWindow(QMainWindow, main_window):
 
                 # Phase 3 타이밍 기본값
                 dialog.dspin_device_query_timeout.setValue(defaults['phase3']['device_query_timeout_sec'])
+                dialog.spin_set_delay.setValue(defaults['phase3']['set_command_delay_ms'])
+                dialog.dspin_set_timeout.setValue(defaults['phase3']['set_response_timeout_sec'])
+                dialog.dspin_set_timeout_5xx.setValue(defaults['phase3']['set_response_timeout_5xx_sec'])
                 dialog.dspin_reboot_delay.setValue(defaults['phase3']['post_apply_reboot_delay_sec'])
 
                 # TCP 설정 기본값
@@ -8164,6 +8225,7 @@ class WIZWindow(QMainWindow, main_window):
                 WIZMSGHandler.loop_select_timeout = defaults['phase1']['loop_select_timeout_sec']
                 WIZMSGHandler.emit_stabilization_ms = defaults['phase1']['emit_stabilization_ms']
                 WIZMSGHandler.skip_phase1_emit_delay = False
+                WIZMSGHandler.set_command_delay_ms = defaults['phase3']['set_command_delay_ms']
 
                 # 인스턴스 변수 업데이트
                 self.search_wait_time_each = defaults['phase3']['device_query_timeout_sec']
@@ -8171,8 +8233,11 @@ class WIZWindow(QMainWindow, main_window):
                 # timing_config 인메모리 동기화
                 self.timing_config.config.setdefault('logging', {})['show_timing_in_statusbar'] = False
                 self.timing_config.config.setdefault('experimental', {})['phase3_on_demand'] = False
-                self.timing_config.config.setdefault('search', {}).setdefault('phase3', {})['post_apply_reboot_delay_sec'] = \
-                    defaults['phase3']['post_apply_reboot_delay_sec']
+                phase3_cfg = self.timing_config.config.setdefault('search', {}).setdefault('phase3', {})
+                phase3_cfg['post_apply_reboot_delay_sec'] = defaults['phase3']['post_apply_reboot_delay_sec']
+                phase3_cfg['set_command_delay_ms'] = defaults['phase3']['set_command_delay_ms']
+                phase3_cfg['set_response_timeout_sec'] = defaults['phase3']['set_response_timeout_sec']
+                phase3_cfg['set_response_timeout_5xx_sec'] = defaults['phase3']['set_response_timeout_5xx_sec']
 
                 QtWidgets.QMessageBox.information(
                     dialog,
