@@ -7794,7 +7794,8 @@ class WIZWindow(QMainWindow, main_window):
             QDialog: 설정 다이얼로그
         """
         from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, QDialogButtonBox,
-                                     QDoubleSpinBox, QSpinBox, QCheckBox, QGroupBox, QPushButton)
+                                     QDoubleSpinBox, QSpinBox, QCheckBox, QGroupBox, QPushButton,
+                                     QComboBox)
 
         dialog = QDialog(self)
         dialog.setWindowTitle("Advanced Search Options")
@@ -7985,6 +7986,19 @@ class WIZWindow(QMainWindow, main_window):
         tcp_group = QGroupBox("TCP Settings")  # TCP 설정
         tcp_layout = QFormLayout()
 
+        # TCP 포트 스캔 타임아웃
+        dialog.dspin_tcp_scan_timeout = QDoubleSpinBox()
+        dialog.dspin_tcp_scan_timeout.setRange(0.5, 10.0)
+        dialog.dspin_tcp_scan_timeout.setSingleStep(0.5)
+        dialog.dspin_tcp_scan_timeout.setDecimals(1)
+        dialog.dspin_tcp_scan_timeout.setSuffix(" sec")
+        dialog.dspin_tcp_scan_timeout.setValue(config.get('tcp_scan_timeout', 2.0))
+        dialog.dspin_tcp_scan_timeout.setToolTip(
+            "Timeout for each IP:port connection attempt during TCP Multicast scan\n"
+            "Recommended: 2.0s (normal), 1.0s (fast), 3.0s (slow)"
+        )
+        tcp_layout.addRow("Scan Timeout:", dialog.dspin_tcp_scan_timeout)
+
         # 최대 병렬 워커 수
         dialog.spin_tcp_max_workers = QSpinBox()
         dialog.spin_tcp_max_workers.setRange(1, 50)
@@ -8051,6 +8065,25 @@ class WIZWindow(QMainWindow, main_window):
         )
         debug_layout.addRow("On-demand Query:", dialog.cb_phase3_on_demand)  # 온디맨드 조회
 
+        dialog.combo_log_level = QComboBox()
+        dialog.combo_log_level.addItems(["DEBUG", "INFO", "WARNING", "ERROR"])
+        dialog.combo_log_level.setCurrentText(config.get('logging_level', 'INFO'))
+        dialog.combo_log_level.setToolTip(
+            "Application log level — written to ~/.wizconfig/logs/wizconfig.log\n"
+            "DEBUG is verbose; recommended only while troubleshooting\n"
+            "(Default: INFO)"
+        )
+        debug_layout.addRow("Log Level:", dialog.combo_log_level)
+
+        dialog.cb_verbose_debug = QCheckBox("Dump raw protocol bytes to log ([WIRE])")
+        dialog.cb_verbose_debug.setChecked(config.get('logging_verbose_debug', False))
+        dialog.cb_verbose_debug.setToolTip(
+            "Logs every byte sent/received on the wire for protocol-level debugging.\n"
+            "Very noisy — DEBUG level alone is not enough detail for this.\n"
+            "(Default: off)"
+        )
+        debug_layout.addRow("Verbose Wire Log:", dialog.cb_verbose_debug)
+
         debug_group.setLayout(debug_layout)
         main_layout.addWidget(debug_group)
 
@@ -8091,6 +8124,7 @@ class WIZWindow(QMainWindow, main_window):
             'phase3_post_apply_reboot_delay': dialog.dspin_reboot_delay.value(),
 
             # TCP 설정
+            'tcp_scan_timeout': dialog.dspin_tcp_scan_timeout.value(),
             'tcp_max_parallel_workers': dialog.spin_tcp_max_workers.value(),
 
             # UI 설정
@@ -8100,6 +8134,8 @@ class WIZWindow(QMainWindow, main_window):
             # 디버그 / 실험적
             'show_timing_in_statusbar': dialog.cb_show_timing.isChecked(),
             'phase3_on_demand': dialog.cb_phase3_on_demand.isChecked(),
+            'logging_level': dialog.combo_log_level.currentText(),
+            'logging_verbose_debug': dialog.cb_verbose_debug.isChecked(),
         }
 
     def _apply_advanced_search_settings(self, updates):
@@ -8142,6 +8178,10 @@ class WIZWindow(QMainWindow, main_window):
                 self.timing_config.config.setdefault('search', {}).setdefault('phase3', {})['set_response_timeout_5xx_sec'] = float(updates['phase3_set_response_timeout_5xx'])
             if 'phase3_set_command_delay_ms' in updates:
                 self.timing_config.config.setdefault('search', {}).setdefault('phase3', {})['set_command_delay_ms'] = int(updates['phase3_set_command_delay_ms'])
+            if 'tcp_scan_timeout' in updates:
+                self.timing_config.config.setdefault('search', {}).setdefault('tcp', {})['scan_timeout_sec'] = float(updates['tcp_scan_timeout'])
+            # logging_level/logging_verbose_debug는 _on_config_file_changed()의 파일 감시가
+            # YAML 저장 직후 자동으로 반영하므로 여기서 별도 동기화 불필요
 
             self.logger.info(f"Advanced search options applied: {updates}")
             QtWidgets.QMessageBox.information(
@@ -8205,6 +8245,7 @@ class WIZWindow(QMainWindow, main_window):
                 dialog.dspin_reboot_delay.setValue(defaults['phase3']['post_apply_reboot_delay_sec'])
 
                 # TCP 설정 기본값
+                dialog.dspin_tcp_scan_timeout.setValue(defaults['tcp']['scan_timeout_sec'])
                 dialog.spin_tcp_max_workers.setValue(defaults['tcp']['max_parallel_workers'])
 
                 # UI 설정 기본값 (device_search_config.py의 DEFAULTS['ui']에서 가져오기)
@@ -8215,6 +8256,10 @@ class WIZWindow(QMainWindow, main_window):
                 # 디버그 / 실험적 기본값
                 dialog.cb_show_timing.setChecked(False)
                 dialog.cb_phase3_on_demand.setChecked(False)
+                dialog.combo_log_level.setCurrentText(full_defaults['logging']['level'])
+                dialog.cb_verbose_debug.setChecked(full_defaults['logging']['verbose_debug'])
+                # logging.level/verbose_debug는 reset_to_defaults()가 YAML에 쓴 직후
+                # _on_config_file_changed() 파일 감시가 자동으로 반영 — 별도 동기화 불필요
 
                 # 내부 변수 업데이트
                 self.retry_search_expected_count = 0
@@ -8238,6 +8283,8 @@ class WIZWindow(QMainWindow, main_window):
                 phase3_cfg['set_command_delay_ms'] = defaults['phase3']['set_command_delay_ms']
                 phase3_cfg['set_response_timeout_sec'] = defaults['phase3']['set_response_timeout_sec']
                 phase3_cfg['set_response_timeout_5xx_sec'] = defaults['phase3']['set_response_timeout_5xx_sec']
+                self.timing_config.config.setdefault('search', {}).setdefault('tcp', {})['scan_timeout_sec'] = \
+                    defaults['tcp']['scan_timeout_sec']
 
                 QtWidgets.QMessageBox.information(
                     dialog,
