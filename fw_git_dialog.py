@@ -84,7 +84,7 @@ class FWGitDialog(QDialog):
 
     def __init__(self, parent, device_name, family, device_spec, fetcher, dl_path,
                  fw_type_list=None, wiz550_config=None, image_validator=None,
-                 current_version=None):
+                 current_version=None, device_in_boot=False):
         """
         fw_type_list: [{"label": str, "family": dict, "device_spec": dict}, ...]
           None 또는 빈 리스트면 타입 선택 행 미표시.
@@ -92,6 +92,8 @@ class FWGitDialog(QDialog):
           제공 시 다운로드 완료 후 TFTP 업로드를 이 창 안에서 자동 진행.
         current_version: 장치에서 읽은 현재 App 버전 문자열. family 에 boot_compat 규칙이
           있으면 이 값으로 Boot 호환을 추측해 릴리즈를 비활성/경고 처리한다.
+        device_in_boot: 장치가 BOOT 상태(복구 중)면 True. 이때 current_version 은 저장된 값이라
+          비활성 판정을 경고로 낮춘다(복구용 업로드를 막지 않기 위해).
         """
         super().__init__(parent)
         self._device_name  = device_name
@@ -105,6 +107,7 @@ class FWGitDialog(QDialog):
         # 그 경로도 같은 이미지 검증을 받도록 호출자가 검증 함수를 넘겨준다.
         self._image_validator = image_validator
         self._current_version = current_version
+        self._device_in_boot = device_in_boot
         self._compat = judge(None, None, None)
         self._releases     = []
         self._current_asset = None
@@ -260,7 +263,9 @@ class FWGitDialog(QDialog):
         self._combo.clear()
         for i, r in enumerate(releases):
             date = r.get("published_at", "")[:10]
-            verdict = judge(rule, self._current_version, r["tag_name"])["result"]
+            verdict = judge(
+                rule, self._current_version, r["tag_name"], self._device_in_boot
+            )["result"]
             label = f"{r['tag_name']}  ({date})"
             if verdict == BLOCK:
                 label += "  [Boot incompatible]"
@@ -297,7 +302,8 @@ class FWGitDialog(QDialog):
             return
         release = self._releases[index]
         self._compat = judge(
-            self._family.get("boot_compat"), self._current_version, release["tag_name"]
+            self._family.get("boot_compat"), self._current_version,
+            release["tag_name"], self._device_in_boot,
         )
         if self._compat["result"] == BLOCK:
             self._current_asset = None
@@ -331,8 +337,8 @@ class FWGitDialog(QDialog):
 
     def _confirm_boot_risk(self):
         c = self._compat
-        cur = f"App {c['from']}.x" if c["from"] else "an unknown App version"
-        tgt = f"App {c['to']}.x" if c["to"] else "an unknown App version"
+        cur = f"App {c['current']}" if c["current"] else "an unknown App version"
+        tgt = f"App {c['target']}"
         if c["isp_recommended"]:
             text = (
                 f"This device is running {cur}, which is discontinued. It has the "
@@ -350,6 +356,11 @@ class FWGitDialog(QDialog):
                 "If the installed Boot does not support the new App, the device may "
                 "stop responding to this tool and have to be recovered with the "
                 "ISP tool."
+            )
+        if c["boot_mode_relaxed"]:
+            text += (
+                "\n\nThis device is in Boot mode, so the App version shown may not "
+                "be the one that was running. This combination is normally blocked."
             )
         if c["docs_url"]:
             text += f"\n\nBoot/App compatibility table:\n{c['docs_url']}"
