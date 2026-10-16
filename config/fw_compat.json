@@ -1,5 +1,5 @@
 {
-  "_comment": "FW from Git 의 Boot↔App 호환표. 판정은 fw_boot_compat.py, 읽기·검증은 fw_compat_rules.py. 이 파일은 exe 에 번들되며 기준(baseline)이다. revision 은 규칙을 바꿀 때마다 올린다 — 더 큰 revision 이 이긴다.",
+  "_comment": "FW from Git 의 Boot↔App 호환표. 판정은 fw_boot_compat.py, 읽기·검증은 fw_compat_rules.py. 이 파일은 exe 에 번들되며 기준(baseline)이다. revision 은 규칙을 바꿀 때마다 올린다 — 더 큰 revision 이 이긴다. 갱신 절차: 규칙을 고치고 revision 을 올리고 updated 를 적은 뒤 master 에 머지한다 — 실행 중인 툴이 GitHub 에서 이 파일을 확인해 더 큰 revision 이면 받아 둔다(fw_compat_update.py). 같은 revision 으로 내용만 바꾸면 반영되지 않는다.",
   "_families": "family id 는 fw_sources.json 의 families[].id 와 같다. 규칙이 없는 family 는 제약 없음(통과).",
   "_rule": "epochs 는 구간 이름→시작 버전(오름차순, 경계는 ISR 주소가 바뀌는 1.3.0/1.3.3). transitions 키는 '현재 구간>대상 구간', 값은 ok/warn/block. transitions 에 없으면 같은 세대는 ok, 그 외 이동은 warn. isp_recommend_from 은 단종된 세대 — 여기서 출발하면 경고에 ISP tool 사용을 강하게 권한다. known_max 는 사람이 호환표로 확인한 최신 App 버전 — 현재/대상이 이걸 넘으면 항상 warn(새 Boot/App 이 나오면 확인한 뒤에만 이 값과 transitions 를 올릴 것. 최신 릴리즈로 자동 설정하지 않는다: 아직 검증되지 않은 버전이 '알려진 버전'이 되어 안전장치가 사라진다).",
   "schema_version": 1,

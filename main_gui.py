@@ -6821,6 +6821,10 @@ class WIZWindow(QMainWindow, main_window):
                 }
 
         from fw_git_dialog import FWGitDialog
+        import fw_compat_rules
+        # 화면을 열 때마다 번들·저장된 호환표 중 쓸 것을 새로 고른다 (열려 있는 동안은 고정).
+        fw_compat_rules.set_tool_version(VERSION.lstrip("Vv"))
+        fw_compat_rules.reload()
         dlg = FWGitDialog(
             self, display_name, family, device_spec,
             self._fw_fetcher, self._fw_download_path,
@@ -8799,4 +8803,9 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     wizwindow = WIZWindow()
     wizwindow.show()
+    # FW from Git 호환표: 더 새로운 것이 GitHub 에 있는지 백그라운드로 확인 (실패는 조용히 넘어간다).
+    # 시험이 WIZWindow() 를 만들 때마다 네트워크를 쓰지 않도록 __main__ 에서만 시작한다.
+    if wizwindow.timing_config.is_fw_compat_auto_update():
+        import fw_compat_update
+        fw_compat_update.refresh_in_background(tool_version=VERSION.lstrip("Vv"))
     app.exec_()

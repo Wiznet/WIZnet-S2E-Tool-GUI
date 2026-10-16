@@ -145,6 +145,9 @@ class DeviceSearchConfig:
             'max_parallel_sockets': 0,
             'phase3_on_demand': False,
         },
+        'fw_compat': {
+            'auto_update': True,
+        },
         'active_preset': 'normal',
         'logging': {
             'level': 'INFO',
@@ -629,6 +632,15 @@ class DeviceSearchConfig:
             bool: True면 재사용, False면 전용 소켓 생성
         """
         return self.config['experimental']['reuse_phase1_socket']
+
+    def is_fw_compat_auto_update(self) -> bool:
+        """FW from Git 호환표를 GitHub 에서 자동 갱신할지 여부
+
+        Returns:
+            bool: True면 실행할 때 백그라운드로 더 새로운 호환표를 확인한다.
+                  폐쇄망처럼 외부 접속이 안 되는 곳에서는 False 로 끈다.
+        """
+        return bool(self.config['fw_compat']['auto_update'])
 
     # ============================================================
     # 범용 접근자

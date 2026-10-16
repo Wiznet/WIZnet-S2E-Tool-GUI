@@ -8,6 +8,10 @@
 문서가 틀렸으면(읽을 수 없거나 형식 위반) 규칙이 없는 것으로 다룬다 — 제약 없음.
 번들 사본은 시험이 매번 검증하므로 현실에서는 일어나지 않아야 하는 경우다.
 
+원격 갱신(`fw_compat_update.py`)이 받아 둔 사본이 사용자 폴더에 있으면, 검증을 통과하고
+revision 이 번들보다 **클 때만** 번들 대신 쓴다. 툴을 새로 받아 번들이 더 새로워지면 낡은
+사본은 저절로 무시된다.
+
 문서 형식:
     schema_version     형식 버전. 이 모듈이 아는 값(SCHEMA_VERSION)과 같아야 한다.
     revision           규칙을 바꿀 때마다 올리는 정수. 더 큰 revision 이 이긴다.
@@ -22,6 +26,8 @@ import sys
 from fw_version import parse, parse_triple
 
 _log = logging.getLogger(__name__)
+
+CACHE_FILENAME = "fw_compat_cache.json"
 
 SCHEMA_VERSION = 1
 RESULTS = ("ok", "warn", "block")
@@ -116,6 +122,22 @@ def _validate_rule(rule):
     return errors
 
 
+def cache_path():
+    """원격에서 받아 둔 사본의 위치 — 로그·설정과 같은 사용자 폴더."""
+    return os.path.join(os.path.expanduser("~"), ".wizconfig", CACHE_FILENAME)
+
+
+def read_cache_file(path):
+    """저장된 사본 파일의 내용(dict). 없거나 읽을 수 없으면 None."""
+    data = load_file(path) if os.path.isfile(path) else None
+    return data if isinstance(data, dict) else None
+
+
+def load_bundled():
+    """번들 사본. 읽을 수 없으면 빈 dict."""
+    return load_file(bundled_path()) or {}
+
+
 def load_file(path):
     """JSON 파일을 읽는다. 읽을 수 없으면 None."""
     try:
@@ -126,29 +148,56 @@ def load_file(path):
         return None
 
 
-_current = None
+_current = None            # (문서, 출처) — 출처는 "bundled" / "cache" / 시험용 이름
+_tool_version = None
+
+
+def set_tool_version(version):
+    """`min_tool_version` 확인에 쓸 툴 버전을 알려 준다(없으면 그 확인을 건너뛴다)."""
+    global _tool_version
+    _tool_version = version
+
+
+def _select():
+    """번들과 저장된 사본 중 쓸 것을 고른다. (문서, 출처)"""
+    bundled = load_file(bundled_path())
+    errors = validate(bundled, _tool_version) if bundled is not None else ["파일 없음"]
+    if errors:
+        _log.error("[compat] 번들 호환표가 올바르지 않아 규칙 없이 동작한다: %s", errors)
+        bundled = {}
+    best, source = bundled, "bundled"
+
+    meta = read_cache_file(cache_path())
+    cached = meta.get("doc") if meta else None
+    if cached is not None:
+        problems = validate(cached, _tool_version)
+        if problems:
+            _log.warning("[compat] 저장된 호환표가 올바르지 않아 무시: %s", problems)
+        elif cached["revision"] > (bundled or {}).get("revision", 0):
+            best, source = cached, "cache"
+    return best, source
 
 
 def current_doc():
     """지금 판정에 쓰는 문서. 검증을 통과한 문서만 돌려주고, 없으면 None.
 
-    (원격 갱신이 붙으면 이 함수가 번들과 캐시 중 revision 이 큰 쪽을 고른다.)
+    한 번 고르면 `reload()` 전까지 바뀌지 않는다 — 열려 있는 화면의 판정이 도중에 달라지지 않게.
     """
     global _current
     if _current is None:
-        doc = load_file(bundled_path())
-        errors = validate(doc) if doc is not None else ["파일 없음"]
-        if errors:
-            _log.error("[compat] 번들 호환표가 올바르지 않아 규칙 없이 동작한다: %s", errors)
-            doc = {}
-        _current = doc
-    return _current or None
+        _current = _select()
+    return _current[0] or None
 
 
-def reset_for_tests(doc=None):
+def reload():
+    """다음 판정부터 번들·저장된 사본을 다시 고르게 한다(화면을 열 때 부른다)."""
+    reset_for_tests()
+
+
+def reset_for_tests(doc=None, source="test"):
     """시험이 문서를 바꿔 끼우거나 다시 읽게 한다."""
     global _current
-    _current = doc
+    _current = None if doc is None else (doc, source)
 
 
 def get_rule(family_id, doc=None):
@@ -161,7 +210,11 @@ def get_rule(family_id, doc=None):
 
 def describe(doc=None):
     """로그·화면 표시용 한 줄: 어떤 호환표로 판정했는가."""
-    doc = doc if doc is not None else current_doc()
+    if doc is None:
+        current_doc()
+        doc, source = _current if _current else ({}, "none")
+    else:
+        source = "given"
     if not doc:
         return "compat table: none"
-    return f"compat table rev {doc.get('revision')} ({doc.get('updated', '?')})"
+    return f"compat table rev {doc.get('revision')} ({doc.get('updated', '?')}, {source})"
