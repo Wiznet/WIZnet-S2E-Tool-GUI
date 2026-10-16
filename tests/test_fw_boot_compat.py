@@ -292,3 +292,97 @@ def test_dialog_without_rule_is_untouched(qapp):
     assert _enabled(dlg) == [True, True, True]
     assert dlg._combo.currentIndex() == 0
     assert dlg._compat["result"] == OK
+
+
+# ── 2026-10-16 사용자 확정·실기기 확인 규칙을 한 표로 고정 ──────────────────────
+
+# 원칙: "반드시 되는 것"은 통과, "반드시 안 되는 것"은 비활성, 나머지는 활성 + [Check Boot].
+# 열: 대상 구간 1.2 / 1.3.0 / 1.3.3 / 1.4.  (대표 버전으로 판정)
+_EPOCH_SAMPLE = {"1.2": "v1.2.9", "1.3.0": "v1.3.2", "1.3.3": "v1.3.3", "1.4": "v1.4.5"}
+_CURRENT_SAMPLE = {"1.2": "1.2.4", "1.3.0": "1.3.1", "1.3.3": "1.3.3", "1.4": "1.4.2"}
+FULL_MATRIX = {
+    # 현재 구간: (→1.2, →1.3.0, →1.3.3, →1.4)
+    "1.2":   (WARN, WARN, BLOCK, BLOCK),
+    "1.3.0": (WARN, OK, BLOCK, BLOCK),
+    "1.3.3": (WARN, WARN, OK, OK),
+    "1.4":   (BLOCK, BLOCK, OK, OK),
+}
+
+
+@pytest.mark.parametrize("src", list(FULL_MATRIX))
+def test_full_epoch_matrix(src):
+    """16 칸 전부. 한 칸이라도 바꾸면 이 시험이 알려준다 — 바꾸는 쪽이 사용자 확정을 확인할 것."""
+    got = tuple(
+        judge(RULE, _CURRENT_SAMPLE[src], _EPOCH_SAMPLE[dst])["result"]
+        for dst in ("1.2", "1.3.0", "1.3.3", "1.4")
+    )
+    assert got == FULL_MATRIX[src]
+
+
+def test_nothing_crosses_the_isr_boundary_as_ok_from_the_1_3_0_side():
+    """0x1FD00 세대(1.3.0~1.3.2)에서 0x7D00 세대(1.3.3~)로 가는 이동은 어디서도 통과가 아니다."""
+    for dst in ("v1.3.3", "v1.4.0", "v1.4.5"):
+        assert judge(RULE, "1.3.1", dst)["result"] != OK
+        assert judge(RULE, "1.2.4", dst)["result"] != OK
+
+
+def test_isp_tool_is_recommended_only_when_leaving_discontinued_1_2():
+    assert judge(RULE, "1.2.4", "v1.3.2")["isp_recommended"] is True
+    assert judge(RULE, "1.2.4", "v1.3.3")["isp_recommended"] is True   # 비활성이어도 안내는 ISP
+    assert judge(RULE, "1.3.1", "v1.3.2")["isp_recommended"] is False
+
+
+# ── 실제 GitHub 릴리즈 태그 목록(Wiznet/WIZ750SR, 2026-10-16)으로 본 다이얼로그 ─────────
+
+REAL_TAGS = [
+    "v1.4.5", "v1.4.4", "v1.4.3", "v1.4.2", "v1.4.1", "v1.4.0", "v1.2.9", "v1.3.3",
+    "v1.2.8", "v1.3.2", "v1.3.1", "v1.3.0", "v1.2.6", "v1.2.5", "v1.2.4", "v1.2.3",
+    "v1.2.2-2", "v1.2.2-1", "v1.2.1", "v1.2.1-1", "v1.2.0", "v.1.1.2", "v1.1.2-1",
+    "v1.1.1", "v1.1.0",
+]
+
+
+def _labels(dlg):
+    return [dlg._combo.itemText(i) for i in range(dlg._combo.count())]
+
+
+def test_real_tags_from_1_4_5_in_app_state(qapp):
+    """2026-10-16 EVB(Boot 1.4.x) 화면: 1.3.3 이상은 열려 있고 1.3.2 이하는 비활성."""
+    dlg = _make_dialog(qapp, "1.4.5", tags=REAL_TAGS)
+    by_tag = dict(zip(REAL_TAGS, _enabled(dlg)))
+    for tag in ("v1.4.5", "v1.4.0", "v1.3.3"):
+        assert by_tag[tag] is True
+    for tag in ("v1.3.2", "v1.3.1", "v1.3.0", "v1.2.9", "v1.2.5"):
+        assert by_tag[tag] is False
+    assert dlg._combo.currentIndex() == 0
+
+
+def test_real_tags_label_the_ones_we_cannot_judge(qapp):
+    """`v.1.1.2` 처럼 구간이 없는 아주 오래된 태그는 막지 않고 [Check Boot] 로 보여 준다."""
+    dlg = _make_dialog(qapp, "1.4.5", tags=REAL_TAGS)
+    labels = dict(zip(REAL_TAGS, _labels(dlg)))
+    assert "[Check Boot]" in labels["v.1.1.2"]
+    assert "[Check Boot]" in labels["v1.1.0"]
+    assert "Boot incompatible" in labels["v1.3.2"]
+    assert "[Check Boot]" not in labels["v1.3.3"] and "Boot incompatible" not in labels["v1.3.3"]
+
+
+def test_boot_state_unblocks_but_labels_every_relaxed_item(qapp):
+    """BOOT 상태: 막힘이 풀리되 풀린 항목마다 [Check Boot] 가 붙어 경고가 사라지지 않는다."""
+    dlg = _make_dialog(qapp, "1.4.5", tags=REAL_TAGS, in_boot=True)
+    labels = dict(zip(REAL_TAGS, _labels(dlg)))
+    assert all(_enabled(dlg))
+    for tag in ("v1.3.2", "v1.3.1", "v1.3.0", "v1.2.9"):
+        assert "[Check Boot]" in labels[tag]
+        assert "Boot incompatible" not in labels[tag]
+    for tag in ("v1.4.5", "v1.3.3"):
+        assert "[Check Boot]" not in labels[tag]
+
+
+def test_boot_state_selected_relaxed_item_shows_orange_notice(qapp):
+    dlg = _make_dialog(qapp, "1.4.5", tags=["v1.4.5", "v1.3.2"], in_boot=True)
+    dlg._combo.setCurrentIndex(1)
+    dlg._update_asset_label(1)
+    assert "unverified" in dlg._lbl_asset.text()
+    assert "b36b00" in dlg._lbl_asset.styleSheet()
+    assert dlg._btn_dl.isEnabled()
