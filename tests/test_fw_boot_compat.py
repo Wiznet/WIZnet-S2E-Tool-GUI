@@ -18,6 +18,7 @@ import json
 
 import pytest
 
+import fw_compat_rules
 import fw_git_dialog
 from fw_boot_compat import BLOCK, OK, WARN, generation, judge
 
@@ -29,7 +30,7 @@ def _families():
         return json.load(f)["families"]
 
 
-RULE = next(f for f in _families() if f["id"] == "wiz750sr")["boot_compat"]
+RULE = fw_compat_rules.get_rule("wiz750sr")
 
 
 @pytest.mark.parametrize("version, expected", [
@@ -161,7 +162,13 @@ def test_epochs_follow_isr_address_boundaries():
 def test_only_wiz750sr_family_has_rule():
     """다른 제품은 Boot/App 쌍 개념이 달라 이 규칙이 걸리면 안 된다."""
     for fam in _families():
-        assert ("boot_compat" in fam) == (fam["id"] == "wiz750sr"), fam["id"]
+        assert (fw_compat_rules.get_rule(fam["id"]) is not None) == (fam["id"] == "wiz750sr"), fam["id"]
+
+
+def test_rule_lives_in_the_compat_table_not_in_fw_sources():
+    """규칙의 단일 출처는 config/fw_compat.json. fw_sources.json 에 남아 있으면 둘이 어긋난다."""
+    for fam in _families():
+        assert "boot_compat" not in fam, fam["id"]
 
 
 # ── 다이얼로그 ───────────────────────────────────────────────────────

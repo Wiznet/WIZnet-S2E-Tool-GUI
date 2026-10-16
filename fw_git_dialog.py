@@ -6,6 +6,7 @@ fw_type_list (optional): WIZ550처럼 같은 장치가 여러 repo를 갖는 경
   [{"label": "SR", "family": {...}, "device_spec": {...}}, ...]
   제공 시 "Type:" 콤보가 Release 위에 표시되고, 선택 변경 시 릴리스 목록 갱신.
 """
+import logging
 import os
 
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer
@@ -15,7 +16,10 @@ from PyQt5.QtWidgets import (
     QFileDialog, QMessageBox, QFrame, QLineEdit,
 )
 
+import fw_compat_rules
 from fw_boot_compat import BLOCK, WARN, judge
+
+_log = logging.getLogger(__name__)
 
 
 class ReportUnsupportedThread(QThread):
@@ -90,8 +94,8 @@ class FWGitDialog(QDialog):
           None 또는 빈 리스트면 타입 선택 행 미표시.
         wiz550_config: {"target_ip": str, "target_mac": str, "localip_addr": str, "pw_setting": str}
           제공 시 다운로드 완료 후 TFTP 업로드를 이 창 안에서 자동 진행.
-        current_version: 장치에서 읽은 현재 App 버전 문자열. family 에 boot_compat 규칙이
-          있으면 이 값으로 Boot 호환을 추측해 릴리즈를 비활성/경고 처리한다.
+        current_version: 장치에서 읽은 현재 App 버전 문자열. 호환표(config/fw_compat.json)에 이 family 의
+          규칙이 있으면 이 값으로 Boot 호환을 추측해 릴리즈를 비활성/경고 처리한다.
         device_in_boot: 장치가 BOOT 상태(복구 중)면 True. 이때 current_version 은 저장된 값이라
           비활성 판정을 경고로 낮춘다(복구용 업로드를 막지 않기 위해).
         """
@@ -255,9 +259,15 @@ class FWGitDialog(QDialog):
         self._fetch_thread.error.connect(self._on_fetch_error)
         self._fetch_thread.start()
 
+    def _boot_rule(self):
+        """이 family 의 Boot↔App 호환 규칙. 호환표에 없으면 None(제약 없음)."""
+        return fw_compat_rules.get_rule(self._family.get("id"))
+
     def _on_releases_fetched(self, releases):
         self._releases = releases
-        rule = self._family.get("boot_compat")
+        rule = self._boot_rule()
+        if rule:
+            _log.info("[compat] %s, family=%s", fw_compat_rules.describe(), self._family.get("id"))
         first_usable = -1
         self._combo.blockSignals(True)
         self._combo.clear()
@@ -302,7 +312,7 @@ class FWGitDialog(QDialog):
             return
         release = self._releases[index]
         self._compat = judge(
-            self._family.get("boot_compat"), self._current_version,
+            self._boot_rule(), self._current_version,
             release["tag_name"], self._device_in_boot,
         )
         if self._compat["result"] == BLOCK:
