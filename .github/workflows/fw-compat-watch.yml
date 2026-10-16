@@ -1,0 +1,47 @@
+name: FW compatibility table watch
+
+# 최신 FW 릴리즈가 호환표(config/fw_compat.json)의 known_max 를 넘으면 이슈를 연다.
+# known_max 는 사람이 확인한 뒤에만 올린다 — 이 워크플로는 알리기만 한다.
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"     # 매주 월요일 00:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install packaging requests
+
+      - name: Compare latest releases with known_max
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python .github/scripts/check_compat_table.py --out report.md
+
+      - name: Open or update the issue
+        if: steps.check.outputs.stale == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TITLE: ${{ steps.check.outputs.title }}
+        run: |
+          gh label create fw-compat --color BFD4F2 --description "FW compatibility table" || true
+          existing=$(gh issue list --state open --label fw-compat --json number,title \
+            --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          if [ -z "$existing" ]; then
+            gh issue create --title "$TITLE" --body-file report.md --label fw-compat
+          else
+            echo "Issue #$existing is already open for: $TITLE"
+          fi

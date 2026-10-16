@@ -309,5 +309,8 @@ def _isolate_fw_compat_cache(tmp_path, monkeypatch):
     import fw_compat_rules
     monkeypatch.setattr(fw_compat_rules, "cache_path", lambda: str(tmp_path / "fw_compat_cache.json"))
     fw_compat_rules.reset_for_tests()
+    fw_compat_rules.set_auto_update(False)      # 시험은 기본적으로 네트워크를 쓰지 않는다
     yield
     fw_compat_rules.reset_for_tests()
+    fw_compat_rules.set_auto_update(False)
+    fw_compat_rules.set_tool_version(None)

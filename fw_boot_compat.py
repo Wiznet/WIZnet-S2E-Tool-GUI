@@ -51,7 +51,13 @@ def generation(version, rule=None):
     return name
 
 
-def _beyond_known(rule, *versions):
+def beyond_known(rule, *versions):
+    """versions 중 호환표가 보증하는 최신(`known_max`)을 넘는 것이 있는가.
+
+    넘는 버전은 판정을 믿을 수 없다 — 호환표가 아직 그 버전을 확인하지 못한 것이다.
+    """
+    if not rule:
+        return False
     known_max = _parse(rule.get("known_max"))
     if known_max is None:
         return False
@@ -64,17 +70,20 @@ def judge(rule, current_version, target_version, in_boot_mode=False):
     반환: {"result": ok|warn|block, "from": 현재 구간, "to": 대상 구간,
            "current": 현재 버전, "target": 대상 버전, "docs_url": 호환표 링크,
            "isp_recommended": 단종 구간에서 출발하는가,
-           "boot_mode_relaxed": BOOT 상태라 block 을 warn 으로 낮췄는가}
+           "boot_mode_relaxed": BOOT 상태라 block 을 warn 으로 낮췄는가,
+           "beyond_known": 현재/대상이 호환표 보증 최신(known_max)을 넘는가,
+           "known_max": 호환표 보증 최신 버전}
     """
     current = (current_version or "").strip()
     target = (target_version or "").strip()
     if not rule:
         return {"result": OK, "from": None, "to": None, "current": current,
                 "target": target, "docs_url": "", "isp_recommended": False,
-                "boot_mode_relaxed": False}
+                "boot_mode_relaxed": False, "beyond_known": False, "known_max": None}
     src = generation(current, rule)
+    beyond = beyond_known(rule, current, target)
     dst = generation(target, rule)
-    if src is None or dst is None or _beyond_known(rule, current, target):
+    if src is None or dst is None or beyond:
         result = WARN
     else:
         default = OK if src == dst else WARN
@@ -85,4 +94,5 @@ def judge(rule, current_version, target_version, in_boot_mode=False):
     return {"result": result, "from": src, "to": dst, "current": current,
             "target": target, "docs_url": rule.get("docs_url", ""),
             "isp_recommended": src in rule.get("isp_recommend_from", []),
-            "boot_mode_relaxed": relaxed}
+            "boot_mode_relaxed": relaxed, "beyond_known": beyond,
+            "known_max": rule.get("known_max")}

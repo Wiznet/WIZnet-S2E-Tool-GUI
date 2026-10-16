@@ -18,6 +18,7 @@ import os
 import threading
 import time
 
+import fw_boot_compat
 import fw_compat_rules
 
 _log = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ URL = "https://raw.githubusercontent.com/Wiznet/WIZnet-S2E-Tool-GUI/master/confi
 MAX_BYTES = 256 * 1024
 TIMEOUT_SEC = 3.0
 MIN_INTERVAL_SEC = 3600       # 이 시간 안에 이미 확인했으면 다시 묻지 않는다
+FORCED_MIN_INTERVAL_SEC = 600  # 호환표에 없는 새 버전을 만났을 때의 재확인 간격(더 짧게, 그래도 억제)
 
 # refresh() 결과 코드
 UPDATED = "updated"
@@ -57,9 +59,10 @@ def _write_cache(path, payload):
     os.replace(tmp, path)        # 반쯤 쓰인 파일이 남지 않게
 
 
-def refresh(cache_path=None, fetch=http_fetch, tool_version=None, url=URL,
+def refresh(cache_path=None, fetch=None, tool_version=None, url=URL,
             now=time.time, min_interval=MIN_INTERVAL_SEC, bundled_doc=None):
     """원격을 한 번 확인한다. 결과 코드를 돌려준다(예외를 올리지 않는다)."""
+    fetch = fetch or http_fetch          # 호출 시점에 찾는다 — 시험이 http_fetch 를 바꿔 끼울 수 있게
     path = cache_path or fw_compat_rules.cache_path()
     try:
         meta = fw_compat_rules.read_cache_file(path) or {}
@@ -121,3 +124,22 @@ def refresh_in_background(tool_version=None, on_done=None, **kwargs):
     t = threading.Thread(target=_run, name="fw-compat-refresh", daemon=True)
     t.start()
     return t
+
+
+def refresh_if_stale(family_id, *versions, **kwargs):
+    """호환표가 모르는 새 버전(`known_max` 초과)을 만났을 때 최신 호환표를 한 번 더 확인한다.
+
+    돌려주는 값: 해당 없으면 None, 확인했으면 refresh() 의 결과 코드.
+    갱신됐으면 바로 다시 고르므로(`reload`), 이 함수가 끝난 뒤의 판정에 새 표가 쓰인다.
+    네트워크를 쓰므로 화면을 막지 않는 스레드(릴리즈 목록을 가져오는 스레드)에서 부른다.
+    """
+    if not fw_compat_rules.auto_update_enabled():
+        return None
+    rule = fw_compat_rules.get_rule(family_id)
+    if not rule or not fw_boot_compat.beyond_known(rule, *versions):
+        return None
+    kwargs.setdefault("min_interval", FORCED_MIN_INTERVAL_SEC)
+    result = refresh(tool_version=fw_compat_rules.get_tool_version(), **kwargs)
+    if result == UPDATED:
+        fw_compat_rules.reload()
+    return result

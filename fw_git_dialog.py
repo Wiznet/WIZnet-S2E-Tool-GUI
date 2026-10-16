@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import (
 )
 
 import fw_compat_rules
+import fw_compat_update
 from fw_boot_compat import BLOCK, WARN, judge
 
 _log = logging.getLogger(__name__)
@@ -49,17 +50,30 @@ class _FetchReleasesThread(QThread):
     done = pyqtSignal(list)
     error = pyqtSignal(str)
 
-    def __init__(self, fetcher, family):
+    def __init__(self, fetcher, family, current_version=None):
         super().__init__()
         self._fetcher = fetcher
         self._family = family
+        self._current_version = current_version
+        self.compat_result = None     # 호환표를 다시 확인했다면 그 결과 코드 (fw_compat_update)
 
     def run(self):
         try:
             # family 의 source_type 에 따라 GitHub 릴리즈 / docs 페이지로 분기
-            self.done.emit(self._fetcher.get_releases_for(self._family))
+            releases = self._fetcher.get_releases_for(self._family)
         except Exception as e:
             self.error.emit(str(e))
+            return
+        # 호환표가 모르는 새 버전이 보이면 판정 전에 최신 호환표를 한 번 확인한다.
+        # 화면을 막지 않는 이 스레드에서 하므로, 창에 목록이 뜨기 전에 판정에 쓸 표가 정해진다.
+        try:
+            tags = [r.get("tag_name", "") for r in releases]
+            self.compat_result = fw_compat_update.refresh_if_stale(
+                self._family.get("id"), self._current_version, *tags
+            )
+        except Exception as e:           # 호환표 확인이 릴리즈 목록 표시를 막으면 안 된다
+            _log.info("[compat] 호환표 재확인을 건너뜀: %s", e)
+        self.done.emit(releases)
 
 
 class _DownloadThread(QThread):
@@ -254,10 +268,30 @@ class FWGitDialog(QDialog):
         self._lbl_asset.setStyleSheet("")
         self._releases = []
         self._current_asset = None
-        self._fetch_thread = _FetchReleasesThread(self._fetcher, self._family)
+        self._fetch_thread = _FetchReleasesThread(
+            self._fetcher, self._family, self._current_version
+        )
         self._fetch_thread.done.connect(self._on_releases_fetched)
         self._fetch_thread.error.connect(self._on_fetch_error)
         self._fetch_thread.start()
+
+    def _unknown_version_note(self):
+        """호환표가 모르는 새 버전일 때 사용자에게 보일 설명. 해당 없으면 빈 문자열."""
+        c = self._compat
+        if not c.get("beyond_known"):
+            return ""
+        rev = fw_compat_rules.revision()
+        table = f"compatibility table (rev {rev}, verified up to {c.get('known_max')})"
+        outcome = getattr(self, "_compat_check", None)
+        if outcome in (fw_compat_update.UPDATED, fw_compat_update.UNCHANGED):
+            tail = "It was checked for updates just now, but has no entry for this version yet."
+        elif outcome == fw_compat_update.SKIPPED:
+            tail = "It was checked for updates a few minutes ago and has no entry for this version yet."
+        elif outcome in (fw_compat_update.ERROR, fw_compat_update.REJECTED):
+            tail = "An update check was attempted but could not be completed (offline?)."
+        else:
+            tail = ""
+        return f"This version is newer than the {table}. {tail}".strip()
 
     def _boot_rule(self):
         """이 family 의 Boot↔App 호환 규칙. 호환표에 없으면 None(제약 없음)."""
@@ -265,6 +299,7 @@ class FWGitDialog(QDialog):
 
     def _on_releases_fetched(self, releases):
         self._releases = releases
+        self._compat_check = getattr(self._fetch_thread, "compat_result", None)
         rule = self._boot_rule()
         if rule:
             _log.info("[compat] %s, family=%s", fw_compat_rules.describe(), self._family.get("id"))
@@ -328,7 +363,9 @@ class FWGitDialog(QDialog):
             extract = self._device_spec.get("extract_file") or "(direct use)"
             text = f"{asset['name']}  →  {extract}"
             if self._compat["result"] == WARN:
-                self._lbl_asset.setText(text + "  — Boot compatibility unverified")
+                note = ("newer than the compatibility table"
+                        if self._compat.get("beyond_known") else "Boot compatibility unverified")
+                self._lbl_asset.setText(f"{text}  — {note}")
                 self._lbl_asset.setStyleSheet("color: #b36b00;")
             else:
                 self._lbl_asset.setText(text)
@@ -367,6 +404,9 @@ class FWGitDialog(QDialog):
                 "stop responding to this tool and have to be recovered with the "
                 "ISP tool."
             )
+        unknown = self._unknown_version_note()
+        if unknown:
+            text += "\n\n" + unknown
         if c["boot_mode_relaxed"]:
             text += (
                 "\n\nThis device is in Boot mode, so the App version shown may not "

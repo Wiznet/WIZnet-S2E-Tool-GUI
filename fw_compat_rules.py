@@ -150,6 +150,21 @@ def load_file(path):
 
 _current = None            # (문서, 출처) — 출처는 "bundled" / "cache" / 시험용 이름
 _tool_version = None
+_auto_update = False       # 기본은 끔: 시험·도구가 우연히 네트워크를 쓰지 않게. 앱이 설정을 읽어 켠다
+
+
+def set_auto_update(enabled):
+    """원격 확인을 해도 되는지(설정 `fw_compat.auto_update`)를 알려 준다."""
+    global _auto_update
+    _auto_update = bool(enabled)
+
+
+def auto_update_enabled():
+    return _auto_update
+
+
+def get_tool_version():
+    return _tool_version
 
 
 def set_tool_version(version):
@@ -206,6 +221,12 @@ def get_rule(family_id, doc=None):
     if not doc:
         return None
     return (doc.get("families") or {}).get(family_id)
+
+
+def revision(doc=None):
+    """지금 쓰는 호환표의 revision. 없으면 None."""
+    doc = doc if doc is not None else current_doc()
+    return doc.get("revision") if doc else None
 
 
 def describe(doc=None):

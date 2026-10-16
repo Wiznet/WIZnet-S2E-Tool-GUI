@@ -8806,6 +8806,9 @@ if __name__ == "__main__":
     # FW from Git 호환표: 더 새로운 것이 GitHub 에 있는지 백그라운드로 확인 (실패는 조용히 넘어간다).
     # 시험이 WIZWindow() 를 만들 때마다 네트워크를 쓰지 않도록 __main__ 에서만 시작한다.
     if wizwindow.timing_config.is_fw_compat_auto_update():
+        import fw_compat_rules
         import fw_compat_update
+        # FW from Git 창이 호환표에 없는 새 버전을 만났을 때의 재확인도 이 설정을 따른다.
+        fw_compat_rules.set_auto_update(True)
         fw_compat_update.refresh_in_background(tool_version=VERSION.lstrip("Vv"))
     app.exec_()
