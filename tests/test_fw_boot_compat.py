@@ -7,7 +7,8 @@ W7500 계열 Boot 는 버전 정보를 갖고 있지 않아 읽을 수 없다(�
 지점으로 나눈다(펌웨어 태그별 실측: v1.3.0~v1.3.2 0x1FD00, v1.3.3~ 0x7D00).
 
   구간  1.2 | 1.3.0(1.3.0~1.3.2) | 1.3.3 | 1.4(1.4.0~)
-  비활성  1.2→1.4, 1.4→1.2, 1.3.0↔1.4, 1.4→1.3.0   (어느 Boot 여도 안 맞음)
+  비활성  1.2→1.3.3 이상, 1.3.0→1.3.3 이상, 1.4→1.2, 1.4→1.3.0
+          (1.2·1.3.0~1.3.2 는 1.3.2 까지만 올릴 수 있다 — 사용자 확정 2026-10-16)
   통과    1.3.3↔1.4, 같은 구간(1.2 제외)  (1.3.3 과 1.4.x 는 ISR 규약이 같다)
   경고    그 외 구간 이동 — Boot 에 따라 갈린다. 1.2 는 단종이라 1.2 에서 출발하면
           같은 구간이어도 경고하고 ISP tool 을 권한다 (담당자 Theo 2026-10-15)
@@ -60,12 +61,12 @@ def test_generation_without_epochs_falls_back_to_major_minor():
     # 1.2 출발 — 단종, 같은 구간이어도 경고
     ("1.2.4", "v1.2.9", WARN),
     ("1.2.4", "v1.3.0", WARN),
-    ("1.2.4", "v1.3.3", WARN),
+    ("1.2.4", "v1.3.3", BLOCK),     # 1.3.2 까지만 — 사용자 확정 2026-10-16
     ("1.2.9", "v1.4.5", BLOCK),
     # 1.3.0~1.3.2 출발
     ("1.3.1", "v1.2.9", WARN),
     ("1.3.1", "v1.3.2", OK),
-    ("1.3.1", "v1.3.3", WARN),
+    ("1.3.1", "v1.3.3", BLOCK),     # ISR 0x1FD00 → 0x7D00, 사용자 확정 2026-10-16
     ("1.3.2", "v1.4.0", BLOCK),
     # 1.3.3 출발
     ("1.3.3", "v1.2.9", WARN),
@@ -200,8 +201,8 @@ def _enabled(dlg):
 def test_dialog_blocks_incompatible_but_still_lists_it(qapp):
     dlg = _make_dialog(qapp, "1.2.4")
     assert dlg._combo.count() == 3                  # 최신도 목록에는 보인다
-    assert _enabled(dlg) == [False, True, True]     # 1.4.5 만 선택 불가
-    assert dlg._combo.currentIndex() == 1           # 선택 가능한 첫 항목으로 이동
+    assert _enabled(dlg) == [False, False, True]    # 1.3.3 이상은 선택 불가(1.3.2 까지만)
+    assert dlg._combo.currentIndex() == 2           # 선택 가능한 첫 항목으로 이동
     assert dlg._btn_dl.isEnabled()
 
 
@@ -233,7 +234,7 @@ def test_dialog_warns_on_uncertain_move(qapp, monkeypatch):
 
 def test_dialog_from_discontinued_app_recommends_isp_tool(qapp, monkeypatch):
     dlg = _make_dialog(qapp, "1.2.4")
-    assert dlg._combo.currentIndex() == 1           # v1.3.3
+    assert dlg._combo.currentIndex() == 2           # v1.2.9
     shown = []
     monkeypatch.setattr(dlg, "_begin_download", lambda: None)
 
