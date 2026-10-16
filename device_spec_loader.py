@@ -18,6 +18,8 @@ from typing import Any
 
 import yaml
 
+from fw_version import parse as _parse_numeric_version
+
 _log = logging.getLogger(__name__)
 
 SPECS_DIR = Path(__file__).parent / "specs"
@@ -134,24 +136,34 @@ class DeviceSpec:
 # ---------------------------------------------------------------------------
 
 def _parse_version(ver_str: str | None):
-    """packaging.version.Version 반환. 파싱 실패 시 None.
+    """숫자부만 담은 packaging.version.Version 반환. 숫자부가 없으면 None.
 
-    비표준 접미사('1.3.3XXX' 등)는 숫자 부분만 추출해 파싱 —
-    펌웨어가 임의 접미사를 붙여도 min_version 필터가 동작하도록.
+    버전 비교는 숫자부만 가지고 한다(`fw_version` 모듈 설명 참고). `1.1.8dev`·`1.4.5A`
+    는 정식판과 같은 번호이고 `VR2.1.0`·`1.3.3XXX`·`1.2.5_GreenCS` 도 숫자부로 읽는다.
+    YAML 의 `min_version` 값 같은 "조건 쪽" 문자열에 쓴다 — 없거나 못 읽으면 조건 없음.
+    장치가 보고한 버전은 `_parse_device_version()` 을 쓴다.
     """
     if not ver_str:
         return None
-    from packaging.version import Version
-    try:
-        return Version(str(ver_str))
-    except Exception:
-        m = re.match(r"^(\d+(?:\.\d+)*)", str(ver_str).strip())
-        if m:
-            try:
-                return Version(m.group(1))
-            except Exception:
-                pass
+    return _parse_numeric_version(ver_str)
+
+
+def _parse_device_version(fw_version_str: str | None):
+    """장치가 보고한 펌웨어 버전 → Version.
+
+    - 값이 없으면(None / 빈 문자열) None: 버전을 모르는 호출(목록 조회 등)이라 게이트를 걸지 않는다.
+    - 값은 있는데 숫자부가 없으면 Version("0"): 가장 오래된 펌웨어로 본다. 이전에는 None 이 되어
+      모든 `min_version` 게이트가 통째로 사라져 "항상 최신 FW" 로 취급됐다(fail-open).
+      `WIZMakeCMD._safe_version` 과 같은 정책이다.
+    """
+    if not fw_version_str:
         return None
+    parsed = _parse_numeric_version(fw_version_str)
+    if parsed is None:
+        _log.warning("[version] 숫자부를 찾지 못함: %r → 0 으로 처리", fw_version_str)
+        from packaging.version import Version
+        return Version("0")
+    return parsed
 
 
 def _check_version_condition(fw_ver: Any, condition: str) -> bool:
@@ -423,7 +435,7 @@ def _load_device_impl(device_name: str, fw_version: str | None) -> DeviceSpec:
         raise FileNotFoundError(f"Device spec not found: {path}")
 
     dev = _load_yaml(path)
-    fw_ver = _parse_version(fw_version)
+    fw_ver = _parse_device_version(fw_version)
 
     # 0. device YAML 스키마 검증 — family로 스키마 선택 (validate_schemas.py 와 동일 기준).
     #    WIZ550 계열은 바이너리 프로토콜이라 command_groups 가 없고 protocol/sections 구조를

@@ -20,18 +20,16 @@ Boot 가 마지막으로 써진 시점의 App 버전으로 붙인 이름일 뿐�
 장치가 BOOT 상태(복구 중)일 때는 화면의 현재 버전이 저장된 값이지 실제로 돌던 App 이
 아니므로 block 을 warn 으로 낮춘다. 막으면 복구용 업로드까지 막게 된다.
 """
-import re
+from fw_version import parse_triple
 
 OK = "ok"
 WARN = "warn"
 BLOCK = "block"
 
-_VERSION_RE = re.compile(r"^\s*[vV]?(\d+)\.(\d+)(?:\.(\d+))?")
-
 
 def _parse(version):
-    m = _VERSION_RE.match(version or "")
-    return tuple(int(g or 0) for g in m.groups()) if m else None
+    """(major, minor, patch) 또는 None. 숫자부 추출은 `fw_version` 이 한다."""
+    return parse_triple(version)
 
 
 def generation(version, rule=None):

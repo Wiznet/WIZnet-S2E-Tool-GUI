@@ -4,9 +4,8 @@ from packaging.version import Version
 """
 Make Serial command
 """
+import fw_version
 from utils import logger
-
-import re
 
 # Supported devices
 ONE_PORT_DEV = [
@@ -285,11 +284,11 @@ def _safe_version(v: str) -> Version:
     `InvalidVersion` 이 나지 않으므로 폴백 경로도 타지 않는다. 그러면 같은
     기능을 가진 dev 펌웨어가 version_compare 게이트에서 조용히 차단된다.
     """
-    m = re.search(r'\d+(?:\.\d+)*', v or "")
-    if not m:
+    parsed = fw_version.parse(v)
+    if parsed is None:
         logger.warning(f"[version] 숫자부를 찾지 못함: {v!r} → 0 으로 처리")
         return Version("0")
-    return Version(m.group(0))
+    return parsed
 
 
 def version_compare(version1: str, version2: str) -> int:
