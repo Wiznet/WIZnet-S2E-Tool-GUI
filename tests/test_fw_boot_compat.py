@@ -8,7 +8,7 @@ W7500 계열 Boot 는 버전 정보를 갖고 있지 않아 읽을 수 없다(�
 
   구간  1.2 | 1.3.0(1.3.0~1.3.2) | 1.3.3 | 1.4(1.4.0~)
   비활성  1.2→1.4, 1.4→1.2, 1.3.0↔1.4, 1.4→1.3.0   (어느 Boot 여도 안 맞음)
-  통과    1.4→1.3.3, 같은 구간(1.2 제외)
+  통과    1.3.3↔1.4, 같은 구간(1.2 제외)  (1.3.3 과 1.4.x 는 ISR 규약이 같다)
   경고    그 외 구간 이동 — Boot 에 따라 갈린다. 1.2 는 단종이라 1.2 에서 출발하면
           같은 구간이어도 경고하고 ISP tool 을 권한다 (담당자 Theo 2026-10-15)
   BOOT 상태(복구 중)에서는 현재 버전이 저장된 값이라 비활성을 경고로 낮춘다.
@@ -70,7 +70,7 @@ def test_generation_without_epochs_falls_back_to_major_minor():
     # 1.3.3 출발
     ("1.3.3", "v1.2.9", WARN),
     ("1.3.3", "v1.3.2", WARN),
-    ("1.3.3", "v1.4.5", WARN),
+    ("1.3.3", "v1.4.5", OK),        # 같은 ISR 규약(0x7D00) — 사용자 확정 2026-10-16
     # 1.4.x 출발
     ("1.4.0", "v1.2.9", BLOCK),
     ("1.4.0", "v1.3.2", BLOCK),     # 2026-10-15 EVB 사고: 1.4.0 → 1.3.2 후 검색 안 됨
@@ -127,7 +127,7 @@ def test_judge_carries_versions_and_docs_url():
     ("1.2.4", "v1.4.5", WARN),
     # 비활성이 아니던 판정은 그대로
     ("1.4.0", "v1.3.3", OK),
-    ("1.3.3", "v1.4.5", WARN),
+    ("1.3.3", "v1.4.5", OK),
 ])
 def test_boot_mode_never_blocks(current, target, expected):
     assert judge(RULE, current, target, in_boot_mode=True)["result"] == expected
@@ -214,7 +214,8 @@ def test_dialog_blocks_the_evb_accident(qapp):
 def test_dialog_warns_on_uncertain_move(qapp, monkeypatch):
     dlg = _make_dialog(qapp, "1.3.3")
     assert _enabled(dlg) == [True, True, True]
-    assert dlg._combo.currentIndex() == 0           # v1.4.5, 불확실
+    assert dlg._combo.currentIndex() == 0           # v1.4.5, 같은 ISR 규약이라 확실
+    dlg._combo.setCurrentIndex(2)                   # v1.2.9: 1.3.3 → 1.2 는 불확실
     assert dlg._btn_dl.isEnabled()
 
     started = []
