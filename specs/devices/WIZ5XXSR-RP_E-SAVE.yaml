@@ -80,6 +80,9 @@ partial_command_groups:
 
 
 overrides:
+  # NP(연결 비밀번호) — FW pw_connect[10] (W55RP20/WIZ5XXSR-RP 계열 공통, 2026-10-14 확인)
+  NP:
+    regex: "^.{0,9}$"
   # BR: WIZ5XXSR-RP_E-SAVE 최대 460800 (index 0-14)
   BR:
     regex: "^([0-9]|1[0-4])$"

@@ -60,6 +60,18 @@ search:
     # - "Setting failed"가 뜨는데 설정은 반영되어 있다면 5.0 전후로 올려서 확인
     set_response_timeout_5xx_sec: 2.0
 
+    # IP 모드 변경 Apply 후 재검색 대기 (초)
+    # - IP/모드 변경 Apply는 장치가 실제로 리부팅하며, 그 직후 바로 Device Search를
+    #   누르면 설정 포트가 아직 안 열려 있어 "unreachable"이 1회 뜬다(고객이 고장으로
+    #   오인하는 사례 있음). 리부팅이 감지된 Apply 뒤, 이 시간만큼 대기 후 1회
+    #   재확인한다(socket_config 참조).
+    # - 권장: 1.0 (장치가 더 느리게 리부팅하면 올려서 확인)
+    # - 네트워크 프리셋별 참고용 권장치(presets 구조에는 넣지 않음 — 리부팅 지연은
+    #   네트워크 속도보다 장치 자체 리부팅 시간에 좌우되고, presets에 넣으면 앱
+    #   재시작마다 Advanced Search Options에서 손으로 조정한 값을 덮어써 버림):
+    #   fast 1.0 / normal 1.0 / slow 2.0
+    post_apply_reboot_delay_sec: 1.0
+
   # TCP Multicast / Mixed Search
   tcp:
     # TCP 포트 스캔 타임아웃 (초)

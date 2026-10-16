@@ -34,6 +34,9 @@ partial_command_groups:
   ddns: [DH]
 
 overrides:
+  # NP(연결 비밀번호) — FW pw_connect[10] (W55RP20/WIZ5XXSR-RP 계열 공통, 2026-10-14 확인)
+  NP:
+    regex: "^.{0,9}$"
   BR:
     regex: "^([0-9]|1[0-9])$"
     values:

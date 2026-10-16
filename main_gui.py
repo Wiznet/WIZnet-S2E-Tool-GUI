@@ -45,7 +45,6 @@ import time
 import re
 import os
 import json
-import subprocess
 import webbrowser
 import logging
 import datetime
@@ -63,7 +62,6 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QTableWidgetItem,
     QFileDialog,
-    QDialog,
     QMenu,
     QAction,
     QProgressBar,
@@ -84,6 +82,7 @@ import ifaddr
 
 # CSV MRU Manager
 from csv_mru_manager import CSVMRUManager
+from net_reachability import icmp_ping, tcp_probe
 
 # Terminal utility
 from terminal.terminal_panel import TerminalPanel
@@ -514,6 +513,11 @@ class WIZWindow(QMainWindow, main_window):
         # 만들 때마다 이전 것을 닫지 않으면 같은 주소에 소켓이 겹쳐 쌓이고,
         # Windows 는 겹친 소켓 중 가장 먼저 바인드된 것에만 유니캐스트를 준다.
         self._conf_sock_key = None
+        # IP 모드 변경 Apply 로 장치가 리부팅 중임을 알리는 유예 시각(time.time() 기준).
+        # 이 시각 전이면 TCP probe 1회 실패를 "장치 고장"이 아니라 리부팅 중으로 보고
+        # post_apply_reboot_delay_sec 만큼 기다려 재확인한다 (socket_config,
+        # get_setting_result 참조, 2026-10-14).
+        self._reboot_grace_until = 0.0
         # GPIO 주기 갱신 전용 소켓. conf_sock 을 공유하면 재설정 때 함께 닫혀 갱신이 죽는다.
         self._datarefresh_sock = None
         self._finalize_timer = None
@@ -726,9 +730,6 @@ class WIZWindow(QMainWindow, main_window):
         self.broadcast.clicked.connect(self._on_broadcast_selected)
         self.unicast_ip.clicked.connect(self._on_unicast_selected)
         # self.unicast_mac.clicked.connect(self.event_search_method)
-        self.localip.textChanged.connect(
-            lambda text: self.search_ipaddr.setText(text) if text and self.unicast_ip.isChecked() else None
-        )
 
         # Event: modbus
         # self.unicast_mac.clicked.connect(self.event_search_method)
@@ -1960,6 +1961,91 @@ class WIZWindow(QMainWindow, main_window):
         self.ch3_mqttclient.setEnabled(False)
         self.ch3_mqtts_client.setEnabled(False)
 
+    def _security_op_values(self) -> set:
+        """OP 커맨드가 지원하는 값 집합 — SSL/MQTT 탭 노출 판단에 쓴다
+        (`_config_security_options` 의 `ch0_ssl_tcpclient`/`mqttclient`/`mqtts_client` 와 같은 근거:
+        OP 값에 4/5/6 이 없으면 그 장치 FW 는 해당 모드 자체가 없다 — W55RP20-S2E-3CH/-4CH 가 그 예)."""
+        if not self.curr_dev:
+            return set()
+        spec_name = detect_device(self.curr_dev) or self.curr_dev
+        try:
+            spec = load_device(spec_name, self.curr_ver)
+        except FileNotFoundError:
+            return set()
+        op_entry = spec.cmdset.get('OP')
+        return set(op_entry.values.keys()) if op_entry else set()
+
+    def _has_pppoe_support(self) -> bool:
+        """IM 커맨드가 PPPoE(값 '2')를 갖는 기종인가 — `ip_pppoe` 라디오 가시성(`has_pppoe`,
+        `_apply_serial_from_spec`)과 같은 근거다. PI/PP 필드 로드·저장, IM=2 전송 범위를 여기로
+        통일한다(예전엔 "WIZ107"/"WIZ108" 이름 하드코딩 세 곳이 각자 있었다)."""
+        if not self.curr_dev:
+            return False
+        spec_name = detect_device(self.curr_dev) or self.curr_dev
+        try:
+            spec = load_device(spec_name, self.curr_ver)
+        except FileNotFoundError:
+            return False
+        im_entry = spec.cmdset.get('IM')
+        return im_entry is not None and '2' in im_entry.values
+
+    def _should_show_ddns_pppoe_tab(self) -> bool:
+        """DDNS/PPPoE 탭을 여는 기종인지 spec 으로 판단한다 (`_apply_serial_from_spec`
+        의 필드 단위 `wo_ddns` 판정과 같은 근거: `ui.widget_overrides.ddns_pppoe_tab.visible`)."""
+        if not self.curr_dev:
+            return False
+        spec_name = detect_device(self.curr_dev) or self.curr_dev
+        try:
+            spec = load_device(spec_name, self.curr_ver)
+        except FileNotFoundError:
+            return False
+        wo_ddns = spec.ui_config.widget_overrides.get('ddns_pppoe_tab')
+        return wo_ddns is not None and wo_ddns.visible
+
+    def _has_full_ddns_support(self) -> bool:
+        """DX 커맨드(DDNS Server Index)를 갖는 기종인가 — PPPoE 지원과는 별개 판단.
+        W55RP20-S2E-4CH 는 `partial_command_groups: ddns: [DH]` 로 DH만 받고 DX는
+        없다(`W55RP20-S2E-4CH.yaml`) — 이 차이로 WIZ107SR/108SR 과 구분한다.
+        'DD'는 쓰지 않는다 — DDNS 의 DD(Enable DDNS)와 connection_events 그룹의
+        DD(Send Data at Disconnection)가 같은 2글자 코드를 재사용해 충돌한다."""
+        if not self.curr_dev:
+            return False
+        spec_name = detect_device(self.curr_dev) or self.curr_dev
+        try:
+            spec = load_device(spec_name, self.curr_ver)
+        except FileNotFoundError:
+            return False
+        return spec.cmdset.get('DX') is not None
+
+    def _sync_ddns_pppoe_tab(self) -> None:
+        """DDNS/PPPoE 탭을 기종에 맞춰 추가/제거한다. `list_tabs` 같은 스냅샷에 기대지
+        않고 그때그때 실제 탭 목록을 다시 읽는다 — 삽입 루프 뒤에는 스냅샷이 낡기 때문."""
+        want = self._should_show_ddns_pppoe_tab()
+        idx = -1
+        for _i in range(self.generalTab.count()):
+            if self.generalTab.widget(_i).objectName() == "ddns_pppoe_tab":
+                idx = _i
+                break
+        if want and idx < 0:
+            tab_obj = self.tab_structure.get("ddns_pppoe_tab")
+            if tab_obj is not None:
+                new_idx = self.generalTab.count()
+                self.generalTab.insertTab(new_idx, tab_obj.object, tab_obj.ui_text)
+                self.generalTab.setTabEnabled(new_idx, True)
+        elif not want and idx >= 0:
+            self.generalTab.removeTab(idx)
+
+        if want:
+            # 이 탭엔 group_pppoe/group_network_protocol/group_ddns 셋이 있는데, PPPoE 만
+            # 지원하는 기종(W55RP20-S2E-4CH)은 뒤 둘에 로드·저장 배선이 없다(DD/DX/DP/DI/DW/PO
+            # 는 "WIZ107"/"WIZ108" 전용 그대로). 배선 없는 그룹을 보이는 채로 두면 입력해도
+            # 반영 안 되는 칸이 된다(s2egui2 검증으로 발견, 2026-10-14). 가시성 판단은
+            # `_has_full_ddns_support()`(DX 커맨드 유무)로 하며, 로드·저장 배선과는 별개다.
+            has_ddns = self._has_full_ddns_support()
+            self.group_pppoe.setVisible(self._has_pppoe_support())
+            self.group_network_protocol.setVisible(has_ddns)
+            self.group_ddns.setVisible(has_ddns)
+
     def general_tab_config(self):
         """버튼 아래 일반 탭을 장비 종류와 상태에 따라 다르게 설정합니다.
         SECURITY_DEVICE 이면 BOOT/UPGRADE 모드가 아닌 경우 mqtt, 인증서 탭을 추가합니다.
@@ -1992,9 +2078,26 @@ class WIZWindow(QMainWindow, main_window):
                         self.generalTab.removeTab(_tab.idx)
                         list_tabs.remove(_tab)
             else:
-                next_tab_idx: int = n_tabs
+                op_vals = self._security_op_values()
+                # FW 가 그 OP 모드를 아예 안 가지면(예: 3CH/4CH, OP 0~3 만) 이미 들어와 있는
+                # mqtt_tab/certificate_tab 도 뗀다 — 직전 장치가 그 탭을 쓰던 경우 대비.
+                for _tab in list(list_tabs):
+                    if _tab.name == "mqtt_tab" and not ({'5', '6'} & op_vals):
+                        self.generalTab.removeTab(_tab.idx)
+                        list_tabs.remove(_tab)
+                    elif _tab.name == "certificate_tab" and not ({'4', '6'} & op_vals):
+                        self.generalTab.removeTab(_tab.idx)
+                        list_tabs.remove(_tab)
+                next_tab_idx: int = len(list_tabs)
                 _new_tab: str
                 for _new_tab in ExcludeTabInMinimum:
+                    # mqtt_tab/certificate_tab 은 FW 가 그 OP 모드를 아예 안 가지면
+                    # (예: W55RP20-S2E-3CH/-4CH, OP 0~3 만) 넣지 않는다. advance_tab 은
+                    # 해당 없음 — 그대로 추가한다.
+                    if _new_tab == "mqtt_tab" and not ({'5', '6'} & op_vals):
+                        continue
+                    if _new_tab == "certificate_tab" and not ({'4', '6'} & op_vals):
+                        continue
                     if _new_tab not in repr(list_tabs):
                         _new_tab_object = self.tab_structure.get(_new_tab)
                         self.logger.debug(f"_new_tab={_new_tab},_new_tab_object={_new_tab_object}")
@@ -2019,12 +2122,6 @@ class WIZWindow(QMainWindow, main_window):
                 if _tab.name in ExcludeTabInCommon:
                     self.generalTab.removeTab(_tab.idx)
                     list_tabs.remove(_tab)
-                # WIZ107SR/108SR이 아닌 장치에서 ddns_pppoe_tab 제거
-                elif _tab.name == "ddns_pppoe_tab" and not (
-                    "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev
-                ):
-                    self.generalTab.removeTab(_tab.idx)
-                    list_tabs.remove(_tab)
             next_tab_idx: int = len(list_tabs)
             # 넣어야할 탭 넣기
             for _new_tab in IncludeTabInCommon:
@@ -2037,15 +2134,13 @@ class WIZWindow(QMainWindow, main_window):
                     )
                     self.generalTab.setTabEnabled(next_tab_idx, True)
                     next_tab_idx += 1
-            # WIZ107SR/108SR 전용: DDNS/PPPoE 탭 추가
-            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
-                if "ddns_pppoe_tab" not in repr(list_tabs):
-                    ddns_tab_obj = self.tab_structure.get("ddns_pppoe_tab")
-                    if ddns_tab_obj is not None:
-                        self.generalTab.insertTab(
-                            next_tab_idx, ddns_tab_obj.object, ddns_tab_obj.ui_text
-                        )
-                        self.generalTab.setTabEnabled(next_tab_idx, True)
+
+        # DDNS/PPPoE 탭: spec 의 ddns_pppoe_tab 가시성(widget_overrides)으로 판단한다.
+        # SECURITY_DEVICE(위 if 분기)·그 외(else 분기) 양쪽 모두 여기서 통일 처리 — 예전엔
+        # else 분기에만 "WIZ107"/"WIZ108" 이름 하드코딩이 있었고, SECURITY_DEVICE 는 이 탭을
+        # 전혀 건드리지 않아 이전 장치에서 열린 탭이 그대로 남을 수 있었다(BUG-UNICAST-IP-CHANGE-FAILS
+        # 조사 중 발견, main_gui.py:1839 의 필드 단위 wo_ddns 판정과 같은 근거로 통일).
+        self._sync_ddns_pppoe_tab()
 
         # User I/O tab
         """
@@ -2422,9 +2517,17 @@ class WIZWindow(QMainWindow, main_window):
         self.search_port.setEnabled(False)
         self._reset_retry_counter()
 
+    def _sync_search_ip(self, ip):
+        # 호출자는 장치가 보고한 IP 를 넘긴다(Local IP 칸은 사용자가 고치는 중일 수 있다).
+        # 타이핑 시점에 옮기면 Apply 가 아직 옛 IP 에 있는 장치로 접속하지 못한다.
+        ip = (ip or "").strip()
+        if ip and ip != "0.0.0.0" and self.unicast_ip.isChecked():
+            self.search_ipaddr.setText(ip)
+
     def _on_unicast_selected(self):
-        if self.localip.text():
-            self.search_ipaddr.setText(self.localip.text())
+        if self.curr_mac:
+            prof = self.dev_profile.get(self.curr_mac, {})
+            self._sync_search_ip(prof.get("LI") or prof.get("local_ip"))
         self.search_ipaddr.setEnabled(True)
         self.search_port.setEnabled(True)
         self._reset_retry_counter()
@@ -2601,7 +2704,24 @@ class WIZWindow(QMainWindow, main_window):
                 _show_dialog = _tcp_mode and bool(self.curr_mac)
 
                 if _tcp_mode:
-                    net_response = self.net_check_ping(ip_addr)
+                    # ping 대신 설정 포트(port)로 직접 TCP 연결을 시도한다 — 바로 아래
+                    # connect_over_tcp()가 할 일을 선점 확인하는 것이라 ping보다 정확하고
+                    # (ping 성공해도 포트가 닫혀 있으면 설정은 못 함), ping.exe 서브프로세스/
+                    # 콘솔창도 없다. (2026-10-14, net_reachability.py 참조)
+                    net_response = tcp_probe(ip_addr, port)
+                    if net_response != 0 and time.time() < self._reboot_grace_until:
+                        # IP 모드 변경 Apply 직후(get_setting_result의 "Device rebooted"
+                        # 분기)라 장치가 실제로 리부팅 중일 수 있다 — 포트가 잠깐
+                        # 닫혀 있을 뿐인데 사용자에게는 "장치 고장"처럼 보인다.
+                        # post_apply_reboot_delay_sec 만큼만 기다려 1회 재확인한다.
+                        _delay = self.timing_config.get_phase3_post_apply_reboot_delay()
+                        self.logger.info(
+                            f"TCP probe failed during reboot grace window, "
+                            f"retry once after {_delay:g}s: {ip_addr}"
+                        )
+                        time.sleep(_delay)
+                        net_response = tcp_probe(ip_addr, port)
+                        self._reboot_grace_until = 0.0
                     if net_response == 0:
                         self.conf_sock = self.connect_over_tcp(ip_addr, port)
                         if self.conf_sock is None:
@@ -4051,6 +4171,8 @@ class WIZWindow(QMainWindow, main_window):
                 self.fill_devinfo(dev_data)
             except Exception as e:
                 self.logger.error(f"get_clicked_devinfo:fill_devinfo:{e}")
+            # Apply 성공 뒤 dev_clicked() 재호출도 여기를 지나, 응답의 새 LI 로 옮겨진다.
+            self._sync_search_ip(dev_data.get("LI"))
         else:
             if len(self.dev_profile) != self.searched_devnum:
                 self.logger.info(
@@ -4085,6 +4207,7 @@ class WIZWindow(QMainWindow, main_window):
             dev_sock.close()
             if macaddr in self.dev_profile:
                 self.fill_devinfo(self.dev_profile[macaddr])
+                self._sync_search_ip(self.dev_profile[macaddr].get("LI"))
             else:
                 self.statusbar.showMessage(f" No response from {macaddr}")
         except Exception as e:
@@ -4436,6 +4559,7 @@ class WIZWindow(QMainWindow, main_window):
 
         # B-02 Stage 2: GET_INFO 완료 후에 위젯에 값 채우기
         self.fill_devinfo_wiz550(cfg)
+        self._sync_search_ip(cfg.get('local_ip'))
         self.statusbar.showMessage(f" WIZ550 settings loaded: {macaddr}")
 
     # ──────────────────────────────────────────────────────────────
@@ -5278,11 +5402,13 @@ class WIZWindow(QMainWindow, main_window):
                     self.status_dsr.setChecked(True)
                     self.checkbox_enable_dsr.setChecked(True)
 
-            # WIZ107SR / WIZ108SR 전용: DDNS / PPPoE 탭 필드 로드
-            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
-                # PPPoE 설정 (IM=2일 때만 유효)
+            # PPPoE 필드 로드 — IM 에 PPPoE(2) 값이 있는 기종(WIZ107SR/108SR, W55RP20-S2E-4CH)
+            if self._has_pppoe_support():
                 self.pppoe_id.setText(dev_data.get("PI", "").strip())
                 self.pppoe_pw.setText(dev_data.get("PP", "").strip())
+
+            # WIZ107SR / WIZ108SR 전용: DDNS 탭 필드 로드
+            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
                 # DDNS Enable
                 dd_val = dev_data.get("DD", "0").strip()
                 self.ddns_enable.setChecked(dd_val == "1")
@@ -5547,9 +5673,7 @@ class WIZWindow(QMainWindow, main_window):
                 setcmd["IM"] = "0"
             elif self.ip_dhcp.isChecked():
                 setcmd["IM"] = "1"
-            elif self.ip_pppoe.isChecked() and (
-                "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev
-            ):
+            elif self.ip_pppoe.isChecked() and self._has_pppoe_support():
                 setcmd["IM"] = "2"
             setcmd["DS"] = self.dns_addr.text()
             # boot 명령에 SP 도 포함되어야 함.
@@ -5692,11 +5816,13 @@ class WIZWindow(QMainWindow, main_window):
             setcmd["KE"] = self.ch0_keepalive_retry.text()
             # reconnection - channel 1
             setcmd["RI"] = self.ch0_reconnection.text()
-            # WIZ107SR / WIZ108SR 전용: DDNS / PPPoE 커맨드 저장
-            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
-                # PPPoE
+            # PPPoE 커맨드 저장 — IM 에 PPPoE(2) 값이 있는 기종(WIZ107SR/108SR, W55RP20-S2E-4CH)
+            if self._has_pppoe_support():
                 setcmd["PI"] = self.pppoe_id.text() or " "
                 setcmd["PP"] = self.pppoe_pw.text() or " "
+
+            # WIZ107SR / WIZ108SR 전용: DDNS 커맨드 저장
+            if "WIZ107" in self.curr_dev or "WIZ108" in self.curr_dev:
                 # DDNS Enable
                 setcmd["DD"] = "1" if self.ddns_enable.isChecked() else "0"
                 setcmd["DX"] = str(self.ddns_server_idx.currentIndex())
@@ -6295,14 +6421,29 @@ class WIZWindow(QMainWindow, main_window):
                 # 편집분이 장치에 반영됐으니 이제 주기 갱신이 실제값을 보여주게 둔다.
                 # 실패 응답에서는 놓지 않는다 — 사용자가 다시 시도할 값이다.
                 self._clear_gpio_user_edit("apply succeeded")
+
+                # 유니캐스트 TCP로 Apply 성공 — 응답은 끝까지 왔지만(len(mc)==17)
+                # 장치가 이 직후 리부팅(IP 변경 등)할 수 있다(실측: 2026-10-14, 짧은
+                # 응답 분기가 아니라 이 정상 성공 분기로도 리부팅이 일어남). 다음
+                # Search의 TCP probe 1회 실패를 "장치 고장"으로 보이지 않게, Set
+                # success 안내문에도 보이는 형태로 먼저 유예를 건다.
+                _reboot_note = ""
+                if self.isConnected and self.unicast_ip.isChecked():
+                    _reboot_delay = self.timing_config.get_phase3_post_apply_reboot_delay()
+                    self._reboot_grace_until = time.time() + _reboot_delay + 4.0
+                    _reboot_note = (
+                        f" Device may be rebooting — next search auto-retries "
+                        f"once after {_reboot_delay:g}s if needed."
+                    )
+
                 if self._setcmd_reduced:
                     self.statusbar.showMessage(
                         f" Set complete — network settings only "
                         f"(device was in {self.curr_st} state)."
                     )
                 else:
-                    self.statusbar.showMessage(" Set device complete!")
-                self.msg_set_success()
+                    self.statusbar.showMessage(" Set device complete!" + _reboot_note)
+                self.msg_set_success(_reboot_note)
 
                 # SET 응답에 포함된 ST 로 장치 상태를 최신화한다.
                 # curr_st 는 원래 검색 시점(dev_data)에만 갱신되어, 재검색 없이 Apply 를
@@ -6343,9 +6484,14 @@ class WIZWindow(QMainWindow, main_window):
                     "Device rebooted before full response (e.g. IP mode change). "
                     "Command was delivered."
                 )
+                _reboot_delay = self.timing_config.get_phase3_post_apply_reboot_delay()
                 self.statusbar.showMessage(
-                    " Setting sent. Device rebooted (IP mode change). Re-search to verify."
+                    " Setting sent. Device rebooted (IP mode change). "
+                    f"Re-search to verify (auto-retries once after {_reboot_delay:g}s)."
                 )
+                # 다음 Search 때 TCP probe 가 리부팅 틈을 "장치 고장"처럼 보이게
+                # 하지 않도록 짧게 유예를 둔다 (socket_config 참조).
+                self._reboot_grace_until = time.time() + _reboot_delay + 4.0
 
         self.object_config()
 
@@ -6835,19 +6981,11 @@ class WIZWindow(QMainWindow, main_window):
                 self.firmware_update(self.fw_filename, self.fw_filesize)
 
     def net_check_ping(self, dst_ip):
+        # FW 업로드 전 "장치가 켜져 있나" 확인용 — TCP 연산이 아니라 ICMP가 맞는 체크.
+        # Windows는 ctypes IcmpSendEcho(net_reachability.py)라 서브프로세스/콘솔창이
+        # 없다. (예전엔 ping.exe 서브프로세스라 빌드된 exe에서 매번 콘솔창이 깜빡였다.)
         self.statusbar.showMessage(" Checking the network...")
-        # serverip = self.localip_addr
-        serverip = dst_ip
-        # do_ping = subprocess.Popen("ping " + ("-n 1 " if sys.platform.lower()=="win32" else "-c 1 ") + serverip,
-        do_ping = subprocess.Popen(
-            ["ping", "-n", "1", serverip]
-            if sys.platform == "win32"
-            else ["ping", "-c", "1", serverip],
-            stdout=None,
-            stderr=None,
-            shell=False,
-        )
-        ping_response = do_ping.wait()
+        ping_response = icmp_ping(dst_ip)
         self.logger.info(ping_response)
         return ping_response
 
@@ -7279,11 +7417,12 @@ class WIZWindow(QMainWindow, main_window):
         msgbox.setText("Setting failed.\nWrong password.")
         msgbox.exec_()
 
-    def msg_set_success(self):
+    def msg_set_success(self, note=""):
         msgbox = QMessageBox(self)
-        msgbox.question(
-            self, "Setting success", "Device configuration complete!", QMessageBox.Yes
-        )
+        text = "Device configuration complete!"
+        if note:
+            text += "\n\n" + note.strip()
+        msgbox.question(self, "Setting success", text, QMessageBox.Yes)
 
     def msg_upload_warning(self, dst_ip):
         msgbox = QMessageBox(self)
@@ -7535,371 +7674,6 @@ class WIZWindow(QMainWindow, main_window):
         # NOTE: 1.5.7 UI 복원으로 인해 info 라벨들이 제거되어 비활성화
         # self._setup_info_labels()
 
-    # ================================================================
-    # 타이밍 설정 다이얼로그 관련 메서드
-    # ================================================================
-    def event_open_timing_settings(self):
-        """타이밍 설정 다이얼로그 표시 (기어 아이콘 버튼 클릭 이벤트)"""
-        try:
-            # 1. 현재 설정 값 읽기
-            current_values = self.timing_config.get_current_values()
-
-            # 2. 다이얼로그 생성 및 표시
-            dialog = self._create_timing_settings_dialog(current_values)
-            result = dialog.exec_()
-
-            # 3. 저장 버튼 클릭 시 적용
-            if result == QDialog.Accepted:
-                # 다이얼로그의 위젯들에서 값 추출
-                new_values = self._extract_dialog_values(dialog)
-
-                # 검증 및 저장
-                if self._apply_timing_settings(new_values):
-                    QMessageBox.information(
-                        self,
-                        "Settings Saved",
-                        "Search timing settings have been saved.\n\n"
-                        "Some settings will take effect from the next search."
-                    )
-                else:
-                    QMessageBox.warning(
-                        self,
-                        "Save Failed",
-                        "Failed to save settings.\n"
-                        "Please check the log."
-                    )
-
-        except Exception as e:
-            self.logger.error(f"타이밍 설정 다이얼로그 오류: {e}")
-            QMessageBox.critical(
-                self,
-                "Error",
-                f"An error occurred while configuring timing settings:\n{e}"
-            )
-
-    def _create_timing_settings_dialog(self, current_values: dict) -> QDialog:
-        """타이밍 설정 다이얼로그 생성
-
-        Args:
-            current_values: 현재 설정 값
-
-        Returns:
-            QDialog: 설정 다이얼로그
-        """
-        from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, QDialogButtonBox,
-                                     QDoubleSpinBox, QSpinBox, QCheckBox, QGroupBox)
-
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Search Timing Settings")
-        dialog.setModal(True)
-        dialog.setMinimumWidth(500)
-
-        # 메인 레이아웃
-        main_layout = QVBoxLayout()
-
-        # === Phase 1 타이밍 그룹 ===
-        phase1_group = QGroupBox("Phase 1 Timing (UDP Broadcast / TCP Multicast)")
-        phase1_layout = QFormLayout()
-
-        # Loop Select Timeout
-        dialog.spin_loop_timeout = QDoubleSpinBox()
-        dialog.spin_loop_timeout.setRange(0.1, 5.0)
-        dialog.spin_loop_timeout.setSingleStep(0.1)
-        dialog.spin_loop_timeout.setDecimals(1)
-        dialog.spin_loop_timeout.setSuffix(" sec")
-        dialog.spin_loop_timeout.setValue(current_values['phase1_loop_select_timeout'])
-        dialog.spin_loop_timeout.setToolTip(
-            "Additional wait time after the last response\n"
-            "Recommended: 0.5s (normal), 1.0s (legacy devices), 0.3s (fast)"
-        )
-        phase1_layout.addRow("Loop Select Timeout:", dialog.spin_loop_timeout)
-
-        # Emit Stabilization Delay
-        dialog.spin_emit_delay = QSpinBox()
-        dialog.spin_emit_delay.setRange(0, 500)
-        dialog.spin_emit_delay.setSingleStep(10)
-        dialog.spin_emit_delay.setSuffix(" ms")
-        dialog.spin_emit_delay.setValue(current_values['phase1_emit_stabilization_ms'])
-        dialog.spin_emit_delay.setToolTip(
-            "PyQt signal queue stabilization wait time\n"
-            "Recommended: 50ms (experimental: 0~100ms)"
-        )
-        phase1_layout.addRow("Emit Stabilization Delay:", dialog.spin_emit_delay)
-
-        # Skip Emit Delay (Experimental)
-        dialog.check_skip_delay = QCheckBox()
-        dialog.check_skip_delay.setChecked(current_values['skip_phase1_emit_delay'])
-        dialog.check_skip_delay.setToolTip(
-            "Experimental: Skip the pre-emit delay\n"
-            "Saves about 50ms when enabled, but signal queue may be unstable"
-        )
-        phase1_layout.addRow("Skip Emit Delay (Experimental):", dialog.check_skip_delay)
-
-        phase1_group.setLayout(phase1_layout)
-        main_layout.addWidget(phase1_group)
-
-        # === Phase 3 타이밍 그룹 ===
-        phase3_group = QGroupBox("Phase 3 Timing (Per-Device Query)")
-        phase3_layout = QFormLayout()
-
-        # Device Query Timeout
-        dialog.spin_query_timeout = QDoubleSpinBox()
-        dialog.spin_query_timeout.setRange(0.5, 5.0)
-        dialog.spin_query_timeout.setSingleStep(0.1)
-        dialog.spin_query_timeout.setDecimals(1)
-        dialog.spin_query_timeout.setSuffix(" sec")
-        dialog.spin_query_timeout.setValue(current_values['phase3_device_query_timeout'])
-        dialog.spin_query_timeout.setToolTip(
-            "Per-device response wait time\n"
-            "Recommended: 1.5s (normal), 1.0s (fast), 2.0s (slow/distant)"
-        )
-        phase3_layout.addRow("Device Query Timeout:", dialog.spin_query_timeout)
-
-        # SET Command Post-Response Delay
-        dialog.spin_set_delay = QSpinBox()
-        dialog.spin_set_delay.setRange(0, 2000)
-        dialog.spin_set_delay.setSingleStep(100)
-        dialog.spin_set_delay.setSuffix(" ms")
-        dialog.spin_set_delay.setValue(current_values['phase3_set_command_delay_ms'])
-        dialog.spin_set_delay.setToolTip(
-            "Wait time after SET response before re-querying the device.\n"
-            "The device reboots immediately after SET, and dev_clicked() queries it\n"
-            "right after — without this delay the device is mid-reboot and won't respond.\n\n"
-            "Default: 500 ms (recommended — do not reduce for older/slow devices).\n"
-            "Reducing below 200 ms risks SET-after-reboot query failures."
-        )
-        phase3_layout.addRow("SET Response Delay:", dialog.spin_set_delay)
-
-        # SET Response Timeout (일반 장치)
-        dialog.spin_set_timeout = QDoubleSpinBox()
-        dialog.spin_set_timeout.setRange(1.0, 15.0)
-        dialog.spin_set_timeout.setSingleStep(0.5)
-        dialog.spin_set_timeout.setDecimals(1)
-        dialog.spin_set_timeout.setSuffix(" sec")
-        dialog.spin_set_timeout.setValue(current_values['phase3_set_response_timeout'])
-        dialog.spin_set_timeout.setToolTip(
-            "How long to wait for the device response after Apply.\n"
-            "Exceeding this shows \"Setting failed\" even if the device applied the setting.\n\n"
-            "Default: 2.0 s"
-        )
-        phase3_layout.addRow("SET Response Timeout:", dialog.spin_set_timeout)
-
-        # SET Response Timeout (WIZ5XXSR-RP 전용)
-        dialog.spin_set_timeout_5xx = QDoubleSpinBox()
-        dialog.spin_set_timeout_5xx.setRange(1.0, 30.0)
-        dialog.spin_set_timeout_5xx.setSingleStep(0.5)
-        dialog.spin_set_timeout_5xx.setDecimals(1)
-        dialog.spin_set_timeout_5xx.setSuffix(" sec")
-        dialog.spin_set_timeout_5xx.setValue(current_values['phase3_set_response_timeout_5xx'])
-        dialog.spin_set_timeout_5xx.setToolTip(
-            "SET response timeout applied only to WIZ5XXSR-RP devices.\n\n"
-            "These devices block up to 1.8 s inside connect() when the remote host is\n"
-            "unreachable (RCR 8 x RTR 200 ms), and the flash save right after SET\n"
-            "(4 KB sector erase, up to ~400 ms) can overlap with it. The general 2.0 s\n"
-            "timeout can therefore be too short in some situations.\n\n"
-            "Default: 2.0 s (same as the general value). Raise it toward 5.0 s if\n"
-            "\"Setting failed\" appears while the setting is actually applied."
-        )
-        phase3_layout.addRow("SET Response Timeout (WIZ5XXSR-RP):", dialog.spin_set_timeout_5xx)
-
-        phase3_group.setLayout(phase3_layout)
-        main_layout.addWidget(phase3_group)
-
-        # === TCP 설정 그룹 ===
-        tcp_group = QGroupBox("TCP Settings (TCP Multicast / Mixed Search)")
-        tcp_layout = QFormLayout()
-
-        # Max Parallel Workers
-        dialog.spin_tcp_workers = QSpinBox()
-        dialog.spin_tcp_workers.setRange(1, 50)
-        dialog.spin_tcp_workers.setSingleStep(5)
-        dialog.spin_tcp_workers.setValue(current_values['tcp_max_parallel_workers'])
-        dialog.spin_tcp_workers.setToolTip(
-            "Maximum number of concurrent connections\n"
-            "Recommended: 15 (adjust based on network bandwidth)"
-        )
-        tcp_layout.addRow("Max Parallel Workers:", dialog.spin_tcp_workers)
-
-        tcp_group.setLayout(tcp_layout)
-        main_layout.addWidget(tcp_group)
-
-        # === UI 설정 그룹 ===
-        ui_group = QGroupBox("UI Settings")
-        ui_layout = QFormLayout()
-
-        # Progress Bar Update Percent
-        dialog.spin_pgbar_percent = QSpinBox()
-        dialog.spin_pgbar_percent.setRange(1, 100)
-        dialog.spin_pgbar_percent.setSingleStep(5)
-        dialog.spin_pgbar_percent.setSuffix(" %")
-        dialog.spin_pgbar_percent.setValue(current_values['pgbar_update_percent'])
-        dialog.spin_pgbar_percent.setToolTip(
-            "Progress bar update percent\n"
-            "Smaller = updates more often (smoother but slower)\n"
-            "Larger = updates less often (faster but choppier)\n"
-            "Recommended: 5~20%"
-        )
-        ui_layout.addRow("Progress Bar Update Interval:", dialog.spin_pgbar_percent)
-
-        # Progress Bar Auto Hide Delay
-        dialog.spin_pgbar_hide = QSpinBox()
-        dialog.spin_pgbar_hide.setRange(0, 10000)
-        dialog.spin_pgbar_hide.setSingleStep(500)
-        dialog.spin_pgbar_hide.setSuffix(" ms")
-        dialog.spin_pgbar_hide.setValue(current_values['pgbar_auto_hide_delay_ms'])
-        dialog.spin_pgbar_hide.setToolTip(
-            "Wait time before auto-hiding Progress bar after search completes\n"
-            "0 = hide immediately"
-        )
-        ui_layout.addRow("Progress Bar Auto-Hide Delay:", dialog.spin_pgbar_hide)
-
-        ui_group.setLayout(ui_layout)
-        main_layout.addWidget(ui_group)
-
-        # === 버튼 박스 ===
-        button_box = QDialogButtonBox()
-        btn_save = button_box.addButton("Save", QDialogButtonBox.AcceptRole)
-        btn_cancel = button_box.addButton("Cancel", QDialogButtonBox.RejectRole)
-        btn_reset = button_box.addButton("Restore Defaults", QDialogButtonBox.ResetRole)
-
-        # 버튼 툴팁
-        if btn_save is not None:
-            btn_save.setToolTip("Save and apply settings")
-        if btn_cancel is not None:
-            btn_cancel.setToolTip("Discard changes and close")
-        if btn_reset is not None:
-            btn_reset.setToolTip("Restore all settings to defaults")
-
-        # 시그널 연결
-        button_box.accepted.connect(dialog.accept)
-        button_box.rejected.connect(dialog.reject)
-        if btn_reset is not None:
-            btn_reset.clicked.connect(lambda: self._reset_dialog_to_defaults(dialog))
-
-        main_layout.addWidget(button_box)
-
-        dialog.setLayout(main_layout)
-        return dialog
-
-    def _extract_dialog_values(self, dialog: QDialog) -> dict:
-        """다이얼로그에서 사용자 입력 값 추출
-
-        Args:
-            dialog: 타이밍 설정 다이얼로그
-
-        Returns:
-            dict: 추출된 설정 값
-        """
-        return {
-            'phase1_loop_select_timeout': dialog.spin_loop_timeout.value(),
-            'phase1_emit_stabilization_ms': dialog.spin_emit_delay.value(),
-            'skip_phase1_emit_delay': dialog.check_skip_delay.isChecked(),
-            'phase3_device_query_timeout': dialog.spin_query_timeout.value(),
-            'phase3_set_command_delay_ms': dialog.spin_set_delay.value(),
-            'phase3_set_response_timeout': dialog.spin_set_timeout.value(),
-            'phase3_set_response_timeout_5xx': dialog.spin_set_timeout_5xx.value(),
-            'tcp_max_parallel_workers': dialog.spin_tcp_workers.value(),
-            'pgbar_update_percent': dialog.spin_pgbar_percent.value(),
-            'pgbar_auto_hide_delay_ms': dialog.spin_pgbar_hide.value()
-        }
-
-    def _apply_timing_settings(self, new_values: dict) -> bool:
-        """새로운 타이밍 설정 적용
-
-        Args:
-            new_values: 새로운 설정 값
-
-        Returns:
-            bool: 성공 여부
-        """
-        try:
-            # 1. DeviceSearchConfig에 저장
-            if not self.timing_config.update_config_values(new_values):
-                self.logger.error("타이밍 설정 저장 실패")
-                return False
-
-            # 2. WIZMSGHandler 클래스 변수 즉시 업데이트
-            from WIZMSGHandler import WIZMSGHandler
-            WIZMSGHandler.loop_select_timeout = new_values['phase1_loop_select_timeout']
-            WIZMSGHandler.emit_stabilization_ms = new_values['phase1_emit_stabilization_ms']
-            WIZMSGHandler.skip_phase1_emit_delay = new_values['skip_phase1_emit_delay']
-            WIZMSGHandler.set_command_delay_ms = new_values['phase3_set_command_delay_ms']
-
-            # 3. 인스턴스 변수 업데이트 (다음 검색 시 사용)
-            self.search_wait_time_each = new_values['phase3_device_query_timeout']
-
-            self.logger.info(f"타이밍 설정 업데이트 완료: {new_values}")
-            return True
-
-        except Exception as e:
-            self.logger.error(f"타이밍 설정 적용 실패: {e}")
-            return False
-
-    def _reset_dialog_to_defaults(self, dialog: QDialog):
-        """다이얼로그 값을 기본값으로 리셋
-
-        Args:
-            dialog: 타이밍 설정 다이얼로그
-        """
-        reply = QMessageBox.question(
-            dialog,
-            "Confirm Restore Defaults",
-            "Restore all timing settings to defaults?\n\n"
-            "This is saved immediately and cannot be undone.",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
-
-        if reply == QMessageBox.Yes:
-            try:
-                # 1. DeviceSearchConfig 기본값 복원
-                if not self.timing_config.reset_to_defaults():
-                    QMessageBox.warning(
-                        dialog,
-                        "Restore Failed",
-                        "Failed to restore defaults.\nPlease check the log."
-                    )
-                    return
-
-                # 2. 다이얼로그 위젯 값 업데이트
-                defaults = self.timing_config.get_current_values()
-                dialog.spin_loop_timeout.setValue(defaults['phase1_loop_select_timeout'])
-                dialog.spin_emit_delay.setValue(defaults['phase1_emit_stabilization_ms'])
-                dialog.check_skip_delay.setChecked(defaults['skip_phase1_emit_delay'])
-                dialog.spin_query_timeout.setValue(defaults['phase3_device_query_timeout'])
-                dialog.spin_set_delay.setValue(defaults['phase3_set_command_delay_ms'])
-                dialog.spin_set_timeout.setValue(defaults['phase3_set_response_timeout'])
-                dialog.spin_set_timeout_5xx.setValue(defaults['phase3_set_response_timeout_5xx'])
-                dialog.spin_tcp_workers.setValue(defaults['tcp_max_parallel_workers'])
-                dialog.spin_pgbar_percent.setValue(defaults['pgbar_update_percent'])
-                dialog.spin_pgbar_hide.setValue(defaults['pgbar_auto_hide_delay_ms'])
-
-                # 3. WIZMSGHandler 클래스 변수 업데이트
-                from WIZMSGHandler import WIZMSGHandler
-                WIZMSGHandler.loop_select_timeout = defaults['phase1_loop_select_timeout']
-                WIZMSGHandler.emit_stabilization_ms = defaults['phase1_emit_stabilization_ms']
-                WIZMSGHandler.skip_phase1_emit_delay = defaults['skip_phase1_emit_delay']
-                WIZMSGHandler.set_command_delay_ms = defaults['phase3_set_command_delay_ms']
-
-                # 4. 인스턴스 변수 업데이트
-                self.search_wait_time_each = defaults['phase3_device_query_timeout']
-
-                QMessageBox.information(
-                    dialog,
-                    "Restore Complete",
-                    "All settings have been restored to defaults."
-                )
-
-                self.logger.info("타이밍 설정 기본값 복원 완료")
-
-            except Exception as e:
-                self.logger.error(f"기본값 복원 실패: {e}")
-                QMessageBox.critical(
-                    dialog,
-                    "Error",
-                    f"An error occurred while restoring defaults:\n{e}"
-                )
-
     # ========== Advanced Search Options 다이얼로그 ==========
 
     def event_open_advanced_search_options(self):
@@ -8020,7 +7794,8 @@ class WIZWindow(QMainWindow, main_window):
             QDialog: 설정 다이얼로그
         """
         from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, QDialogButtonBox,
-                                     QDoubleSpinBox, QSpinBox, QCheckBox, QGroupBox, QPushButton)
+                                     QDoubleSpinBox, QSpinBox, QCheckBox, QGroupBox, QPushButton,
+                                     QComboBox)
 
         dialog = QDialog(self)
         dialog.setWindowTitle("Advanced Search Options")
@@ -8143,12 +7918,86 @@ class WIZWindow(QMainWindow, main_window):
         )
         phase3_layout.addRow("Device Query Timeout:", dialog.dspin_device_query_timeout)  # 장비 쿼리 타임아웃
 
+        # SET Command Post-Response Delay
+        dialog.spin_set_delay = QSpinBox()
+        dialog.spin_set_delay.setRange(0, 2000)
+        dialog.spin_set_delay.setSingleStep(100)
+        dialog.spin_set_delay.setSuffix(" ms")
+        dialog.spin_set_delay.setValue(config.get('phase3_set_command_delay_ms', 500))
+        dialog.spin_set_delay.setToolTip(
+            "Wait time after SET response before re-querying the device.\n"
+            "The device reboots immediately after SET, and dev_clicked() queries it\n"
+            "right after — without this delay the device is mid-reboot and won't respond.\n\n"
+            "Default: 500 ms (recommended — do not reduce for older/slow devices).\n"
+            "Reducing below 200 ms risks SET-after-reboot query failures."
+        )
+        phase3_layout.addRow("SET Response Delay:", dialog.spin_set_delay)
+
+        # SET Response Timeout (일반 장치)
+        dialog.dspin_set_timeout = QDoubleSpinBox()
+        dialog.dspin_set_timeout.setRange(1.0, 15.0)
+        dialog.dspin_set_timeout.setSingleStep(0.5)
+        dialog.dspin_set_timeout.setDecimals(1)
+        dialog.dspin_set_timeout.setSuffix(" sec")
+        dialog.dspin_set_timeout.setValue(config.get('phase3_set_response_timeout', 2.0))
+        dialog.dspin_set_timeout.setToolTip(
+            "How long to wait for the device response after Apply.\n"
+            "Exceeding this shows \"Setting failed\" even if the device applied the setting.\n\n"
+            "Default: 2.0 s"
+        )
+        phase3_layout.addRow("SET Response Timeout:", dialog.dspin_set_timeout)
+
+        # SET Response Timeout (WIZ5XXSR-RP 전용)
+        dialog.dspin_set_timeout_5xx = QDoubleSpinBox()
+        dialog.dspin_set_timeout_5xx.setRange(1.0, 30.0)
+        dialog.dspin_set_timeout_5xx.setSingleStep(0.5)
+        dialog.dspin_set_timeout_5xx.setDecimals(1)
+        dialog.dspin_set_timeout_5xx.setSuffix(" sec")
+        dialog.dspin_set_timeout_5xx.setValue(config.get('phase3_set_response_timeout_5xx', 2.0))
+        dialog.dspin_set_timeout_5xx.setToolTip(
+            "SET response timeout applied only to WIZ5XXSR-RP devices.\n\n"
+            "These devices block up to 1.8 s inside connect() when the remote host is\n"
+            "unreachable (RCR 8 x RTR 200 ms), and the flash save right after SET\n"
+            "(4 KB sector erase, up to ~400 ms) can overlap with it. The general 2.0 s\n"
+            "timeout can therefore be too short in some situations.\n\n"
+            "Default: 2.0 s (same as the general value). Raise it toward 5.0 s if\n"
+            "\"Setting failed\" appears while the setting is actually applied."
+        )
+        phase3_layout.addRow("SET Response Timeout (WIZ5XXSR-RP):", dialog.dspin_set_timeout_5xx)
+
+        # Post-Apply Reboot Delay (IP 모드 변경 등)
+        dialog.dspin_reboot_delay = QDoubleSpinBox()
+        dialog.dspin_reboot_delay.setRange(0.0, 5.0)
+        dialog.dspin_reboot_delay.setSingleStep(0.5)
+        dialog.dspin_reboot_delay.setDecimals(1)
+        dialog.dspin_reboot_delay.setSuffix(" sec")
+        dialog.dspin_reboot_delay.setValue(config.get('phase3_post_apply_reboot_delay', 1.0))
+        dialog.dspin_reboot_delay.setToolTip(
+            "IP 모드 변경 등으로 Apply 후 장치가 리부팅할 때, 다음 Device Search의\n"
+            "TCP probe 1회 실패를 기기 고장처럼 보이지 않게 이만큼 기다려 재확인한다.\n\n"
+            "Default: 1.0 s — 장치가 더 느리게 리부팅하면 올려서 확인."
+        )
+        phase3_layout.addRow("Post-Apply Reboot Delay:", dialog.dspin_reboot_delay)
+
         phase3_group.setLayout(phase3_layout)
         main_layout.addWidget(phase3_group)
 
         # === TCP 설정 그룹 ===
         tcp_group = QGroupBox("TCP Settings")  # TCP 설정
         tcp_layout = QFormLayout()
+
+        # TCP 포트 스캔 타임아웃
+        dialog.dspin_tcp_scan_timeout = QDoubleSpinBox()
+        dialog.dspin_tcp_scan_timeout.setRange(0.5, 10.0)
+        dialog.dspin_tcp_scan_timeout.setSingleStep(0.5)
+        dialog.dspin_tcp_scan_timeout.setDecimals(1)
+        dialog.dspin_tcp_scan_timeout.setSuffix(" sec")
+        dialog.dspin_tcp_scan_timeout.setValue(config.get('tcp_scan_timeout', 2.0))
+        dialog.dspin_tcp_scan_timeout.setToolTip(
+            "Timeout for each IP:port connection attempt during TCP Multicast scan\n"
+            "Recommended: 2.0s (normal), 1.0s (fast), 3.0s (slow)"
+        )
+        tcp_layout.addRow("Scan Timeout:", dialog.dspin_tcp_scan_timeout)
 
         # 최대 병렬 워커 수
         dialog.spin_tcp_max_workers = QSpinBox()
@@ -8216,6 +8065,25 @@ class WIZWindow(QMainWindow, main_window):
         )
         debug_layout.addRow("On-demand Query:", dialog.cb_phase3_on_demand)  # 온디맨드 조회
 
+        dialog.combo_log_level = QComboBox()
+        dialog.combo_log_level.addItems(["DEBUG", "INFO", "WARNING", "ERROR"])
+        dialog.combo_log_level.setCurrentText(config.get('logging_level', 'INFO'))
+        dialog.combo_log_level.setToolTip(
+            "Application log level — written to ~/.wizconfig/logs/wizconfig.log\n"
+            "DEBUG is verbose; recommended only while troubleshooting\n"
+            "(Default: INFO)"
+        )
+        debug_layout.addRow("Log Level:", dialog.combo_log_level)
+
+        dialog.cb_verbose_debug = QCheckBox("Dump raw protocol bytes to log ([WIRE])")
+        dialog.cb_verbose_debug.setChecked(config.get('logging_verbose_debug', False))
+        dialog.cb_verbose_debug.setToolTip(
+            "Logs every byte sent/received on the wire for protocol-level debugging.\n"
+            "Very noisy — DEBUG level alone is not enough detail for this.\n"
+            "(Default: off)"
+        )
+        debug_layout.addRow("Verbose Wire Log:", dialog.cb_verbose_debug)
+
         debug_group.setLayout(debug_layout)
         main_layout.addWidget(debug_group)
 
@@ -8250,8 +8118,13 @@ class WIZWindow(QMainWindow, main_window):
 
             # Phase 3 타이밍
             'phase3_device_query_timeout': dialog.dspin_device_query_timeout.value(),
+            'phase3_set_command_delay_ms': dialog.spin_set_delay.value(),
+            'phase3_set_response_timeout': dialog.dspin_set_timeout.value(),
+            'phase3_set_response_timeout_5xx': dialog.dspin_set_timeout_5xx.value(),
+            'phase3_post_apply_reboot_delay': dialog.dspin_reboot_delay.value(),
 
             # TCP 설정
+            'tcp_scan_timeout': dialog.dspin_tcp_scan_timeout.value(),
             'tcp_max_parallel_workers': dialog.spin_tcp_max_workers.value(),
 
             # UI 설정
@@ -8261,6 +8134,8 @@ class WIZWindow(QMainWindow, main_window):
             # 디버그 / 실험적
             'show_timing_in_statusbar': dialog.cb_show_timing.isChecked(),
             'phase3_on_demand': dialog.cb_phase3_on_demand.isChecked(),
+            'logging_level': dialog.combo_log_level.currentText(),
+            'logging_verbose_debug': dialog.cb_verbose_debug.isChecked(),
         }
 
     def _apply_advanced_search_settings(self, updates):
@@ -8284,6 +8159,8 @@ class WIZWindow(QMainWindow, main_window):
             WIZMSGHandler.loop_select_timeout = updates['phase1_loop_select_timeout']
             WIZMSGHandler.emit_stabilization_ms = updates['phase1_emit_stabilization_ms']
             WIZMSGHandler.skip_phase1_emit_delay = updates['skip_phase1_emit_delay']
+            if 'phase3_set_command_delay_ms' in updates:
+                WIZMSGHandler.set_command_delay_ms = int(updates['phase3_set_command_delay_ms'])
 
             # 인스턴스 변수 업데이트
             self.search_wait_time_each = updates['phase3_device_query_timeout']
@@ -8293,6 +8170,18 @@ class WIZWindow(QMainWindow, main_window):
             self.timing_config.config.setdefault('experimental', {})['phase3_on_demand'] = updates.get('phase3_on_demand', False)
             if 'pgbar_auto_hide_delay_ms' in updates:
                 self.timing_config.config.setdefault('ui', {}).setdefault('progress_bar', {})['auto_hide_delay_ms'] = int(updates['pgbar_auto_hide_delay_ms'])
+            if 'phase3_post_apply_reboot_delay' in updates:
+                self.timing_config.config.setdefault('search', {}).setdefault('phase3', {})['post_apply_reboot_delay_sec'] = float(updates['phase3_post_apply_reboot_delay'])
+            if 'phase3_set_response_timeout' in updates:
+                self.timing_config.config.setdefault('search', {}).setdefault('phase3', {})['set_response_timeout_sec'] = float(updates['phase3_set_response_timeout'])
+            if 'phase3_set_response_timeout_5xx' in updates:
+                self.timing_config.config.setdefault('search', {}).setdefault('phase3', {})['set_response_timeout_5xx_sec'] = float(updates['phase3_set_response_timeout_5xx'])
+            if 'phase3_set_command_delay_ms' in updates:
+                self.timing_config.config.setdefault('search', {}).setdefault('phase3', {})['set_command_delay_ms'] = int(updates['phase3_set_command_delay_ms'])
+            if 'tcp_scan_timeout' in updates:
+                self.timing_config.config.setdefault('search', {}).setdefault('tcp', {})['scan_timeout_sec'] = float(updates['tcp_scan_timeout'])
+            # logging_level/logging_verbose_debug는 _on_config_file_changed()의 파일 감시가
+            # YAML 저장 직후 자동으로 반영하므로 여기서 별도 동기화 불필요
 
             self.logger.info(f"Advanced search options applied: {updates}")
             QtWidgets.QMessageBox.information(
@@ -8350,8 +8239,13 @@ class WIZWindow(QMainWindow, main_window):
 
                 # Phase 3 타이밍 기본값
                 dialog.dspin_device_query_timeout.setValue(defaults['phase3']['device_query_timeout_sec'])
+                dialog.spin_set_delay.setValue(defaults['phase3']['set_command_delay_ms'])
+                dialog.dspin_set_timeout.setValue(defaults['phase3']['set_response_timeout_sec'])
+                dialog.dspin_set_timeout_5xx.setValue(defaults['phase3']['set_response_timeout_5xx_sec'])
+                dialog.dspin_reboot_delay.setValue(defaults['phase3']['post_apply_reboot_delay_sec'])
 
                 # TCP 설정 기본값
+                dialog.dspin_tcp_scan_timeout.setValue(defaults['tcp']['scan_timeout_sec'])
                 dialog.spin_tcp_max_workers.setValue(defaults['tcp']['max_parallel_workers'])
 
                 # UI 설정 기본값 (device_search_config.py의 DEFAULTS['ui']에서 가져오기)
@@ -8362,6 +8256,10 @@ class WIZWindow(QMainWindow, main_window):
                 # 디버그 / 실험적 기본값
                 dialog.cb_show_timing.setChecked(False)
                 dialog.cb_phase3_on_demand.setChecked(False)
+                dialog.combo_log_level.setCurrentText(full_defaults['logging']['level'])
+                dialog.cb_verbose_debug.setChecked(full_defaults['logging']['verbose_debug'])
+                # logging.level/verbose_debug는 reset_to_defaults()가 YAML에 쓴 직후
+                # _on_config_file_changed() 파일 감시가 자동으로 반영 — 별도 동기화 불필요
 
                 # 내부 변수 업데이트
                 self.retry_search_expected_count = 0
@@ -8372,6 +8270,7 @@ class WIZWindow(QMainWindow, main_window):
                 WIZMSGHandler.loop_select_timeout = defaults['phase1']['loop_select_timeout_sec']
                 WIZMSGHandler.emit_stabilization_ms = defaults['phase1']['emit_stabilization_ms']
                 WIZMSGHandler.skip_phase1_emit_delay = False
+                WIZMSGHandler.set_command_delay_ms = defaults['phase3']['set_command_delay_ms']
 
                 # 인스턴스 변수 업데이트
                 self.search_wait_time_each = defaults['phase3']['device_query_timeout_sec']
@@ -8379,6 +8278,13 @@ class WIZWindow(QMainWindow, main_window):
                 # timing_config 인메모리 동기화
                 self.timing_config.config.setdefault('logging', {})['show_timing_in_statusbar'] = False
                 self.timing_config.config.setdefault('experimental', {})['phase3_on_demand'] = False
+                phase3_cfg = self.timing_config.config.setdefault('search', {}).setdefault('phase3', {})
+                phase3_cfg['post_apply_reboot_delay_sec'] = defaults['phase3']['post_apply_reboot_delay_sec']
+                phase3_cfg['set_command_delay_ms'] = defaults['phase3']['set_command_delay_ms']
+                phase3_cfg['set_response_timeout_sec'] = defaults['phase3']['set_response_timeout_sec']
+                phase3_cfg['set_response_timeout_5xx_sec'] = defaults['phase3']['set_response_timeout_5xx_sec']
+                self.timing_config.config.setdefault('search', {}).setdefault('tcp', {})['scan_timeout_sec'] = \
+                    defaults['tcp']['scan_timeout_sec']
 
                 QtWidgets.QMessageBox.information(
                     dialog,

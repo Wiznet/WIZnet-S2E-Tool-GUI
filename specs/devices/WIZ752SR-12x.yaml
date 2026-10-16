@@ -79,6 +79,11 @@ command_groups:
   - pppoe
 
 overrides:
+  # NP(연결 비밀번호) — FW pw_connect[10] (2026-10-14 실제 소스
+  # WIZ752SR-12x/.../ConfigData.h:78 확인). 10자 이상 보내면 ERINVALIDPARAM →
+  # UDP/TCP 모드라 ER 문자열 없이 SAVE 전체 스킵(조용히 실패).
+  NP:
+    regex: "^.{0,9}$"
   # WIZ752SR BR 최대 230400 (0-13)
   BR:
     regex: "^([0-9]|1[0-3])$"
