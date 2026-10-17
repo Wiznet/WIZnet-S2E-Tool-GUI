@@ -49,6 +49,8 @@ import webbrowser
 import logging
 import datetime
 import csv
+import threading
+import traceback
 from pathlib import Path
 from enum import Enum
 
@@ -8791,7 +8793,43 @@ class ThreadProgress(QtCore.QThread):
         self.wait()
 
 
+def _log_unhandled_exception(exc_type, exc_value, exc_tb):
+    """미처리 예외 — 로그에 전체 traceback 남긴다.
+
+    PyQt5 는 슬롯/오버라이드된 가상 메서드(QThread.run() 포함, sip 가 C++ 쪽에
+    예외를 못 던지므로 여기로 포워딩됨) 밖으로 새는 예외도 이 훅으로 들어온다.
+    PyQt5 가 미처리 예외에 다이얼로그 없이 그냥 종료하는 경우가 있어
+    (BUG-IP20-WIN11-SEARCH-CRASH, 2026-10-05 고객 리포트 — "에러 없이 그냥 닫힘"),
+    이 훅이 없으면 원인 파악이 불가능하다. KeyboardInterrupt 는 정상 종료 경로이므로 제외.
+    """
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_tb)
+        return
+    logger.error(
+        "[FATAL] 미처리 예외(메인 스레드) — 이 로그 뒤에 앱이 종료됐다면 원인이 이것:\n"
+        + "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+    )
+    sys.__excepthook__(exc_type, exc_value, exc_tb)
+
+
+def _log_unhandled_thread_exception(args):
+    """순수 Python `threading.Thread` 보조 스레드의 미처리 예외 — 로그에 traceback 남긴다.
+
+    QThread(PyQt5) 는 C++ 가상 메서드 오버라이드라 `sys.excepthook`(위) 으로 간다 —
+    이 훅은 그 경로를 안 타는 순수 threading.Thread 용 안전망(현재는 쓰는 곳이 없어도,
+    향후 추가될 경우를 대비해 둠).
+    """
+    logger.error(
+        f"[FATAL] 미처리 예외(스레드 {args.thread.name}) — "
+        "이 로그 뒤에 앱이 종료됐다면 원인이 이것:\n"
+        + "".join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback))
+    )
+
+
 if __name__ == "__main__":
+    sys.excepthook = _log_unhandled_exception
+    threading.excepthook = _log_unhandled_thread_exception
+
     # High DPI mode
     # PyQt5 High DPI (일부 환경에서 속성 없을 수 있음)
     logger.debug(f"sys.platform={sys.platform}")

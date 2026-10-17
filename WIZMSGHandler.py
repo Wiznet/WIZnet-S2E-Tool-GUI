@@ -303,7 +303,21 @@ class WIZMSGHandler(QThread):
         while readready:
             for sock in readready:
                 if sock == self.sock.sock:
-                    data, _ = self.sock.recvfrom()
+                    try:
+                        data, _ = self.sock.recvfrom()
+                    except OSError as e:
+                        # Phase 1 브로드캐스트 루프(run())는 recv 전체를 try/except로 감싸는데
+                        # Phase 3 개별 조회만 이 보호가 없었다 — UDP 소켓에서 OS가 던지는
+                        # 예외(예: Windows 의 ConnectionResetError/WinError 10054, ICMP
+                        # unreachable 이 다음 recv에 되돌아오는 경우)가 QThread.run() 밖으로
+                        # 그대로 새어 앱이 다이얼로그 없이 종료되는 고객 리포트
+                        # (BUG-IP20-WIN11-SEARCH-CRASH, 2026-10-05)의 원인 후보. 지금까지 모은
+                        # 응답만 반환 — 이번 라운드 무응답과 동일하게 취급(재시도 로직이 처리).
+                        self.logger.error(
+                            f"[ERROR] _collect_replies recvfrom: {e!r} — "
+                            "이번 라운드 응답 수집 중단, 지금까지 모은 것만 반환"
+                        )
+                        return buf
                     self.logger.debug(f"Each-search recv: {len(data)}B")
                     if self.what_sock == "udp":
                         self._warn_if_reply_reaches_buffer(len(data))
