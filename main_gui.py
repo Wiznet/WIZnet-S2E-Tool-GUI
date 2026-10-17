@@ -466,8 +466,8 @@ class WIZWindow(QMainWindow, main_window):
             self.ch0_flow.itemText(i) for i in range(self.ch0_flow.count())
         ]
 
-        # 타이틀 "(BETA - 4CH)" 표기는 이 타이틀바가 전 장치 공용이라 보류 —
-        # version 정책·BETA 표기는 사용자 결정 대기 (계획서 참조)
+        # "(BETA - 4CH)" 표기는 제목·About·파일명(_4CH) 모두 제거했다 (2026-10-17 사용자 지시).
+        # 4채널 전용 빌드로 오해될 수 있고 이 툴은 전 장치 공용이다.
         self.setWindowTitle(f"WIZnet S2E Configuration Tool {VERSION}")
 
         self.logger = logger
@@ -7316,7 +7316,7 @@ class WIZWindow(QMainWindow, main_window):
             f"<html><body style='font-family:Arial,sans-serif;font-size:13px;margin:0;padding:0;'>"
             f"<h2 style='margin:0 0 6px 0;'>About WIZnet-S2E-Tool-GUI</h2>"
             f"<p style='margin:2px 0;'>Configuration Tool for WIZnet serial to ethernet devices.</p>"
-            f"<p style='margin:2px 0;'>Version: <b>{VERSION} (BETA - 4CH)</b></p>"
+            f"<p style='margin:2px 0;'>Version: <b>{VERSION}</b></p>"
             f"<p style='margin:2px 0;'>Author: WIZnet</p>"
             f"<p style='margin:2px 0;'>Github: <a href='{gh}'>Repository</a>"
             f" &nbsp;|&nbsp; <a href='{gh}/releases'>Release</a></p>"
