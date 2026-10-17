@@ -4,6 +4,114 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
 
 ---
 
+## [Unreleased]
+
+### Features
+- **W55RP20-S2E-4CH support**: Channel #2 and Channel #3 tabs, CH2/CH3 command groups, per-channel
+  value ranges taken from the firmware documentation, and PPPoE. The SSL/MQTT tabs are hidden
+  because this firmware does not provide them.
+- **W55RP20-S2E-3CH groundwork**: device spec, Channel #2 tab, and 3-channel runtime commands are
+  in place. Not yet verified on hardware.
+- W55RP20 (3CH/4CH): Flow control gains **DTR/DSR**; Serial interface (TTL / RS-232 / RS-422 /
+  RS-485 / RS-485 Reverse) is now selectable instead of read-only; Remote host accepts a domain
+  name on every channel.
+- **WIZ1x0SR direct-IP search** (TCP:1461) in "IP Address" search mode.
+- **FW from Git: WIZ750SR Boot↔App compatibility check** — incompatible combinations are shown
+  but cannot be selected, risky ones ask for confirmation and point to the ISP tool. The
+  compatibility table is a separate file (`config/fw_compat.json`) refreshed from GitHub at
+  startup (can be turned off with `fw_compat.auto_update`); versions newer than the table are
+  allowed with a notice.
+- Advanced Search Options now exposes **Post-Apply Reboot Delay**, SET command delay, SET
+  response timeouts, TCP scan timeout, log level, and **Verbose Wire Log** (raw request/response
+  bytes in the log).
+- **Post-Apply Reboot Delay**: after an IP-mode change the tool waits for the device to reboot
+  before the next search, and the completion dialog says so.
+- Terminal: Escape-mode hint text updates when Escape is toggled.
+
+### Bug Fixes
+- **TCP unicast Apply failed after editing Local IP**: typing a new IP switched the connection
+  target before Apply was sent. The target now follows the IP the device reports.
+- **Settings were not saved when NP (connection password) was 10+ characters**: now limited to
+  9 characters (WIZ750SR, WIZ750SR-1xx, WIZ752SR-12x, W55RP20, WIZ5XXSR-RP).
+- W55RP20: **Apply Settings did not save** because the SC command made the firmware discard the
+  whole save; fixed together with response-parsing and diagnostics improvements.
+- Fixed a crash on Windows 11 during IP20 search (unprotected receive in the individual-query
+  phase); unhandled exceptions are now written to the log.
+- Unicast TCP search/Apply no longer runs `ping.exe` (no console-window flash, no false
+  positives); the check connects to the configuration port instead. FW-upload pre-check uses the
+  Windows ICMP API.
+- Configuration sockets are no longer re-created on every call, which could leave a stale socket
+  receiving the device's reply.
+- WIZ752SR-12x: User I/O tab missing, GPIO refresh and widget sync, "configuration complete"
+  popup missing after SET, per-device query split into three requests to stay within the
+  firmware's 512-byte response buffer, and the periodic GPIO refresh overwriting values being
+  edited.
+- WIZ550: DNS use/domain, packing delimiter, serial trigger, and Modbus fields are now editable.
+- W55RP20 3CH/4CH: stale combo indexes no longer sent on SET, expected-response length corrected,
+  firmware-document value ranges applied (UI/EI/WI/YI, OP/AO/TO, FL/EF/WF, KI/KE, RS/RE, XS/XE).
+- Channel 2/3 tabs not appearing when a field failed to parse; packaged builds now include
+  `specs/` so the channel count is read correctly.
+- "TCP timeout" group box is hidden on models without TR (e.g. WIZ752SR-12x).
+- Firmware version strings with custom suffixes (e.g. `1.2.5_GreenCS`) no longer raise errors;
+  version comparison uses the numeric part only.
+- Duplicate F4 shortcut removed.
+- Device spec command lists aligned with the firmware command enums.
+- Removed the "(BETA - 4CH)" label from About and the `_4CH` suffix from the build name.
+
+### Build / Docs
+- `build.bat` passes its arguments (e.g. `-NoSign`) through to `build.ps1`.
+- flake8 E501 (line length) disabled.
+
+### Refactoring
+- W55RP20 3CH/4CH field handling consolidated into a table (`channel_field_map`); about 420 lines
+  removed. The three firmware-version parsers are unified in `fw_version.py`.
+- Unused timing-settings dialog removed.
+
+### Tests
+- Fake-device simulators for the SEGCP, WIZ550 and WIZ1x0 families, launchable together
+  (`tests/fake_fleet.py`); snapshot and regression tests for W55RP20 field mapping, version
+  parsing, and firmware compatibility.
+
+---
+
+## [1.6.2.15] – 2026-08-28
+
+(1.6.2.10–1.6.2.15 were development builds; released together as 1.6.2.15.)
+
+### Features
+- **FW from Git** now covers WIZ5XXSR-RP, WIZ752SR-12x, WIZ107SR and WIZ108SR (the last two read
+  the firmware link from the product page). Devices with no public firmware show the reason and
+  point to Firmware Upload instead of offering another product's image.
+- **Firmware image check before upload**: App vs. Boot is determined from both the file name and
+  the ARM vector table; a mismatch blocks the upload. Applies to the WIZ550 upload path too.
+- **IP-range check before upload**: warns when the device and the PC are on different subnets.
+- Configurable SET response timeout (Advanced Search Options), with a separate key for
+  WIZ5XXSR-RP.
+- CSV: Protocol column added so binary-protocol devices stay identified after loading.
+- Remote host (RH/QH) accepts a domain name on every channel; DeviceSpec validation is wired in.
+
+### Bug Fixes
+- TCP unicast search restored for ASCII devices (WIZ107SR etc.) (#67).
+- `TCPClient.recvfrom` return value unified as `(data, addr)`.
+- **UPGRADE state no longer limits Apply or editing** (only BOOT does); the status is refreshed
+  from the SET response and a reduced transmission is reported.
+- FW from Git: no fallback to an unrelated product's firmware; App image chosen inside a zip
+  without relying on file names; merged Boot+App images excluded.
+- WIZ550S2E got its own image profile (the STM32 profile was wrongly applied).
+- User-visible strings added in this release unified to English.
+
+---
+
+## [1.6.2.9] – 2026-07-29
+
+### Features
+- IP20: high baud-rate options 1M / 2M / 4M / 8M (firmware 1.2.1 or later).
+
+### Bug Fixes
+- Build: `specs/` folder and icon were missing from the PyInstaller package.
+
+---
+
 ## [1.6.2.8] – 2026-07-02
 
 ### Security
