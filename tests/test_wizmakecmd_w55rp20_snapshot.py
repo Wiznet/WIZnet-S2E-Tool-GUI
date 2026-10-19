@@ -56,7 +56,7 @@ SEARCH_SNAPSHOT = {
         'TO', 'GL', 'GH', 'TP', 'WB', 'WD', 'WP', 'WS', 'WF', 'HD', 'HS', 'TT', 'XV', 'XA',
         'XS', 'XE', 'XR', 'XO', 'WO', 'XD', 'XF', 'WE', 'CS', 'YN', 'YI', 'JO', 'CL', 'CH',
         'JP', 'YB', 'YD', 'YP', 'YS', 'YF', 'UD', 'US', 'JT', 'ZV', 'ZA', 'ZS', 'ZE', 'ZR',
-        'ZO', 'YO', 'ZD', 'ZF', 'YE', 'PO',
+        'ZO', 'YO', 'ZD', 'ZF', 'YE', 'PI', 'PP', 'PO',
     ],
 }
 # 구FW(<1.1.8): 4개 devname 전부 base 목록(채널 확장 커맨드 없이 강등)으로 동일

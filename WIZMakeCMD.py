@@ -253,7 +253,10 @@ cmd_wiz5xxsr = cmd_security_base + cmd_wiz5xxsr_added
 cmd_w55rp20 = cmd_security_base + cmd_wiz5xxsr_added + cmd_w55rp20_added
 cmd_w55rp20_2ch = cmd_w55rp20 + cmd_w55rp20_2ch_ch1
 cmd_w55rp20_3ch = cmd_w55rp20_2ch + cmd_w55rp20_3ch_ui_rw + cmd_w55rp20_3ch_ch2
-cmd_w55rp20_4ch = cmd_w55rp20_3ch + cmd_w55rp20_4ch_ch3
+# PI/PP(PPPoE ID/Password): 4CH 만 조회한다. 저장(SET)은 8af6975 부터 보내지만 조회 목록에
+# 빠져 있어 PPPoE 탭이 비어 보였다. 2CH/3CH 는 FW 미확인이라 넣지 않는다.
+cmd_w55rp20_4ch_pppoe = ['PI', 'PP']
+cmd_w55rp20_4ch = cmd_w55rp20_3ch + cmd_w55rp20_4ch_ch3 + cmd_w55rp20_4ch_pppoe
 
 # R2(7단계, 2026-09-28): search()/setcommand() 에 devname 별로 거의 동일한 elif 4개
 # (4CH/3CH/2CH/base — FW<1.1.8 폴백 + 경고로그 + 목록 순회) 가 따로 있던 것을 테이블로

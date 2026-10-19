@@ -59,7 +59,7 @@ L 은 만든 지 한 달~석 달 된 코드가 그 사이 바뀐 코드와 합�
 | R4 | 10-14 | IP 변경 Apply 후 재부팅 대기(Post-Apply Reboot Delay), 완료 창에 재부팅 안내 | 전 기종 |
 | R5 | 10-14~15 | Advanced Search Options 에 지연·타임아웃·로그 레벨·Verbose Wire Log 노출 | 전 기종 |
 | R6 | 10-15~16 | FW from Git: WIZ750SR Boot↔App 호환 경고·차단, 호환표에 없는 새 버전 안내 | WIZ750SR |
-| R7 | 10-14 | W55RP20-S2E-4CH: PPPoE 지원, SSL/MQTT 탭 숨김 | 4CH |
+| R7 | 10-14, **10-19 보완** | W55RP20-S2E-4CH: PPPoE 지원, SSL/MQTT 탭 숨김. 10-19: 검색 때 PPPoE ID/Password 를 읽어 오도록 조회 목록에 추가(전에는 저장은 되는데 표시가 비었음) | 4CH |
 | R8 | 10-06 | IP20 Windows 11 검색 중 종료 방어 코드 (원인 미확정) | IP20 |
 | R9 | 10-17 | About 의 `(BETA - 4CH)` 표기 제거, exe 이름의 `_4CH` 접미사 제거 | 전체 |
 
@@ -189,7 +189,10 @@ L 은 만든 지 한 달~석 달 된 코드가 그 사이 바뀐 코드와 합�
 | --- | --- |
 | 1. 4CH 선택 | **PPPoE 탭이 있다.** PPPoE 탭 안에 DDNS / Network Protocol 그룹은 보이지 않는다 |
 | 2. 탭 목록 | **SSL/MQTT(certificate) 탭이 없다** |
-| 3. PPPoE 값(ID/비밀번호)을 입력하고 F4 후 재검색 | 값이 유지된다. 시험 후 원래대로 되돌린다 |
+| 3. PPPoE 값(ID/비밀번호)을 입력하고 F4 후 재검색 | **재검색 후 입력한 ID/비밀번호가 PPPoE 탭에 표시된다** (이번 보완의 핵심). 시험 후 원래대로 되돌린다 |
+| 4. **PPPoE 를 쓰지 않는 상태(Static IP)** 에서 장치를 선택하고 PPPoE 탭을 연다 | 오류 없이 열린다. ID/비밀번호는 비어 있어도 정상이다 |
+| 5. 4번 상태에서 Basic/Options/채널 #0~#3 탭의 값이 평소와 같이 채워진다 | 비거나 깨진 항목이 없다. 있으면 항목명과 `wizconfig.log` 를 첨부한다 |
+| 6. 1~5 후 Apply Settings(F4) 를 한 번 한다 | 완료 메시지가 뜨고 장치가 정상 응답한다 |
 
 | 결과 | 비고 |
 | --- | --- |
