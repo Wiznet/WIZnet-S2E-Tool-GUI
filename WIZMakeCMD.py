@@ -26,7 +26,6 @@ SECURITY_DEVICE = [
     "WIZ5XXSR-RP_E-SAVE",
     "W55RP20-S2E",
     "W55RP20-S2E-2CH",
-    "W55RP20-S2E-3CH",
     "W55RP20-S2E-4CH",
     "W232N",
     "IP20",
@@ -154,12 +153,13 @@ cmd_w55rp20_2ch_ch1 = [
     'EE',  # Channel 1 ethernet connected data
 ]
 
-# W55RP20-S2E-3CH부터 UART 인터페이스 선택이 CH0/CH1 도 RW 로 열린다(FW 문서
+# 4CH 부터 UART 인터페이스 선택이 CH0/CH1 도 RW 로 열린다(FW 문서
 # W55RP20_ConfigTool_main_vs_4Port_KR.md, 2026-09-23). 1포트/2CH 는 핀 결정 read-only
-# 그대로 두고(main 브랜치 동작), 3CH/4CH 만 콤보박스로 노출한다.
+# 그대로 두고(main 브랜치 동작), 4CH 만 콤보박스로 노출한다.
+# (이름의 3ch 는 CH0~CH2 계층이라는 뜻이다. 3CH 는 공식 제품이 아니다 — W55RP20-S2E-4CH.yaml 참조)
 cmd_w55rp20_3ch_ui_rw = ['UI', 'EI']  # Channel 0/1 UART interface (code, RW)
 
-# W55RP20-S2E-3CH channel 2 specific commands (CH1 미러 — 2글자 코드만 치환)
+# W55RP20 channel 2 specific commands — 4CH 의 구성 요소 (CH1 미러 — 2글자 코드만 치환)
 cmd_w55rp20_3ch_ch2 = [
     'GS',  # Channel 2 status
     'WN',  # Channel 2 UART interface
@@ -254,7 +254,7 @@ cmd_w55rp20 = cmd_security_base + cmd_wiz5xxsr_added + cmd_w55rp20_added
 cmd_w55rp20_2ch = cmd_w55rp20 + cmd_w55rp20_2ch_ch1
 cmd_w55rp20_3ch = cmd_w55rp20_2ch + cmd_w55rp20_3ch_ui_rw + cmd_w55rp20_3ch_ch2
 # PI/PP(PPPoE ID/Password): 4CH 만 조회한다. 저장(SET)은 8af6975 부터 보내지만 조회 목록에
-# 빠져 있어 PPPoE 탭이 비어 보였다. 2CH/3CH 는 FW 미확인이라 넣지 않는다.
+# 빠져 있어 PPPoE 탭이 비어 보였다. 2CH 는 FW 미확인이라 넣지 않는다.
 cmd_w55rp20_4ch_pppoe = ['PI', 'PP']
 cmd_w55rp20_4ch = cmd_w55rp20_3ch + cmd_w55rp20_4ch_ch3 + cmd_w55rp20_4ch_pppoe
 
@@ -266,7 +266,6 @@ cmd_w55rp20_4ch = cmd_w55rp20_3ch + cmd_w55rp20_4ch_ch3 + cmd_w55rp20_4ch_pppoe
 # (원래 base 분기엔 그런 경고가 없었다).
 W55RP20_CH_TABLE = [
     ("W55RP20-S2E-4CH", cmd_w55rp20_4ch, "CH1/2/3"),
-    ("W55RP20-S2E-3CH", cmd_w55rp20_3ch, "CH1/2"),
     ("W55RP20-S2E-2CH", cmd_w55rp20_2ch, "CH1"),
     ("W55RP20-S2E", cmd_w55rp20, None),
 ]

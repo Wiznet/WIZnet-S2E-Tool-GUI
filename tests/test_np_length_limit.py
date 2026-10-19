@@ -17,7 +17,7 @@ from device_spec_loader import load_device
 # pw_connect[10] 을 FW 소스로 확인했거나(750SR 계열, 752SR-12x) 같은 구조인 W55RP20 계열.
 LIMITED = [
     "WIZ750SR", "WIZ750SR-1xx", "WIZ752SR-12x",
-    "W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-3CH", "W55RP20-S2E-4CH",
+    "W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-4CH",
     "WIZ5XXSR-RP", "WIZ5XXSR-RP_E-SAVE",
 ]
 

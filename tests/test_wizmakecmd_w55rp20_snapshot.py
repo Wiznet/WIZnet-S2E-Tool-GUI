@@ -14,7 +14,6 @@ PW = "0000"
 DEVNAMES = [
     "W55RP20-S2E",
     "W55RP20-S2E-2CH",
-    "W55RP20-S2E-3CH",
     "W55RP20-S2E-4CH",
 ]
 
@@ -35,16 +34,6 @@ SEARCH_SNAPSHOT = {
         'QK', 'PU', 'U0', 'U1', 'U2', 'QO', 'RC', 'CE', 'SO', 'UF', 'SD', 'DD', 'SE', 'QS',
         'EN', 'AO', 'QL', 'QH', 'AP', 'EB', 'ED', 'EP', 'ES', 'EF', 'ND', 'NS', 'AT', 'RV',
         'RA', 'RS', 'RE', 'RR', 'RO', 'EO', 'RD', 'RF', 'EE', 'PO',
-    ],
-    (NEW_FW, "W55RP20-S2E-3CH"): [
-        'MA', 'PW', 'MC', 'VR', 'MN', 'IM', 'OP', 'CP', 'DG', 'KA', 'KI', 'KE', 'RI', 'LI',
-        'SM', 'GW', 'DS', 'DH', 'LP', 'RP', 'RH', 'BR', 'DB', 'PR', 'SB', 'FL', 'IT', 'PT',
-        'PS', 'PD', 'TE', 'SS', 'NP', 'SP', 'UN', 'ST', 'EC', 'SC', 'TR', 'QU', 'QP', 'QC',
-        'QK', 'PU', 'U0', 'U1', 'U2', 'QO', 'RC', 'CE', 'SO', 'UF', 'SD', 'DD', 'SE', 'QS',
-        'EN', 'AO', 'QL', 'QH', 'AP', 'EB', 'ED', 'EP', 'ES', 'EF', 'ND', 'NS', 'AT', 'RV',
-        'RA', 'RS', 'RE', 'RR', 'RO', 'EO', 'RD', 'RF', 'EE', 'UI', 'EI', 'GS', 'WN', 'WI',
-        'TO', 'GL', 'GH', 'TP', 'WB', 'WD', 'WP', 'WS', 'WF', 'HD', 'HS', 'TT', 'XV', 'XA',
-        'XS', 'XE', 'XR', 'XO', 'WO', 'XD', 'XF', 'WE', 'PO',
     ],
     (NEW_FW, "W55RP20-S2E-4CH"): [
         'MA', 'PW', 'MC', 'VR', 'MN', 'IM', 'OP', 'CP', 'DG', 'KA', 'KI', 'KE', 'RI', 'LI',

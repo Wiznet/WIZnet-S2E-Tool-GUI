@@ -11,7 +11,7 @@ common_cmdset (기본 명령어 집합, BR: 0-15)
     └─ W55RP20_CMDSET (고속 BR 지원, BR: 0-19)
         ├─ W55RP20-S2E, IP20 ← 단일채널
         └─ W55RP20_2CH_CMDSET (2채널, BR/EB: 0-19)
-            └─ W55RP20_3CH_CMDSET (3채널, BR/EB/WB: 0-19)
+            └─ W55RP20_3CH_CMDSET (CH0~CH2 계층 — 4CH 의 구성 요소, 3CH 는 공식 제품 아님)
                 └─ W55RP20_4CH_CMDSET (4채널, BR/EB/WB/YB: 0-19)
 
 장치별 Baudrate 지원:
@@ -20,7 +20,6 @@ common_cmdset (기본 명령어 집합, BR: 0-15)
 - 일반 장치:         BR 0-15     (최대 921600 bps)
 - W55RP20-S2E:       BR 0-19     (최대 8M bps, FW >= 1.2.1)
 - W55RP20-S2E-2CH:   BR/EB 0-19  (최대 8M bps, FW >= 1.2.1)
-- W55RP20-S2E-3CH:   BR/EB/WB 0-19 (최대 8M bps, FW >= 1.2.1)
 - W55RP20-S2E-4CH:   BR/EB/WB/YB 0-19 (최대 8M bps, FW >= 1.2.1)
 - IP20:              BR 0-19     (최대 8M bps, FW >= 1.2.1)
 """
@@ -284,10 +283,11 @@ W55RP20_2CH_CMDSET = {
     "EE": ["Channel 1 Ethernet Connected Data", "^.{0,30}$", {}, "RW"],
 }
 
-# ==================== W55RP20 3-Channel CMDSET ====================
-# 적용 장치: W55RP20-S2E-3CH
+# ==================== W55RP20 CH0~CH2 계층 (4CH 의 구성 요소) ====================
+# 적용 장치: 없음(직접) — W55RP20_4CH_CMDSET 이 상속한다. 3CH 는 공식 제품이 아니다
+#            (W55RP20-S2E-4CH.yaml 머리말 참조).
 # 상속: W55RP20_2CH_CMDSET (CH0 + CH1) + CH2 커맨드 24개
-# 특징: 3채널 지원, CH2는 CH1의 순수 미러 (2글자 코드만 치환)
+# 특징: CH2는 CH1의 순수 미러 (2글자 코드만 치환)
 #       물리 RS-485 버스는 CH0 공유 — CH2 serial 파라미터는 표시상 존재
 W55RP20_3CH_CMDSET = {
     **W55RP20_2CH_CMDSET,
@@ -510,10 +510,6 @@ class Wizcmdset():
                     # 2채널, BR/EB 0-19 (최대 8Mbps)
                     logger.debug("Security device (W55RP20-S2E-2CH)")
                     self.cmdset = W55RP20_2CH_CMDSET.copy()
-                elif name == "W55RP20-S2E-3CH":
-                    # 3채널, BR/EB/WB 0-19 (최대 8Mbps)
-                    logger.debug("Security device (W55RP20-S2E-3CH)")
-                    self.cmdset = W55RP20_3CH_CMDSET.copy()
                 elif name == "W55RP20-S2E-4CH":
                     # 4채널, BR/EB/WB/YB 0-19 (최대 8Mbps)
                     logger.debug("Security device (W55RP20-S2E-4CH)")
@@ -578,7 +574,7 @@ class Wizcmdset():
 
         # W55RP20 Family: 펌웨어 버전 1.2.0 이하는 고속 보드레이트 미지원
         # BR/EB 패턴을 0-15 (최대 921600)로 제한
-        if name in ("W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-3CH", "W55RP20-S2E-4CH", "IP20") and version_compare(version, "1.2.1") < 0:
+        if name in ("W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-4CH", "IP20") and version_compare(version, "1.2.1") < 0:
             updated_cmdset = self.cmdset.copy()
             # BR 패턴을 표준 패턴(0-15)으로 재정의
             if "BR" in updated_cmdset:
@@ -588,16 +584,16 @@ class Wizcmdset():
                     baudrate_option,
                     "RW"
                 ]
-            # 2CH/3CH/4CH의 경우 EB(채널1)도 제한
-            if name in ("W55RP20-S2E-2CH", "W55RP20-S2E-3CH", "W55RP20-S2E-4CH") and "EB" in updated_cmdset:
+            # 2CH/4CH의 경우 EB(채널1)도 제한
+            if name in ("W55RP20-S2E-2CH", "W55RP20-S2E-4CH") and "EB" in updated_cmdset:
                 updated_cmdset["EB"] = [
                     "UART channel 1 Baud rate",
                     r"^([0-9]|1[0-5])$",  # 0-15 only
                     baudrate_option,
                     "RW"
                 ]
-            # 3CH/4CH의 경우 WB(채널2)도 제한
-            if name in ("W55RP20-S2E-3CH", "W55RP20-S2E-4CH") and "WB" in updated_cmdset:
+            # 4CH의 경우 WB(채널2)도 제한
+            if name == "W55RP20-S2E-4CH" and "WB" in updated_cmdset:
                 updated_cmdset["WB"] = [
                     "UART channel 2 Baud rate",
                     r"^([0-9]|1[0-5])$",  # 0-15 only

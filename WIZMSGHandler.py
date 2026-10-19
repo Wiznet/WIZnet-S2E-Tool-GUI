@@ -24,7 +24,7 @@ MAX_REPLY_CHUNKS = 200      # HIGH-03: 비정상 응답 truncation 상한
 # (엉뚱한 커맨드명으로 INVALIDPARAM/NOTAVAIL 반환). 2026-08-18 실기기 확인.
 DEVICE_CONFIG_BUF_SIZE = 512
 EACH_DEV_LOOP_TIMEOUT = 0.4  # Strategy B: 개별 장치 멀티패킷 수집 루프 타임아웃
-# 0.15s였던 이전 값은 GET 커맨드가 많은 장치(2CH 79개/3CH 104개/4CH 129개 —
+# 0.15s였던 이전 값은 GET 커맨드가 많은 장치(2CH 79개/4CH 129개 —
 # 기본 보안장치 50개 대비 최대 2.5배)의 멀티패킷 응답을 다 받기 전에 조기 종료시켜
 # 검색 실패("정보 아직 읽고있음"/MC 필드 누락)를 유발했다.
 

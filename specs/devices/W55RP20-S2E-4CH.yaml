@@ -2,7 +2,7 @@
 # 4채널 고속 S2E 게이트웨이
 # RS-485 Modbus RTU 버스 1개를 TCP 서버 소켓 4개(CH0~CH3)가 공유하는 구조.
 # 소스 기준: 펌웨어 GreenCS 커밋 de622f8 (DEVICE_UART_CNT=4 빌드)
-# W55RP20-S2E-3CH.yaml 기반 + CH3(w55rp20_four_port) 추가
+# 3채널 계층(w55rp20_three_port, CH2) 위에 CH3(w55rp20_four_port) 를 얹은 구성
 #
 # 주의: family는 "능력(security/SSL 보유)" 플래그로 쓰고, 채널 수는 channels(=4)로 결정한다.
 #       ("two_port" 명칭은 레거시 — 실제 채널 수는 channels 필드가 단일 진실 소스)
@@ -10,9 +10,10 @@
 # [3CH 에 관한 기록 — 4CH 담당자 확인, 2026-10-19]
 #   3채널 모델은 공식 제품이 아니다. 고객 요청으로 커스텀 개발된 사례가 있을 뿐이며 공식 릴리즈
 #   계획도 없고 모델명에 "3CH" 가 쓰이지도 않을 예정이다. 앞으로 3채널 요청이 오면 **이 4CH 모델을
-#   전달하고 설정만 3채널로 쓰게 한다.** 그래서 3CH 전용 spec/시험/배포 항목은 늘리지 않는다.
-#   (3CH 커스텀 FW 는 펌웨어 커밋 de622f8, DEVICE_UART_CNT=3 기준으로 W55RP20-S2E-3CH.yaml 에 남아 있다.
-#    4CH 의 CH0~CH2 코드·커맨드 그룹 w55rp20_three_port 는 그 위에 CH3 를 얹은 것이라 4CH 가 그대로 쓴다.)
+#   전달하고 설정만 3채널로 쓰게 한다.** 그래서 3CH 전용 spec(W55RP20-S2E-3CH.yaml)과 시험·배포
+#   항목은 2026-10-19 에 제거했다(git 이력에 남아 있다 — 제거 직전 커밋 ab8a832).
+#   3CH 커스텀 FW 는 펌웨어 커밋 de622f8(DEVICE_UART_CNT=3) 기준이었다. 4CH 의 CH0~CH2 코드와 커맨드
+#   그룹 w55rp20_three_port 는 그 계층을 4CH 가 그대로 쓰는 것이라 남겨 두었다.
 
 name: W55RP20-S2E-4CH
 display_name: "W55RP20-S2E-4CH"

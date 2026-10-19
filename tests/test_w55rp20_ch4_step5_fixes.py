@@ -45,7 +45,7 @@ def win(qapp):
     # 도메인이라 통과하는 게 맞다(버그 아님).
     ("WIZ752SR-12x", "2.1.0", "QH", ["not an ip !!"]),
     ("W55RP20-S2E", "1.2.2", "FL", ["5"]),
-    ("W55RP20-S2E-3CH", "1.0.5", "GL", [""]),
+    ("W55RP20-S2E-4CH", "1.0.5", "GL", [""]),
 ])
 def test_devicespec_path_already_rejects_known_bug_repro_cases(dev, ver, cmd, bad_values):
     from device_spec_loader import load_device, detect_device
@@ -60,7 +60,7 @@ def test_devicespec_path_already_rejects_known_bug_repro_cases(dev, ver, cmd, ba
 
 # ── T3/M2: _get_expected_min_resp_len 버전 미반영 ────────────────────
 
-@pytest.mark.parametrize("dev", ["W55RP20-S2E-3CH", "W55RP20-S2E-4CH"])
+@pytest.mark.parametrize("dev", ["W55RP20-S2E-4CH"])
 def test_expected_min_resp_len_old_fw_matches_base_floor(win, dev):
     """FW<1.1.8 이면 채널 확장 없이 기본 명령만 GET 하므로(WIZMakeCMD.search()와
     동일 기준), 기대 최소 길이도 2CH 와 같은 바닥값이어야 한다.
@@ -75,7 +75,7 @@ def test_expected_min_resp_len_old_fw_matches_base_floor(win, dev):
     )
 
 
-@pytest.mark.parametrize("dev", ["W55RP20-S2E-3CH", "W55RP20-S2E-4CH"])
+@pytest.mark.parametrize("dev", ["W55RP20-S2E-4CH"])
 def test_expected_min_resp_len_new_fw_unaffected(win, dev):
     """새 FW(>=1.1.8)는 채널 확장 커맨드 전부를 GET 하므로 기존처럼 더 커야 한다
     (이번 수정이 새 FW 쪽을 실수로 낮추지 않았는지 확인)."""
@@ -88,7 +88,6 @@ def test_expected_min_resp_len_new_fw_unaffected(win, dev):
 
 @pytest.mark.parametrize("dev,warn_snippet", [
     ("W55RP20-S2E-2CH", "CH1 확장 커맨드 미지원"),
-    ("W55RP20-S2E-3CH", "CH1/2 확장 커맨드 미지원"),
     ("W55RP20-S2E-4CH", "CH1/2/3 확장 커맨드 미지원"),
 ])
 def test_search_warns_on_old_fw_channel_demotion(caplog, dev, warn_snippet):
@@ -102,7 +101,7 @@ def test_search_warns_on_old_fw_channel_demotion(caplog, dev, warn_snippet):
     )
 
 
-@pytest.mark.parametrize("dev", ["W55RP20-S2E-2CH", "W55RP20-S2E-3CH", "W55RP20-S2E-4CH"])
+@pytest.mark.parametrize("dev", ["W55RP20-S2E-2CH", "W55RP20-S2E-4CH"])
 def test_search_no_warning_on_new_fw(caplog, dev):
     """새 FW 는 강등이 아니므로 경고가 없어야 한다(오탐 방지)."""
     import logging
@@ -116,7 +115,7 @@ def test_search_no_warning_on_new_fw(caplog, dev):
 # ── T4/C1 완결: ch0 UI 도 게이트 대상(channel_field_map 범위 밖이라 별도) ──
 
 @pytest.mark.parametrize("dev", [
-    "W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-3CH", "W55RP20-S2E-4CH",
+    "W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-4CH",
 ])
 def test_ch0_ui_gate_blocks_unreported_value(win, dev):
     """장치A(UI=2)를 본 뒤 장치B(이번엔 UI 미보고)로 넘어가도, 위젯에 남은
@@ -130,7 +129,7 @@ def test_ch0_ui_gate_blocks_unreported_value(win, dev):
 
 
 @pytest.mark.parametrize("dev", [
-    "W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-3CH", "W55RP20-S2E-4CH",
+    "W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-4CH",
 ])
 def test_ch0_ui_gate_passes_when_reported(win, dev):
     _prep(win, dev)

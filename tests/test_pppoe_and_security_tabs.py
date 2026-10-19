@@ -4,9 +4,9 @@
 
 세 가지를 고정한다:
 1. `_has_pppoe_support()`/`_should_show_ddns_pppoe_tab()` — IM 에 PPPoE(2)가 있는 기종만
-   True (WIZ107SR/108SR 는 기존 그대로, W55RP20-S2E-4CH 는 이번에 추가, 3CH/750SR 은 여전히 False).
+   True (WIZ107SR/108SR 는 기존 그대로, W55RP20-S2E-4CH 는 이번에 추가, 750SR 은 여전히 False).
 2. `_security_op_values()` 기반 mqtt_tab/certificate_tab 노출 — OP 에 4/5/6 이 없는 기종
-   (3CH/4CH)은 숨고, 있는 기종(1CH/WIZ510SSL)은 그대로 뜬다.
+   (4CH)은 숨고, 있는 기종(1CH/WIZ510SSL)은 그대로 뜬다.
 3. `general_tab_config()` 를 실제로 호출했을 때 generalTab 의 탭 구성이 위와 일치한다
    (ddns_pppoe_tab 이 SECURITY_DEVICE 분기에서도 통일 관리되는지 — BUG-UNICAST-IP-CHANGE-FAILS
    조사 중 발견한 사각, 이전엔 SECURITY_DEVICE 는 이 탭을 전혀 건드리지 않았다).
@@ -34,7 +34,6 @@ def _set_device(win, devname, ver="1.2.5", status="OPEN"):
     ("WIZ107SR", True),
     ("WIZ108SR", True),
     ("W55RP20-S2E-4CH", True),
-    ("W55RP20-S2E-3CH", False),
     ("W55RP20-S2E", False),
     ("WIZ750SR", False),
 ])
@@ -48,7 +47,6 @@ def test_has_pppoe_support(win, devname, expected):
 @pytest.mark.parametrize("devname,wants_mqtt_cert", [
     ("W55RP20-S2E", True),
     ("WIZ510SSL", True),
-    ("W55RP20-S2E-3CH", False),
     ("W55RP20-S2E-4CH", False),
 ])
 def test_security_op_values_gate_mqtt_cert(win, devname, wants_mqtt_cert):
@@ -63,7 +61,6 @@ def test_security_op_values_gate_mqtt_cert(win, devname, wants_mqtt_cert):
 @pytest.mark.parametrize("devname,expect_ddns_pppoe,expect_mqtt_cert", [
     ("WIZ107SR", True, False),           # DDNS/PPPoE 탭 있음, SECURITY_DEVICE 아님
     ("W55RP20-S2E-4CH", True, False),    # 이번에 PPPoE 탭 생김, SSL/MQTT 는 여전히 없음
-    ("W55RP20-S2E-3CH", False, False),   # 둘 다 없음(기존과 동일)
     ("W55RP20-S2E", False, True),        # PPPoE 없음, SSL/MQTT 는 있음(SECURITY_DEVICE)
     ("WIZ750SR", False, False),          # 둘 다 없음, SECURITY_DEVICE 도 아님
 ])
@@ -105,16 +102,6 @@ def test_switching_from_wiz510ssl_to_4ch_drops_mqtt_cert(win):
     assert "certificate_tab" not in names
 
 
-def test_w55rp20_3ch_also_loses_mqtt_cert_tabs(win):
-    """3CH 도 FW 상 SSL/MQTT 미지원(기존 yaml 주석)이라, OP 기반 판단으로 바뀌면서
-    같이 사라지는 게 맞다 — 4CH 만 고치려다 놓친 회귀가 아니라 의도한 동반 수정."""
-    _set_device(win, "W55RP20-S2E-3CH")
-    win.general_tab_config()
-    names = _tab_names(win)
-    assert "mqtt_tab" not in names
-    assert "certificate_tab" not in names
-
-
 def test_has_full_ddns_support_uses_dx_command_not_device_name(win):
     """has_ddns 판단은 "WIZ107"/"WIZ108" 이름 문자열이 아니라 DX 커맨드 유무로 한다
     (2026-10-14, PPPoE 판단(IM/PI/PP)과는 별개 기준). 4CH 는 partial_command_groups
@@ -127,7 +114,7 @@ def test_has_full_ddns_support_uses_dx_command_not_device_name(win):
     assert win._has_full_ddns_support() is True
     _set_device(win, "W55RP20-S2E-4CH")
     assert win._has_full_ddns_support() is False
-    _set_device(win, "W55RP20-S2E-3CH")
+    _set_device(win, "W55RP20-S2E-2CH")
     assert win._has_full_ddns_support() is False
 
 
@@ -157,9 +144,9 @@ def test_pppoe_fields_load_for_4ch(win):
     assert win.pppoe_pw.text() == "mypass"
 
 
-def test_pppoe_fields_save_for_4ch_not_for_3ch(win):
-    """get_object_value 가 4CH 에서는 IM=2/PI/PP 를 담고, 3CH 에서는 안 담는지
-    (ip_pppoe 가 이전 장치에서 체크된 채로 남아 있어도 3CH 는 보내면 안 된다)."""
+def test_pppoe_fields_save_for_4ch_not_for_2ch(win):
+    """get_object_value 가 4CH 에서는 IM=2/PI/PP 를 담고, 2CH 에서는 안 담는지
+    (ip_pppoe 가 이전 장치에서 체크된 채로 남아 있어도 2CH 는 보내면 안 된다)."""
     win.list_device.setRowCount(0)  # selected_devinfo() 가 curr_dev/curr_ver 를 건드리지 않게
     _set_device(win, "W55RP20-S2E-4CH")
     win.ip_pppoe.setChecked(True)
@@ -170,7 +157,7 @@ def test_pppoe_fields_save_for_4ch_not_for_3ch(win):
     assert setcmd["PI"] == "myacct"
     assert setcmd["PP"] == "mypass"
 
-    _set_device(win, "W55RP20-S2E-3CH")
+    _set_device(win, "W55RP20-S2E-2CH")
     setcmd = win.get_object_value()  # ip_pppoe 는 여전히 체크된 상태(위젯은 공유)
     assert setcmd.get("IM") != "2"
     assert "PI" not in setcmd

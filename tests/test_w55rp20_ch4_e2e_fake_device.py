@@ -27,8 +27,7 @@ from WIZMSGHandler import parse_reply_lines
 MAC = "00:08:DC:FA:CE:04"
 
 TIERS = [
-    ("W55RP20-S2E-3CH", 2),  # 이 기종의 "가장 확장된" 채널
-    ("W55RP20-S2E-4CH", 3),
+    ("W55RP20-S2E-4CH", 3),  # 이 기종의 "가장 확장된" 채널
 ]
 
 
@@ -110,7 +109,7 @@ def test_new_fw_search_edit_set_roundtrip(win, devname, edit_ch):
 
 # ── 구형 FW(<1.1.8) — 채널 강등 시나리오, gate=True 가 잔상을 막는지 ──────
 
-@pytest.mark.parametrize("devname", ["W55RP20-S2E-3CH", "W55RP20-S2E-4CH"])
+@pytest.mark.parametrize("devname", ["W55RP20-S2E-4CH"])
 def test_old_fw_channel_demotion_blocks_stale_channel_fields(win, devname):
     """계획서 3-1: FW<1.1.8 는 CH1~CH3 확장 커맨드를 아예 모른다(WIZMakeCMD 자체
     버전 게이트로 검색·SET 둘 다 기본 명령만 구성). 여기에 4/5단계 gate=True 가

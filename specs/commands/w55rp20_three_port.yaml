@@ -1,5 +1,5 @@
 # w55rp20_three_port.yaml
-# W55RP20-S2E-3CH 전용 채널 2 (CH2) 커맨드
+# W55RP20 채널 2 (CH2) 커맨드 — W55RP20-S2E-4CH 가 사용한다 (3CH 는 공식 제품 아님)
 # w55rp20_two_port.yaml(CH1)의 순수 복제 — 2글자 코드만 치환. 값 범위/선택지는 CH0/CH1과 동일.
 # 소스 기준: 펌웨어 커밋 de622f8 (DEVICE_UART_CNT=3)
 #

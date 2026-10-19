@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""TASK-W55RP20-CH4-ABSORB 6단계 — fw_sources.json 의 3CH/4CH 처리.
+"""TASK-W55RP20-CH4-ABSORB 6단계 — fw_sources.json 의 4CH 처리 (3CH 는 공식 제품이 아니라 2026-10-19 항목 제거).
 
 merge-risk 조사(2026-08-12)가 지적한 갭: `name_pattern`이 정확 일치(fnmatch,
 와일드카드 없음)라 `W55RP20-S2E-3CH`/`-4CH`는 어떤 항목에도 안 걸려 "FW from Git"
@@ -14,22 +14,22 @@ from fw_git_fetcher import FWGitFetcher
 CONFIG = "config/fw_sources.json"
 
 
-def test_3ch_4ch_not_matched_as_base_w55rp20():
+def test_4ch_not_matched_as_base_w55rp20():
     """3CH/4CH 가 base 'W55RP20-S2E' name_pattern 에 잘못 걸려서
     (베이스 이미지를 잘못 권하는 것을) 방지 — fnmatch 정확 일치라 원래도
     안 걸리지만, 회귀 감시로 고정."""
     fetcher = FWGitFetcher(CONFIG)
-    for dev in ("W55RP20-S2E-3CH", "W55RP20-S2E-4CH"):
+    for dev in ("W55RP20-S2E-4CH",):
         fam, entry = fetcher.find_device(dev)
         assert fam is None and entry is None, (
             f"{dev} 가 {entry!r} 에 매칭됨 — 3CH/4CH 전용 릴리즈 없이 베이스 이미지를 권할 위험"
         )
 
 
-def test_3ch_4ch_marked_unsupported_with_reason():
+def test_4ch_marked_unsupported_with_reason():
     """미지원 이유가 명시돼 있어야 한다(이유 없는 침묵은 이슈 등록을 유도해 헛수고가 된다)."""
     fetcher = FWGitFetcher(CONFIG)
-    for dev in ("W55RP20-S2E-3CH", "W55RP20-S2E-4CH"):
+    for dev in ("W55RP20-S2E-4CH",):
         reason = fetcher.find_unsupported(dev)
         assert reason, f"{dev}: unsupported 사유가 비어 있음"
 

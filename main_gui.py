@@ -91,12 +91,13 @@ from terminal.terminal_panel import TerminalPanel
 
 
 # 멀티채널 보안 장치 (CH1 이상 보유). 상위 채널 장치는 하위 채널 처리를 그대로 상속한다.
-SECURITY_TWO_PORT_DEV = ("W55RP20-S2E-2CH", "W55RP20-S2E-3CH", "W55RP20-S2E-4CH")
+# (3CH 는 공식 제품이 아니라 목록에 없다 — W55RP20-S2E-4CH.yaml 머리말 참조)
+SECURITY_TWO_PORT_DEV = ("W55RP20-S2E-2CH", "W55RP20-S2E-4CH")
 # CH2 탭(3번째 채널)을 보유한 장치
-SECURITY_THREE_PORT_DEV = ("W55RP20-S2E-3CH", "W55RP20-S2E-4CH")
+SECURITY_THREE_PORT_DEV = ("W55RP20-S2E-4CH",)
 # CH3 탭(4번째 채널)을 보유한 장치
 SECURITY_FOUR_PORT_DEV = ("W55RP20-S2E-4CH",)
-W55RP20_FAMILY = ("W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-3CH", "W55RP20-S2E-4CH")
+W55RP20_FAMILY = ("W55RP20-S2E", "W55RP20-S2E-2CH", "W55RP20-S2E-4CH")
 # User I/O 탭(GPIO) 지원 장치 — ONE_PORT_DEV 중 WIZ107SR/108SR(GPIO 미지원)만 제외하고 TWO_PORT_DEV(752 계열) 합침
 # TODO(꼼수): 신규 장치 추가 시 이 목록도 수동 갱신 필요 — 근본 해법은 specs/devices/*.yaml의
 # command_groups(gpio) 기반 판단으로 전환하는 것. object_config_for_device()가 아직 spec 미사용이라
@@ -1966,7 +1967,7 @@ class WIZWindow(QMainWindow, main_window):
     def _security_op_values(self) -> set:
         """OP 커맨드가 지원하는 값 집합 — SSL/MQTT 탭 노출 판단에 쓴다
         (`_config_security_options` 의 `ch0_ssl_tcpclient`/`mqttclient`/`mqtts_client` 와 같은 근거:
-        OP 값에 4/5/6 이 없으면 그 장치 FW 는 해당 모드 자체가 없다 — W55RP20-S2E-3CH/-4CH 가 그 예)."""
+        OP 값에 4/5/6 이 없으면 그 장치 FW 는 해당 모드 자체가 없다 — W55RP20-S2E-4CH 가 그 예)."""
         if not self.curr_dev:
             return set()
         spec_name = detect_device(self.curr_dev) or self.curr_dev
@@ -2120,7 +2121,7 @@ class WIZWindow(QMainWindow, main_window):
                 _new_tab: str
                 for _new_tab in ExcludeTabInMinimum:
                     # mqtt_tab/certificate_tab 은 FW 가 그 OP 모드를 아예 안 가지면
-                    # (예: W55RP20-S2E-3CH/-4CH, OP 0~3 만) 넣지 않는다. advance_tab 은
+                    # (예: W55RP20-S2E-4CH, OP 0~3 만) 넣지 않는다. advance_tab 은
                     # 해당 없음 — 그대로 추가한다.
                     if _new_tab == "mqtt_tab" and not ({'5', '6'} & op_vals):
                         continue
@@ -6317,11 +6318,11 @@ class WIZWindow(QMainWindow, main_window):
         from WIZMakeCMD import (
             cmd_107sr, cmd_1p_advanced, cmd_1p_default, cmd_2p_setconfirm,
             cmd_security_base, cmd_wiz5xxsr_added, cmd_w55rp20_added,
-            cmd_w55rp20_3ch, cmd_w55rp20_4ch,
+            cmd_w55rp20_4ch,
             ONE_PORT_DEV, TWO_PORT_DEV, SECURITY_DEVICE,
             version_compare,
         )
-        # 3CH/4CH 는 FW<1.1.8 이면 WIZMakeCMD.search() 가 채널 확장 커맨드 대신
+        # 4CH 는 FW<1.1.8 이면 WIZMakeCMD.search() 가 채널 확장 커맨드 대신
         # 기본 명령으로만 GET 하므로(cmd_security_base+cmd_wiz5xxsr_added), 기대
         # 최소 길이도 같은 기준으로 낮춰야 한다. 안 그러면 구FW 의 정상 응답을
         # "SearchMsg 처리 전 리부트"로 오판한다(M2/T3, 2026-09-28).
@@ -6330,8 +6331,6 @@ class WIZWindow(QMainWindow, main_window):
             n = len(cmd_107sr)                          # 42
         elif "W55RP20-S2E-4CH" in devname:
             n = len(cmd_w55rp20_4ch) if version_compare(version, "1.1.8") >= 0 else old_fw_base_n
-        elif "W55RP20-S2E-3CH" in devname:
-            n = len(cmd_w55rp20_3ch) if version_compare(version, "1.1.8") >= 0 else old_fw_base_n
         # W55RP20-S2E-2CH 는 의도적으로 여기 없음 — SECURITY_DEVICE 분기(50)로 폴백한다.
         # cmd_w55rp20_2ch(79) 로 바꾸는 안은 M2-b 로 사용자 결정 대기 중
         # (~/.claude/docs/WIZnet-S2E-Tool-GUI/plans/2026-08-12-w55rp20-ch4-absorption-plan.md)
