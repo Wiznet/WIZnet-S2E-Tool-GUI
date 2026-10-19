@@ -10,9 +10,7 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
 - **W55RP20-S2E-4CH support**: Channel #2 and Channel #3 tabs, CH2/CH3 command groups, per-channel
   value ranges taken from the firmware documentation, and PPPoE (ID/Password up to 63 characters). The SSL/MQTT tabs are hidden
   because this firmware does not provide them.
-- **W55RP20-S2E-3CH groundwork**: device spec, Channel #2 tab, and 3-channel runtime commands are
-  in place. Not yet verified on hardware.
-- W55RP20 (3CH/4CH): Flow control gains **DTR/DSR**; Serial interface (TTL / RS-232 / RS-422 /
+- W55RP20 (4CH): Flow control gains **DTR/DSR**; Serial interface (TTL / RS-232 / RS-422 /
   RS-485 / RS-485 Reverse) is now selectable instead of read-only; Remote host accepts a domain
   name on every channel.
 - **WIZ1x0SR direct-IP search** (TCP:1461) in "IP Address" search mode.
@@ -47,7 +45,7 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
   firmware's 512-byte response buffer, and the periodic GPIO refresh overwriting values being
   edited.
 - WIZ550: DNS use/domain, packing delimiter, serial trigger, and Modbus fields are now editable.
-- W55RP20 3CH/4CH: stale combo indexes no longer sent on SET, expected-response length corrected,
+- W55RP20 4CH: stale combo indexes no longer sent on SET, expected-response length corrected,
   firmware-document value ranges applied (UI/EI/WI/YI, OP/AO/TO, FL/EF/WF, KI/KE, RS/RE, XS/XE).
 - Channel 2/3 tabs not appearing when a field failed to parse; packaged builds now include
   `specs/` so the channel count is read correctly.
@@ -63,7 +61,7 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
 - flake8 E501 (line length) disabled.
 
 ### Refactoring
-- W55RP20 3CH/4CH field handling consolidated into a table (`channel_field_map`); about 420 lines
+- W55RP20 multi-channel field handling consolidated into a table (`channel_field_map`); about 420 lines
   removed. The three firmware-version parsers are unified in `fw_version.py`.
 - Unused timing-settings dialog removed.
 
