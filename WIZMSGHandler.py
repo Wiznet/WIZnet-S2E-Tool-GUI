@@ -29,6 +29,18 @@ EACH_DEV_LOOP_TIMEOUT = 0.4  # Strategy B: 개별 장치 멀티패킷 수집 루
 # 검색 실패("정보 아직 읽고있음"/MC 필드 누락)를 유발했다.
 
 
+def normalize_mac_key(mac) -> str:
+    """MAC 을 장치 식별 키로 쓰기 위한 정규형 — 공백 제거 + 대문자.
+
+    병합·중복 검사는 이 키로 한다. 표시값과 원본 바이트는 건드리지 않는다.
+    MC 정규식이 대소문자를 모두 허용하므로(wizcmdset.py) 표기만 다른 같은 장치가
+    다른 행이 되지 않게 한다. 조사 기록: doc/dev/INVESTIGATION-search-mac-duplicate-ko.md
+    """
+    if isinstance(mac, (bytes, bytearray)):
+        mac = bytes(mac).decode('utf-8', errors='replace')
+    return str(mac).strip().upper()
+
+
 def _sanitize_device_name(raw: bytes) -> str:
     """WIZnet 장비 MN 필드 바이트 → str 변환.
 
@@ -481,6 +493,7 @@ class WIZMSGHandler(QThread):
 
             if self.opcode == Opcode.OP_SEARCHALL:
                 # Strategy C: 루프 종료 후 addr별 누적 데이터 파싱 → mac_list 구성
+                _mc_first_addr = {}  # 정규화 MAC → 처음 응답한 출처 주소
                 for _addr, _accumulated in per_addr_buf.items():
                     try:
                         _replylists = _accumulated.split(b"\r\n")
@@ -499,6 +512,17 @@ class WIZMSGHandler(QThread):
                                 continue
                             pkt[cmd] = line[2:]
                         if 'MC' in pkt and self.check_parameter(b"MC" + pkt['MC']):
+                            _mc_key = normalize_mac_key(pkt['MC'])
+                            if _mc_key in _mc_first_addr:
+                                # 같은 장치가 서로 다른 출처로 응답했다. 동작은 바꾸지 않고
+                                # 흔적만 남긴다(중복 행 원인 조사용).
+                                self.logger.warning(
+                                    f"[DUP] MC {pkt['MC']!r} 가 두 출처에서 응답: "
+                                    f"{_mc_first_addr[_mc_key]} / {_addr}, "
+                                    f"필드 수 {len(pkt)}"
+                                )
+                            else:
+                                _mc_first_addr[_mc_key] = _addr
                             self.mac_list.append(pkt['MC'])
                             self.mn_list.append(_sanitize_device_name(pkt.get('MN', b'')))
                             self.vr_list.append(pkt.get('VR', b''))

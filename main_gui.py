@@ -12,7 +12,7 @@ from channel_field_map import build_channel_setcmd, fill_channel_widgets, gate_o
 
 from WIZUDPSock import WIZUDPSock
 from FWUploadThread import FWUploadThread
-from WIZMSGHandler import WIZMSGHandler, DataRefresh, parse_reply_lines
+from WIZMSGHandler import WIZMSGHandler, DataRefresh, parse_reply_lines, normalize_mac_key
 from WIZ1x0MSGHandler import WIZ1x0Searcher, WIZ1x0Setter, WIZ1x0DirectSearcher
 from WIZ550MSGHandler import (
     WIZ550Searcher,
@@ -3186,7 +3186,7 @@ class WIZWindow(QMainWindow, main_window):
         self.logger.info(f"[WIZ1x0] 검색 완료: {len(results)}개")
 
         existing_macs = self.mac_list_str()
-        new_results = [(mac, d) for mac, d in results if mac not in existing_macs]
+        new_results = [(mac, d) for mac, d in results if normalize_mac_key(mac) not in existing_macs]
         if new_results:
             for mac_str, board_dict in new_results:
                 self.mac_list.append(mac_str.encode())
@@ -3234,7 +3234,7 @@ class WIZWindow(QMainWindow, main_window):
 
         existing_macs = self.mac_list_str()
         self.logger.debug(f"[WIZ550] existing_macs={existing_macs}, results_macs={[d['mac'] for d in results]}")
-        new_results = [d for d in results if d['mac'] not in existing_macs]
+        new_results = [d for d in results if normalize_mac_key(d['mac']) not in existing_macs]
         if new_results:
             _wiz550_bg = QtGui.QColor(0xD0, 0xFF, 0xD0)  # 연한 녹색 배경 (WIZ1x0 하늘색과 구분)
             for device_dict in new_results:
@@ -3277,11 +3277,14 @@ class WIZWindow(QMainWindow, main_window):
             QtCore.QTimer.singleShot(0, self.get_dev_list)
 
     def mac_list_str(self):
-        """self.mac_list를 str 집합으로 반환 (중복 체크용)."""
+        """self.mac_list를 정규화한 str 집합으로 반환 (중복 체크용).
+
+        비교하는 쪽도 normalize_mac_key() 를 거쳐야 한다.
+        """
         result = set()
         for m in self.mac_list:
             try:
-                result.add(m.decode('utf-8', errors='replace'))
+                result.add(normalize_mac_key(m))
             except Exception:
                 pass
         return result
@@ -3489,29 +3492,21 @@ class WIZWindow(QMainWindow, main_window):
                 self.logger.debug(f"[GET] {mc}: {profile}")
 
                 # Phase 3 완료: 해당 행 색 복원 (주황-빨강 → 정상)
+                # 같은 장치로 합쳐지는 행이 여럿이면 전부 복원한다(첫 행만 복원하면 나머지는
+                # 영원히 주황으로 남는다). 정규화 키로 비교한다.
+                _mc_key = normalize_mac_key(mc)
                 for idx, mac_bytes in enumerate(self.mac_list):
-                    mac_str = (
-                        mac_bytes.decode('utf-8', errors='replace')
-                        if isinstance(mac_bytes, bytes)
-                        else str(mac_bytes)
-                    )
-                    if mac_str == mc:
+                    if normalize_mac_key(mac_bytes) == _mc_key:
                         for col in (0, 1):
                             _item = self.list_device.item(idx, col)
                             if _item:
                                 _item.setForeground(QtGui.QColor(0, 0, 0))
-                        break
 
                 # 브로드캐스트 응답(mn_list)이 비어있으면 개별 쿼리 결과로 채우기
                 mn_from_profile = profile.get("MN", "")
                 if mn_from_profile:
                     for idx, mac_bytes in enumerate(self.mac_list):
-                        mac_str = (
-                            mac_bytes.decode('utf-8', errors='replace')
-                            if isinstance(mac_bytes, bytes)
-                            else str(mac_bytes)
-                        )
-                        if mac_str == mc:
+                        if normalize_mac_key(mac_bytes) == _mc_key:
                             if idx < len(self.mn_list) and not self.mn_list[idx]:
                                 self.mn_list[idx] = mn_from_profile
                                 if self.list_device.rowCount() > idx:
@@ -3618,11 +3613,13 @@ class WIZWindow(QMainWindow, main_window):
                     new_mode_list = data_source.mode_list if data_source else []
                     new_resp_list = data_source.rcv_list if data_source else []
 
-                    # check mac list
+                    # check mac list (정규화 키로 비교)
+                    _known_keys = {normalize_mac_key(m) for m in self.mac_list}
                     for i in range(len(new_mac_list)):
-                        if new_mac_list[i] in self.mac_list:
+                        if normalize_mac_key(new_mac_list[i]) in _known_keys:
                             pass
                         else:
+                            _known_keys.add(normalize_mac_key(new_mac_list[i]))
                             self.mac_list.append(new_mac_list[i])
                             self.mn_list.append(new_mn_list[i])
                             self.vr_list.append(new_vr_list[i])
@@ -3980,19 +3977,26 @@ class WIZWindow(QMainWindow, main_window):
             new_mode_list: 새로 발견된 동작 모드 목록 (OP - Operation Mode)
         """
         # 기존 MAC 주소 → 인덱스 매핑 생성
+        # 키는 정규화한 MAC 이다(공백·대소문자 무시). 표기만 다른 같은 장치가 별개 행이
+        # 되지 않게 한다 — doc/dev/INVESTIGATION-search-mac-duplicate-ko.md
         existing_mac_map = {}
         for i, mac in enumerate(self.mac_list):
-            mac_str = mac.decode() if isinstance(mac, bytes) else mac
-            existing_mac_map[mac_str] = i
+            existing_mac_map[normalize_mac_key(mac)] = i
 
         # 새 결과 처리
         for i in range(len(new_mac_list)):
             new_mac = new_mac_list[i]
-            new_mac_str = new_mac.decode() if isinstance(new_mac, bytes) else new_mac
+            new_mac_str = normalize_mac_key(new_mac)
 
             if new_mac_str in existing_mac_map:
                 # 기존 장비 발견 → 데이터 갱신 (비어있지 않은 값만 덮어씀)
                 idx = existing_mac_map[new_mac_str]
+                if self.mac_list[idx] != new_mac:
+                    # 정규화해야만 같아지는 쌍 — 표기가 다른 같은 장치. 원인 조사용 흔적.
+                    self.logger.warning(
+                        f"[DUP] MAC 표기 차이를 같은 장치로 합침: "
+                        f"{self.mac_list[idx]!r} / {new_mac!r}"
+                    )
                 if i < len(new_mn_list) and new_mn_list[i]:
                     self.mn_list[idx] = new_mn_list[i]
                 if i < len(new_vr_list) and new_vr_list[i]:
