@@ -31,3 +31,46 @@ def test_control_device_without_limit_still_accepts_long_pi():
 
 def test_4ch_reply_buffer_is_declared():
     assert load_device(DEVICE).fw_config.config_buf_size == 2048
+
+
+# ── UI: 입력칸 자체가 상한을 넘기지 못한다 ─────────────────────────────────────
+import pytest  # noqa: E402
+
+
+@pytest.fixture
+def win(qapp):
+    import main_gui
+    w = main_gui.WIZWindow()
+    yield w
+    w.close()
+
+
+def _select(win, devname, ver="1.2.5"):
+    win.curr_dev, win.curr_ver, win.curr_st = devname, ver, "OPEN"
+    win._apply_text_length_limits()
+
+
+def _type(widget, text):
+    widget.clear()
+    widget.insert(text)          # 사용자가 입력하는 것과 같은 경로(maxLength 적용)
+    return widget.text()
+
+
+def test_ui_4ch_pppoe_id_and_password_stop_at_63(win):
+    _select(win, "W55RP20-S2E-4CH")
+    assert len(_type(win.pppoe_id, "a" * 80)) == 63
+    assert len(_type(win.pppoe_pw, "b" * 80)) == 63
+
+
+def test_ui_np_stops_at_9_on_limited_devices(win):
+    for dev in ("W55RP20-S2E-4CH", "WIZ750SR", "WIZ752SR-12x", "WIZ5XXSR-RP"):
+        _select(win, dev)
+        assert len(_type(win.connect_pw, "x" * 20)) == 9, dev
+
+
+def test_ui_limit_is_released_on_a_device_without_the_cap(win):
+    """4CH 를 고른 뒤 WIZ107SR 로 바꾸면 4CH 의 63자 상한이 남아 있지 않다."""
+    _select(win, "W55RP20-S2E-4CH")
+    _select(win, "WIZ107SR", ver="4.06")
+    assert len(_type(win.pppoe_id, "a" * 80)) == 80
+    assert len(_type(win.connect_pw, "x" * 20)) == 20

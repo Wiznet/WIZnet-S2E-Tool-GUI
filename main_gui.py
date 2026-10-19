@@ -1991,6 +1991,32 @@ class WIZWindow(QMainWindow, main_window):
         im_entry = spec.cmdset.get('IM')
         return im_entry is not None and '2' in im_entry.values
 
+    # spec 의 길이 상한 regex(`^.{0,N}$`)를 입력칸 maxLength 로 옮길 커맨드 → 위젯 이름.
+    # 상한은 FW 버퍼 한도다. 넘겨 보내면 FW 가 SET 전체(SV)를 취소하므로(NP·PI·PP)
+    # 보내기 전에 입력 단계에서 막는다. spec 에 상한이 없는 기종은 제한을 푼다.
+    _TEXT_LIMIT_WIDGETS = (("NP", "connect_pw"), ("PI", "pppoe_id"), ("PP", "pppoe_pw"))
+    _QLINEEDIT_DEFAULT_MAXLEN = 32767
+
+    def _apply_text_length_limits(self) -> None:
+        """현재 기종 spec 의 길이 상한을 입력칸에 건다. 기종을 바꿀 때마다 다시 정한다
+        (이전 기종의 상한이 남지 않게)."""
+        limits = {}
+        if self.curr_dev:
+            spec_name = detect_device(self.curr_dev) or self.curr_dev
+            try:
+                cmdset = load_device(spec_name, self.curr_ver).cmdset
+            except FileNotFoundError:
+                cmdset = {}
+            for cmd, _widget in self._TEXT_LIMIT_WIDGETS:
+                entry = cmdset.get(cmd)
+                m = re.fullmatch(r"\^\.\{0,(\d+)\}\$", entry.regex or "") if entry is not None else None
+                if m:
+                    limits[cmd] = int(m.group(1))
+        for cmd, widget_name in self._TEXT_LIMIT_WIDGETS:
+            widget = getattr(self, widget_name, None)
+            if widget is not None:
+                widget.setMaxLength(limits.get(cmd, self._QLINEEDIT_DEFAULT_MAXLEN))
+
     def _should_show_ddns_pppoe_tab(self) -> bool:
         """DDNS/PPPoE 탭을 여는 기종인지 spec 으로 판단한다 (`_apply_serial_from_spec`
         의 필드 단위 `wo_ddns` 판정과 같은 근거: `ui.widget_overrides.ddns_pppoe_tab.visible`)."""
@@ -2143,6 +2169,7 @@ class WIZWindow(QMainWindow, main_window):
         # 전혀 건드리지 않아 이전 장치에서 열린 탭이 그대로 남을 수 있었다(BUG-UNICAST-IP-CHANGE-FAILS
         # 조사 중 발견, main_gui.py:1839 의 필드 단위 wo_ddns 판정과 같은 근거로 통일).
         self._sync_ddns_pppoe_tab()
+        self._apply_text_length_limits()
 
         # User I/O tab
         """

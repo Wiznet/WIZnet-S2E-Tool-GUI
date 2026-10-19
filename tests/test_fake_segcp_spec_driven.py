@@ -66,7 +66,8 @@ def test_reply_to_the_tools_own_search_request_fits_the_device_buffer(device):
     ver = prof_ver(device)
     prof = profile_from_spec(device, mac=MAC, fw_version=ver,
                              include=tool_asked_commands(device, ver, MAC))
-    dev = FakeSegcpDevice(prof, mac=MAC)
+    # 가짜 장치의 버퍼도 spec 의 크기로 맞춘다. 기본값(512)이면 2048B 장치가 거짓 초과로 잡힌다.
+    dev = FakeSegcpDevice(prof, mac=MAC, reply_buf_size=spec.fw_config.config_buf_size)
     for chunk in WIZMakeCMD().search_chunks(MAC, " ", device, ver, "OPEN"):
         body = b"".join(c.encode() + b"\r\n" for c, _ in chunk[2:])
         request = b"MA" + bytes.fromhex(MAC.replace(":", "")) + b"\r\nPW \r\n" + body
