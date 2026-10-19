@@ -8,7 +8,7 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
 
 ### Features
 - **W55RP20-S2E-4CH support**: Channel #2 and Channel #3 tabs, CH2/CH3 command groups, per-channel
-  value ranges taken from the firmware documentation, and PPPoE. The SSL/MQTT tabs are hidden
+  value ranges taken from the firmware documentation, and PPPoE (ID/Password up to 63 characters). The SSL/MQTT tabs are hidden
   because this firmware does not provide them.
 - **W55RP20-S2E-3CH groundwork**: device spec, Channel #2 tab, and 3-channel runtime commands are
   in place. Not yet verified on hardware.

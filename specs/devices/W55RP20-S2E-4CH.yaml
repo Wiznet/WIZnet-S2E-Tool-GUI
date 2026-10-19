@@ -37,6 +37,12 @@ overrides:
   # NP(연결 비밀번호) — FW pw_connect[10] (W55RP20/WIZ5XXSR-RP 계열 공통, 2026-10-14 확인)
   NP:
     regex: "^.{0,9}$"
+  # PPPoE ID/Password — 4CH 담당자 확인(2026-10-19): SET 은 각 최대 63자. 64자 이상이면 FW 가
+  # ERINVALIDPARAM 을 내고 **같은 요청의 SV(저장)도 취소**된다 → 다른 설정까지 함께 저장 안 됨(NP 와 같은 구조).
+  PI:
+    regex: "^.{0,63}$"
+  PP:
+    regex: "^.{0,63}$"
   # IM — 4port FW 브랜치에서 PPPoE(2) 추가 확인(ff05cfa2, 2026-10-08). base.yaml 은 0/1만 정의.
   IM:
     regex: "^[0-2]$"
@@ -225,6 +231,11 @@ overrides:
 fw_constraints:
   upload_supported: true
   config_port: 50001
+  # SEGCP 응답 버퍼 — 4CH 담당자 확인(2026-10-19, FW 커밋 90af22e 기준). 응답이 이 값에서
+  # 여유분 256 을 뺀 1792B 를 넘으면 그 뒤 명령은 버려진다. UDP 는 1472B 를 넘으면 한 패킷에
+  # 안 들어가고 W5500 이 IP 조각내기를 지원하지 않아 유실될 수 있다(공장 기본값 응답은 약 920B).
+  # 툴의 [SIZE] 경고는 이 값 도달 시에만 울리므로 1792B 절단은 직접 잡지 못한다.
+  config_buf_size: 2048
 
 ui:
   widget_overrides:
