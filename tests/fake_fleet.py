@@ -37,7 +37,7 @@ from pathlib import Path
 
 import yaml
 
-from tests.fake_segcp_device import PROFILE_WIZ752_MEASURED, FirmwareQuirks
+from tests.fake_segcp_device import FW_4PORT, PROFILE_WIZ752_MEASURED, FirmwareQuirks
 from tests.fake_segcp_device import make_device_fleet as make_segcp_fleet
 from tests.fake_segcp_device import profile_from_spec, profile_with_remote_host, tool_asked_commands
 from tests.fake_wiz1x0_device import make_device_fleet as make_1x0_fleet
@@ -54,7 +54,9 @@ _FAMILY_KEYS = {
     "w550": _COMMON_KEYS | {"type", "fw", "password"},
     "w1x0": _COMMON_KEYS | {"direct_port", "ip", "setc_carries_board"},
 }
-_QUIRK_KEYS = {f.name for f in dataclasses.fields(FirmwareQuirks)}
+_QUIRK_KEYS = {f.name for f in dataclasses.fields(FirmwareQuirks)} | {"preset"}
+# 펌웨어 묶음 이름 → 기본 quirks. 나머지 항목은 그 위에 덮어쓴다.
+_QUIRK_PRESETS = {"4port": FW_4PORT}
 
 
 def load_fleet_config(path: Path | str = DEFAULT_CONFIG_PATH) -> dict:
@@ -74,7 +76,13 @@ def _quirks_from(raw: dict | None) -> FirmwareQuirks:
     if not raw:
         return FirmwareQuirks()
     _check_keys(raw, _QUIRK_KEYS, "quirks")
-    return FirmwareQuirks(**raw)
+    raw = dict(raw)
+    preset = raw.pop("preset", None)
+    if preset is None:
+        return FirmwareQuirks(**raw)
+    if preset not in _QUIRK_PRESETS:
+        raise ValueError(f"quirks.preset: 모르는 이름 {preset!r} — {sorted(_QUIRK_PRESETS)}")
+    return dataclasses.replace(_QUIRK_PRESETS[preset], **raw)
 
 
 def _segcp_profile(entry: dict, mac: str) -> dict:

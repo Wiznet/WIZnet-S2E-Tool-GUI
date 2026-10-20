@@ -55,7 +55,7 @@ import re
 import socket
 import threading
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import Optional
 
 CRLF = b"\r\n"
@@ -128,6 +128,37 @@ class FirmwareQuirks:
     """부팅 시 도메인 해석으로 do_segcp() 가 멈추는 시간 (main.c 의 process_dns()).
     채널0(OP)이 TCP Server 가 아니고 Remote host 가 도메인일 때만 걸린다."""
 
+    # ── 4port 브랜치(W55RP20-S2E-4CH) 소스에서 읽은 동작 (segcp.c, 2026-10-20) ──
+
+    reply_headroom: int = 0
+    """명령 하나를 처리하기 **전에** 지금까지 쓴 응답 본문이 `버퍼 - headroom` 을 넘었으면
+    IGNORED 오류를 세우고 남은 명령을 버린다 (proc_SEGCP 의 SEGCP_REPLY_HEADROOM=256).
+    '남은 공간 < 256' 이 아니라 '쓴 양 > 버퍼-256' 이고, 검사는 명령 **앞**에서만 하므로
+    마지막으로 들어간 줄은 그 선을 조금 넘을 수 있다. 0 = 검사 없음(main/2Port/GreenCS)."""
+
+    field_limits: dict = field(default_factory=dict)
+    """{커맨드: 최대 글자 수}. 넘으면 INVALIDPARAM — segcp_store_string 은 자르지 않고 거부하며
+    필드는 그대로다. 최대 글자 수 = 필드 크기 - 1 (NUL 자리). 비면 길이 검사 없음."""
+
+    err_cancels_save: bool = False
+    """오류가 하나라도 있으면 SV/RT 가 실행되지 않는다 (segcp_ret_handler 가
+    `(ret & ERR) != ERR` 일 때만 처리). 그 앞의 SET 은 RAM 에 이미 반영된 채 남는다.
+    설정툴(UDP) 모드에서는 오류가 나도 뒤 명령을 계속 처리한다 — 중단은 AT 모드에서만."""
+
+    flags_drop_gets: bool = False
+    """ret 에 오류/SV/RT 플래그가 하나라도 서 있으면 그 뒤 GET 의 응답 줄이 지워진다
+    (proc_SEGCP 의 `trep -= SEGCP_CMD_MAX`). 즉 'SV 뒤에 확인 조회' 는 답이 오지 않는다."""
+
+    empty_as_space: bool = False
+    """빈 문자열 GET 은 값 자리에 공백 한 칸(SEGCP_NULL=' ')을 싣는다 — 'PI \r\n'."""
+
+    space_clears_string: bool = False
+    """문자열 SET 의 값이 공백 한 칸이면 필드를 비운다 (`param[0] == SEGCP_NULL`)."""
+
+    max_param_len: int = 0
+    """명령 토큰의 값 길이 상한. 넘으면 알 수 없는 명령(NOCOMMAND)으로 처리된다
+    (parse_SEGCP: strlen > SEGCP_PARAM_MAX*2-1 = 511). 0 = 검사 없음."""
+
 
 # 시험 장비 84:14:27 에 올라가 있는 빌드.
 FW_752_2_1_0DEV = FirmwareQuirks()
@@ -138,6 +169,23 @@ FW_752_FIX_BRANCH = FirmwareQuirks(er_in_tool_mode=False, abort_on_error=False)
 
 # 7번(응답 상한)까지 들어간 가정.
 FW_752_WITH_REPLY_CAP = replace(FW_752_FIX_BRANCH, truncate_reply=True)
+
+# 4CH — WIZnet-ioNIC/W55RP20-S2E 의 4port 브랜치 (port/app/configuration/src/segcp.c).
+# 칸 크기는 inc/ConfigData.h, 동작은 proc_SEGCP / segcp_ret_handler 를 읽고 옮겼다.
+# 소스에서 확인한 것만 넣었다 — 실기기 측정이 아니다.
+_STR31 = ("SD", "DD", "SE", "RD", "RF", "EE", "XD", "XF", "WE", "ZD", "ZF", "YE")
+FW_4PORT_FIELD_LIMITS = {
+    **{c: 127 for c in ("RH", "QH", "GH", "CH", "QU", "QP", "QC", "PU", "U0", "U1", "U2")},
+    **{c: 63 for c in ("PI", "PP")},
+    **{c: 31 for c in _STR31},
+    "DH": 19, "NP": 9, "SP": 9,
+}
+FW_4PORT = FirmwareQuirks(
+    reply_buf_size=2048, shared_domain=False, domain_field_size=128,
+    er_in_tool_mode=False, abort_on_error=False,
+    reply_headroom=256, field_limits=FW_4PORT_FIELD_LIMITS,
+    err_cancels_save=True, flags_drop_gets=True,
+    empty_as_space=True, space_clears_string=True, max_param_len=511)
 
 
 @dataclass
@@ -340,6 +388,8 @@ class FakeSegcpDevice:
         self.replies: list[bytes] = []
         self.overflow_events: list[tuple[int, int]] = []   # (요청 순번, 초과 바이트)
         self.field_overflows: list[tuple[str, int, int]] = []  # (커맨드, 준 길이, 필드 크기)
+        self.field_rejects: list[tuple[str, int, int]] = []    # (커맨드, 준 길이, 허용 글자 수) — 거부됨
+        self.dropped_cmds = 0   # reply_headroom 에 걸려 버려진 요청 수(뒤쪽 명령이 빠진 횟수)
         self.verdicts: list[Verdict] = []
         self.dropped = 0
         self.saved = False
@@ -389,27 +439,52 @@ class FakeSegcpDevice:
             return None
         mac6, code, cmds = parse_request(request)   # type: ignore[misc]
 
+        q = self.quirks
         body = b""
         reboot = False
+        save = False
+        had_error = False
         for cmd, param in cmds:
+            if q.reply_headroom and len(body) > q.reply_buf_size - q.reply_headroom:
+                had_error = True          # SEGCP_RET_ERR_IGNORED — 남은 명령은 버린다
+                self.dropped_cmds += 1
+                break
             err = self.reject.get(cmd) or self._spec_rejects(cmd, param)
+            if not err and q.max_param_len and len(param) > q.max_param_len:
+                err = "NOCOMMAND"
+            if not err and param not in ("", " ") and cmd in q.field_limits                     and len(param) > q.field_limits[cmd]:
+                err = "INVALIDPARAM"
+                self.field_rejects.append((cmd, len(param), q.field_limits[cmd]))
             if err:
-                if self.quirks.er_in_tool_mode:
+                had_error = True
+                if q.er_in_tool_mode:
                     body += f"ER{err}:{cmd}".encode() + CRLF
-                if self.quirks.abort_on_error:
+                if q.abort_on_error:
                     # segcp.c:1365 `return ret` — 뒤 커맨드도 SV/RT 도 처리되지 않는다
                     reboot = False
+                    save = False
                     break
                 continue
             if cmd == "SV":
-                self.saved = True
+                save = True
+                if not q.err_cancels_save:
+                    self.saved = True
             elif cmd == "RT":
                 reboot = True
             elif param == "":
+                if q.flags_drop_gets and (had_error or save or reboot):
+                    continue
                 if cmd in self.profile:
-                    body += cmd.encode() + self.profile[cmd].encode() + CRLF
+                    value = self.profile[cmd]
+                    if q.empty_as_space and value == "":
+                        value = " "
+                    body += cmd.encode() + value.encode() + CRLF
             else:
                 self._store(cmd, param)
+        if q.err_cancels_save and had_error:
+            reboot = False                # segcp_ret_handler 는 오류가 있으면 아무것도 하지 않는다
+        elif q.err_cancels_save and save:
+            self.saved = True
 
         reply = b"MA" + self.mac6 + CRLF + b"PW" + code + CRLF + body
 
@@ -437,6 +512,10 @@ class FakeSegcpDevice:
 
     def _store(self, cmd: str, param: str) -> None:
         """SET 값을 장치에 반영한다. 도메인은 한 필드를 공유하고 길이 제한이 있다."""
+        if (self.quirks.space_clears_string and param == " "
+                and cmd in self.quirks.field_limits):
+            self.profile[cmd] = ""
+            return
         if cmd in ("RH", "QH") and not _IPV4.match(param):
             size = self.quirks.domain_field_size
             if len(param) >= size:

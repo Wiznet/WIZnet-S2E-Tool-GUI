@@ -40,6 +40,9 @@ devices:
       dns_block_sec: 0.0     # 부팅 DNS 해석 지연. 채널0 이 TCP Server 가 아니고 도메인일 때만
       # truncate_reply: false   # 응답 상한이 들어간 펌웨어 흉내
       # shared_domain: true     # RH/QH 가 한 필드 (실장치 동작)
+      # preset: 4port           # 4CH(4port 브랜치) 펌웨어 동작 일괄 — 버퍼 2048·길이 거부·SV 취소·
+      #                         # 응답 절단(본문 > 버퍼-256). 근거는 tests/fake_segcp_device.py FW_4PORT
+      #                         # 쓰려면 위에서 device: W55RP20-S2E-4CH 도 지정할 것
 
   # ── WIZ550 계열 ──────────────────────────────────────────────────────
   - family: w550
