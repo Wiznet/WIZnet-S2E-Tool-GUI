@@ -74,3 +74,15 @@ def test_ui_limit_is_released_on_a_device_without_the_cap(win):
     _select(win, "WIZ107SR", ver="4.06")
     assert len(_type(win.pppoe_id, "a" * 80)) == 80
     assert len(_type(win.connect_pw, "x" * 20)) == 20
+
+
+# ── 원격 호스트 도메인: FW dns_domain_name[128] → 127자 (4port segcp.c 확인) ──
+
+@pytest.mark.parametrize("cmd", ["RH", "QH", "GH", "CH"])
+def test_4ch_remote_host_accepts_127_rejects_128(cmd):
+    from device_spec_loader import load_device
+    e = load_device("W55RP20-S2E-4CH").cmdset[cmd]
+    dom127 = "a" * 63 + "." + "a" * 63          # 레이블 63자 규칙을 지킨 127자
+    assert len(dom127) == 127 and e.is_valid(dom127)
+    assert not e.is_valid(dom127 + "a")
+    assert e.is_valid("192.168.0.1")
