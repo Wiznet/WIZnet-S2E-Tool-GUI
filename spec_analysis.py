@@ -91,6 +91,22 @@ def worst_case_reply_size(spec, cmds=None):
     return ReplyEstimate(minimum=lo, maximum=hi, unbounded=unbounded)
 
 
+def missing_tail(requested, answered):
+    """요청한 조회(GET) 명령 중 응답에서 **끝에서부터 이어서** 빠진 명령 목록.
+
+    절단과 앞 명령의 오류는 둘 다 뒤쪽 GET 을 통째로 지우므로 빠진 것이 끝에 붙어 있다.
+    중간에만 빠진 명령은 그 기종이 원래 답하지 않는 명령일 가능성이 높아 세지 않는다.
+    값이 빈 응답(`PI` 만 오거나 공백 한 칸)은 답한 것이다 — `answered` 에 키가 있으면 된다.
+    """
+    out = []
+    for cmd in reversed(list(requested)):
+        if cmd in answered:
+            break
+        out.append(cmd)
+    out.reverse()
+    return out
+
+
 @dataclass
 class Finding:
     level: str      # "error" | "warn" | "info"

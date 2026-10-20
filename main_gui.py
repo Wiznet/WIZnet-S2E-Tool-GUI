@@ -13,6 +13,7 @@ from channel_field_map import build_channel_setcmd, fill_channel_widgets, gate_o
 from WIZUDPSock import WIZUDPSock
 from FWUploadThread import FWUploadThread
 from WIZMSGHandler import WIZMSGHandler, DataRefresh, parse_reply_lines, normalize_mac_key
+from spec_analysis import missing_tail
 from WIZ1x0MSGHandler import WIZ1x0Searcher, WIZ1x0Setter, WIZ1x0DirectSearcher
 from WIZ550MSGHandler import (
     WIZ550Searcher,
@@ -503,6 +504,9 @@ class WIZWindow(QMainWindow, main_window):
         self.wizmakecmd = WIZMakeCMD()
 
         self.dev_profile = {}
+        # 검색 응답에서 끝부분이 빠진 장치 {정규화 MAC: 안내문}, 마지막 검색에서 실제로 물은 명령 {정규화 MAC: [명령]}
+        self.reply_warnings = {}
+        self._requested_cmds = {}
         self.dev_data = {}
         # fill_devinfo() 가 마지막으로 받은 원본 커맨드 dict(CH1~CH3 SET 게이트용).
         # dev_profile[mac] 과 보통 같지만, "설정 불러오기"(load_configuration)는
@@ -650,6 +654,7 @@ class WIZWindow(QMainWindow, main_window):
 
         # device select event
         self.list_device.itemClicked.connect(self.dev_clicked)
+        self.list_device.itemClicked.connect(self._show_reply_warning_on_click)
 
         """ Button event """
         try:
@@ -3330,6 +3335,83 @@ class WIZWindow(QMainWindow, main_window):
             self.pgbar.show()
         # k>0: 이미 표시 중 → 그대로 유지
 
+    # ── 검색 응답 끝부분 누락 경고 (ⓘ) ──────────────────────────────────
+    # 펌웨어가 응답을 자르거나(4CH: 본문 > 버퍼-256), 앞 명령 오류로 뒤쪽 GET 을 지우거나,
+    # 패킷이 유실되면 요청한 조회의 **끝부분**이 응답에서 통째로 빠진다. 기종과 무관하게 같은
+    # 모양이라 범용으로 감지한다. 값이 빈 응답은 키가 있으므로 누락이 아니다.
+
+    def _remember_requested(self, mac, chunks):
+        try:
+            self._requested_cmds[normalize_mac_key(mac)] = [
+                cmd for ch in chunks for cmd, _ in ch[2:]]
+        except Exception as e:
+            self.logger.debug(f"_remember_requested: {e}")
+
+    def _check_reply_complete(self, mc, profile):
+        key = normalize_mac_key(mc)
+        requested = self._requested_cmds.get(key)
+        if not requested:
+            return
+        missing = missing_tail(requested, profile)
+        if not missing:
+            self.reply_warnings.pop(key, None)
+        else:
+            self.reply_warnings[key] = self._reply_warning_text(len(requested), missing)
+            self.logger.warning(
+                f"[REPLY-INCOMPLETE] {mc} ({profile.get('MN', '?')}): 요청 {len(requested)}개 중 "
+                f"끝의 {len(missing)}개 응답 없음 {missing} (응답 {len(profile)}개)")
+        self._mark_reply_warnings()
+
+    @staticmethod
+    def _reply_warning_text(n_requested, missing):
+        shown = ", ".join(missing[:12]) + (" …" if len(missing) > 12 else "")
+        return "\n".join([
+            "장치 응답의 끝부분이 빠졌습니다.",
+            f"조회한 {n_requested}개 중 마지막 {len(missing)}개({shown})의 응답이 없습니다.",
+            "",
+            "가능한 원인: 응답 길이 초과로 장치가 뒤쪽을 잘랐거나, 앞 명령의 오류로 뒤쪽 조회가 "
+            "지워졌거나, 패킷이 유실됐습니다.",
+            "이 항목들은 화면에 비어 보이거나 이전 값일 수 있습니다. 다시 검색해 보세요.",
+        ])
+
+    def _reply_warning_icon(self):
+        icon = getattr(self, "_reply_warning_icon_cache", None)
+        if icon is None:
+            size = 16
+            pm = QtGui.QPixmap(size, size)
+            pm.fill(QtCore.Qt.transparent)
+            p = QtGui.QPainter(pm)
+            p.setRenderHint(QtGui.QPainter.Antialiasing)
+            color = QtGui.QColor(0, 102, 204)
+            p.setPen(QtGui.QPen(color, 1.4))
+            p.drawEllipse(1, 1, size - 2, size - 2)
+            font = p.font()
+            font.setBold(True)
+            font.setPixelSize(11)
+            p.setFont(font)
+            p.drawText(pm.rect(), QtCore.Qt.AlignCenter, "i")
+            p.end()
+            icon = self._reply_warning_icon_cache = QtGui.QIcon(pm)
+        return icon
+
+    def _mark_reply_warnings(self):
+        """목록의 MAC 칸에 ⓘ 와 안내문(툴팁)을 단다. 행이 다시 만들어질 때마다 다시 부른다."""
+        for row, mac in enumerate(self.mac_list):
+            item = self.list_device.item(row, 0)
+            if item is None:
+                continue
+            msg = self.reply_warnings.get(normalize_mac_key(mac))
+            if msg:
+                item.setIcon(self._reply_warning_icon())
+                item.setToolTip(msg)
+            elif not item.icon().isNull():
+                item.setIcon(QtGui.QIcon())
+                item.setToolTip("")
+
+    def _show_reply_warning_on_click(self, item):
+        if item is not None and item.column() == 0 and item.toolTip():
+            QtWidgets.QToolTip.showText(QtGui.QCursor.pos(), item.toolTip(), self.list_device)
+
     def _stop_pgbar_fill_timer(self):
         pass  # 타이머 없음 (하위 호환용 stub)
 
@@ -3396,6 +3478,7 @@ class WIZWindow(QMainWindow, main_window):
                     chunks = self.wizmakecmd.search_chunks(
                         dev_info[0], self.code, dev_info[1], dev_info[2], dev_info[3]
                     )
+                    self._remember_requested(dev_info[0], chunks)
                     th = WIZMSGHandler.for_device_query(
                         self.conf_sock, chunks, "tcp", self.search_wait_time_each,
                         reply_limit=self._reply_buf_size_of(dev_info[1], dev_info[2]),
@@ -3419,6 +3502,7 @@ class WIZWindow(QMainWindow, main_window):
                     chunks = self.wizmakecmd.search_chunks(
                         dev_info[0], self.code, dev_info[1], dev_info[2], dev_info[3]
                     )
+                    self._remember_requested(dev_info[0], chunks)
                     # 장비마다 독립 소켓 (localport=0 → OS가 포트 자동 할당)
                     dev_sock = WIZUDPSock(0, peer_port, local_ip, localport=0)
                     dev_sock.open()
@@ -3516,6 +3600,7 @@ class WIZWindow(QMainWindow, main_window):
             mc = profile.get("MC")
             if mc:
                 self.dev_profile[mc] = profile
+                self._check_reply_complete(mc, profile)
                 self.logger.info(f"[GET] {mc} ({profile.get('MN','?')}) ip={profile.get('LI','?')}")
                 self.logger.debug(f"[GET] {mc}: {profile}")
 
@@ -3738,6 +3823,7 @@ class WIZWindow(QMainWindow, main_window):
 
                 # resize for data
                 _t_resize = time.time()
+                self._mark_reply_warnings()
                 self.list_device.resizeColumnsToContents()
                 self.list_device.resizeRowsToContents()
 
