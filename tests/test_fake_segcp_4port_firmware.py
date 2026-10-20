@@ -111,3 +111,43 @@ def test_fleet_config_accepts_the_4port_preset():
     from tests.fake_fleet import _quirks_from
     q = _quirks_from({"preset": "4port", "reboot_sec": 2.0})
     assert q.reply_headroom == 256 and q.reboot_sec == 2.0 and q.field_limits["PI"] == 63
+
+
+def test_unimplemented_commands_answer_with_one_space_and_ignore_set():
+    d = _dev()
+    assert b"QU \r\n" in d.build_reply(_req("QU"))
+    d.build_reply(_req("QUabc", "SV"))
+    assert d.saved is True and d.profile.get("QU") != "abc"      # 오류 없이 무시
+
+
+def _tool_set_request(cmd, value):
+    lst = WIZMakeCMD().setcommand(MAC, " ", "", [cmd], [value], DEV, "1.2.4", "OPEN")
+    body = b"".join(c.encode() + p.encode() + b"\r\n" for c, p in lst[2:])
+    return b"MA" + bytes.fromhex(MAC.replace(":", "")) + b"\r\nPW \r\n" + body
+
+
+def _fill_all_strings_to_max(d):
+    for c in ("RH", "QH", "GH", "CH"):
+        d.profile[c] = "a" * 63 + "." + "a" * 63
+    d.profile["DH"] = "d" * 19
+    d.profile["PI"] = d.profile["PP"] = "p" * 63
+    for c in ("SD", "DD", "SE", "RD", "RF", "EE", "XD", "XF", "WE", "ZD", "ZF", "YE"):
+        d.profile[c] = "s" * 31
+
+
+def test_tool_apply_default_config_is_saved_and_rebooted():
+    d = _dev()
+    reply = d.build_reply(_tool_set_request("NP", "1234"))
+    assert d.saved and d.reboots == 1 and b"MC" in reply
+
+
+def test_tool_apply_with_every_string_at_max_loses_save_but_still_looks_successful():
+    """툴이 보내는 'SET + 확인 GET + SV + RT' 에서 확인 GET 응답이 1,792B 를 넘으면 FW 는 SV/RT 를
+    버린다. 응답에는 MC 가 있어 툴은 성공(len(MC)==17)으로 판단한다 — 소스 읽기 기반 시나리오.
+    이 시험은 FW 동작을 '재현'해 두는 것이지 현 툴이 옳다는 보증이 아니다."""
+    d = _dev()
+    _fill_all_strings_to_max(d)
+    reply = d.build_reply(_tool_set_request("NP", "1234"))
+    assert d.profile["NP"] == "1234"          # RAM 에는 반영
+    assert d.saved is False and d.reboots == 0  # 저장·재부팅은 안 됨
+    assert parse_reply_lines(reply)["MC"] == MAC and len(parse_reply_lines(reply)["MC"]) == 17

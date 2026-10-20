@@ -155,6 +155,11 @@ class FirmwareQuirks:
     space_clears_string: bool = False
     """문자열 SET 의 값이 공백 한 칸이면 필드를 비운다 (`param[0] == SEGCP_NULL`)."""
 
+    unimplemented_cmds: tuple = ()
+    """이 빌드에 구현이 없는 명령. GET 은 값 자리에 공백 한 칸만 싣고('QU \r\n', 5B), SET 은
+    오류 없이 무시된다 (proc_SEGCP 의 switch default). 4CH 는 보드가 SSL/TLS·MQTT 를 끈다
+    (WIZnet_board.h: `DEVICE_BOARD_NAME != W55RP20_S2E` 일 때만 __USE_S2E_OVER_TLS__/__USE_MQTT__)."""
+
     max_param_len: int = 0
     """명령 토큰의 값 길이 상한. 넘으면 알 수 없는 명령(NOCOMMAND)으로 처리된다
     (parse_SEGCP: strlen > SEGCP_PARAM_MAX*2-1 = 511). 0 = 검사 없음."""
@@ -175,17 +180,21 @@ FW_752_WITH_REPLY_CAP = replace(FW_752_FIX_BRANCH, truncate_reply=True)
 # 소스에서 확인한 것만 넣었다 — 실기기 측정이 아니다.
 _STR31 = ("SD", "DD", "SE", "RD", "RF", "EE", "XD", "XF", "WE", "ZD", "ZF", "YE")
 FW_4PORT_FIELD_LIMITS = {
-    **{c: 127 for c in ("RH", "QH", "GH", "CH", "QU", "QP", "QC", "PU", "U0", "U1", "U2")},
+    **{c: 127 for c in ("RH", "QH", "GH", "CH")},
     **{c: 63 for c in ("PI", "PP")},
     **{c: 31 for c in _STR31},
     "DH": 19, "NP": 9, "SP": 9,
 }
+# segcp.c 의 `#if defined(__USE_S2E_OVER_TLS__) || defined(__USE_MQTT__)` 안 + 채널별 XO/ZO
+FW_4PORT_UNIMPLEMENTED = ("RC", "CE", "SO", "RO", "QU", "QP", "QC", "QK", "PU", "U0", "U1", "U2",
+                          "QO", "XO", "ZO")
 FW_4PORT = FirmwareQuirks(
     reply_buf_size=2048, shared_domain=False, domain_field_size=128,
     er_in_tool_mode=False, abort_on_error=False,
     reply_headroom=256, field_limits=FW_4PORT_FIELD_LIMITS,
     err_cancels_save=True, flags_drop_gets=True,
-    empty_as_space=True, space_clears_string=True, max_param_len=511)
+    empty_as_space=True, space_clears_string=True, max_param_len=511,
+    unimplemented_cmds=FW_4PORT_UNIMPLEMENTED)
 
 
 @dataclass
@@ -471,6 +480,9 @@ class FakeSegcpDevice:
                     self.saved = True
             elif cmd == "RT":
                 reboot = True
+            elif cmd in q.unimplemented_cmds:
+                if param == "" and not (q.flags_drop_gets and (had_error or save or reboot)):
+                    body += cmd.encode() + b" " + CRLF
             elif param == "":
                 if q.flags_drop_gets and (had_error or save or reboot):
                     continue
