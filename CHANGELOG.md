@@ -22,8 +22,10 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
 - Advanced Search Options now exposes **Post-Apply Reboot Delay**, SET command delay, SET
   response timeouts, TCP scan timeout, log level, and **Verbose Wire Log** (raw request/response
   bytes in the log).
-- **Post-Apply Reboot Delay**: after an IP-mode change the tool waits for the device to reboot
-  before the next search, and the completion dialog says so.
+- **Post-Apply Reboot Delay**: after an IP-mode change, if the device cannot be reached right
+  away, the tool retries once after a short delay (1.0 s by default), and the completion dialog
+  says so. A device that is still rebooting may not be found yet; search again after it has
+  finished rebooting.
 - Terminal: Escape-mode hint text updates when Escape is toggled.
 - Search results show an **ⓘ marker** for a device whose reply arrived incomplete (any model);
   hover or click it for details.
