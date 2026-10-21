@@ -8,12 +8,12 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
 
 ### Features
 - **W55RP20-S2E-4CH support**: Channel #2 and Channel #3 tabs, CH2/CH3 command groups, per-channel
-  value ranges taken from the firmware documentation, and PPPoE (ID/Password up to 63 characters). The SSL/MQTT tabs are hidden
+  value ranges taken from the firmware documentation, and PPPoE settings. The SSL/MQTT tabs are hidden
   because this firmware does not provide them.
 - W55RP20 (4CH): Flow control gains **DTR/DSR**; Serial interface (TTL / RS-232 / RS-422 /
   RS-485 / RS-485 Reverse) is now selectable instead of read-only; Remote host accepts a domain
   name on every channel.
-- **WIZ1x0SR direct-IP search** (TCP:1461) in "IP Address" search mode.
+- WIZ1x0SR: improved search in "IP Address" search mode (TCP:1461).
 - **FW from Git: WIZ750SR Boot↔App compatibility check** — incompatible combinations are shown
   but cannot be selected, risky ones ask for confirmation and point to the ISP tool. The
   compatibility table is a separate file (`config/fw_compat.json`) refreshed from GitHub at
@@ -33,13 +33,13 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
 ### Bug Fixes
 - **TCP unicast Apply failed after editing Local IP**: typing a new IP switched the connection
   target before Apply was sent. The target now follows the IP the device reports.
-- **Settings were not saved when NP (connection password) was 10+ characters**: now limited to
-  9 characters (WIZ750SR, WIZ750SR-1xx, WIZ752SR-12x, W55RP20, WIZ5XXSR-RP).
+- NP (connection password) input is now limited to 9 characters to match the firmware
+  (WIZ750SR, WIZ750SR-1xx, WIZ752SR-12x, W55RP20, WIZ5XXSR-RP).
 - W55RP20: **Apply Settings did not save** because the SC command made the firmware discard the
   whole save; fixed together with response-parsing and diagnostics improvements.
-- IP20 search: socket errors while receiving in the individual-query phase are now handled
-  (reported as an application exit on Windows 11), and unhandled exceptions are now written to
-  the log.
+- IP20 search: improved handling of socket errors while receiving in the individual-query phase
+  (reported as an application exit on Windows 11); unhandled exceptions are now written to the
+  log.
 - Unicast TCP search/Apply no longer runs `ping.exe` (no console-window flash, no false
   positives); the check connects to the configuration port instead. FW-upload pre-check uses the
   Windows ICMP API.
@@ -49,13 +49,14 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
   popup missing after SET, per-device query split into three requests to stay within the
   firmware's 512-byte response buffer, and the periodic GPIO refresh overwriting values being
   edited.
-- WIZ550: DNS use/domain, packing delimiter, serial trigger, and Modbus fields are now editable.
+- WIZ550: improved handling of the DNS use/domain, packing delimiter, serial trigger, and Modbus
+  fields.
 - W55RP20 4CH: stale combo indexes no longer sent on SET, expected-response length corrected,
   firmware-document value ranges applied (UI/EI/WI/YI, OP/AO/TO, FL/EF/WF, KI/KE, RS/RE, XS/XE).
 - Channel 2/3 tabs not appearing when a field failed to parse; packaged builds now include
   `specs/` so the channel count is read correctly.
 - "TCP timeout" group box is hidden on models without TR (e.g. WIZ752SR-12x).
-- Firmware version strings with custom suffixes (e.g. `1.2.5_GreenCS`) no longer raise errors;
+- Improved handling of firmware version strings with custom suffixes (e.g. `1.2.5_GreenCS`);
   version comparison uses the numeric part only.
 - Duplicate F4 shortcut removed.
 - Device spec command lists aligned with the firmware command enums.
@@ -65,9 +66,9 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
 - **Search**: the default number of search rounds is back to 1 (it had been 3), so a plain
   Search is faster. Raise **Max Retry Count** in Advanced Search Options to search repeatedly.
   Existing saved settings are kept; use Reset in that dialog to apply the new default.
-- Search results no longer show duplicate rows when the same device's MAC address is written in
-  a different notation.
-- Input length limits now follow the firmware: remote host domain name (127 characters on
+- Improved merging of search results when the same device's MAC address is written in a
+  different notation.
+- Input length limits were aligned with the firmware: remote host domain name (127 characters on
   W55RP20-S2E-4CH), SP, MQTT fields, NP on IP20/W232N, and the TR range.
 - Removed the W55RP20-S2E-3CH entry; it is not an official product (use 4CH).
 
