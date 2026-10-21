@@ -4,7 +4,7 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
 
 ---
 
-## [Unreleased]
+## [1.6.3] – 2026-10-21
 
 ### Features
 - **W55RP20-S2E-4CH support**: Channel #2 and Channel #3 tabs, CH2/CH3 command groups, per-channel
@@ -25,6 +25,8 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
 - **Post-Apply Reboot Delay**: after an IP-mode change the tool waits for the device to reboot
   before the next search, and the completion dialog says so.
 - Terminal: Escape-mode hint text updates when Escape is toggled.
+- Search results show an **ⓘ marker** for a device whose reply arrived incomplete (any model);
+  hover or click it for details.
 
 ### Bug Fixes
 - **TCP unicast Apply failed after editing Local IP**: typing a new IP switched the connection
@@ -33,8 +35,9 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
   9 characters (WIZ750SR, WIZ750SR-1xx, WIZ752SR-12x, W55RP20, WIZ5XXSR-RP).
 - W55RP20: **Apply Settings did not save** because the SC command made the firmware discard the
   whole save; fixed together with response-parsing and diagnostics improvements.
-- Fixed a crash on Windows 11 during IP20 search (unprotected receive in the individual-query
-  phase); unhandled exceptions are now written to the log.
+- IP20 search: socket errors while receiving in the individual-query phase are now handled
+  (reported as an application exit on Windows 11), and unhandled exceptions are now written to
+  the log.
 - Unicast TCP search/Apply no longer runs `ping.exe` (no console-window flash, no false
   positives); the check connects to the configuration port instead. FW-upload pre-check uses the
   Windows ICMP API.
@@ -55,6 +58,16 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
 - Duplicate F4 shortcut removed.
 - Device spec command lists aligned with the firmware command enums.
 - Removed the "(BETA - 4CH)" label from About and the `_4CH` suffix from the build name.
+- **Factory Reset button**: clicking the button itself runs "Factory default settings" again
+  (after the confirmation); the arrow beside it opens the option list, as before.
+- **Search**: the default number of search rounds is back to 1 (it had been 3), so a plain
+  Search is faster. Raise **Max Retry Count** in Advanced Search Options to search repeatedly.
+  Existing saved settings are kept; use Reset in that dialog to apply the new default.
+- Search results no longer show duplicate rows when the same device's MAC address is written in
+  a different notation.
+- Input length limits now follow the firmware: remote host domain name (127 characters on
+  W55RP20-S2E-4CH), SP, MQTT fields, NP on IP20/W232N, and the TR range.
+- Removed the W55RP20-S2E-3CH entry; it is not an official product (use 4CH).
 
 ### Build / Docs
 - `build.bat` passes its arguments (e.g. `-NoSign`) through to `build.ps1`.
