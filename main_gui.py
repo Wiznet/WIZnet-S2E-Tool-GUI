@@ -1020,7 +1020,7 @@ class WIZWindow(QMainWindow, main_window):
         # 검색 옵션을 DeviceSearchConfig에서 로드
         config = self.device_search_config.get_current_values()
         self.retry_search_expected_count = config.get('expected_device_count', 0)
-        self.retry_search_max_count = config.get('max_retry_count', 3)  # 기본값 3
+        self.retry_search_max_count = config.get('max_retry_count', 1)  # 기본값 1 (한 번만 검색)
 
         # cumulative_mode는 항상 True (UI 옵션 제거, 기능 유지)
         self.cumulative_mode = True
@@ -3058,7 +3058,7 @@ class WIZWindow(QMainWindow, main_window):
                     self.logger.warning(f"예상 장비 수 범위 초과 → {expected}로 제한")
                 self.retry_search_expected_count = expected
 
-                max_retry = getattr(self, 'retry_search_max_count', 3)
+                max_retry = getattr(self, 'retry_search_max_count', 1)
                 if max_retry < RetrySearchLimits.MAX_RETRY_MIN:
                     max_retry = RetrySearchLimits.MAX_RETRY_MIN
                     self.logger.warning(f"최대 반복 횟수 범위 미만 → {max_retry}로 설정")
@@ -7905,7 +7905,7 @@ class WIZWindow(QMainWindow, main_window):
 
         # 내부 변수 추가
         config['expected_device_count'] = getattr(self, 'retry_search_expected_count', 0)
-        config['max_retry_count'] = getattr(self, 'retry_search_max_count', 3)
+        config['max_retry_count'] = getattr(self, 'retry_search_max_count', 1)
 
         return config
 
@@ -7949,7 +7949,7 @@ class WIZWindow(QMainWindow, main_window):
         dialog.spin_max_retry_count = QSpinBox()
         dialog.spin_max_retry_count.setRange(1, 100)
         dialog.spin_max_retry_count.setSingleStep(1)
-        dialog.spin_max_retry_count.setValue(config.get('max_retry_count', 3))
+        dialog.spin_max_retry_count.setValue(config.get('max_retry_count', 1))
         dialog.spin_max_retry_count.setToolTip(
             "Maximum number of search retries\n"             # 검색 반복 최대 횟수
             "Recommended: 3 (normal), 1 (fast search)"       # 권장: 일반 3회, 빠른 검색 1회
@@ -8352,7 +8352,7 @@ class WIZWindow(QMainWindow, main_window):
 
                 # 검색 옵션 기본값
                 dialog.spin_expected_device_count.setValue(0)
-                dialog.spin_max_retry_count.setValue(3)
+                dialog.spin_max_retry_count.setValue(defaults['options']['max_retry_count'])
                 dialog.spin_retry_delay_ms.setValue(defaults['retry']['delay_between_retries_ms'])
                 RetrySearchLimits.RETRY_DELAY_MS = defaults['retry']['delay_between_retries_ms']
 
@@ -8388,7 +8388,7 @@ class WIZWindow(QMainWindow, main_window):
 
                 # 내부 변수 업데이트
                 self.retry_search_expected_count = 0
-                self.retry_search_max_count = 3
+                self.retry_search_max_count = defaults['options']['max_retry_count']
 
                 # WIZMSGHandler 클래스 변수 업데이트
                 from WIZMSGHandler import WIZMSGHandler

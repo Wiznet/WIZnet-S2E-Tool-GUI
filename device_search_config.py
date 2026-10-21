@@ -114,11 +114,11 @@ class DeviceSearchConfig:
             'retry': {
                 'delay_between_retries_ms': 100,
                 'max_retry_count_limit': 100,
-                'default_max_retry': 3,
+                'default_max_retry': 1,
             },
             'options': {
                 'expected_device_count': 0,
-                'max_retry_count': 3,
+                'max_retry_count': 1,
             },
         },
         'ui': {
@@ -701,7 +701,7 @@ class DeviceSearchConfig:
             'pgbar_update_percent': self.get_pgbar_update_percent(),
             'pgbar_auto_hide_delay_ms': self.get_pgbar_auto_hide_delay_ms(),
             'expected_device_count': self.config.get('search', {}).get('options', {}).get('expected_device_count', 0),
-            'max_retry_count': self.config.get('search', {}).get('options', {}).get('max_retry_count', 3),
+            'max_retry_count': self.config.get('search', {}).get('options', {}).get('max_retry_count', 1),
             'show_timing_in_statusbar': self.config.get('logging', {}).get('show_timing_in_statusbar', False),
             'phase3_on_demand': self.config.get('experimental', {}).get('phase3_on_demand', False),
             'logging_level': self.config.get('logging', {}).get('level', 'INFO'),

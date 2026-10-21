@@ -95,7 +95,7 @@ search:
     max_retry_count_limit: 100
 
     # 기본 최대 반복 횟수
-    default_max_retry: 3
+    default_max_retry: 1
 
   # 검색 옵션 (Search Options)
   options:
@@ -103,7 +103,7 @@ search:
     expected_device_count: 0
 
     # 최대 반복 횟수 (누적 검색)
-    max_retry_count: 3
+    max_retry_count: 1
 
 # ============================================================
 # UI 응답성 (UI Responsiveness)
