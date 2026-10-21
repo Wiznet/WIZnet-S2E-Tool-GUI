@@ -72,6 +72,8 @@ All notable changes to WIZnet S2E Tool GUI from v1.5.5 onward.
 ### Build / Docs
 - `build.bat` passes its arguments (e.g. `-NoSign`) through to `build.ps1`.
 - flake8 E501 (line length) disabled.
+- Dependency update: urllib3 2.7.0 → 2.8.0 (security fixes for HTTPS proxy TLS settings and for
+  chunked/deflate response streaming, which firmware downloads use).
 
 ### Refactoring
 - W55RP20 multi-channel field handling consolidated into a table (`channel_field_map`); about 420 lines
