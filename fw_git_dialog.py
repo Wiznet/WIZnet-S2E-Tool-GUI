@@ -6,6 +6,7 @@ fw_type_list (optional): WIZ550처럼 같은 장치가 여러 repo를 갖는 경
   [{"label": "SR", "family": {...}, "device_spec": {...}}, ...]
   제공 시 "Type:" 콤보가 Release 위에 표시되고, 선택 변경 시 릴리스 목록 갱신.
 """
+import logging
 import os
 
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer
@@ -14,6 +15,12 @@ from PyQt5.QtWidgets import (
     QLabel, QComboBox, QPushButton, QProgressBar,
     QFileDialog, QMessageBox, QFrame, QLineEdit,
 )
+
+import fw_compat_rules
+import fw_compat_update
+from fw_boot_compat import BLOCK, WARN, judge
+
+_log = logging.getLogger(__name__)
 
 
 class ReportUnsupportedThread(QThread):
@@ -43,17 +50,30 @@ class _FetchReleasesThread(QThread):
     done = pyqtSignal(list)
     error = pyqtSignal(str)
 
-    def __init__(self, fetcher, family):
+    def __init__(self, fetcher, family, current_version=None):
         super().__init__()
         self._fetcher = fetcher
         self._family = family
+        self._current_version = current_version
+        self.compat_result = None     # 호환표를 다시 확인했다면 그 결과 코드 (fw_compat_update)
 
     def run(self):
         try:
             # family 의 source_type 에 따라 GitHub 릴리즈 / docs 페이지로 분기
-            self.done.emit(self._fetcher.get_releases_for(self._family))
+            releases = self._fetcher.get_releases_for(self._family)
         except Exception as e:
             self.error.emit(str(e))
+            return
+        # 호환표가 모르는 새 버전이 보이면 판정 전에 최신 호환표를 한 번 확인한다.
+        # 화면을 막지 않는 이 스레드에서 하므로, 창에 목록이 뜨기 전에 판정에 쓸 표가 정해진다.
+        try:
+            tags = [r.get("tag_name", "") for r in releases]
+            self.compat_result = fw_compat_update.refresh_if_stale(
+                self._family.get("id"), self._current_version, *tags
+            )
+        except Exception as e:           # 호환표 확인이 릴리즈 목록 표시를 막으면 안 된다
+            _log.info("[compat] 호환표 재확인을 건너뜀: %s", e)
+        self.done.emit(releases)
 
 
 class _DownloadThread(QThread):
@@ -81,12 +101,17 @@ class FWGitDialog(QDialog):
     firmware_ready = pyqtSignal(str, int)   # (bin_path, filesize)
 
     def __init__(self, parent, device_name, family, device_spec, fetcher, dl_path,
-                 fw_type_list=None, wiz550_config=None, image_validator=None):
+                 fw_type_list=None, wiz550_config=None, image_validator=None,
+                 current_version=None, device_in_boot=False):
         """
         fw_type_list: [{"label": str, "family": dict, "device_spec": dict}, ...]
           None 또는 빈 리스트면 타입 선택 행 미표시.
         wiz550_config: {"target_ip": str, "target_mac": str, "localip_addr": str, "pw_setting": str}
           제공 시 다운로드 완료 후 TFTP 업로드를 이 창 안에서 자동 진행.
+        current_version: 장치에서 읽은 현재 App 버전 문자열. 호환표(config/fw_compat.json)에 이 family 의
+          규칙이 있으면 이 값으로 Boot 호환을 추측해 릴리즈를 비활성/경고 처리한다.
+        device_in_boot: 장치가 BOOT 상태(복구 중)면 True. 이때 current_version 은 저장된 값이라
+          비활성 판정을 경고로 낮춘다(복구용 업로드를 막지 않기 위해).
         """
         super().__init__(parent)
         self._device_name  = device_name
@@ -99,6 +124,9 @@ class FWGitDialog(QDialog):
         # WIZ550 은 이 창 안에서 바로 TFTP 업로드하므로 firmware_ready 를 타지 않는다.
         # 그 경로도 같은 이미지 검증을 받도록 호출자가 검증 함수를 넘겨준다.
         self._image_validator = image_validator
+        self._current_version = current_version
+        self._device_in_boot = device_in_boot
+        self._compat = judge(None, None, None)
         self._releases     = []
         self._current_asset = None
         self._fetch_thread  = None
@@ -240,22 +268,69 @@ class FWGitDialog(QDialog):
         self._lbl_asset.setStyleSheet("")
         self._releases = []
         self._current_asset = None
-        self._fetch_thread = _FetchReleasesThread(self._fetcher, self._family)
+        self._fetch_thread = _FetchReleasesThread(
+            self._fetcher, self._family, self._current_version
+        )
         self._fetch_thread.done.connect(self._on_releases_fetched)
         self._fetch_thread.error.connect(self._on_fetch_error)
         self._fetch_thread.start()
 
+    def _unknown_version_note(self):
+        """호환표가 모르는 새 버전일 때 사용자에게 보일 설명. 해당 없으면 빈 문자열."""
+        c = self._compat
+        if not c.get("beyond_known"):
+            return ""
+        rev = fw_compat_rules.revision()
+        table = f"compatibility table (rev {rev}, verified up to {c.get('known_max')})"
+        outcome = getattr(self, "_compat_check", None)
+        if outcome in (fw_compat_update.UPDATED, fw_compat_update.UNCHANGED):
+            tail = "It was checked for updates just now, but has no entry for this version yet."
+        elif outcome == fw_compat_update.SKIPPED:
+            tail = "It was checked for updates a few minutes ago and has no entry for this version yet."
+        elif outcome in (fw_compat_update.ERROR, fw_compat_update.REJECTED):
+            tail = "An update check was attempted but could not be completed (offline?)."
+        else:
+            tail = ""
+        return f"This version is newer than the {table}. {tail}".strip()
+
+    def _boot_rule(self):
+        """이 family 의 Boot↔App 호환 규칙. 호환표에 없으면 None(제약 없음)."""
+        return fw_compat_rules.get_rule(self._family.get("id"))
+
     def _on_releases_fetched(self, releases):
         self._releases = releases
+        self._compat_check = getattr(self._fetch_thread, "compat_result", None)
+        rule = self._boot_rule()
+        if rule:
+            _log.info("[compat] %s, family=%s", fw_compat_rules.describe(), self._family.get("id"))
+        first_usable = -1
         self._combo.blockSignals(True)
         self._combo.clear()
-        for r in releases:
+        for i, r in enumerate(releases):
             date = r.get("published_at", "")[:10]
-            self._combo.addItem(f"{r['tag_name']}  ({date})")
+            verdict = judge(
+                rule, self._current_version, r["tag_name"], self._device_in_boot
+            )["result"]
+            label = f"{r['tag_name']}  ({date})"
+            if verdict == BLOCK:
+                label += "  [Boot incompatible]"
+            elif verdict == WARN:
+                label += "  [Check Boot]"
+            self._combo.addItem(label)
+            if verdict == BLOCK:
+                # 최신 버전도 목록에는 보여주되 선택은 못 하게 한다
+                self._combo.model().item(i).setEnabled(False)
+            elif first_usable < 0:
+                first_usable = i
+        if first_usable > 0:
+            self._combo.setCurrentIndex(first_usable)
         self._combo.blockSignals(False)
         self._set_busy(False)
-        if releases:
-            self._update_asset_label(0)
+        if first_usable >= 0:
+            self._update_asset_label(first_usable)
+        elif releases:
+            self._lbl_asset.setText("No release is compatible with this device's Boot.")
+            self._lbl_asset.setStyleSheet("color: red;")
         else:
             self._lbl_asset.setText("No releases found.")
 
@@ -271,12 +346,30 @@ class FWGitDialog(QDialog):
             self._btn_dl.setEnabled(False)
             return
         release = self._releases[index]
+        self._compat = judge(
+            self._boot_rule(), self._current_version,
+            release["tag_name"], self._device_in_boot,
+        )
+        if self._compat["result"] == BLOCK:
+            self._current_asset = None
+            hint = "  Use the ISP tool." if self._compat["isp_recommended"] else ""
+            self._lbl_asset.setText("Not compatible with this device's Boot." + hint)
+            self._lbl_asset.setStyleSheet("color: red;")
+            self._btn_dl.setEnabled(False)
+            return
         asset = self._fetcher.find_asset(release, self._device_spec, self._family)
         self._current_asset = asset
         if asset:
             extract = self._device_spec.get("extract_file") or "(direct use)"
-            self._lbl_asset.setText(f"{asset['name']}  →  {extract}")
-            self._lbl_asset.setStyleSheet("")
+            text = f"{asset['name']}  →  {extract}"
+            if self._compat["result"] == WARN:
+                note = ("newer than the compatibility table"
+                        if self._compat.get("beyond_known") else "Boot compatibility unverified")
+                self._lbl_asset.setText(f"{text}  — {note}")
+                self._lbl_asset.setStyleSheet("color: #b36b00;")
+            else:
+                self._lbl_asset.setText(text)
+                self._lbl_asset.setStyleSheet("")
             self._btn_dl.setEnabled(True)
         else:
             self._lbl_asset.setText("No matching asset for this release.")
@@ -285,6 +378,49 @@ class FWGitDialog(QDialog):
 
     # ── Download ─────────────────────────────────────────────────────
     def _on_download(self):
+        if self._compat["result"] == WARN and not self._confirm_boot_risk():
+            return
+        self._begin_download()
+
+    def _confirm_boot_risk(self):
+        c = self._compat
+        cur = f"App {c['current']}" if c["current"] else "an unknown App version"
+        tgt = f"App {c['target']}"
+        if c["isp_recommended"]:
+            text = (
+                f"This device is running {cur}, which is discontinued. It has the "
+                "old Boot, and updating only the App leaves that Boot in place. "
+                "A later App update can then make the device stop responding to "
+                "this tool.\n\n"
+                "We strongly recommend using the ISP tool to write the App and "
+                "the Boot together instead."
+            )
+        else:
+            text = (
+                "The Boot version of this device cannot be read, so compatibility "
+                "with this firmware cannot be confirmed.\n\n"
+                f"The device is running {cur} and you are about to flash {tgt}. "
+                "If the installed Boot does not support the new App, the device may "
+                "stop responding to this tool and have to be recovered with the "
+                "ISP tool."
+            )
+        unknown = self._unknown_version_note()
+        if unknown:
+            text += "\n\n" + unknown
+        if c["boot_mode_relaxed"]:
+            text += (
+                "\n\nThis device is in Boot mode, so the App version shown may not "
+                "be the one that was running. This combination is normally blocked."
+            )
+        if c["docs_url"]:
+            text += f"\n\nBoot/App compatibility table:\n{c['docs_url']}"
+        text += "\n\nContinue?"
+        return QMessageBox.warning(
+            self, "Boot compatibility", text,
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+        ) == QMessageBox.Yes
+
+    def _begin_download(self):
         self._set_busy(True)
         extract_file = self._device_spec.get("extract_file")
         self._dl_thread = _DownloadThread(

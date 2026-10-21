@@ -5,9 +5,10 @@ WIZ1x0MSGHandler.py — WIZ100SR/WIZ105SR/WIZ110SR 바이너리 프로토콜 핸
 
 프로토콜:
   - 검색: UDP 브로드캐스트 255.255.255.255:1460 → 'FIND'(4B)
-  - 응답: 'IMIN' + 163바이트 바이너리
-  - 설정: UDP unicast/TCP → 'SETT' + 163바이트  (즉시 저장+리부트)
-  - 응답: 'SETC' + 163바이트
+  - 응답: 'IMIN'(4B) + 159바이트 바이너리 (총 163바이트)
+  - 설정: UDP 브로드캐스트 → 'SETT'(4B) + 159바이트  (즉시 저장+리부트)
+  - 응답: 'SETC'(4B) + 159바이트
+  - 직접-IP: TCP:1461 — 동일 패킷(FIND/SETT)을 TCP로 전송 (VB6 WinsockDirect)
 
 기존 WIZMSGHandler(UDP:50001, 텍스트 커맨드)와 완전 분리.
 """
@@ -25,9 +26,10 @@ from utils import logger
 
 WIZ1X0_SEARCH_PORT  = 1460   # 장치 수신 포트 (브로드캐스트)
 WIZ1X0_SEARCH_SPORT = 5001   # 응답 수신 포트 (장치 → PC)
-WIZ1X0_SET_PORT     = 1461   # TCP 유니캐스트 설정 포트
+WIZ1X0_DIRECT_PORT  = 1461   # 직접-IP 검색/설정 TCP 포트 (VB6 WinsockDirect)
+WIZ1X0_SET_PORT     = WIZ1X0_DIRECT_PORT  # (구명칭 호환)
 WIZ1X0_FW_PORT      = 1470   # 펌웨어 업로드 포트 (고정)
-PACKET_SIZE         = 4 + BOARD_INFO_SIZE  # 167바이트
+PACKET_SIZE         = 4 + BOARD_INFO_SIZE  # 4 + 159 = 163바이트
 
 
 class WIZ1x0Searcher(QThread):
@@ -110,6 +112,85 @@ class WIZ1x0Searcher(QThread):
         result_list = [(mac, d) for mac, d in results.items()]
         self.logger.info(f"[WIZ1x0] 검색 완료: {len(result_list)}개")
         self.search_done.emit(result_list)
+
+
+class WIZ1x0DirectSearcher(QThread):
+    """WIZ1x0SR 직접-IP 검색 스레드 (TCP:1461).
+
+    VB6 원본 frmSEGConf의 WinsockDirect_Connect/_DataArrival 이식:
+    TCP 연결 → 'FIND'(4B) 전송 → 'IMIN'+159B(총 163B) 수신 → 세션 종료.
+    UDP 브로드캐스트와 달리 장치 1대만 대상이며 응답도 1회다.
+
+    설계 계약 (issue #67 후속 — pending 플래그 데드락 방지):
+      - 모든 경로에서 search_done을 정확히 1회 emit
+        (연결 실패/타임아웃/파싱 실패 = 빈 리스트)
+      - 소켓은 지역 변수로만 생성·해제 — main_gui의 conf_sock/isConnected를
+        절대 건드리지 않는다 (그 둘은 ASCII TCP 경로 전용 게이트)
+      - TCP는 스트림이라 163바이트가 분할 도착할 수 있다 → deadline까지 누적
+
+    주의: parse_imin()의 WIZ120SR 필터(byte[103])가 여기에도 적용된다.
+    VB6 원본은 Direct 경로에 이 필터가 없었으나(비대칭 버그), 의도적으로
+    더 엄격한 쪽을 택했다 — 120SR은 미지원 장치.
+    """
+    search_done = pyqtSignal(list)
+
+    def __init__(self, target_ip: str, timeout: float = 2.0):
+        super().__init__()
+        self.target_ip = target_ip
+        self.timeout = timeout
+        self.logger = logger
+
+    def run(self):
+        results = []
+        sock = None
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # 미설정 시 connect가 OS 기본(수십 초)까지 블록될 수 있다
+            sock.settimeout(self.timeout)
+            self.logger.info(
+                f"[WIZ1x0] direct 검색: {self.target_ip}:{WIZ1X0_DIRECT_PORT}"
+            )
+            sock.connect((self.target_ip, WIZ1X0_DIRECT_PORT))
+            sock.sendall(build_find())
+
+            # 스트림 재조립 — PACKET_SIZE(163B)를 채우거나 deadline까지
+            buf = b''
+            deadline = time.time() + self.timeout
+            while len(buf) < PACKET_SIZE:
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    break
+                sock.settimeout(remaining)
+                chunk = sock.recv(PACKET_SIZE - len(buf))
+                if not chunk:  # 장치가 세션을 닫음
+                    break
+                buf += chunk
+
+            parsed = parse_imin(buf)
+            if parsed is not None:
+                self.logger.info(
+                    f"[WIZ1x0] direct 발견: {parsed['mac']} "
+                    f"({self.target_ip}) FW={parsed['appver_str']}"
+                )
+                results.append((parsed['mac'], parsed))
+            elif buf:
+                self.logger.debug(
+                    f"[WIZ1x0] direct 응답 파싱 실패: len={len(buf)}"
+                )
+        except OSError as e:
+            # 연결 거부/타임아웃 = 그 IP에 WIZ1x0 없음. 정상 탐색 실패.
+            self.logger.info(f"[WIZ1x0] direct 검색 실패 {self.target_ip}: {e}")
+        except Exception as e:
+            self.logger.error(f"[WIZ1x0] DirectSearcher 오류: {e}")
+        finally:
+            if sock:
+                try:
+                    sock.close()
+                except OSError:
+                    pass
+
+        # 계약: 어떤 경로에서도 정확히 1회 emit (호출측 UI 갱신 보장)
+        self.search_done.emit(results)
 
 
 class WIZ1x0Setter(QThread):

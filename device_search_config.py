@@ -105,6 +105,7 @@ class DeviceSearchConfig:
                 'set_command_delay_ms': 500,
                 'set_response_timeout_sec': 2.0,
                 'set_response_timeout_5xx_sec': 2.0,
+                'post_apply_reboot_delay_sec': 1.0,
             },
             'tcp': {
                 'scan_timeout_sec': 2.0,
@@ -113,11 +114,11 @@ class DeviceSearchConfig:
             'retry': {
                 'delay_between_retries_ms': 100,
                 'max_retry_count_limit': 100,
-                'default_max_retry': 3,
+                'default_max_retry': 1,
             },
             'options': {
                 'expected_device_count': 0,
-                'max_retry_count': 3,
+                'max_retry_count': 1,
             },
         },
         'ui': {
@@ -144,6 +145,9 @@ class DeviceSearchConfig:
             'max_parallel_sockets': 0,
             'phase3_on_demand': False,
         },
+        'fw_compat': {
+            'auto_update': True,
+        },
         'active_preset': 'normal',
         'logging': {
             'level': 'INFO',
@@ -163,6 +167,8 @@ class DeviceSearchConfig:
         ('search', 'phase3', 'set_command_delay_ms'): (0, 2000),
         ('search', 'phase3', 'set_response_timeout_sec'): (1.0, 15.0),
         ('search', 'phase3', 'set_response_timeout_5xx_sec'): (1.0, 30.0),
+        ('search', 'phase3', 'post_apply_reboot_delay_sec'): (0.0, 5.0),
+        ('search', 'tcp', 'scan_timeout_sec'): (0.5, 10.0),
         ('search', 'tcp', 'max_parallel_workers'): (1, 50),
         ('ui', 'progress_bar', 'update_percent'): (1, 100),
         ('ui', 'progress_bar', 'auto_hide_delay_ms'): (0, 10000),
@@ -496,6 +502,17 @@ class DeviceSearchConfig:
         """
         return float(self.config['search']['phase3']['set_response_timeout_5xx_sec'])
 
+    def get_phase3_post_apply_reboot_delay(self) -> float:
+        """IP 모드 변경 Apply 후 재검색 대기 (초)
+
+        장치가 리부팅 감지된 Apply 뒤, 설정 포트가 다시 열릴 시간을 벌어준다
+        (socket_config의 TCP probe 1회 재확인 대기).
+
+        Returns:
+            float: 대기 시간 (초)
+        """
+        return float(self.config['search']['phase3']['post_apply_reboot_delay_sec'])
+
     # ============================================================
     # TCP 설정 접근자
     # ============================================================
@@ -589,6 +606,17 @@ class DeviceSearchConfig:
         level_str = self.config.get('logging', {}).get('level', 'INFO').upper()
         return getattr(logging, level_str, logging.INFO)
 
+    def is_verbose_debug(self) -> bool:
+        """상세 디버그(와이어 바이트 덤프 등) 활성화 여부
+
+        DEBUG 레벨만으로는 양이 많아 평소 끄고, 프로토콜 수준 추적이
+        필요할 때만 켠다. 런타임 변경 가능(config 파일 감시).
+
+        Returns:
+            bool: True면 [WIRE] 로그 출력
+        """
+        return bool(self.config.get('logging', {}).get('verbose_debug', False))
+
     def is_skip_phase1_emit_delay(self) -> bool:
         """Phase 1 emit 전 msleep 건너뛰기 여부
 
@@ -604,6 +632,15 @@ class DeviceSearchConfig:
             bool: True면 재사용, False면 전용 소켓 생성
         """
         return self.config['experimental']['reuse_phase1_socket']
+
+    def is_fw_compat_auto_update(self) -> bool:
+        """FW from Git 호환표를 GitHub 에서 자동 갱신할지 여부
+
+        Returns:
+            bool: True면 실행할 때 백그라운드로 더 새로운 호환표를 확인한다.
+                  폐쇄망처럼 외부 접속이 안 되는 곳에서는 False 로 끈다.
+        """
+        return bool(self.config['fw_compat']['auto_update'])
 
     # ============================================================
     # 범용 접근자
@@ -658,13 +695,17 @@ class DeviceSearchConfig:
             'phase3_set_command_delay_ms': self.get_phase3_set_command_delay_ms(),
             'phase3_set_response_timeout': self.get_phase3_set_response_timeout(),
             'phase3_set_response_timeout_5xx': self.get_phase3_set_response_timeout_5xx(),
+            'phase3_post_apply_reboot_delay': self.get_phase3_post_apply_reboot_delay(),
+            'tcp_scan_timeout': self.get_tcp_scan_timeout(),
             'tcp_max_parallel_workers': self.get_tcp_max_parallel_workers(),
             'pgbar_update_percent': self.get_pgbar_update_percent(),
             'pgbar_auto_hide_delay_ms': self.get_pgbar_auto_hide_delay_ms(),
             'expected_device_count': self.config.get('search', {}).get('options', {}).get('expected_device_count', 0),
-            'max_retry_count': self.config.get('search', {}).get('options', {}).get('max_retry_count', 3),
+            'max_retry_count': self.config.get('search', {}).get('options', {}).get('max_retry_count', 1),
             'show_timing_in_statusbar': self.config.get('logging', {}).get('show_timing_in_statusbar', False),
             'phase3_on_demand': self.config.get('experimental', {}).get('phase3_on_demand', False),
+            'logging_level': self.config.get('logging', {}).get('level', 'INFO'),
+            'logging_verbose_debug': self.is_verbose_debug(),
             'delay_between_retries_ms': int(self.config.get('search', {}).get('retry', {}).get('delay_between_retries_ms', 100)),
         }
 
@@ -749,11 +790,32 @@ class DeviceSearchConfig:
                     raise ValueError(f"phase3_set_response_timeout_5xx must be 1.0~30.0, got {value}")
                 self.config['search']['phase3']['set_response_timeout_5xx_sec'] = value
 
+            if 'phase3_post_apply_reboot_delay' in updates:
+                value = float(updates['phase3_post_apply_reboot_delay'])
+                if not (0.0 <= value <= 5.0):
+                    raise ValueError(f"phase3_post_apply_reboot_delay must be 0.0~5.0, got {value}")
+                self.config['search']['phase3']['post_apply_reboot_delay_sec'] = value
+
             if 'tcp_max_parallel_workers' in updates:
                 value = int(updates['tcp_max_parallel_workers'])
                 if not (1 <= value <= 50):
                     raise ValueError(f"tcp_max_parallel_workers must be 1~50, got {value}")
                 self.config['search']['tcp']['max_parallel_workers'] = value
+
+            if 'tcp_scan_timeout' in updates:
+                value = float(updates['tcp_scan_timeout'])
+                if not (0.5 <= value <= 10.0):
+                    raise ValueError(f"tcp_scan_timeout must be 0.5~10.0, got {value}")
+                self.config['search']['tcp']['scan_timeout_sec'] = value
+
+            if 'logging_level' in updates:
+                value = str(updates['logging_level']).upper()
+                if value not in self._ENUM_VALIDATORS[('logging', 'level')]:
+                    raise ValueError(f"logging_level must be one of {self._ENUM_VALIDATORS[('logging', 'level')]}, got {value}")
+                self.config.setdefault('logging', {})['level'] = value
+
+            if 'logging_verbose_debug' in updates:
+                self.config.setdefault('logging', {})['verbose_debug'] = bool(updates['logging_verbose_debug'])
 
             if 'pgbar_update_percent' in updates:
                 value = int(updates['pgbar_update_percent'])

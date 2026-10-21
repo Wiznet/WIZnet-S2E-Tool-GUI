@@ -18,6 +18,8 @@ from typing import Any
 
 import yaml
 
+from fw_version import parse as _parse_numeric_version
+
 _log = logging.getLogger(__name__)
 
 SPECS_DIR = Path(__file__).parent / "specs"
@@ -68,6 +70,8 @@ class CmdEntry:
 class FWConfig:
     upload_supported: bool = False
     config_port: int = 50001
+    # SEGCP 요청/응답 버퍼 크기(B). 0 = 모름 → 응답 크기 경고를 내지 않는다
+    config_buf_size: int = 0
     upload_port_from_response: bool = False
     hw_version_field: str = "VR"
     new_hw_major_versions: list[int] = field(default_factory=list)
@@ -132,14 +136,34 @@ class DeviceSpec:
 # ---------------------------------------------------------------------------
 
 def _parse_version(ver_str: str | None):
-    """packaging.version.Version 반환. 파싱 실패 시 None."""
+    """숫자부만 담은 packaging.version.Version 반환. 숫자부가 없으면 None.
+
+    버전 비교는 숫자부만 가지고 한다(`fw_version` 모듈 설명 참고). `1.1.8dev`·`1.4.5A`
+    는 정식판과 같은 번호이고 `VR2.1.0`·`1.3.3XXX`·`1.2.5_GreenCS` 도 숫자부로 읽는다.
+    YAML 의 `min_version` 값 같은 "조건 쪽" 문자열에 쓴다 — 없거나 못 읽으면 조건 없음.
+    장치가 보고한 버전은 `_parse_device_version()` 을 쓴다.
+    """
     if not ver_str:
         return None
-    try:
-        from packaging.version import Version
-        return Version(str(ver_str))
-    except Exception:
+    return _parse_numeric_version(ver_str)
+
+
+def _parse_device_version(fw_version_str: str | None):
+    """장치가 보고한 펌웨어 버전 → Version.
+
+    - 값이 없으면(None / 빈 문자열) None: 버전을 모르는 호출(목록 조회 등)이라 게이트를 걸지 않는다.
+    - 값은 있는데 숫자부가 없으면 Version("0"): 가장 오래된 펌웨어로 본다. 이전에는 None 이 되어
+      모든 `min_version` 게이트가 통째로 사라져 "항상 최신 FW" 로 취급됐다(fail-open).
+      `WIZMakeCMD._safe_version` 과 같은 정책이다.
+    """
+    if not fw_version_str:
         return None
+    parsed = _parse_numeric_version(fw_version_str)
+    if parsed is None:
+        _log.warning("[version] 숫자부를 찾지 못함: %r → 0 으로 처리", fw_version_str)
+        from packaging.version import Version
+        return Version("0")
+    return parsed
 
 
 def _check_version_condition(fw_ver: Any, condition: str) -> bool:
@@ -289,6 +313,30 @@ def _load_command_group(
     return cmdset, meta
 
 
+def _select_partial_commands(
+    group_cmdset: dict,
+    wanted: list,
+    group_name: str,
+    device_name: str,
+) -> dict:
+    """그룹에서 지정한 커맨드만 골라 낸다.
+
+    펌웨어가 그룹의 일부만 가진 기종이 있다. 예를 들어 WIZ5XXSR-RP 펌웨어의
+    1-UART enum(`segcp.h`)에는 DDNS 커맨드 중 `DH` 하나뿐이다. 그룹을 통째로
+    넣으면 spec 이 펌웨어에 없는 커맨드를 가졌다고 주장하게 된다.
+
+    없는 커맨드를 적으면 조용히 넘기지 않는다 — 오타가 그대로 굳으면
+    "왜 이 커맨드만 빠졌지" 를 다음 사람이 다시 추적하게 된다.
+    """
+    unknown = [c for c in wanted if c not in group_cmdset]
+    if unknown:
+        raise ValueError(
+            f"{device_name}: partial_command_groups.{group_name} 에 "
+            f"그룹에 없는 커맨드 {unknown} — 오타이거나 그룹 파일에 정의가 없다"
+        )
+    return {c: group_cmdset[c] for c in wanted}
+
+
 def _apply_overrides(
     cmdset: dict[str, CmdEntry],
     overrides: dict,
@@ -387,7 +435,7 @@ def _load_device_impl(device_name: str, fw_version: str | None) -> DeviceSpec:
         raise FileNotFoundError(f"Device spec not found: {path}")
 
     dev = _load_yaml(path)
-    fw_ver = _parse_version(fw_version)
+    fw_ver = _parse_device_version(fw_version)
 
     # 0. device YAML 스키마 검증 — family로 스키마 선택 (validate_schemas.py 와 동일 기준).
     #    WIZ550 계열은 바이너리 프로토콜이라 command_groups 가 없고 protocol/sections 구조를
@@ -407,8 +455,21 @@ def _load_device_impl(device_name: str, fw_version: str | None) -> DeviceSpec:
         if meta is not None:
             module_meta[group] = meta
 
-    # 1b. requires/conflicts 호환성 검증
-    _validate_module_compatibility(list(dev.get("command_groups", [])), module_meta)
+    # 1a. 부분 include — 그룹에서 이 커맨드만 가져온다.
+    #     펌웨어가 그룹의 일부만 가진 기종을 위해 있다. 근거는 각 장치 YAML 의 주석에.
+    partial_groups = list(dev.get("partial_command_groups", {}) or {})
+    for group, wanted in (dev.get("partial_command_groups", {}) or {}).items():
+        group_cmdset, meta = _load_command_group(group)
+        cmdset.update(
+            _select_partial_commands(group_cmdset, list(wanted), group, device_name)
+        )
+        if meta is not None:
+            module_meta[group] = meta
+
+    # 1b. requires/conflicts 호환성 검증 (부분 include 도 그룹으로 친다)
+    _validate_module_compatibility(
+        list(dev.get("command_groups", [])) + partial_groups, module_meta
+    )
 
     # 2. device-level overrides (min_version 필터 포함)
     if "overrides" in dev:
@@ -431,6 +492,7 @@ def _load_device_impl(device_name: str, fw_version: str | None) -> DeviceSpec:
     fw_config = FWConfig(
         upload_supported=fw_raw.get("upload_supported", False),
         config_port=fw_raw.get("config_port", 50001),
+        config_buf_size=int(fw_raw.get("config_buf_size", 0) or 0),
         upload_port_from_response=fw_raw.get("upload_port_from_response", False),
         hw_version_field=fw_raw.get("hw_version_field", "VR"),
         new_hw_major_versions=fw_raw.get("new_hw_major_versions", []),

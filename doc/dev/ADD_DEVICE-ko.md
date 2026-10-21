@@ -73,6 +73,7 @@ overrides:                    # 장치 특화 값 (선택)
 fw_constraints:               # 펌웨어 업로드 설정 (선택)
   upload_supported: true
   config_port: 50001
+  config_buf_size: 2048       # SEGCP 응답 버퍼(B, 선택). 응답이 여기 닿으면 로그에 [SIZE] 경고. 모르면 생략
 
 ui:                           # UI 탭/그룹 구성
   tabs:
@@ -117,6 +118,7 @@ ui:                           # UI 탭/그룹 구성
 
 - **값 범위 변경** — Baud rate 최대값이 다른 경우 `BR`의 `regex`와 `values`를 재정의
 - **FW 버전 게이트** — 특정 펌웨어 이상에서만 지원하는 커맨드는 `min_version` 지정. 장치 FW가 이보다 낮으면 해당 커맨드가 UI에서 자동 제외됩니다
+- **길이 상한** — FW 버퍼가 받을 수 있는 글자 수가 정해진 문자열 커맨드(`NP`, `PI`, `PP` 등)는 `regex: "^.{0,N}$"` 로 적습니다. 이 형태이면 **UI 입력칸도 N자에서 더 받지 않습니다**(`_apply_text_length_limits`, 기종을 바꾸면 다시 정함). 상한을 넘겨 SET 하면 FW 가 같은 요청의 저장(SV)까지 취소하므로 반드시 적습니다. 예: W55RP20 계열 `NP` 9자, W55RP20-S2E-4CH `PI`/`PP` 63자
 
 ---
 

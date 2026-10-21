@@ -63,8 +63,46 @@ search_cmd_order:
 command_groups:
   - base
   - security
+  # 2026-09-08: FW segcp.h(1-UART enum, DEVICE_UART_CNT==1)에 있는 것만 넣는다.
+  # gpio(CA~CD/GA~GD/SC/S0/S1)·modbus(MB PO)·retransmit(TR EC) 는 enum 에 전부 있다.
+  # PO 는 telnet 이 아니라 modbus 쪽 정의를 쓴다 — 이 펌웨어에서 PO 는
+  # 시리얼 프로토콜(0~2) 선택자다(segcp.c:795, uartHandler.h:94).
+  - retransmit
+  - modbus
+  - gpio
+
+# 그룹 전체가 아니라 이것만 — RP2040 펌웨어의 DDNS 는 도메인(DH) 하나뿐이고
+# DD DX DP DI DW 는 segcp.h enum 에 없다. 통째로 넣으면 spec 이 펌웨어에 없는
+# 커맨드를 가졌다고 주장하게 된다. (2026-09-08 FW 대조)
+partial_command_groups:
+  ddns: [DH]
+
 
 overrides:
+  # [FW 소스 대조 2026-10-20] 칸 크기-1 = 최대 글자 수. 이 값을 넘기면 오류 없이 이웃 필드가
+  # 덮이거나(검사 없는 strcpy) INVALIDPARAM 으로 같은 요청의 SV 가 취소된다.
+  # 근거: doc/fw/FW-SOURCE-wiz5xxsr-rp §9.1 #2~#5 (RH[128], pw_search[10], DH[20], MQTT[128])
+  RH:
+    regex: "^(?=.{0,127}$)( ?|(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])|([A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?\\.)*[A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?)$"
+  SP:
+    regex: "^.{0,9}$"
+  QU:
+    regex: "^.{0,127}$"
+  QP:
+    regex: "^.{0,127}$"
+  QC:
+    regex: "^.{0,127}$"
+  PU:
+    regex: "^.{0,127}$"
+  U0:
+    regex: "^.{0,127}$"
+  U1:
+    regex: "^.{0,127}$"
+  U2:
+    regex: "^.{0,127}$"
+  # NP(연결 비밀번호) — FW pw_connect[10] (W55RP20/WIZ5XXSR-RP 계열 공통, 2026-10-14 확인)
+  NP:
+    regex: "^.{0,9}$"
   # BR: WIZ5XXSR-RP 최대 460800 (index 0-14)
   BR:
     regex: "^([0-9]|1[0-4])$"
@@ -99,6 +137,10 @@ overrides:
 fw_constraints:
   upload_supported: true
   config_port: 50001
+  # SEGCP 요청/응답 버퍼 크기 (common.h CONFIG_BUF_SIZE). WIZ5XXSR-RP-C 소스 확인 —
+  # W7500 계열 512 에서 2048 로 확장돼 있어 여유가 크다. 설정툴은 응답이 여기
+  # 닿았는지 사후 검출하는 데만 쓴다.
+  config_buf_size: 2048
 
 ui:
   tabs:

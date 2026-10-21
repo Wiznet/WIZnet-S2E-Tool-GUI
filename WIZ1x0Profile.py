@@ -17,6 +17,8 @@ VB6 소스(WIZ1xxSR_config_v3.0.2) 기반.
 import struct
 import ipaddress
 
+from utils import logger
+
 # ─────────────────────────────────────────────
 # typeBoardInfo 구조체 (163 bytes, little-endian)
 # ─────────────────────────────────────────────

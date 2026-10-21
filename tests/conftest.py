@@ -299,3 +299,18 @@ def qapp():
         app = QApplication(sys.argv)
     yield app
     # 세션 종료 시 app을 명시적으로 종료하지 않음 — pytest 종료 시 자동 해제
+
+
+# ─────────────────────────────────────────────────────────────────
+# 호환표 사본 격리 — 개발 PC 의 ~/.wizconfig/fw_compat_cache.json 이 시험에 끼어들지 않게 한다
+# ─────────────────────────────────────────────────────────────────
+@pytest.fixture(autouse=True)
+def _isolate_fw_compat_cache(tmp_path, monkeypatch):
+    import fw_compat_rules
+    monkeypatch.setattr(fw_compat_rules, "cache_path", lambda: str(tmp_path / "fw_compat_cache.json"))
+    fw_compat_rules.reset_for_tests()
+    fw_compat_rules.set_auto_update(False)      # 시험은 기본적으로 네트워크를 쓰지 않는다
+    yield
+    fw_compat_rules.reset_for_tests()
+    fw_compat_rules.set_auto_update(False)
+    fw_compat_rules.set_tool_version(None)

@@ -78,7 +78,11 @@ class SendWidget(QWidget):
 
         self.chk_escape = QCheckBox('Escape')
         self.chk_escape.setChecked(True)
-        self.chk_escape.setToolTip(r'Interpret \\r \\n \\xHH escape sequences')
+        self.chk_escape.setToolTip(
+            'Interpret \\r \\n \\t \\\\ \\xHH as raw bytes\n'
+            'Example: \\x41\\x42 -> AB, \\r\\n -> CR LF'
+        )
+        self.chk_escape.toggled.connect(self._update_input_hints)
         opts.addWidget(self.chk_escape)
 
         opts.addWidget(QLabel('Line End:'))
@@ -108,6 +112,25 @@ class SendWidget(QWidget):
         QShortcut(QKeySequence('Ctrl+Return'), self, self._send_once)
         QShortcut(QKeySequence('Ctrl+Up'), self, self._history_prev)
         QShortcut(QKeySequence('Ctrl+Down'), self, self._history_next)
+
+        self._update_input_hints(self.chk_escape.isChecked())
+
+    def _update_input_hints(self, escape_on: bool):
+        if escape_on:
+            self.input.setPlaceholderText(
+                'Input — Ctrl+Enter: Send | Escape: \\r \\n \\t \\\\ \\xHH'
+            )
+            self.input.setToolTip(
+                'Escape mode ON: \\r \\n \\t \\\\ \\xHH are converted to raw bytes.\n'
+                'Everything else is sent as UTF-8 text.'
+            )
+        else:
+            self.input.setPlaceholderText(
+                'Input — Ctrl+Enter: Send, Ctrl+↑/↓: History'
+            )
+            self.input.setToolTip(
+                'Escape mode OFF: text is sent as-is (UTF-8), no conversion.'
+            )
 
     def _build_payload(self) -> bytes:
         text = self.input.toPlainText()

@@ -1,0 +1,338 @@
+# W55RP20-S2E-4CH.yaml
+# 4채널 고속 S2E 게이트웨이
+# UART 4개 + TCP 소켓 4개로 이루어진 독립 4채널 (CH0~CH3 각자 시리얼↔이더넷) — 4CH 담당자 확인 2026-10-21.
+# (이전 주석의 "RS-485 버스 1개를 소켓 4개가 공유"는 GreenCS 구조이며 4CH 가 아니다.)
+# 소스 기준: 펌웨어 GreenCS 커밋 de622f8 (DEVICE_UART_CNT=4 빌드)
+# 3채널 계층(w55rp20_three_port, CH2) 위에 CH3(w55rp20_four_port) 를 얹은 구성
+#
+# 주의: family는 "능력(security/SSL 보유)" 플래그로 쓰고, 채널 수는 channels(=4)로 결정한다.
+#       ("two_port" 명칭은 레거시 — 실제 채널 수는 channels 필드가 단일 진실 소스)
+#
+# [3CH 에 관한 기록 — 4CH 담당자 확인, 2026-10-19]
+#   3채널 모델은 공식 제품이 아니다. 고객 요청으로 커스텀 개발된 사례가 있을 뿐이며 공식 릴리즈
+#   계획도 없고 모델명에 "3CH" 가 쓰이지도 않을 예정이다. 앞으로 3채널 요청이 오면 **이 4CH 모델을
+#   전달하고 설정만 3채널로 쓰게 한다.** 그래서 3CH 전용 spec(W55RP20-S2E-3CH.yaml)과 시험·배포
+#   항목은 2026-10-19 에 제거했다(git 이력에 남아 있다 — 제거 직전 커밋 ab8a832).
+#   3CH 커스텀 FW(GreenCS 브랜치)는 응답·저장 길이 검사가 모두 없고, 툴이 보는 조회 105개의 응답이 정상 값으로도
+#   최대 약 2,390B 로 버퍼 2048B 를 넘는다(코드 계산, 4CH 담당자 정리표) — 이 툴로 전체 조회를 하면 장치 메모리가
+#   덮일 수 있어 3CH 정의를 제거한 것이 결과적으로 더 안전하다.
+#   3CH 커스텀 FW 는 펌웨어 커밋 de622f8(DEVICE_UART_CNT=3) 기준이었다. 4CH 의 CH0~CH2 코드와 커맨드
+#   그룹 w55rp20_three_port 는 그 계층을 4CH 가 그대로 쓰는 것이라 남겨 두었다.
+
+name: W55RP20-S2E-4CH
+display_name: "W55RP20-S2E-4CH"
+aliases:
+  - "W55RP20-S2E-4CH"
+family: security_two_port
+channels: 4
+
+command_groups:
+  - base
+  - retransmit
+  - security
+  - w55rp20_ext
+  # W55RP20-S2E-2CH.yaml 과 동일 근거 — 3CH.yaml 헤더 주석 참고(2026-09-28 보완).
+  - modbus
+  - gpio
+  - w55rp20_two_port
+  - w55rp20_three_port
+  - w55rp20_four_port
+  # PPPoE — 4port FW 브랜치(WIZnet-ioNIC/W55RP20-S2E@4port, ff05cfa2)에서 IM=2(PPPoE)/PI/PP
+  # 추가 확인(2026-10-08). 2CH/3CH 는 FW 미확인이라 4CH 에만 넣는다(사용자 결정, 2026-10-14).
+  - pppoe
+
+# 그룹 전체가 아니라 이것만 — W55RP20-S2E-2CH.yaml 과 동일 근거(2026-09-08 FW 대조).
+partial_command_groups:
+  ddns: [DH]
+
+overrides:
+  # [FW 소스 대조 2026-10-20] 칸 크기-1 = 최대 글자 수. 이 값을 넘기면 오류 없이 이웃 필드가
+  # 덮이거나(검사 없는 strcpy) INVALIDPARAM 으로 같은 요청의 SV 가 취소된다.
+  # 근거: doc/fw/4port 브랜치 716a3b0 segcp.c (pw_search[10], device_name[20])
+  SP:
+    regex: "^.{0,9}$"
+  # NP(연결 비밀번호) — FW pw_connect[10] (W55RP20/WIZ5XXSR-RP 계열 공통, 2026-10-14 확인)
+  NP:
+    regex: "^.{0,9}$"
+  # PPPoE ID/Password — 4CH 담당자 확인(2026-10-19): SET 은 각 최대 63자. 64자 이상이면 FW 가
+  # ERINVALIDPARAM 을 내고 **같은 요청의 SV(저장)도 취소**된다 → 다른 설정까지 함께 저장 안 됨(NP 와 같은 구조).
+  PI:
+    regex: "^.{0,63}$"
+  PP:
+    regex: "^.{0,63}$"
+  # 원격 호스트(RH/QH/GH/CH) 도메인 — FW dns_domain_name[128] → segcp_store_string 이 NUL 자리 1B 를 빼고
+  # 최대 127자만 받는다(4port 브랜치 segcp.c, 2026-10-20 소스 확인). 128자 이상이면 ERINVALIDPARAM + SV 취소.
+  # base 의 RH/QH/GH 는 128자까지 허용해 FW 보다 1자 느슨했다. CH 는 w55rp20_four_port.yaml 에서 교정.
+  RH:
+    regex: "^(?=.{0,127}$)( ?|(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])|([A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?\\.)*[A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?)$"
+  QH:
+    regex: "^(?=.{0,127}$)( ?|(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])|([A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?\\.)*[A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?)$"
+  GH:
+    regex: "^(?=.{0,127}$)( ?|(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])|([A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?\\.)*[A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?)$"
+  # IM — 4port FW 브랜치에서 PPPoE(2) 추가 확인(ff05cfa2, 2026-10-08). base.yaml 은 0/1만 정의.
+  IM:
+    regex: "^[0-2]$"
+    values:
+      "0": "Static IP"
+      "1": "DHCP"
+      "2": "PPPoE"
+  BR:
+    regex: "^([0-9]|1[0-9])$"
+    values:
+      "0": "300"
+      "1": "600"
+      "2": "1200"
+      "3": "1800"
+      "4": "2400"
+      "5": "4800"
+      "6": "9600"
+      "7": "14400"
+      "8": "19200"
+      "9": "28800"
+      "10": "38400"
+      "11": "57600"
+      "12": "115200"
+      "13": "230400"
+      "14": "460800"
+      "15": "921600"
+      "16": {value: "1M", min_version: "1.2.1"}
+      "17": {value: "2M", min_version: "1.2.1"}
+      "18": {value: "4M", min_version: "1.2.1"}
+      "19": {value: "8M", min_version: "1.2.1"}
+  EB:
+    regex: "^([0-9]|1[0-9])$"
+    values:
+      "0": "300"
+      "1": "600"
+      "2": "1200"
+      "3": "1800"
+      "4": "2400"
+      "5": "4800"
+      "6": "9600"
+      "7": "14400"
+      "8": "19200"
+      "9": "28800"
+      "10": "38400"
+      "11": "57600"
+      "12": "115200"
+      "13": "230400"
+      "14": "460800"
+      "15": "921600"
+      "16": {value: "1M", min_version: "1.2.1"}
+      "17": {value: "2M", min_version: "1.2.1"}
+      "18": {value: "4M", min_version: "1.2.1"}
+      "19": {value: "8M", min_version: "1.2.1"}
+  WB:
+    regex: "^([0-9]|1[0-9])$"
+    values:
+      "0": "300"
+      "1": "600"
+      "2": "1200"
+      "3": "1800"
+      "4": "2400"
+      "5": "4800"
+      "6": "9600"
+      "7": "14400"
+      "8": "19200"
+      "9": "28800"
+      "10": "38400"
+      "11": "57600"
+      "12": "115200"
+      "13": "230400"
+      "14": "460800"
+      "15": "921600"
+      "16": {value: "1M", min_version: "1.2.1"}
+      "17": {value: "2M", min_version: "1.2.1"}
+      "18": {value: "4M", min_version: "1.2.1"}
+      "19": {value: "8M", min_version: "1.2.1"}
+  YB:
+    regex: "^([0-9]|1[0-9])$"
+    values:
+      "0": "300"
+      "1": "600"
+      "2": "1200"
+      "3": "1800"
+      "4": "2400"
+      "5": "4800"
+      "6": "9600"
+      "7": "14400"
+      "8": "19200"
+      "9": "28800"
+      "10": "38400"
+      "11": "57600"
+      "12": "115200"
+      "13": "230400"
+      "14": "460800"
+      "15": "921600"
+      "16": {value: "1M", min_version: "1.2.1"}
+      "17": {value: "2M", min_version: "1.2.1"}
+      "18": {value: "4M", min_version: "1.2.1"}
+      "19": {value: "8M", min_version: "1.2.1"}
+  # OP/AO/TO/JO — 3CH/4CH 펌웨어는 SSL/MQTT 미지원, 0~3(TCP client/server/mixed/UDP)만 유효.
+  # 4~6은 ERINVALIDPARAM. 근거: FW 문서 W55RP20_ConfigTool_main_vs_4Port_KR.md(2026-09-23) 표3.
+  OP:
+    regex: "^[0-3]$"
+    values:
+      "0": "TCP Client mode"
+      "1": "TCP Server mode"
+      "2": "TCP Mixed mode"
+      "3": "UDP mode"
+  AO:
+    regex: "^[0-3]$"
+    values:
+      "0": "TCP Client mode"
+      "1": "TCP Server mode"
+      "2": "TCP Mixed mode"
+      "3": "UDP mode"
+  TO:
+    regex: "^[0-3]$"
+    values:
+      "0": "TCP Client mode"
+      "1": "TCP Server mode"
+      "2": "TCP Mixed mode"
+      "3": "UDP mode"
+  JO:
+    regex: "^[0-3]$"
+    values:
+      "0": "TCP Client mode"
+      "1": "TCP Server mode"
+      "2": "TCP Mixed mode"
+      "3": "UDP mode"
+  # FL/EF/WF/YF — 3CH/4CH 펌웨어는 DTR/DSR(5)까지 지원. 근거: 위 문서 표3, 커밋 00b30e9.
+  FL:
+    regex: "^[0-5]$"
+    values:
+      "0": "NONE"
+      "1": "XON/XOFF"
+      "2": "RTS/CTS"
+      "3": "RTS on TX"
+      "4": "RTS on TX (invert)"
+      "5": "DTR/DSR"
+  EF:
+    regex: "^[0-5]$"
+    values:
+      "0": "NONE"
+      "1": "XON/XOFF"
+      "2": "RTS/CTS"
+      "3": "RTS on TX"
+      "4": "RTS on TX (invert)"
+      "5": "DTR/DSR"
+  WF:
+    regex: "^[0-5]$"
+    values:
+      "0": "NONE"
+      "1": "XON/XOFF"
+      "2": "RTS/CTS"
+      "3": "RTS on TX"
+      "4": "RTS on TX (invert)"
+      "5": "DTR/DSR"
+  YF:
+    regex: "^[0-5]$"
+    values:
+      "0": "NONE"
+      "1": "XON/XOFF"
+      "2": "RTS/CTS"
+      "3": "RTS on TX"
+      "4": "RTS on TX (invert)"
+      "5": "DTR/DSR"
+  # KI/KE(ch0)·RS/RE(ch1)·XS/XE(ch2)·ZS/ZE(ch3) keep-alive 간격 — 3CH/4CH 는 1000ms 미만
+  # ERINVALIDPARAM. 근거: 위 문서 표3.
+  KI:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  KE:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  RS:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  RE:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  XS:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  XE:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  ZS:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+  ZE:
+    regex: "^(1000|100[1-9]|10[1-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+
+fw_constraints:
+  upload_supported: true
+  config_port: 50001
+  # SEGCP 응답 버퍼 — 4CH 담당자 확인(2026-10-19, FW 커밋 90af22e 기준).
+  # · 응답 중 **남은 공간이 256B 미만**이 되면 그 뒤 명령은 응답하지 않고 거기서 잘라 보낸다
+  #   ("256B 를 더하는 여유분"이 아니라 2048B 중 남은 양이 기준). 이 절단은 **4CH 빌드에만 있는
+  #   패치**다 — 다른 빌드는 응답이 버퍼를 넘기면 메모리가 덮여 요청 버퍼가 깨지고 대응 코드가 없다.
+  # · UDP 는 1472B 를 넘으면 한 패킷에 안 들어가고 W5500 이 IP 조각내기를 지원하지 않아 유실될 수 있다
+  #   (공장 기본값 응답은 약 920B).
+  # · 잘린 응답은 **조회한 명령이 응답에 아예 없다**는 모양이다(값이 빈 것과 다름 — 설정한 적 없는
+  #   값은 "PI" 처럼 명령어만 온다). 툴의 [SIZE] 경고는 응답이 2048B 에 닿을 때만 울려 이 절단은
+  #   직접 잡지 못한다. 응답에 빠진 명령이 있으면 경고하는 안은 TASKS.md TODO-REPLY-MISSING-CMDS.
+  # · PI/PP GET: Static IP 상태에서도 **이미 설정된 값이 응답된다.** 설정한 적이 없으면 명령어만 온다.
+  config_buf_size: 2048
+
+ui:
+  widget_overrides:
+    # DDNS/PPPoE 탭 — PPPoE(IM=2) 추가로 4CH 도 이 탭을 연다(2026-10-14, 사용자 결정: 4CH 만).
+    ddns_pppoe_tab:
+      visible: true
+  tabs:
+    - id: network
+      label: "Network"
+      groups:
+        - device_info
+        - pppoe
+        - ip_mode
+        - op_mode
+        - conn_password
+        - ssl_options
+    - id: serial
+      label: "Serial (CH0)"
+      groups:
+        - serial_info
+        - serial_params
+        - data_packing
+    - id: channel1
+      label: "Channel 1"
+      groups:
+        - ch1_info
+        - ch1_op_mode
+        - ch1_serial
+        - ch1_packing
+        - ch1_options
+        - ch1_connection_events
+    - id: channel2
+      label: "Channel 2"
+      groups:
+        - ch2_info
+        - ch2_op_mode
+        - ch2_serial
+        - ch2_packing
+        - ch2_options
+        - ch2_connection_events
+    - id: channel3
+      label: "Channel 3"
+      groups:
+        - ch3_info
+        - ch3_op_mode
+        - ch3_serial
+        - ch3_packing
+        - ch3_options
+        - ch3_connection_events
+    - id: options
+      label: "Options"
+      groups:
+        - inactivity
+        - keepalive
+        - trigger
+        - search_password
+        - tcp_options
+        - connection_events
+    - id: mqtt
+      label: "MQTT"
+      groups:
+        - mqtt_options
+        - mqtt_topics
+    - id: certificate
+      label: "Certificate"
+      groups:
+        - cert_options
+        - cert_upload

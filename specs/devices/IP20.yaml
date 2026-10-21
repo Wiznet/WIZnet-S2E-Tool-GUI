@@ -13,8 +13,43 @@ command_groups:
   - retransmit
   - security
   - w55rp20_ext
+  # 2026-09-08: 이 기종의 FW 소스가 없다. 확인할 수 없는 것을 주장하지 않으려고
+  # 설정툴이 실제로 묻는 커맨드만 부분 include 한다(WIZMakeCMD.cmd_security_base 계열).
+  # PO 는 W55RP20 펌웨어와 같은 계열이므로 Modbus 의미(0~2)로 본다 — telnet(0~1)을
+  # 쓰면 2 가 거부된다. MB 는 묻지 않아 넣지 않는다.
+
+# 그룹 전체가 아니라 이것만 — 이 기종의 FW 소스가 없어 DDNS 전체 지원 여부를
+# 확인할 수 없다. 설정툴이 묻는 것은 도메인(DH) 뿐이므로 그것만 주장한다.
+partial_command_groups:
+  ddns: [DH]
+  gpio: [SC]
+  modbus: [PO]
+
 
 overrides:
+  # [FW 소스 대조 2026-10-20] 칸 크기-1 = 최대 글자 수. 이 값을 넘기면 오류 없이 이웃 필드가
+  # 덮이거나(검사 없는 strcpy) INVALIDPARAM 으로 같은 요청의 SV 가 취소된다.
+  # 근거: doc/fw/FW-SOURCE-w55rp20-other-branches §7 #4 (같은 소스의 보드 선택지, CMakeLists.txt:50-58)
+  RH:
+    regex: "^(?=.{0,127}$)( ?|(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])|([A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?\\.)*[A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?)$"
+  SP:
+    regex: "^.{0,9}$"
+  QU:
+    regex: "^.{0,127}$"
+  QP:
+    regex: "^.{0,127}$"
+  QC:
+    regex: "^.{0,127}$"
+  PU:
+    regex: "^.{0,127}$"
+  U0:
+    regex: "^.{0,127}$"
+  U1:
+    regex: "^.{0,127}$"
+  U2:
+    regex: "^.{0,127}$"
+  NP:
+    regex: "^.{0,9}$"
   # 고속 Baudrate (FW >= 1.2.1에서 index 0-19 지원, W55RP20-S2E와 동일 — IP20은 W55RP20 칩 사용)
   # 근거: wizcmdset.py get_cmdset() name in ("W55RP20-S2E", "IP20") → W55RP20_CMDSET (BR 0-19)
   #       + 커밋 5a638bb "Integrate IP20 into W55RP20_CMDSET for high-speed baudrate support" (2026-02-10)

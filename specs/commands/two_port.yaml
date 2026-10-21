@@ -278,3 +278,34 @@ RE:
     label: "CH1 KA Retry (ms)"
     order: 4
     depends_on: {RA: "1"}
+
+# 채널1 상태 핀. 채널0 의 S0/S1(gpio.yaml)과 같은 값을 채널1 인자로 읽는다 —
+# segcp.c:548 `get_connection_status_io(PHYLINK, 1)` / :555 `(TCPCONNECT, 1)`.
+# SET 은 펌웨어가 INVALIDPARAM 으로 거부한다(segcp.c:1270) → 읽기 전용.
+E0:
+  description: "Channel 1 status of pin S0 (PHY Link or DTR)"
+  regex: "^[0-1]$"
+  values:
+    "0": "PHY Link Up / Not ready"
+    "1": "PHY Link Down / Ready"
+  access: RO
+  ui:
+    tab: channel1
+    group: ch1_options
+    widget: label
+    label: "CH1 Status Pin S0"
+    order: 10
+
+E1:
+  description: "Channel 1 status of pin S1 (TCP Connect or DSR)"
+  regex: "^[0-1]$"
+  values:
+    "0": "Disconnected / Not ready"
+    "1": "Connected / Ready"
+  access: RO
+  ui:
+    tab: channel1
+    group: ch1_options
+    widget: label
+    label: "CH1 Status Pin S1"
+    order: 11

@@ -52,8 +52,24 @@ command_groups:
   - base
   - retransmit
   - gpio
+  # 2026-09-08: FW segcp.h 의 teSEGCPCMDNUM 에 DDNS(DD DX DP DI DW DH)·PPPoE(PI PP) 가
+  # 전부 있다. 설정툴도 이 커맨드를 묻는다(WIZMakeCMD.cmd_ch1). DDNS/PPPoE 탭은
+  # WIZ107SR/108SR 에서만 열리므로 화면 변화는 없다.
+  - ddns
+  - pppoe
 
 overrides:
+  # [FW 소스 대조 2026-10-20] 칸 크기-1 = 최대 글자 수. 이 값을 넘기면 오류 없이 이웃 필드가
+  # 덮이거나(검사 없는 strcpy) INVALIDPARAM 으로 같은 요청의 SV 가 취소된다.
+  # 근거: doc/fw/FW-SOURCE-wiz750sr §9.1 #1,#2 (dns_domain_name[49], pw_search[10])
+  RH:
+    regex: "^(?=.{0,48}$)( ?|(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])|([A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?\\.)*[A-Za-z0-9]([A-Za-z0-9_-]{0,61}[A-Za-z0-9])?)$"
+  SP:
+    regex: "^.{0,9}$"
+  # NP(연결 비밀번호) — FW pw_connect[10] (2026-10-14 실제 소스 WIZ750SR/.../ConfigData.h:68 확인).
+  # 10자 이상 보내면 ERINVALIDPARAM → UDP/TCP 모드라 ER 문자열 없이 SAVE 전체 스킵(조용히 실패).
+  NP:
+    regex: "^.{0,9}$"
   # TR: FW 1.2.0 이상에서만 지원
   TR:
     min_version: "1.2.0"
@@ -79,6 +95,9 @@ overrides:
 fw_constraints:
   upload_supported: true
   config_port: 50001
+  # SEGCP 요청/응답 버퍼 gSEGCPREQ/gSEGCPREP 크기 (common.h CONFIG_BUF_SIZE). 펌웨어가
+  # 응답 길이를 대조하지 않으므로 설정툴이 응답이 여기 닿았는지 사후 검출하는 데 쓴다.
+  config_buf_size: 512
 
 ui:
   widget_overrides:
