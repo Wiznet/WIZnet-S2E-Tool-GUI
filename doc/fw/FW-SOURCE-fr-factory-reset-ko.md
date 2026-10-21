@@ -73,3 +73,34 @@ case SEGCP_SV: case SEGCP_RT: case SEGCP_FR: case SEGCP_PW: case SEGCP_UI:
 | 1 | `"0"` 을 받던 모델·FW 이름 | 담당자에게 서면(메일·메신저 캡처)으로 확인해 이 문서에 출처 추가 |
 | 2 | 그 FW 의 소스 | 담당자에게 저장소 위치 확인 (로컬·GitHub 공개분에는 없음) |
 | 3 | 현재 기종에서 `FR0` 응답 | 실기기에서 `FR0` 를 보내 응답(`ER` 여부) 확인 — 시험서 규칙상 사용자 승인 후 |
+
+## 6. W55RP20 계열 판별 (2026-10-21, 담당자 확인: 오래된 모델 담당자는 없음)
+
+대상: W55RP20-S2E(1CH), 2CH, 4CH(=`upstream/4port`). 3CH(GreenCS)는 공식 제품이 아니라 제외하되 소스는 같은 구조라 함께 확인했다.
+
+### 6-1. 두 메뉴가 보내는 것과 FW 결과 `[소스]`
+| 툴 메뉴 | 전송 바이트 | `parse_SEGCP` 결과 | 분기 | FW 결과 |
+| --- | --- | --- | --- | --- |
+| Factory default settings | `FR\r\n` | `*param == 0` | GET (`case SEGCP_FR`) | `ret \|= SEGCP_RET_FACTORY \| SEGCP_RET_REBOOT` → `device_set_factory_default()` → 재부팅 |
+| Factory default firmware | `FR0\r\n` | `param = "0"` (`strcpy(param, &pmsg[2])`) | SET (`case SEGCP_FR` 가 `SV RT PW` 와 같은 묶음) | `ret \|= SEGCP_RET_ERR_NOTAVAIL` → **아무것도 실행하지 않음**, 같은 요청의 후속 처리도 취소 |
+
+- 같은 판별을 `upstream/4port`(`20236fe`) `segcp.c:489`(GET/SET 판별), `:768-778`(GET FR), `:2486`(SET FR), `:377-440`(`parse_SEGCP`), `:290`(`SEGCP_RET_FACTORY`), `main`(`44f0393`) `:299/:516/:1374`, `upstream/2Port`(`78517ea`), `upstream/GreenCS`(`29ce076`) `:316` 에서 확인했다. 파서의 특수 처리(`*param = 1`)는 `OC LC PK` 에만 있고 `FR` 과 무관하다(`:418-430`).
+- `FR` 이 값을 받는 분기가 이 계열 어느 브랜치에도 없다. `FR0` 이 공장 초기화로 해석될 경로는 없다.
+
+### 6-2. 공장 초기화가 실제로 하는 일 (4port) `[소스]`
+- `device_set_factory_default()` = `set_DevConfig_to_factory_value()` + `save_DevConfig_to_storage()` (`deviceHandler.c:41-44`). 채널 수(`DEVICE_UART_CNT`)만큼 반복해 각 채널을 공장값(예: 로컬 포트 `5000 + ch`, `ConfigData.c:88-100`)으로 되돌리고 저장한다.
+- 뒤이어 `SEGCP_RET_REBOOT` 처리로 재부팅한다(`segcp.c:340` 부근).
+
+### 6-3. 판정
+- **실제 공장 초기화를 수행하는 것은 `Factory default settings`(`FR`) 하나뿐이다.**
+- **`Factory default firmware`(`FR0`)는 이 계열에서 아무 일도 하지 않는다.** 담당자 전언("0 은 예전 모델의 EEPROM 지우기, W55RP20 에서는 쓰지 않음")과 소스가 일치한다.
+- 남길 것: **settings 만.** firmware 메뉴는 W55RP20 계열에서 숨기거나 비활성이 맞다.
+
+### 6-4. 남기는 settings 쪽의 주의점 `[소스]`
+- GET 분기의 숨은 옵션: **CH1 로컬 포트가 `1` 이면 `FR` 이 공장 초기화가 아니라 MAC·설정 섹터 삭제 + 재부팅**이 된다(`4port segcp.c:771-772`, 조건은 `network_connection[0].local_port == 1`). 1CH·2CH 는 `network_connection.local_port == 1`.
+- 이 값이 `1` 인 장치에서 `Factory default settings` 를 누르면 MAC 이 지워진다. 팝업은 "모든 설정이 초기화된다"고만 말한다. 방어 필요 여부는 사용자 결정이다(현재 툴은 이 조건을 검사하지 않는다 — `main_gui.py:7200-7227`).
+- 공장 초기화 후 장치 IP·포트가 공장값으로 돌아가므로 재검색이 필요하다(시험서 C8-2).
+
+### 6-5. 툴 변경 시 대상 (미적용)
+- `main_gui.py:1932-1943` 가 firmware 메뉴를 `spec.family in ("security", "security_two_port")` 로 켠다. W55RP20-S2E, 2CH, 4CH 가 여기 들어간다.
+- 같은 family 의 IP20, W232N, WIZ510SSL 은 이 계열이 아니라 소스로 판정하지 못했다. WIZ5XXSR-RP 는 5XXSR-RP-C 소스에서 SET `FR` 이 `NOTAVAIL` 임을 확인했다(§2). 따라서 기종 조건을 W55RP20 계열만으로 좁힐지 family 전체로 할지는 사용자 결정이다.
