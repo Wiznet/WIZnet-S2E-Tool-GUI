@@ -14599,7 +14599,7 @@ Reset</string>
              </size>
             </property>
             <property name="popupMode">
-             <enum>QToolButton::InstantPopup</enum>
+             <enum>QToolButton::MenuButtonPopup</enum>
             </property>
             <property name="toolButtonStyle">
              <enum>Qt::ToolButtonTextUnderIcon</enum>

@@ -1389,7 +1389,13 @@ class WIZWindow(QMainWindow, main_window):
         self.do_reset()
 
     def event_factory_setting(self):
-        self.msg_factory_setting()
+        # 버튼 본체 클릭과 메뉴 "Factory default settings" 가 함께 쓴다.
+        # WIZ550 장치이면 전용 FactoryReset 흐름으로 라우팅 (UI-04, Phase 6)
+        if (hasattr(self, 'curr_mac') and self.curr_mac
+                and self.dev_profile.get(self.curr_mac, {}).get('_proto') == 'wiz550'):
+            self.reset_wiz550(op_code=OP_FACTORY_RESET)
+        else:
+            self.msg_factory_setting()
 
     def event_factory_firmware(self):
         self.msg_factory_firmware()
@@ -1401,12 +1407,7 @@ class WIZWindow(QMainWindow, main_window):
         opt = option.text()
 
         if "settings" in opt:
-            # WIZ550 장치이면 전용 FactoryReset 흐름으로 라우팅 (UI-04, Phase 6)
-            if (hasattr(self, 'curr_mac') and self.curr_mac
-                    and self.dev_profile.get(self.curr_mac, {}).get('_proto') == 'wiz550'):
-                self.reset_wiz550(op_code=OP_FACTORY_RESET)
-            else:
-                self.event_factory_setting()
+            self.event_factory_setting()
         elif "firmware" in opt:
             self.event_factory_firmware()
 
