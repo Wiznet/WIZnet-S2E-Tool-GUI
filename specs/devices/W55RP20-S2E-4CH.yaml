@@ -1,6 +1,7 @@
 # W55RP20-S2E-4CH.yaml
 # 4채널 고속 S2E 게이트웨이
-# RS-485 Modbus RTU 버스 1개를 TCP 서버 소켓 4개(CH0~CH3)가 공유하는 구조.
+# UART 4개 + TCP 소켓 4개로 이루어진 독립 4채널 (CH0~CH3 각자 시리얼↔이더넷) — 4CH 담당자 확인 2026-10-21.
+# (이전 주석의 "RS-485 버스 1개를 소켓 4개가 공유"는 GreenCS 구조이며 4CH 가 아니다.)
 # 소스 기준: 펌웨어 GreenCS 커밋 de622f8 (DEVICE_UART_CNT=4 빌드)
 # 3채널 계층(w55rp20_three_port, CH2) 위에 CH3(w55rp20_four_port) 를 얹은 구성
 #
